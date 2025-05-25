@@ -1,0 +1,148 @@
+name: Manual Package Build and Release
+
+on:
+  workflow_dispatch: # Allows manual triggering
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    # Remove strategy matrix for node-version as it's fixed by Docker image
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Cache Electron
+        id: cache-electron
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/electron
+          key: ${{ runner.os }}-electron-cache-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-cache-
+
+      - name: Cache electron-builder
+        id: cache-electron-builder
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/electron-builder
+          key: ${{ runner.os }}-electron-builder-cache-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-builder-cache-
+
+      - name: Build Linux packages using Docker
+        run: |
+          docker run --rm \
+            --env DEBUG="${{ secrets.DEBUG }}" \
+            --env NODE_ENV=development \
+            -v "${{ github.workspace }}:/project" \
+            -v "${{ steps.cache-node-modules.outputs.path }}:/project/node_modules" \
+            -v "${{ steps.cache-electron.outputs.path }}:/root/.cache/electron" \
+            -v "${{ steps.cache-electron-builder.outputs.path }}:/root/.cache/electron-builder" \
+            electronuserland/builder:18-07.23 \
+            /bin/bash -c "cd /project && npm ci && npm run build:linux"
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-builds
+          path: dist/*.{AppImage,deb,rpm}
+
+  build-windows:
+    runs-on: ubuntu-latest # Changed from windows-latest
+    # Remove strategy matrix for node-version
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Cache node_modules
+        id: cache-node-modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }} # runner.os will now be 'Linux'
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Cache Electron
+        id: cache-electron
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/electron
+          key: ${{ runner.os }}-electron-cache-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-cache-
+
+      - name: Cache electron-builder
+        id: cache-electron-builder
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/electron-builder
+          key: ${{ runner.os }}-electron-builder-cache-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-builder-cache-
+
+      - name: Build Windows package using Docker
+        run: |
+          docker run --rm \
+            --env DEBUG="${{ secrets.DEBUG }}" \
+            --env NODE_ENV=development \
+            --env CSC_LINK="${{ secrets.CSC_LINK }}" \
+            --env CSC_KEY_PASSWORD="${{ secrets.CSC_KEY_PASSWORD }}" \
+            -v "${{ github.workspace }}:/project" \
+            -v "${{ steps.cache-node-modules.outputs.path }}:/project/node_modules" \
+            -v "${{ steps.cache-electron.outputs.path }}:/root/.cache/electron" \
+            -v "${{ steps.cache-electron-builder.outputs.path }}:/root/.cache/electron-builder" \
+            electronuserland/builder:18-wine-07.23 \
+            /bin/bash -c "cd /project && npm ci && npm run build:win"
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: dist/*.exe # Adjusted for Windows
+
+  create-release:
+    runs-on: ubuntu-latest
+    needs: [build-linux, build-windows] # Depends on both build jobs
+    permissions:
+      contents: write # Required to create a release
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-builds
+          path: dist/linux
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-build
+          path: dist/windows
+
+      - name: Get version from package.json
+        id: get_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.get_version.outputs.version }}
+        run: |
+          gh release create v${VERSION} \
+            --title "Release v${VERSION}" \
+            --notes "Automated release for version v${VERSION}" \
+            --draft \
+            dist/linux/* \
+            dist/windows/*

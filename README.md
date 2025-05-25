@@ -363,6 +363,8 @@ $ npm run build:mac
 $ npm run build:linux
 ```
 
+For details on the manual package building and release process using GitHub Actions, please see the [Manual Package Build and Release Workflow documentation](docs/manual-release-workflow.md).
+
 ## 🤝 Contributing
 
 We welcome contributions from the community! Here's how you can help improve aider-desk:
