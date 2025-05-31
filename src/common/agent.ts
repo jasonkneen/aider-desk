@@ -1,3 +1,4 @@
+import { ModelData, ModelInformation } from '@common/model-data';
 import { AgentProfile, ReasoningEffort, SettingsData, ToolApprovalState } from '@common/types';
 import {
   AIDER_TOOL_ADD_CONTEXT_FILE,
@@ -109,136 +110,19 @@ export type LlmProvider =
   | OpenAiCompatibleProvider
   | OllamaProvider
   | OpenRouterProvider
-  | RequestyProvider;
-
-// prices in dollars per million tokens
-export const PROVIDER_MODELS: Partial<
-  Record<
-    LlmProviderName,
-    {
-      models: Record<
-        string,
-        {
-          inputCost: number;
-          outputCost: number;
-          cacheCreationInputCost?: number;
-          cacheReadInputCost?: number;
-          maxInputTokens?: number;
-        }
-      >;
-    }
-  >
-> = {
-  openai: {
-    models: {
-      'gpt-4o-mini': {
-        inputCost: 0.15,
-        outputCost: 0.6,
-        maxInputTokens: 128_000,
-      },
-      'o4-mini': {
-        inputCost: 1.1,
-        outputCost: 4.4,
-        maxInputTokens: 200_000,
-      },
-      'gpt-4.1': {
-        inputCost: 2,
-        outputCost: 8,
-        maxInputTokens: 1_047_576,
-      },
-      'gpt-4.1-mini': {
-        inputCost: 0.4,
-        outputCost: 1.6,
-        maxInputTokens: 1_047_576,
-      },
-    },
-  },
-  anthropic: {
-    models: {
-      'claude-sonnet-4-20250514': {
-        inputCost: 3.0,
-        outputCost: 15.0,
-        cacheCreationInputCost: 3.75,
-        cacheReadInputCost: 0.3,
-        maxInputTokens: 200_000,
-      },
-      'claude-3-7-sonnet-20250219': {
-        inputCost: 3.0,
-        outputCost: 15.0,
-        cacheCreationInputCost: 3.75,
-        cacheReadInputCost: 0.3,
-        maxInputTokens: 200_000,
-      },
-      'claude-3-5-haiku-20241022': {
-        inputCost: 0.8,
-        outputCost: 4.0,
-        cacheCreationInputCost: 1,
-        cacheReadInputCost: 0.08,
-        maxInputTokens: 200_000,
-      },
-    },
-  },
-  gemini: {
-    models: {
-      'gemini-2.5-pro-preview-05-06': {
-        inputCost: 1.25,
-        outputCost: 10,
-        maxInputTokens: 1_048_576,
-      },
-      'gemini-2.5-flash-preview-05-20': {
-        inputCost: 0.15,
-        outputCost: 0.6,
-        maxInputTokens: 1_048_576,
-      },
-      'gemini-2.0-flash': {
-        inputCost: 0.1,
-        outputCost: 0.4,
-        maxInputTokens: 1_048_576,
-      },
-      'gemini-2.5-pro-exp-03-25': {
-        inputCost: 0,
-        outputCost: 0,
-        maxInputTokens: 1_048_576,
-      },
-      'gemini-2.0-flash-exp': {
-        inputCost: 0,
-        outputCost: 0,
-        maxInputTokens: 1_048_576,
-      },
-    },
-  },
-  deepseek: {
-    models: {
-      'deepseek-chat': {
-        inputCost: 0.27,
-        outputCost: 1.1,
-        maxInputTokens: 163_840,
-      },
-    },
-  },
-  bedrock: {
-    models: {
-      'us.anthropic.claude-3-7-sonnet-20250219-v1:0': {
-        inputCost: 3.0,
-        outputCost: 15.0,
-        maxInputTokens: 200_000,
-      },
-      'anthropic.claude-3-7-sonnet-20250219-v1:0': {
-        inputCost: 3.0,
-        outputCost: 15.0,
-        maxInputTokens: 200_000,
-      },
-    },
-  },
-};
-
 const DEFAULT_AGENT_PROFILE_ID = 'default';
+
+// Define a logger for common code, can be replaced by a more robust solution if needed
+const logger = {
+  warn: (...args: any[]) => console.warn('[WARN]', ...args),
+  debug: (...args: any[]) => console.debug('[DEBUG]', ...args),
+};
 
 export const DEFAULT_AGENT_PROFILE: AgentProfile = {
   id: DEFAULT_AGENT_PROFILE_ID,
   name: 'Default',
   provider: 'anthropic',
-  model: Object.keys(PROVIDER_MODELS.anthropic!.models)[0],
+  model: 'claude-3-haiku-20240307', // Using a known Haiku model as a sensible default.
   maxIterations: 20,
   maxTokens: 2000,
   minTimeBetweenToolCalls: 0,
@@ -366,38 +250,66 @@ type AnthropicMetadata = {
   };
 };
 
-export const calculateCost = (profile: AgentProfile, sentTokens: number, receivedTokens: number, providerMetadata?: AnthropicMetadata | unknown) => {
-  const providerModels = PROVIDER_MODELS[profile.provider];
-  if (!providerModels) {
+export const calculateCost = (
+  profile: AgentProfile,
+  modelData: ModelData | null, // Added new parameter
+  sentTokens: number,
+  receivedTokens: number,
+  providerMetadata?: AnthropicMetadata | unknown,
+) => {
+  if (!modelData) {
+    logger.warn('Model data not available for cost calculation.');
     return 0;
   }
 
-  // Get the model name directly from the provider
-  const model = profile.model;
-  if (!model) {
-    return 0;
+  // Get the model name directly from the profile.
+  // The keys in modelData are expected to be without provider prefixes.
+  // profile.model might or might not have a prefix.
+  const modelId = profile.model;
+
+  let modelInfo = modelData[modelId];
+
+  if (!modelInfo) {
+    // Try to find the model by stripping provider prefix if modelId contains one
+    const parts = modelId.split('/');
+    const potentialBaseModelId = parts.length > 1 ? parts.slice(1).join('/') : modelId;
+    const fallbackModelInfo = modelData[potentialBaseModelId];
+
+    if (!fallbackModelInfo) {
+        logger.warn(`Cost data for model ${modelId} (and fallback ${potentialBaseModelId}) not found in model-data.json.`);
+        return 0;
+    }
+    logger.debug(`Using fallback model key ${potentialBaseModelId} for ${modelId}`);
+    modelInfo = fallbackModelInfo;
   }
 
-  // Find the model cost configuration
-  const modelCost = providerModels.models[model];
+  const modelCost = modelInfo.costs;
   if (!modelCost) {
+    logger.warn(`Cost details for model ${modelId} not found.`);
     return 0;
   }
 
-  // Calculate cost in dollars (costs are per million tokens)
   const inputCost = (sentTokens * modelCost.inputCost) / 1_000_000;
   const outputCost = (receivedTokens * modelCost.outputCost) / 1_000_000;
-  let cacheCost = 0;
 
-  if (profile.provider === 'anthropic') {
-    const anthropicMetadata = providerMetadata as AnthropicMetadata;
-    const cacheCreationInputTokens = anthropicMetadata.anthropic?.cacheCreationInputTokens ?? 0;
-    const cacheReadInputTokens = anthropicMetadata?.anthropic?.cacheReadInputTokens ?? 0;
-    const cacheCreationCost = (cacheCreationInputTokens * (modelCost.cacheCreationInputCost ?? 0)) / 1_000_000;
-    const cacheReadCost = (cacheReadInputTokens * (modelCost.cacheReadInputCost ?? 0)) / 1_000_000;
+  let specializedCacheCost = 0;
+  if (profile.provider === 'anthropic' && providerMetadata && modelInfo.costs) { // Ensure modelInfo.costs exists
+      const anthropicMeta = providerMetadata as AnthropicMetadata; // Type assertion
+      const cacheCreationTokens = anthropicMeta.anthropic?.cacheCreationInputTokens ?? 0;
+      const cacheReadTokens = anthropicMeta.anthropic?.cacheReadInputTokens ?? 0;
 
-    cacheCost = cacheCreationCost + cacheReadCost;
+      if (modelInfo.costs.cacheCreationInputCost !== undefined) {
+          const cacheCreationCost = (cacheCreationTokens * modelInfo.costs.cacheCreationInputCost) / 1_000_000;
+          specializedCacheCost += cacheCreationCost;
+      }
+      if (modelInfo.costs.cacheReadInputCost !== undefined) {
+          const cacheReadCost = (cacheReadTokens * modelInfo.costs.cacheReadInputCost) / 1_000_000;
+          specializedCacheCost += cacheReadCost;
+      }
+      if (cacheCreationTokens > 0 || cacheReadTokens > 0) {
+           logger.debug('Calculating Anthropic cache cost', { specializedCacheCost });
+      }
   }
 
-  return inputCost + outputCost + cacheCost;
+  return inputCost + outputCost + specializedCacheCost;
 };

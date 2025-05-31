@@ -12,7 +12,7 @@ import icon from '../../resources/icon.png?asset';
 import { Agent } from './agent';
 import { RestApiController } from './rest-api-controller';
 import { ConnectorManager } from './connector-manager';
-import { setupIpcHandlers } from './ipc-handlers';
+import { setupIpcHandlers, registerModelDataHandlers } from './ipc-handlers';
 import { ProjectManager } from './project-manager';
 import { performStartUp, UpdateProgressData } from './start-up';
 import { Store } from './store';
@@ -197,6 +197,7 @@ app.whenReady().then(async () => {
 
   const store = await initStore();
   await initWindow(store);
+  registerModelDataHandlers(); // Call the function to register handlers
 
   progressBar.close();
 

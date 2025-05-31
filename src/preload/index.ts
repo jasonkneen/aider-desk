@@ -22,6 +22,8 @@ import { electronAPI } from '@electron-toolkit/preload';
 import { contextBridge, ipcRenderer } from 'electron';
 import { v4 as uuidv4 } from 'uuid';
 
+import { MODEL_DATA_CHANNEL } from '@common/ipc-channels';
+import { ModelData } from '@common/model-data';
 import { ApplicationAPI } from './index.d';
 
 const compareBaseDirs = (baseDir1: string, baseDir2: string): boolean => {
@@ -98,6 +100,7 @@ const api: ApplicationAPI = {
   getReleaseNotes: () => ipcRenderer.invoke('get-release-notes'),
   clearReleaseNotes: () => ipcRenderer.invoke('clear-release-notes'),
   getOS: (): Promise<OS> => ipcRenderer.invoke('get-os'),
+  getModelData: (): Promise<{ success: boolean; data?: ModelData; error?: string }> => ipcRenderer.invoke(MODEL_DATA_CHANNEL),
 
   addResponseChunkListener: (baseDir, callback) => {
     const listenerId = uuidv4();

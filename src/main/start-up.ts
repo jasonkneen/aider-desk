@@ -6,6 +6,7 @@ import { promisify } from 'util';
 import { delay } from '@common/utils';
 import { is } from '@electron-toolkit/utils';
 
+import { loadAndProcessModelData } from './model-data-loader';
 import logger from './logger';
 import { getCurrentPythonLibVersion, getLatestPythonLibVersion, getPythonVenvBinPath } from './utils';
 import {
@@ -202,6 +203,12 @@ const performUpdateCheck = async (updateProgress: UpdateProgressFunction): Promi
   });
 
   await setupMcpServer();
+
+  updateProgress({
+    step: 'Updating Model Data',
+    message: 'Fetching latest model information...',
+  });
+  await loadAndProcessModelData();
 };
 
 export type UpdateProgressData = {
@@ -264,6 +271,12 @@ export const performStartUp = async (updateProgress: UpdateProgressFunction): Pr
 
     logger.info('Setting up MCP server');
     await setupMcpServer();
+
+    updateProgress({
+      step: 'Loading Model Data',
+      message: 'Fetching latest model information...',
+    });
+    await loadAndProcessModelData();
 
     updateProgress({
       step: 'Finishing Setup',

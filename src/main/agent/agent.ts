@@ -29,6 +29,7 @@ import { parseAiderEnv } from '../utils';
 import logger from '../logger';
 import { Store } from '../store';
 import { Project } from '../project';
+import { getStoredModelData } from '../model-data-loader';
 
 import { createPowerToolset } from './tools/power';
 import { getSystemPrompt } from './prompts';
@@ -751,7 +752,8 @@ export class Agent {
       providerMetadata,
     });
 
-    const messageCost = calculateCost(profile, usage.promptTokens, usage.completionTokens, providerMetadata);
+    const modelData = getStoredModelData(); // Get the loaded model data
+    const messageCost = calculateCost(profile, modelData, usage.promptTokens, usage.completionTokens, providerMetadata);
     const usageReport: UsageReportData = {
       sentTokens: usage.promptTokens,
       receivedTokens: usage.completionTokens,

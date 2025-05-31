@@ -10,6 +10,8 @@ import { Store, getDefaultProjectSettings } from './store';
 import { scrapeWeb } from './web-scrapper';
 import logger from './logger';
 import { VersionsManager } from './versions-manager';
+import { getStoredModelData } from './model-data-loader';
+import { MODEL_DATA_CHANNEL } from '@common/ipc-channels';
 
 export const setupIpcHandlers = (
   mainWindow: BrowserWindow,
@@ -299,3 +301,21 @@ export const setupIpcHandlers = (
     }
   });
 };
+
+export function registerModelDataHandlers() {
+  ipcMain.handle(MODEL_DATA_CHANNEL, async () => {
+    try {
+      logger.info('IPC: Received request for model data.');
+      const modelData = getStoredModelData();
+      if (modelData) {
+        return { success: true, data: modelData };
+      } else {
+        logger.warn('IPC: Model data not found or empty when requested.');
+        return { success: false, error: 'Model data not available.' };
+      }
+    } catch (error) {
+      logger.error('IPC: Error handling get-model-data:', error);
+      return { success: false, error: 'Failed to retrieve model data.' };
+    }
+  });
+}
