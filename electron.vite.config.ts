@@ -28,5 +28,8 @@ export default defineConfig({
       }),
       tsconfigPaths(),
     ],
+    server: {
+      hmr: process.env.NO_HMR === 'true' ? false : undefined,
+    },
   },
 });
