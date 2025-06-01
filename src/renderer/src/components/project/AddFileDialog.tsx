@@ -20,9 +20,20 @@ export const AddFileDialog = ({ onClose, onAddFiles, baseDir, initialReadOnly = 
 
   const handleOnPaste = async (pastedText: string) => {
     if (pastedText) {
-      const isValid = await window.api.isValidPath(baseDir, pastedText);
-      if (isValid && !selectedPaths.includes(pastedText)) {
-        setSelectedPaths((prev) => [...prev, pastedText]);
+      const paths = pastedText.split(/\s+/);
+      const validPathsToAdd: string[] = [];
+      for (const p of paths) {
+        const trimmedPath = p.trim();
+        if (trimmedPath === '') {
+          continue;
+        }
+        const isValid = await window.api.isValidPath(baseDir, trimmedPath);
+        if (isValid && !selectedPaths.includes(trimmedPath) && !validPathsToAdd.includes(trimmedPath)) {
+          validPathsToAdd.push(trimmedPath);
+        }
+      }
+      if (validPathsToAdd.length > 0) {
+        setSelectedPaths((prev) => [...prev, ...validPathsToAdd]);
       }
     }
   };
