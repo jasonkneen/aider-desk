@@ -60,6 +60,7 @@ const api: ApplicationAPI = {
   addOpenProject: (baseDir) => ipcRenderer.invoke('add-open-project', baseDir),
   setActiveProject: (baseDir) => ipcRenderer.invoke('set-active-project', baseDir),
   removeOpenProject: (baseDir) => ipcRenderer.invoke('remove-open-project', baseDir),
+  updateOpenProjectsOrder: (baseDirs) => ipcRenderer.invoke('update-open-projects-order', baseDirs),
   updateMainModel: (baseDir, model) => ipcRenderer.send('update-main-model', baseDir, model),
   updateWeakModel: (baseDir, model) => ipcRenderer.send('update-weak-model', baseDir, model),
   updateArchitectModel: (baseDir, model) => ipcRenderer.send('update-architect-model', baseDir, model),

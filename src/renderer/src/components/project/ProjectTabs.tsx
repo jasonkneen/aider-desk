@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Tab, TabGroup, TabList } from '@headlessui/react';
 import clsx from 'clsx';
 import { MdAdd, MdClose, MdChevronLeft, MdChevronRight } from 'react-icons/md';
+import { DragDropContext, Droppable, Draggable, DropResult } from 'react-beautiful-dnd';
 
 type Props = {
   openProjects: ProjectData[];
@@ -10,9 +11,17 @@ type Props = {
   onAddProject: () => void;
   onSetActiveProject: (baseDir: string) => void;
   onCloseProject: (projectBaseDir: string) => void;
+  onReorderProjects: (projects: ProjectData[]) => void;
 };
 
-export const ProjectTabs = ({ openProjects, activeProject, onAddProject, onSetActiveProject, onCloseProject }: Props) => {
+export const ProjectTabs = ({
+  openProjects,
+  activeProject,
+  onAddProject,
+  onSetActiveProject,
+  onCloseProject,
+  onReorderProjects
+}: Props) => {
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftScrollButton, setShowLeftScrollButton] = useState(false);
   const [showRightScrollButton, setShowRightScrollButton] = useState(false);
@@ -57,53 +66,95 @@ export const ProjectTabs = ({ openProjects, activeProject, onAddProject, onSetAc
     };
   }, [openProjects, activeProject]);
 
+  const onDragEnd = (result: DropResult) => {
+    const { source, destination } = result;
+
+    if (!destination) {
+      return;
+    }
+
+    if (source.index === destination.index) {
+      return;
+    }
+
+    const reorderedProjects = Array.from(openProjects);
+    const [removed] = reorderedProjects.splice(source.index, 1);
+    reorderedProjects.splice(destination.index, 0, removed);
+
+    onReorderProjects(reorderedProjects);
+  };
+
   return (
-    <TabGroup
-      className="overflow-x-hidden flex-1"
-      selectedIndex={openProjects.findIndex((p) => p.baseDir === activeProject?.baseDir)}
-      onChange={(index) => onSetActiveProject(openProjects[index].baseDir)}
-    >
-      <TabList className="flex items-center relative">
-        {showLeftScrollButton && (
-          <button
-            className="absolute left-0 z-10 h-full flex items-center px-2 bg-neutral-900/80 hover:bg-neutral-900 transition-colors duration-200"
-            onClick={handleScrollLeft}
-          >
-            <MdChevronLeft className="h-5 w-5 text-neutral-400" />
-          </button>
-        )}
-        <div ref={tabsContainerRef} className="flex items-center overflow-x-hidden scroll-smooth" onScroll={handleScroll}>
-          {openProjects.map((project) => (
-            <Tab
-              key={project.baseDir}
-              className={({ selected }) =>
-                clsx(
-                  'text-sm pl-3 py-2 pr-1 border-r border-neutral-800 transition-all duration-200 ease-in-out flex items-center gap-3 relative whitespace-nowrap',
-                  selected
-                    ? 'bg-gradient-to-b from-neutral-800 to-neutral-800 text-neutral-100 font-medium'
-                    : 'bg-gradient-to-b from-neutral-950 to-neutral-900 text-neutral-600 hover:bg-neutral-800/50 hover:text-neutral-300',
-                )
-              }
+    <DragDropContext onDragEnd={onDragEnd}>
+      <TabGroup
+        className="overflow-x-hidden flex-1"
+        selectedIndex={openProjects.findIndex((p) => p.baseDir === activeProject?.baseDir)}
+        onChange={(index) => {
+          if (openProjects[index]) {
+            onSetActiveProject(openProjects[index].baseDir);
+          }
+        }}
+      >
+        <TabList className="flex items-center relative">
+          {showLeftScrollButton && (
+            <button
+              className="absolute left-0 z-10 h-full flex items-center px-2 bg-neutral-900/80 hover:bg-neutral-900 transition-colors duration-200"
+              onClick={handleScrollLeft}
             >
-              {project.baseDir.split(/[\\/]/).pop()}
+              <MdChevronLeft className="h-5 w-5 text-neutral-400" />
+            </button>
+          )}
+          <Droppable droppableId="projectTabs" direction="horizontal">
+            {(provided) => (
               <div
-                className={clsx(
-                  'flex items-center justify-center rounded-full p-1 transition-colors duration-200',
-                  activeProject?.baseDir === project.baseDir ? 'hover:bg-neutral-500/30' : 'hover:bg-neutral-600/30',
-                )}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCloseProject(project.baseDir);
+                ref={(el) => {
+                  tabsContainerRef.current = el;
+                  provided.innerRef(el);
                 }}
+                {...provided.droppableProps}
+                className="flex items-center overflow-x-hidden scroll-smooth"
+                onScroll={handleScroll}
               >
-                <MdClose className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 transition-opacity duration-200" />
+                {openProjects.map((project, index) => (
+                  <Draggable key={project.baseDir} draggableId={project.baseDir} index={index}>
+                    {(providedDraggable) => (
+                      <Tab
+                        ref={providedDraggable.innerRef}
+                        {...providedDraggable.draggableProps}
+                        {...providedDraggable.dragHandleProps}
+                        className={({ selected }) =>
+                          clsx(
+                            'text-sm pl-3 py-2 pr-1 border-r border-neutral-800 transition-all duration-200 ease-in-out flex items-center gap-3 relative whitespace-nowrap',
+                            selected
+                              ? 'bg-gradient-to-b from-neutral-800 to-neutral-800 text-neutral-100 font-medium'
+                              : 'bg-gradient-to-b from-neutral-950 to-neutral-900 text-neutral-600 hover:bg-neutral-800/50 hover:text-neutral-300',
+                          )
+                        }
+                      >
+                        {project.baseDir.split(/[\\/]/).pop()}
+                        <div
+                          className={clsx(
+                            'flex items-center justify-center rounded-full p-1 transition-colors duration-200',
+                            activeProject?.baseDir === project.baseDir ? 'hover:bg-neutral-500/30' : 'hover:bg-neutral-600/30',
+                          )}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onCloseProject(project.baseDir);
+                          }}
+                        >
+                          <MdClose className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 transition-opacity duration-200" />
+                        </div>
+                      </Tab>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
               </div>
-            </Tab>
-          ))}
-        </div>
-        {showRightScrollButton && (
-          <button
-            className="absolute right-[52px] z-10 h-full flex items-center px-2 bg-neutral-900/80 hover:bg-neutral-900 transition-colors duration-200"
+            )}
+          </Droppable>
+          {showRightScrollButton && (
+            <button
+              className="absolute right-[52px] z-10 h-full flex items-center px-2 bg-neutral-900/80 hover:bg-neutral-900 transition-colors duration-200"
             onClick={handleScrollRight}
           >
             <MdChevronRight className="h-5 w-5 text-neutral-400" />
@@ -117,5 +168,6 @@ export const ProjectTabs = ({ openProjects, activeProject, onAddProject, onSetAc
         </button>
       </TabList>
     </TabGroup>
+    </DragDropContext>
   );
 };

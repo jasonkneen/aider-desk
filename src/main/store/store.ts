@@ -244,6 +244,29 @@ export class Store {
     this.store.set('openProjects', projects);
   }
 
+  updateOpenProjectsOrder(baseDirs: string[]): ProjectData[] {
+    const currentProjects = this.getOpenProjects();
+    const orderedProjects: ProjectData[] = [];
+    const currentProjectsMap = new Map(currentProjects.map((p) => [normalizeBaseDir(p.baseDir), p]));
+
+    for (const baseDir of baseDirs) {
+      const project = currentProjectsMap.get(normalizeBaseDir(baseDir));
+      if (project) {
+        orderedProjects.push(project);
+      } else {
+        // This case should ideally not happen if baseDirs comes from the existing open projects.
+        // If it can happen, we might need to decide how to handle it (e.g., log a warning).
+        logger.warn(`Project with baseDir ${baseDir} not found in current open projects during reorder.`);
+      }
+    }
+
+    // Ensure all projects from the original list that were not in baseDirs are removed.
+    // Also, if a new baseDir was somehow introduced (not in currentProjectsMap), it won't be included.
+    // This effectively makes `baseDirs` the source of truth for the new order and set of open projects.
+    this.setOpenProjects(orderedProjects);
+    return orderedProjects;
+  }
+
   getRecentProjects(): string[] {
     const recentProjects = this.store.get('recentProjects') || [];
     const openProjectBaseDirs = this.getOpenProjects().map((p) => p.baseDir);

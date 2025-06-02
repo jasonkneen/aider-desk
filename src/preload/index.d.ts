@@ -41,6 +41,7 @@ export interface ApplicationAPI {
   addOpenProject: (baseDir: string) => Promise<ProjectData[]>;
   setActiveProject: (baseDir: string) => Promise<ProjectData[]>;
   removeOpenProject: (baseDir: string) => Promise<ProjectData[]>;
+  updateOpenProjectsOrder: (baseDirs: string[]) => Promise<ProjectData[]>;
   updateMainModel: (baseDir: string, model: string) => void;
   updateWeakModel: (baseDir: string, model: string) => void;
   updateArchitectModel: (baseDir: string, model: string) => void;

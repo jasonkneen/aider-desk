@@ -22,6 +22,16 @@ export class ProjectManager {
     this.agent = agent;
   }
 
+  public async updateOpenProjectsOrder(baseDirs: string[]) {
+    logger.info('Updating open projects order', { baseDirs });
+    const updatedProjects = this.store.updateOpenProjectsOrder(baseDirs);
+    // Ensure the internal 'projects' array reflects the new order if necessary.
+    // This might involve re-fetching or re-sorting 'this.projects'.
+    // For now, we'll assume the primary source of truth for UI order is the store.
+    // If ProjectManager's 'this.projects' order needs to match, further logic is needed here.
+    return updatedProjects;
+  }
+
   private findProject(baseDir: string): Project | undefined {
     return this.projects.find((project) => normalizeBaseDir(project.baseDir) === normalizeBaseDir(baseDir));
   }

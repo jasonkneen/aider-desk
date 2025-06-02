@@ -130,6 +130,18 @@ export const setupIpcHandlers = (
     return updatedProjects;
   });
 
+  ipcMain.handle('update-open-projects-order', async (_, baseDirs: string[]) => {
+    logger.info('IPC Handler: update-open-projects-order', { baseDirs });
+    try {
+      const updatedProjects = await projectManager.updateOpenProjectsOrder(baseDirs);
+      return updatedProjects;
+    } catch (error) {
+      logger.error('Error updating open projects order:', error);
+      // Optionally, re-throw or return an error object to the renderer
+      throw error; // Or return { error: 'Failed to update order' };
+    }
+  });
+
   ipcMain.handle('get-recent-projects', async () => {
     return store.getRecentProjects();
   });

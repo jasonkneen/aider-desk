@@ -28,6 +28,20 @@ export const Home = () => {
 
   const activeProject = openProjects.find((project) => project.active) || openProjects[0];
 
+  const handleReorderProjects = async (reorderedProjects: ProjectData[]) => {
+    setOpenProjects(reorderedProjects);
+    // Persist the new order to the main process.
+    // This function might not exist yet and may need to be implemented in the main process.
+    try {
+      await window.api.updateOpenProjectsOrder(reorderedProjects.map(p => p.baseDir));
+    } catch (error) {
+      console.error('Failed to update open projects order:', error);
+      // Optionally, revert the state change if the API call fails
+      // const currentProjects = await window.api.getOpenProjects();
+      // setOpenProjects(currentProjects);
+    }
+  };
+
   const isAiderDeskUpdateAvailable = versions?.aiderDeskAvailableVersion && versions.aiderDeskAvailableVersion !== versions.aiderDeskCurrentVersion;
   const isAiderUpdateAvailable = versions?.aiderAvailableVersion && versions.aiderAvailableVersion !== versions.aiderCurrentVersion;
   const isUpdateAvailable = isAiderDeskUpdateAvailable || isAiderUpdateAvailable;
@@ -176,6 +190,7 @@ export const Home = () => {
             onAddProject={() => setIsOpenProjectDialogVisible(true)}
             onSetActiveProject={setActiveProject}
             onCloseProject={handleCloseProject}
+            onReorderProjects={handleReorderProjects}
           />
           <div className="flex items-center">
             {showUpdateIcon && (
