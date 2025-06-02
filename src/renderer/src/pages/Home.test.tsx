@@ -1,16 +1,17 @@
 import React from 'react';
 import { render, screen, act, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { vi } from 'vitest';
 import { Home } from './Home';
 import { ProjectData } from '@common/types';
 
 // Mock window.api
-const mockUpdateOpenProjectsOrder = jest.fn(() => Promise.resolve([]));
-const mockGetOpenProjects = jest.fn(() => Promise.resolve([]));
-const mockGetReleaseNotes = jest.fn(() => Promise.resolve(null));
-const mockLoadModelsInfo = jest.fn(() => Promise.resolve({}));
+const mockUpdateOpenProjectsOrder = vi.fn(() => Promise.resolve([]));
+const mockGetOpenProjects = vi.fn(() => Promise.resolve([]));
+const mockGetReleaseNotes = vi.fn(() => Promise.resolve(null));
+const mockLoadModelsInfo = vi.fn(() => Promise.resolve({}));
 
-jest.mock('@/utils/routes', () => ({
+vi.mock('@/utils/routes', () => ({
   ROUTES: {
     Onboarding: '/onboarding',
     Home: '/home',
@@ -18,7 +19,7 @@ jest.mock('@/utils/routes', () => ({
 }));
 
 // Mock i18n
-jest.mock('react-i18next', () => ({
+vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (str) => str,
     i18n: {
@@ -29,25 +30,25 @@ jest.mock('react-i18next', () => ({
 
 // Mock child components
 let capturedProjectTabsProps: any = {};
-jest.mock('@/components/project/ProjectTabs', () => ({
+vi.mock('@/components/project/ProjectTabs', () => ({
   ProjectTabs: (props: any) => {
     capturedProjectTabsProps = props; // Capture props to inspect/invoke them
     return <div data-testid="project-tabs"></div>;
   },
 }));
-jest.mock('@/components/project/NoProjectsOpen', () => ({
+vi.mock('@/components/project/NoProjectsOpen', () => ({
   NoProjectsOpen: () => <div data-testid="no-projects-open"></div>,
 }));
-jest.mock('@/components/project/ProjectView', () => ({
+vi.mock('@/components/project/ProjectView', () => ({
   ProjectView: () => <div data-testid="project-view"></div>,
 }));
-jest.mock('@/components/settings/SettingsDialog', () => ({
+vi.mock('@/components/settings/SettingsDialog', () => ({
   SettingsDialog: () => <div data-testid="settings-dialog"></div>,
 }));
-jest.mock('@/components/common/HtmlInfoDialog', () => ({
+vi.mock('@/components/common/HtmlInfoDialog', () => ({
   HtmlInfoDialog: () => <div data-testid="html-info-dialog"></div>,
 }));
-jest.mock('@/components/Dialogs/TelemetryInfoDialog', () => ({
+vi.mock('@/components/Dialogs/TelemetryInfoDialog', () => ({
   TelemetryInfoDialog: () => <div data-testid="telemetry-info-dialog"></div>,
 }));
 
@@ -62,11 +63,11 @@ global.window = {
     getReleaseNotes: mockGetReleaseNotes,
     loadModelsInfo: mockLoadModelsInfo,
     // Add other necessary mock API functions if Home component uses them on mount or during test
-    setActiveProject: jest.fn(() => Promise.resolve([])),
-    removeOpenProject: jest.fn(() => Promise.resolve([])),
-    addOpenProject: jest.fn(() => Promise.resolve([])),
-    getVersions: jest.fn(() => Promise.resolve({ appVersion: '1.0.0', engineVersion: '1.0.0' })),
-    getProjectSettings: jest.fn(() => Promise.resolve({ mainModel: 'test-model' })),
+    setActiveProject: vi.fn(() => Promise.resolve([])),
+    removeOpenProject: vi.fn(() => Promise.resolve([])),
+    addOpenProject: vi.fn(() => Promise.resolve([])),
+    getVersions: vi.fn(() => Promise.resolve({ appVersion: '1.0.0', engineVersion: '1.0.0' })),
+    getProjectSettings: vi.fn(() => Promise.resolve({ mainModel: 'test-model' })),
   },
 } as any;
 
@@ -78,24 +79,34 @@ const initialProjects: ProjectData[] = [
 ];
 
 describe('Home Page', () => {
-  beforeEach(async () => {
-    jest.clearAllMocks();
-    // Reset captured props for each test
+  beforeEach(() => { // Removed async here, setup mocks synchronously
+    vi.clearAllMocks();
     capturedProjectTabsProps = {};
-    // Setup initial mockResolvedValue for getOpenProjects
-    mockGetOpenProjects.mockResolvedValue(initialProjects.map(p => ({...p}))); // Return fresh copies
+    // Ensure all API calls that Home makes on mount are mocked BEFORE render
+    mockGetOpenProjects.mockResolvedValue([...initialProjects.map(p => ({...p}))]);
+    mockGetReleaseNotes.mockResolvedValue(null); // Assuming this is used in a useEffect
+    mockLoadModelsInfo.mockResolvedValue({}); // Assuming this is used in a useEffect
+    // Ensure getVersions is mocked if used in useEffect
+    (window.api.getVersions as ReturnType<typeof vi.fn>).mockResolvedValue({ aiderDeskCurrentVersion: '1', aiderCurrentVersion: '1' });
+
+
     mockUpdateOpenProjectsOrder.mockResolvedValue([]);
   });
 
   test('handleReorderProjects updates openProjects state and calls window.api.updateOpenProjectsOrder', async () => {
-    render(<Home />);
-
-    // Wait for initial projects to be loaded and ProjectTabs to be rendered with props
-    await waitFor(() => {
-      expect(capturedProjectTabsProps.openProjects).toBeDefined();
-    });
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     
-    expect(capturedProjectTabsProps.openProjects).toEqual(initialProjects);
+    await act(async () => {
+      render(<Home />);
+      // Ensure all initial useEffect async operations settle
+      await Promise.resolve(); // Flushes microtasks
+    });
+
+    // Check initial state after render and useEffects
+    await waitFor(() => {
+      expect(capturedProjectTabsProps.openProjects).toEqual(initialProjects);
+    });
 
     const reorderedProjects: ProjectData[] = [
       initialProjects[1], // Project B
@@ -127,10 +138,18 @@ describe('Home Page', () => {
     mockUpdateOpenProjectsOrder.mockRejectedValueOnce(new Error('API Error'));
     // Store original projects to check for revert (optional, depends on error handling strategy)
     const originalProjectsBeforeReorder = initialProjects.map(p => ({...p}));
-    mockGetOpenProjects.mockResolvedValue(originalProjectsBeforeReorder);
+    // Ensure getOpenProjects is reset if it's meant to be called again after an error by some logic
+    mockGetOpenProjects.mockResolvedValue([...originalProjectsBeforeReorder]);
 
 
-    render(<Home />);
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    
+    await act(async () => {
+      render(<Home />);
+      await Promise.resolve(); // Flush microtasks for initial render effects
+    });
+    
     await waitFor(() => {
         expect(capturedProjectTabsProps.openProjects).toEqual(originalProjectsBeforeReorder);
     });
@@ -143,11 +162,14 @@ describe('Home Page', () => {
     ];
     const reorderedBaseDirs = reorderedProjects.map(p => p.baseDir);
     
-    // Spy on console.error
-    const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
     await act(async () => {
-      capturedProjectTabsProps.onReorderProjects(reorderedProjects);
+      // Simulate ProjectTabs calling onReorderProjects
+      if (capturedProjectTabsProps.onReorderProjects) {
+         capturedProjectTabsProps.onReorderProjects(reorderedProjects);
+      } else {
+        throw new Error('onReorderProjects prop not captured or available');
+      }
+      await Promise.resolve(); // Flush microtasks for state update from onReorderProjects
     });
 
     expect(mockUpdateOpenProjectsOrder).toHaveBeenCalledTimes(1);
