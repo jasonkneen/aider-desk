@@ -40,8 +40,8 @@ export const Onboarding = () => {
       case 1:
         return (
           <div className="flex flex-col space-y-4 relative">
-            <h1 className="text-xl font-bold text-neutral-100 uppercase">{t('onboarding.title')}</h1>
-            <p className="text-neutral-300 text-sm">{t('onboarding.description')}</p>
+            <h1 className="text-xl font-bold text-neutral-100 uppercase">{t('onboarding.welcomeTitle')}</h1>
+            <p className="text-neutral-300 text-sm">{t('onboarding.welcomeDescription')}</p>
             <ul className="list-disc list-inside text-neutral-300 space-y-2 text-sm">
               <li>{t('onboarding.features.1')}</li>
               <li>{t('onboarding.features.2')}</li>
@@ -55,15 +55,19 @@ export const Onboarding = () => {
       case 2:
         return (
           <div className="space-y-4">
-            <h2 className="text-xl font-bold text-neutral-100 uppercase">{t('onboarding.aider.title')}</h2>
-            <p className="text-neutral-300 text-sm">{t('onboarding.aider.description')}</p>
-            <ul className="list-disc list-inside text-neutral-300 space-y-2 text-xs">
-              <li>{t('onboarding.aider.options.1')}</li>
-              <li>{t('onboarding.aider.options.2')}</li>
-              <li>{t('onboarding.aider.options.3')}</li>
-            </ul>
-            <p className="text-neutral-300 text-sm">{t('onboarding.aider.configureLater')}</p>
+            <h2 className="text-xl font-bold text-neutral-100 uppercase">{t('onboarding.aider.apiKeySetupTitle')}</h2>
+            <p className="text-neutral-300 text-sm">
+              {t('onboarding.aider.apiKeyMainInstruction')}{' '}
+              <a href="https://platform.openai.com/account/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                {t('onboarding.aider.apiKeyFindHere')}
+              </a>
+              .
+            </p>
+            <p className="text-neutral-300 text-sm">
+              {t('onboarding.aider.advancedSettingsInfo')}
+            </p>
             <AiderSettings settings={settings!} setSettings={saveSettings} initialShowEnvVars={true} />
+            <p className="text-xs text-neutral-400 mt-3 px-1">{t('onboarding.aider.configureLater')}</p>
           </div>
         );
       default:

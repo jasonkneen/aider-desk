@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import * as fs from 'fs';
+import { IpcMainEvent } from 'electron';
 import * as path from 'path';
 import { promisify } from 'util';
 
@@ -66,39 +67,87 @@ export const getOSPythonExecutable = async (): Promise<string> => {
   throw new Error('No supported Python 3.9-3.12 executable found. Please install Python or set the AIDER_DESK_PYTHON environment variable.');
 };
 
-const checkPythonVersion = async (): Promise<void> => {
-  const pythonExecutable = await getOSPythonExecutable();
+export type PythonValidationResult = {
+  success: boolean;
+  pythonPath?: string;
+  version?: string;
+  error?: string;
+  message?: string; // User-friendly message
+};
+
+// Renamed from checkPythonVersion to avoid conflict with the startup check
+const getPythonVersionValidationResult = async (pythonExecutable: string): Promise<PythonValidationResult> => {
   try {
     const command = `${pythonExecutable} --version`;
     const { stdout, stderr } = await execAsync(command, {
       windowsHide: true,
     });
 
-    // Extract version number from output like "Python 3.10.12"
     const output = (stdout || '') + (stderr || '');
     const versionMatch = output.match(/Python (\d+)\.(\d+)\.\d+/);
+
     if (!versionMatch) {
-      throw new Error(
-        `Could not determine Python version (output: '${output}'). You can specify a specific Python executable by setting the AIDER_DESK_PYTHON environment variable.`,
-      );
+      return {
+        success: false,
+        pythonPath: pythonExecutable,
+        error: `Could not determine Python version (output: '${output}').`,
+        message: `Could not determine Python version from ${pythonExecutable}. You can specify a specific Python executable by setting the AIDER_DESK_PYTHON environment variable.`,
+      };
     }
 
     const major = parseInt(versionMatch[1], 10);
     const minor = parseInt(versionMatch[2], 10);
+    const version = `${major}.${minor}`;
 
-    // Check if version is between 3.9 and 3.12
     if (major !== 3 || minor < 9 || minor > 12) {
-      throw new Error(
-        `Python version ${major}.${minor} is not supported. Please install Python 3.9-3.12. You can specify a specific Python executable by setting the AIDER_DESK_PYTHON environment variable.`,
-      );
+      return {
+        success: false,
+        pythonPath: pythonExecutable,
+        version,
+        error: `Python version ${version} is not supported. Please install Python 3.9-3.12.`,
+        message: `Python version ${version} found at ${pythonExecutable} is not supported. Please install Python 3.9-3.12. You can specify a specific Python executable by setting the AIDER_DESK_PYTHON environment variable.`,
+      };
     }
+
+    return {
+      success: true,
+      pythonPath: pythonExecutable,
+      version,
+      message: `Python version ${version} found at ${pythonExecutable} is compatible.`,
+    };
   } catch (error) {
-    if (error instanceof Error && error.message.includes('version')) {
-      throw error;
-    }
-    throw new Error(
-      `Python is not installed or an error occurred. Please install Python 3.9-3.12 or set the AIDER_DESK_PYTHON environment variable. Original error: ${error}`,
-    );
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      success: false,
+      pythonPath: pythonExecutable,
+      error: `Error checking Python version: ${errorMessage}`,
+      message: `Error checking Python version for ${pythonExecutable}. Please ensure Python 3.9-3.12 is installed and accessible. You can specify a specific Python executable by setting the AIDER_DESK_PYTHON environment variable. Original error: ${errorMessage}`,
+    };
+  }
+};
+
+export const validatePythonEnvironment = async (): Promise<PythonValidationResult> => {
+  let pythonExecutable: string;
+  try {
+    pythonExecutable = await getOSPythonExecutable();
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      success: false,
+      error: errorMessage,
+      message: `Python executable not found. ${errorMessage}`,
+    };
+  }
+
+  return getPythonVersionValidationResult(pythonExecutable);
+};
+
+// This version is for startup and will throw an error on failure
+const checkPythonVersionForStartup = async (): Promise<void> => {
+  const pythonExecutable = await getOSPythonExecutable();
+  const result = await getPythonVersionValidationResult(pythonExecutable);
+  if (!result.success) {
+    throw new Error(result.message || result.error || 'Python validation failed during startup');
   }
 };
 
@@ -119,6 +168,7 @@ const setupAiderConnector = async (cleanInstall: boolean, updateProgress?: Updat
   const destConnectorPath = path.join(AIDER_DESK_CONNECTOR_DIR, 'connector.py');
   fs.copyFileSync(sourceConnectorPath, destConnectorPath);
 
+  // Ensure updateProgress is passed down
   await installAiderConnectorRequirements(cleanInstall, updateProgress);
 };
 
@@ -139,7 +189,7 @@ const installAiderConnectorRequirements = async (cleanInstall: boolean, updatePr
     try {
       const installCommand = `"${PYTHON_COMMAND}" -m pip install --upgrade --no-cache-dir ${pkg}`;
 
-      if (!cleanInstall) {
+      if (!cleanInstall && updateProgress) { // Ensure updateProgress exists
         const packageName = pkg.split('==')[0];
         const currentVersion = await getCurrentPythonLibVersion(packageName);
 
@@ -180,11 +230,21 @@ const installAiderConnectorRequirements = async (cleanInstall: boolean, updatePr
         logger.warn(`Package ${pkg} installation warnings`, { stderr: stderr.trim() });
       }
     } catch (error) {
-      logger.error(`Failed to install package: ${pkg}`, {
+      const errorMsg = `Failed to install Aider connector requirements. Package: ${pkg}. Error: ${error instanceof Error ? error.message : String(error)}`;
+      logger.error(`Failed to install package: ${pkg}`, { // Keep original logger error format
         error: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
       });
-      throw new Error(`Failed to install Aider connector requirements. Package: ${pkg}. Error: ${error}`);
+      if (updateProgress) {
+        updateProgress(
+          createErrorProgressData(
+            'Installing Requirements', // Step name
+            `Failed to install package: ${pkg}`, // User-friendly message
+            error, // The original error
+          ),
+        );
+      }
+      throw new Error(errorMsg); // Re-throw the error after sending progress
     }
   }
 
@@ -244,11 +304,30 @@ const performUpdateCheck = async (updateProgress: UpdateProgressFunction): Promi
 };
 
 export type UpdateProgressData = {
-  step: string;
-  message: string;
+  step: string; // Current phase, e.g., "Creating Virtual Environment"
+  message: string; // Specific progress message
+  isError?: boolean; // True if this update represents a fatal error
+  errorMessage?: string; // Detailed error message if isError is true
+  errorStack?: string; // Optional: stack trace for debugging
 };
 
 export type UpdateProgressFunction = (data: UpdateProgressData) => void;
+
+// Helper to create a standardized error object for updateProgress
+const createErrorProgressData = (
+  step: string,
+  userMessage: string,
+  error: unknown,
+): UpdateProgressData => {
+  const errorObj = error instanceof Error ? error : new Error(String(error));
+  return {
+    step,
+    message: userMessage,
+    isError: true,
+    errorMessage: errorObj.message,
+    errorStack: errorObj.stack,
+  };
+};
 
 export const performStartUp = async (updateProgress: UpdateProgressFunction): Promise<boolean> => {
   logger.info('Starting AiderDesk setup process');
@@ -272,51 +351,58 @@ export const performStartUp = async (updateProgress: UpdateProgressFunction): Pr
   }
 
   try {
-    updateProgress({
-      step: 'Checking Python Installation',
-      message: 'Verifying Python installation...',
-    });
-
+    updateProgress({ step: 'Checking Python Installation', message: 'Verifying Python installation...' });
     logger.info('Checking Python version compatibility');
-    await checkPythonVersion();
+    try {
+      await checkPythonVersionForStartup();
+    } catch (err) {
+      updateProgress(createErrorProgressData('Checking Python Installation', 'Python version check failed.', err));
+      throw err; // Re-throw to be caught by the main catch block
+    }
 
-    updateProgress({
-      step: 'Creating Virtual Environment',
-      message: 'Setting up Python virtual environment...',
-    });
-
+    updateProgress({ step: 'Creating Virtual Environment', message: 'Setting up Python virtual environment...' });
     logger.info(`Creating Python virtual environment in: ${PYTHON_VENV_DIR}`);
-    await createVirtualEnv();
+    try {
+      await createVirtualEnv();
+    } catch (err) {
+      updateProgress(createErrorProgressData('Creating Virtual Environment', 'Failed to create Python virtual environment.', err));
+      throw err;
+    }
 
-    updateProgress({
-      step: 'Setting Up Connector',
-      message: 'Installing Aider connector (this may take a while)...',
-    });
-
+    updateProgress({ step: 'Setting Up Connector', message: 'Installing Aider connector (this may take a while)...' });
     logger.info('Setting up Aider connector');
-    await setupAiderConnector(true);
+    try {
+      // Pass updateProgress down so installAiderConnectorRequirements can use it
+      await setupAiderConnector(true, updateProgress);
+    } catch (err) {
+      // If error is from installAiderConnectorRequirements, it should have already sent a progress update.
+      // This will catch errors from setupAiderConnector itself or if installAiderConnectorRequirements somehow didn't send one.
+      if (!(err instanceof Error && err.message.includes('Failed to install Aider connector requirements'))) {
+         updateProgress(createErrorProgressData('Setting Up Connector', 'Failed to set up Aider connector.', err));
+      }
+      throw err;
+    }
 
-    updateProgress({
-      step: 'Setting Up MCP Server',
-      message: 'Installing MCP server...',
-    });
-
+    updateProgress({ step: 'Setting Up MCP Server', message: 'Installing MCP server...' });
     logger.info('Setting up MCP server');
-    await setupMcpServer();
+    try {
+      await setupMcpServer();
+    } catch (err) {
+      updateProgress(createErrorProgressData('Setting Up MCP Server', 'Failed to set up MCP server.', err));
+      throw err;
+    }
 
-    updateProgress({
-      step: 'Finishing Setup',
-      message: 'Completing installation...',
-    });
-
-    // Create setup complete file
+    updateProgress({ step: 'Finishing Setup', message: 'Completing installation...' });
     logger.info(`Creating setup complete file: ${SETUP_COMPLETE_FILENAME}`);
     fs.writeFileSync(SETUP_COMPLETE_FILENAME, new Date().toISOString());
 
     logger.info('AiderDesk setup completed successfully');
     return true;
-  } catch (error) {
-    logger.error('AiderDesk setup failed', { error });
+  } catch (error) { // This is the main catch block for performStartUp
+    // The error should have already been sent with details by the specific step's catch block.
+    // This main catch block is now primarily for logging the overall failure and cleanup.
+    const finalErrorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('AiderDesk setup failed', { error: finalErrorMessage, stack: error instanceof Error ? error.stack : undefined });
 
     // Clean up if setup fails
     if (fs.existsSync(PYTHON_VENV_DIR)) {

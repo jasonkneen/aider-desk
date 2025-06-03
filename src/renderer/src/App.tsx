@@ -1,9 +1,11 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Dispatch, SetStateAction } from 'react';
 import { HashRouter as Router, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 
+import PythonCheckPage from '@/pages/PythonCheckPage';
+import StartupStatusPage from '@/pages/StartupStatusPage'; // Import StartupStatusPage
 import { Onboarding } from '@/pages/Onboarding';
 import { Home } from '@/pages/Home';
 import { SettingsProvider, useSettings } from '@/context/SettingsContext';
@@ -24,7 +26,12 @@ const ThemeManager = () => {
   return null;
 };
 
-const AnimatedRoutes = () => {
+interface AnimatedRoutesProps {
+  pythonReady: boolean;
+  setPythonReady: Dispatch<SetStateAction<boolean>>;
+}
+
+const AnimatedRoutes: React.FC<AnimatedRoutesProps> = ({ pythonReady, setPythonReady }) => {
   const { i18n } = useTranslation();
   const location = useLocation();
   const { settings } = useSettings();
@@ -35,6 +42,11 @@ const AnimatedRoutes = () => {
     }
   }, [i18n, settings]);
 
+  if (!pythonReady) {
+    return <PythonCheckPage setPythonReady={setPythonReady} />;
+  }
+
+  // Python is ready, proceed with normal app routes
   return (
     <div style={{ position: 'relative', width: '100%', height: '100vh' }}>
       <AnimatePresence initial={true}>
@@ -45,11 +57,34 @@ const AnimatedRoutes = () => {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
         >
+          {/* Ensure settings are loaded before rendering routes that might depend on them */}
           {settings && (
             <Routes location={location}>
+              <Route path={ROUTES.StartupStatus} element={<StartupStatusPage />} /> {/* Add StartupStatusPage route */}
               <Route path={ROUTES.Onboarding} element={<Onboarding />} />
               <Route path={ROUTES.Home} element={<Home />} />
-              <Route path="/" element={settings.onboardingFinished ? <Navigate to={ROUTES.Home} replace /> : <Navigate to={ROUTES.Onboarding} replace />} />
+              {/* Default route based on onboarding status */}
+              <Route
+                path="/"
+                element={
+                  settings.onboardingFinished ? (
+                    <Navigate to={ROUTES.Home} replace />
+                  ) : (
+                    <Navigate to={ROUTES.Onboarding} replace />
+                  )
+                }
+              />
+              {/* Fallback for any other route, redirect based on onboarding status */}
+              <Route
+                path="*"
+                element={
+                  settings.onboardingFinished ? (
+                    <Navigate to={ROUTES.Home} replace />
+                  ) : (
+                    <Navigate to={ROUTES.Onboarding} replace />
+                  )
+                }
+              />
             </Routes>
           )}
           <StyledTooltip id="global-tooltip-sm" />
@@ -63,17 +98,21 @@ const AnimatedRoutes = () => {
 
 const App = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const [pythonReady, setPythonReady] = useState(false);
 
   useEffect(() => {
+    // Initial fade-in for the whole app
     setIsVisible(true);
   }, []);
 
+  // The main motion.div for app visibility can remain as is.
+  // AnimatedRoutes will handle the switch between PythonCheckPage and the main app content.
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: isVisible ? 1 : 0 }} transition={{ duration: 0.5, ease: 'easeIn' }}>
       <Router>
         <SettingsProvider>
           <ThemeManager />
-          <AnimatedRoutes />
+          <AnimatedRoutes pythonReady={pythonReady} setPythonReady={setPythonReady} />
           <ToastContainer />
         </SettingsProvider>
       </Router>

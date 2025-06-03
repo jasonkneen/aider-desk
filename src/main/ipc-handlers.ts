@@ -12,6 +12,7 @@ import { scrapeWeb } from './web-scrapper';
 import logger from './logger';
 import { VersionsManager } from './versions-manager';
 import { TelemetryManager } from './telemetry-manager';
+import { validatePythonEnvironment } from './start-up';
 
 export const setupIpcHandlers = (
   mainWindow: BrowserWindow,
@@ -321,5 +322,13 @@ export const setupIpcHandlers = (
       logger.error('Error loading models info:', error);
       return {}; // Return empty object or handle error as appropriate
     }
+  });
+
+  ipcMain.handle('PYTHON_CHECK', async () => {
+    logger.info('IPC Handler: PYTHON_CHECK received');
+    const result = await validatePythonEnvironment();
+    logger.info('IPC Handler: PYTHON_CHECK sending result', result);
+    mainWindow.webContents.send('PYTHON_CHECK_RESULT', result);
+    return result; // Also return the result via handle, useful for direct invocation if needed
   });
 };

@@ -34,7 +34,7 @@ AiderDesk is packed with features designed for modern software development:
 *   **🔍 Integrated Diff Viewer**: Review AI-generated code changes with a clear side-by-side comparison.
 *   **⏪ One-Click Reverts**: Easily undo specific AI modifications while keeping others.
 *   **💰 Cost Tracking**: Monitor token usage and associated costs per project session for both Aider and the Agent.
-*   **⚙️ Centralized Settings**: Manage API keys, environment variables, and configurations conveniently.
+*   **⚙️ Centralized Settings**: Manage API keys, environment variables, and configurations conveniently (with guided setup for essentials on first run).
 *   **🌐 Versatile REST API**: Integrate AiderDesk with external tools and workflows.
 *   **📨 Structured Communication**: View prompts, AI responses, agent thoughts, and tool outputs in an organized format.
 *   **📋 Easy Sharing**: Copy code snippets or entire conversations effortlessly.
@@ -328,13 +328,25 @@ The built-in server exposes these tools to MCP clients:
 ### Quick Start
 1. Download the latest release for your OS from [Releases](https://github.com/hotovo/aider-desk/releases).
 2. Run the executable.
+3. Upon first launch, AiderDesk will guide you through Python validation and initial configuration, including API key setup.
 
 ### Troubleshooting
 
 #### Python Version Issues
-If AiderDesk struggles to find your Python installation, specify the path via the `AIDER_DESK_PYTHON` environment variable (usually only needed on first run):
-- **macOS/Linux:** `export AIDER_DESK_PYTHON=/path/to/your/python3.x`
-- **Windows:** `$env:AIDER_DESK_PYTHON = "C:\Path\To\Python\python.exe"`
+AiderDesk automatically checks for a compatible Python installation (3.9-3.12) on startup. If it encounters issues (e.g., Python not found or an incompatible version), you'll be guided by an on-screen setup process. This process includes detailed instructions on how to set the `AIDER_DESK_PYTHON` environment variable if your Python installation is in a non-standard location.
+
+For reference, here's how you can set it (these instructions are also available within the app if needed):
+- **macOS/Linux:** `export AIDER_DESK_PYTHON=/path/to/your/python3.x` (e.g., in `~/.zshrc` or `~/.bashrc`)
+- **Windows (PowerShell):** `$env:AIDER_DESK_PYTHON = "C:\Path\To\Python\python.exe"`
+- **Windows (System Properties):**
+    1. Search for "environment variables" and select "Edit the system environment variables".
+    2. Click "Environment Variables...".
+    3. Under "User variables" or "System variables", click "New...".
+    4. Variable name: `AIDER_DESK_PYTHON`
+    5. Variable value: `C:\Path\To\Your\Python\python.exe` (e.g., `C:\Python310\python.exe`)
+    6. Click OK on all windows.
+
+Remember to restart AiderDesk after setting the variable.
 
 #### Disabling Auto Updates
 To prevent automatic updates, set the `AIDER_DESK_NO_AUTO_UPDATE` environment variable:

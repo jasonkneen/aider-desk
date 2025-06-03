@@ -184,34 +184,103 @@ app.whenReady().then(async () => {
   });
   await delay(1000);
 
-  const updateProgress = ({ step, message }: UpdateProgressData) => {
-    progressBar.detail = message;
-    progressBar.text = step;
+  let lastProgressData: UpdateProgressData | null = null;
+
+  const updateProgress = (data: UpdateProgressData) => {
+    lastProgressData = data; // Store the last progress update
+    if (progressBar.isCompleted() || !progressBar.getOptions().browserWindow || progressBar.getOptions().browserWindow.isDestroyed()) {
+      // Avoid updating a completed or destroyed progress bar
+      return;
+    }
+    progressBar.detail = data.message;
+    progressBar.text = data.step;
+    if (data.isError) {
+      // Potentially change style or add "(Error)" to text if desired,
+      // but the main error display will be via dialog after performStartUp throws.
+      // For now, just logging it here for main process visibility.
+      logger.error(`Startup Error Progress: Step: ${data.step}, Message: ${data.message}, Error: ${data.errorMessage}`);
+    }
   };
 
   try {
     await performStartUp(updateProgress);
+    // Check if startup was actually successful (no error reported in last progress)
+    if (lastProgressData && lastProgressData.isError) {
+      // This case should ideally not be reached if performStartUp re-throws the error.
+      // If it does, it means performStartUp caught an error, sent an error progress, but didn't re-throw.
+      logger.warn('performStartUp completed but last progress indicated an error.');
+      // Use the error information from lastProgressData for the dialog
+      dialog.showErrorBox(
+        `Setup Failed: ${lastProgressData.step}`,
+        lastProgressData.errorMessage || lastProgressData.message || 'An unknown error occurred during setup.',
+      );
+      progressBar.close();
+      app.quit();
+      return;
+    }
+
     updateProgress({
       step: 'Startup complete',
       message: 'Everything is ready! Have fun coding!',
     });
     progressBar.setCompleted();
     await delay(1000);
-  } catch (error) {
+  } catch (error) { // This catches errors re-thrown by performStartUp
     progressBar.close();
-    dialog.showErrorBox('Setup Failed', error instanceof Error ? error.message : 'Unknown error occurred during setup');
+    let title = 'Setup Failed';
+    let content = 'An unknown error occurred during setup.';
+
+    if (lastProgressData && lastProgressData.isError) {
+      // Use the more detailed error from the last progress update
+      title = `Setup Failed: ${lastProgressData.step}`;
+      content = `${lastProgressData.message}\n\nDetails: ${lastProgressData.errorMessage || 'N/A'}`;
+      if (lastProgressData.errorStack) {
+        // Optionally, log the stack trace but don't show it in the simple error box
+        logger.error("Startup error stack trace:", lastProgressData.errorStack);
+      }
+    } else if (error instanceof Error) {
+      content = error.message;
+    }
+
+    dialog.showErrorBox(title, content);
     app.quit();
     return;
   }
 
   const store = await initStore();
-  await initWindow(store);
+  let mainWindowInstance: BrowserWindow | null = null; // To hold the mainWindow instance
 
-  progressBar.close();
+  try {
+    mainWindowInstance = await initWindow(store); // initWindow now returns the window
+    // If startup was successful and we have a window, tell it.
+    if (mainWindowInstance && !mainWindowInstance.isDestroyed() && (!lastProgressData || !lastProgressData.isError)) {
+      mainWindowInstance.webContents.send('STARTUP_PROGRESS_UPDATE', {
+        step: 'Setup Complete',
+        message: 'Application setup finished successfully.',
+        isError: false,
+      });
+    } else if (mainWindowInstance && !mainWindowInstance.isDestroyed() && lastProgressData && lastProgressData.isError) {
+      // If startup failed and we have a window, tell it about the failure.
+      // This is a fallback, as the dialog.showErrorBox would have already appeared.
+      mainWindowInstance.webContents.send('STARTUP_PROGRESS_UPDATE', lastProgressData);
+    }
+  } catch (windowInitError) {
+    logger.error('Failed to initialize window:', windowInitError);
+    // If window initialization itself fails, there's nowhere to send IPC messages.
+    // The progressBar error (if any from performStartUp) or this new error will be the main feedback.
+    if (!(lastProgressData && lastProgressData.isError)) { // Avoid showing two dialogs if performStartUp already showed one
+        dialog.showErrorBox('Application Error', 'Failed to initialize the application window.');
+    }
+    app.quit();
+    return;
+  } finally {
+    progressBar.close(); // Close progress bar after window init attempt or if it succeeded
+  }
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) {
-      void initWindow(store);
+      // Ensure mainWindowInstance is updated if a new window is created here
+      initWindow(store).then(mw => mainWindowInstance = mw).catch(err => logger.error('Error re-initializing window on activate:', err));
     }
   });
 });
