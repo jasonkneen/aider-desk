@@ -6,12 +6,18 @@ import dotenv from 'dotenv';
 import { AgentProfile, ContextFile, ContextMessage, McpTool, SettingsData, ToolApprovalState, UsageReportData } from '@common/types';
 import {
   APICallError,
+  addLanguageModelUsage, // Added
+  APICallError,
   type CoreMessage,
+  calculateLanguageModelUsage, // Added
+  executeTools,
   generateText,
   InvalidToolArgumentsError,
   NoSuchToolError,
+  parseToolCall,
   type StepResult,
   streamText,
+  toResponseMessages,
   type Tool,
   type ToolExecutionOptions,
   type ToolSet,
@@ -23,6 +29,7 @@ import { countTokens } from 'gpt-tokenizer/model/gpt-4o';
 import { jsonSchemaToZod } from '@n8n/json-schema-to-zod';
 import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.js';
 import { ZodSchema } from 'zod';
+import { nanoid } from 'nanoid'; // Added
 import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 import { TelemetryManager } from 'src/main/telemetry-manager';
 import { ModelInfoManager } from 'src/main/model-info-manager';
@@ -445,13 +452,353 @@ export class Agent {
       tools: Object.keys(toolSet),
     });
 
+    // --- Start of new variable initializations ---
+    let stepCount = 0;
+    const initialResponseMessages = [...messages]; // messages is from prepareMessages + user prompt
+    let currentModelResponse: CoreMessage | undefined = undefined;
+    let currentToolCalls: unknown[] = []; // Define more specific types later if possible
+    let currentToolResults: unknown[] = []; // Define more specific types later if possible
+    let accumulatedText = "";
+    let usage = { completionTokens: 0, promptTokens: 0, totalTokens: 0 };
+    let stepType = "initial"; // Or choose a more appropriate starting step type name
+    const allResponseMessages = [...initialResponseMessages]; // This will accumulate all messages through steps
+    const steps: StepResult<typeof toolSet>[] = []; // To store step results, similar to Vercel SDK
+    let currentResponseId: string | null = null; // As per request, ensure usable in loop
+    // --- End of new variable initializations ---
+
+    while (stepType !== "done") {
+      // Define mode for the model call for the current step
+      const mode = {
+        type: 'regular' as const,
+        tools: toolSet && Object.keys(toolSet).length > 0 ? Object.values(toolSet) : undefined,
+        toolChoice: toolSet && Object.keys(toolSet).length > 0 ? 'auto' as const : undefined,
+      };
+
+      // Ensure model and systemPrompt are available in this scope
+      // model and systemPrompt are defined in the try block enclosing this while loop
+      const model = createLlm(llmProvider, profile.model, await this.getLlmEnv(project)); // This might need to be outside the loop if it's expensive/stateful
+      const systemPrompt = await getSystemPrompt(project.baseDir, profile); // Similarly, this could be outside
+
+      // Make the call to model.doStream
+      const streamResult = await model.doStream({
+        system: systemPrompt,
+        prompt: [...allResponseMessages], // Use a copy
+        mode: mode,
+        maxTokens: profile.maxTokens,
+        temperature: 0, // Keep deterministic for agent behavior
+        providerMetadata: providerOptions, // Contains cacheControl
+        abortSignal: this.abortController.signal,
+        // Note: Other settings like inputFormat, responseFormat might be needed depending on the model implementation
+      });
+
+      // Initialize variables to accumulate results from the stream for the current step
+      let streamedText = "";
+      let streamedToolCalls: CoreMessage.ToolCall[] = []; // More specific type
+      let streamedFinishReason: string | null = null; // type should be FinishReason
+      let streamedUsage: { promptTokens: number; completionTokens: number } = { promptTokens: 0, completionTokens: 0 };
+      let streamedWarnings: CoreMessage.Warning[] | undefined = undefined; // More specific type
+      let streamedRawResponse: { id?: string; timestamp?: Date; modelId?: string } | undefined = undefined; // Adjust as per actual rawResponse structure
+      let streamedProviderMetadata: Record<string, any> | undefined = undefined;
+
+      // Iterate over streamResult.stream
+      for await (const part of streamResult.stream) {
+        if (this.abortController.signal.aborted) {
+          logger.info('Streaming aborted by user during model call.');
+          streamedFinishReason = 'abort';
+          break;
+        }
+
+        switch (part.type) {
+          case 'text-delta':
+            streamedText += part.textDelta;
+            currentResponseId = project.processResponseMessage({
+              action: 'response',
+              content: part.textDelta,
+              finished: false,
+              // id: currentResponseId, // processResponseMessage can manage this
+            });
+            break;
+          case 'tool-call':
+            streamedToolCalls.push(part.toolCall);
+            break;
+          case 'finish':
+            streamedFinishReason = part.finishReason as string; // Cast to string
+            streamedUsage = part.usage;
+            streamedWarnings = part.warnings;
+            streamedRawResponse = part.rawResponse as { id?: string; timestamp?: Date; modelId?: string }; // Cast as needed
+            streamedProviderMetadata = part.providerMetadata;
+            break;
+          case 'error':
+            logger.error('Error during model stream:', part.error);
+            const error = part.error;
+            if (typeof error === 'string') {
+              project.addLogMessage('error', error);
+            } else if (APICallError.isInstance(error) || ('message' in error && 'responseBody' in error)) {
+              // @ts-expect-error error has responseBody if it's an APICallError like structure
+              project.addLogMessage('error', `${error.message}: ${error.responseBody}`);
+            } else if (error instanceof Error) {
+              project.addLogMessage('error', error.message);
+            } else {
+              project.addLogMessage('error', JSON.stringify(error));
+            }
+            streamedFinishReason = 'error';
+            // Potentially set stepType to 'done' or handle error to allow retry/repair
+            stepType = "done"; // Exit loop on stream error for now
+            break;
+        }
+      }
+
+      // Construct currentModelResponse from accumulated streamed data
+      currentModelResponse = {
+        text: streamedText,
+        toolCalls: streamedToolCalls, // These are of type CoreMessage.ToolCall
+        finishReason: streamedFinishReason,
+        usage: streamedUsage,
+        warnings: streamedWarnings,
+        rawResponse: streamedRawResponse,
+        providerMetadata: streamedProviderMetadata,
+        // Emulate the structure that processStep might expect from onStepFinish's stepResult.response
+        response: {
+          id: streamedRawResponse?.id || `response-${Date.now()}`, // Example ID
+          timestamp: streamedRawResponse?.timestamp || new Date(),
+          modelId: streamedRawResponse?.modelId || profile.model,
+          messages: [...allResponseMessages], // This will be updated later with assistant's response
+        }
+      };
+
+      // Aggregate usage from the current step
+      if (currentModelResponse.usage) {
+        const currentStepUsage = calculateLanguageModelUsage(currentModelResponse.usage);
+        usage = addLanguageModelUsage(usage, currentStepUsage);
+      }
+
+      // TODO: Process currentModelResponse (e.g., call tools, update allResponseMessages, decide next stepType)
+      // For now, this is where the old onStepFinish logic would partially go.
+      // We'll need to adapt processStep or replicate its relevant parts here.
+
+      // --- Start: Process text and parse tool calls from currentModelResponse ---
+      const currentStepText = currentModelResponse.text || "";
+      accumulatedText += currentStepText; // Simple accumulation for now
+
+      let currentStepToolCalls: { toolCallId: string, toolName: string, args: any }[] = []; // Type for parsed tool calls
+      const parsedToolCallsThisStep = [];
+      if (currentModelResponse.toolCalls && currentModelResponse.toolCalls.length > 0) {
+        for (const tc of currentModelResponse.toolCalls) { // tc is a LanguageModelToolCall from the model stream
+          let repairedTcToParse = null; // Holds the result of repairToolCall if needed
+
+          // Ensure args is a string for the initial parse attempt
+          let argsForInitialParse: string;
+          if (typeof tc.args === 'string') {
+            argsForInitialParse = tc.args;
+          } else {
+            argsForInitialParse = JSON.stringify(tc.args);
+          }
+          const initialToolCallToParse = {
+            toolCallId: tc.toolCallId,
+            toolName: tc.toolName,
+            args: argsForInitialParse,
+          };
+
+          try {
+            // First attempt to parse the original tool call
+            const parsedTc = await parseToolCall({
+              toolCall: initialToolCallToParse, // Use the version with stringified args
+              tools: toolSet,
+            });
+            parsedToolCallsThisStep.push(parsedTc);
+          } catch (error) {
+            // Initial parsing failed, attempt to repair
+            logger.warn(`Initial parsing failed for tool call ${tc.toolCallId} (${tc.toolName}), attempting repair. Error:`, error);
+
+            const repairedCallData = await repairToolCall({
+              toolCall: tc, // Pass original tc (with potentially non-string args) to repairToolCall
+              tools: toolSet,
+              error: error, // Pass the original error
+              messages: [...allResponseMessages], // Context for repair
+              system: systemPrompt,
+              // model: model, // repairToolCall has access to model via closure from the outer scope
+            });
+
+            if (repairedCallData && repairedCallData.toolCallId) {
+              let argsForRepairedParse: string;
+              if (typeof repairedCallData.args === 'string') {
+                argsForRepairedParse = repairedCallData.args;
+              } else {
+                argsForRepairedParse = JSON.stringify(repairedCallData.args);
+              }
+
+              repairedTcToParse = {
+                toolCallId: repairedCallData.toolCallId,
+                toolName: repairedCallData.toolName,
+                args: argsForRepairedParse,
+              };
+
+              logger.info(`Tool call ${tc.toolCallId} repaired. Attempting to parse repaired call:`, repairedTcToParse);
+              try {
+                const parsedRepairedTc = await parseToolCall({
+                  toolCall: repairedTcToParse,
+                  tools: toolSet,
+                });
+                parsedToolCallsThisStep.push(parsedRepairedTc);
+              } catch (repairedParsingError) {
+                logger.error(`Failed to parse *repaired* tool call ${repairedTcToParse.toolCallId}. Original error: ${error?.message}. Repair error: ${repairedParsingError?.message}`);
+                project.addLogMessage('error', `Failed to parse repaired tool call ${repairedTcToParse.toolCallId}: ${repairedParsingError.message}`);
+                stepType = 'done';
+                streamedFinishReason = 'error';
+                break;
+              }
+            } else {
+              logger.error(`Tool call ${tc.toolCallId} could not be repaired. Original error: ${error?.message}.`);
+              project.addLogMessage('error', `Unrepairable tool call ${tc.toolCallId}: ${error.message}`);
+              stepType = 'done';
+              streamedFinishReason = 'error';
+              break;
+            }
+          }
+        }
+      }
+      // Only assign if we haven't aborted the step by setting stepType = 'done'
+      if (stepType !== 'done') {
+        currentStepToolCalls = parsedToolCallsThisStep;
+      } else {
+        currentStepToolCalls = []; // Clear any partially parsed calls if step was aborted
+      }
+      logger.debug('Parsed step tool calls (after repair attempt):', currentStepToolCalls);
+      // --- End: Process text and parse tool calls ---
+
+      // --- Start: Execute parsed tool calls ---
+      let currentStepToolResults: { toolCallId: string, toolName: string, args: any, result: any, isError?: boolean }[] = [];
+      if (currentStepToolCalls && currentStepToolCalls.length > 0 && toolSet) {
+        try {
+          currentStepToolResults = await executeTools({
+            toolCalls: currentStepToolCalls, // These are already parsed and args are objects
+            tools: toolSet,
+            messages: [...allResponseMessages], // Pass current messages for context
+            abortSignal: this.abortController.signal,
+            // Optional: Pass tracer or telemetry if available and needed by your executeTools version or tool implementations
+          });
+          logger.debug('Tool execution results:', currentStepToolResults);
+        } catch (error) {
+          logger.error('Critical error during executeTools call:', error);
+          // This catch is for fundamental errors in executeTools setup or unexpected issues,
+          // as individual tool errors are typically returned within the results array.
+          project.addLogMessage('error', `Critical error during tool execution: ${error instanceof Error ? error.message : String(error)}`);
+          stepType = 'done'; // Halt on critical executeTools error
+        }
+      }
+      // --- End: Execute parsed tool calls ---
+
+      // --- Start: Update messages, determine next step, and call processStep ---
+
+      // Update allResponseMessages with the latest assistant message and tool results
+      const newMessages = toResponseMessages({
+        text: currentStepText, // Text from the current model response
+        toolCalls: currentModelResponse.toolCalls || [], // Raw tool calls from the model
+        toolResults: currentStepToolResults, // Results from executeTools
+        messageId: () => nanoid(), // Generate unique IDs for new messages
+      });
+      allResponseMessages.push(...newMessages);
+
+      stepCount++; // Increment step count after a step has been processed
+
+      let nextStepLogic = "default_done";
+
+      if (currentModelResponse.finishReason === 'abort') {
+        logger.info('Run aborted by user.');
+        nextStepLogic = "done_aborted";
+      } else if (stepCount >= profile.maxIterations) {
+        logger.info(`Max iterations (${profile.maxIterations}) reached.`);
+        nextStepLogic = "done_max_iterations";
+      } else if (currentModelResponse.finishReason === 'tool-calls') {
+        if (currentStepToolCalls && currentStepToolCalls.length > 0) {
+          nextStepLogic = "needs_model_call_for_tool_results";
+        } else {
+          logger.warn("Model finishReason was 'tool-calls' but no tool calls were parsed/provided.");
+          nextStepLogic = "done_unexpected_state_tool_calls_no_calls";
+        }
+      } else if (currentModelResponse.finishReason === 'length') {
+        logger.info("Model finishReason was 'length', indicating continuation may be needed.");
+        nextStepLogic = "needs_model_call_for_continuation";
+      } else if (currentModelResponse.finishReason === 'stop') {
+        // If finishReason is 'stop', but we did have tool calls that were just executed,
+        // we should loop back to the model with the tool results.
+        if (currentStepToolCalls && currentStepToolCalls.length > 0) {
+          nextStepLogic = "needs_model_call_for_tool_results";
+        } else {
+          nextStepLogic = "done_model_stopped";
+        }
+      } else if (currentModelResponse.finishReason === 'error') {
+        logger.info("Model stream ended with error. Step type set to done by stream error handling or here.");
+        nextStepLogic = "done_model_error";
+      } else if (currentStepToolCalls && currentStepToolCalls.length > 0) {
+        // This case handles scenarios where tools were called (e.g. model output text and tool_calls)
+        // but the finishReason might not have been 'tool-calls' explicitly (e.g. some models might output
+        // tool calls and then 'stop'). We've executed tools, so we need to feed results back.
+        nextStepLogic = "needs_model_call_for_tool_results";
+      } else {
+        logger.warn(`Unhandled finish reason: '${currentModelResponse.finishReason}' or no tool calls to process. Assuming current step is final.`);
+        nextStepLogic = "done_unhandled_reason";
+      }
+
+      if (nextStepLogic.startsWith("done")) {
+        stepType = "done";
+      } else {
+        stepType = "processing"; // Continue the loop
+      }
+
+      // Construct StepResult for this.processStep
+      // Ensure currentModelResponse and its fields are defined before accessing
+      const usageForStep = currentModelResponse.usage || { promptTokens: 0, completionTokens: 0 };
+      const responseForStep = currentModelResponse.response || {
+        id: nanoid(),
+        timestamp: new Date(),
+        modelId: profile.model,
+        messages: [], // This should be the messages up to the point of this response
+      };
+
+      const stepResultForCallback: StepResult<typeof toolSet> = {
+        text: currentStepText, // Text from the model for this step
+        toolCalls: currentModelResponse.toolCalls || [], // Raw tool calls from model for this step
+        toolResults: currentStepToolResults, // Results of execution for this step
+        finishReason: currentModelResponse.finishReason || 'unknown', // Ensure finishReason is not null/undefined
+        usage: usageForStep,
+        providerMetadata: currentModelResponse.providerMetadata,
+        warnings: currentModelResponse.warnings,
+        response: { // This 'response' object for processStep might need specific fields
+          id: responseForStep.id,
+          timestamp: responseForStep.timestamp,
+          modelId: responseForStep.modelId,
+          messages: [...allResponseMessages], // Pass the fully updated message history
+        },
+        // Optional fields like reasoning, files, sources, logprobs can be added if available
+      };
+
+      this.processStep(currentResponseId, stepResultForCallback, project, profile);
+      currentResponseId = null; // Reset for the next potential message stream
+
+      steps.push(stepResultForCallback); // Store step result
+
+      // --- End: Update messages, determine next step, and call processStep ---
+    }
+
+    // --- Start: onFinish logic (after while loop) ---
+    const finalFinishReason = currentModelResponse?.finishReason || (streamedFinishReason === 'abort' ? 'abort' : (stepCount >= profile.maxIterations ? 'max_iterations' : 'unknown'));
+    // Note: streamedFinishReason would hold 'error' if stream errored.
+    // currentModelResponse.finishReason would be from the last successful model interaction.
+
+    logger.info(`Agent run finished. Reason: ${finalFinishReason}, Steps: ${stepCount}`);
+    logger.info('Total usage for the run:', usage);
+    // --- End: onFinish logic ---
+
     try {
-      const model = createLlm(llmProvider, profile.model, await this.getLlmEnv(project));
-      const systemPrompt = await getSystemPrompt(project.baseDir, profile);
+      // const model = createLlm(llmProvider, profile.model, await this.getLlmEnv(project)); // Moved into loop
+      // const systemPrompt = await getSystemPrompt(project.baseDir, profile); // Moved into loop
 
       // repairToolCall function that attempts to repair tool calls
+      // This repairToolCall was part of the old streamText. We might need a similar mechanism for doStream if it doesn't handle it.
+      // For now, this is not directly used by doStream in the loop above.
       const repairToolCall = async ({ toolCall, tools, error, messages, system }) => {
-        logger.warn('Error during tool call:', { error, toolCall });
+        logger.warn('Error during tool call (Note: repairToolCall might need reintegration/rethinking with doStream):', { error, toolCall });
 
         if (NoSuchToolError.isInstance(error)) {
           // If the tool doesn't exist, return a call to the helper tool
@@ -548,69 +895,11 @@ export class Agent {
         }
       };
 
-      let currentResponseId: null | string = null;
+      let currentResponseId_original_declaration_location: null | string = null; // Original line, kept for reference, but new currentResponseId is used
 
-      const result = streamText({
-        providerOptions,
-        model,
-        system: systemPrompt,
-        messages,
-        tools: toolSet,
-        abortSignal: this.abortController.signal,
-        maxSteps: profile.maxIterations,
-        maxTokens: profile.maxTokens,
-        temperature: 0, // Keep deterministic for agent behavior
-        onError: ({ error }) => {
-          logger.error('Error during prompt:', { error });
-          if (typeof error === 'string') {
-            project.addLogMessage('error', error);
-            // @ts-expect-error checking keys in error
-          } else if (APICallError.isInstance(error) || ('message' in error && 'responseBody' in error)) {
-            project.addLogMessage('error', `${error.message}: ${error.responseBody}`);
-          } else if (error instanceof Error) {
-            project.addLogMessage('error', error.message);
-          } else {
-            project.addLogMessage('error', JSON.stringify(error));
-          }
-        },
-        onChunk: ({ chunk }) => {
-          if (chunk.type === 'text-delta') {
-            currentResponseId = project.processResponseMessage({
-              action: 'response',
-              content: chunk.textDelta,
-              finished: false,
-            });
-          }
-        },
-        onStepFinish: (stepResult) => {
-          const { response, finishReason } = stepResult;
+      // const result = streamText({ ... }); // Original streamText call is commented out
 
-          if (finishReason === 'error') {
-            logger.error('Error during prompt:', { stepResult });
-            return;
-          }
-
-          // Replace agentMessages with the latest full history from the response keeping the user message
-          agentMessages.length = 1;
-          agentMessages.push(...response.messages);
-
-          if (this.abortController?.signal.aborted) {
-            logger.info('Prompt aborted by user');
-            return;
-          }
-
-          this.processStep<typeof toolSet>(currentResponseId, stepResult, project, profile);
-
-          currentResponseId = null;
-        },
-        onFinish: ({ finishReason }) => {
-          logger.info(`Prompt finished. Reason: ${finishReason}`);
-        },
-        experimental_repairToolCall: repairToolCall,
-      });
-
-      // Consume the stream to ensure it runs to completion
-      await result.consumeStream();
+      // await result.consumeStream(); // Original consumeStream call is commented out
     } catch (error) {
       if (this.abortController?.signal.aborted) {
         logger.info('Prompt aborted by user');
@@ -635,7 +924,25 @@ export class Agent {
       });
     }
 
-    return agentMessages;
+    // Determine messages to return (specific to this run)
+    // `messages` here refers to the variable holding `await this.prepareMessages(project, profile);`
+    // `agentMessages` is the initial user prompt for this run.
+    // `initialResponseMessages` = `messages` (prepared history) + `agentMessages` (current prompt)
+    // `allResponseMessages` = `initialResponseMessages` + everything generated by the loop.
+    // We want to return messages starting from the current user prompt.
+    // The `messages` variable (passed into `initialResponseMessages`) included the history *and* the current user prompt.
+    // So, `initialResponseMessages` is the full list of messages at the start of the loop.
+    // The messages strictly generated *by the agent interaction loop* are `allResponseMessages.slice(initialResponseMessages.length)`.
+    // However, the function is expected to return messages including the user's prompt that triggered this run.
+
+    // `messages` was:
+    //    const messagesFromHistory = await this.prepareMessages(project, profile);
+    //    const currentUserPromptMessage = agentMessages[0]; // agentMessages was [{ role: 'user', content: prompt, ... }]
+    //    messages = [...messagesFromHistory, currentUserPromptMessage]; // This was the input to initialResponseMessages
+    // So, `initialResponseMessages.length - 1` is the count of historical messages.
+    const historyMessagesCount = initialResponseMessages.length - 1;
+    const runSpecificMessages = allResponseMessages.slice(historyMessagesCount);
+    return runSpecificMessages;
   }
 
   private async getLlmEnv(project: Project) {

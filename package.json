@@ -76,6 +76,7 @@
     "lodash": "^4.17.21",
     "mark.js": "^8.11.1",
     "match-sorter": "^8.0.0",
+    "nanoid": "^5.1.5",
     "object-hash": "^3.0.0",
     "ollama-ai-provider": "^1.2.0",
     "os-name": "^6.0.0",
