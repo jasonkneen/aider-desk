@@ -53,7 +53,7 @@ export const setupIpcHandlers = (
     projectManager.getProject(baseDir).answerQuestion(answer);
   });
 
-  ipcMain.on('drop-file', (_, baseDir: string, filePath: string) => {
+  ipcMain.on('drop-file', (_,  baseDir: string, filePath: string) => {
     void projectManager.getProject(baseDir).dropFile(filePath);
   });
 
@@ -377,5 +377,22 @@ export const setupIpcHandlers = (
 
   ipcMain.handle('query-usage-data', async (_, from: string, to: string) => {
     return dataManager.queryUsageData(new Date(from), new Date(to));
+  });
+
+  // Window control handlers
+  ipcMain.handle('minimize-window', () => {
+    mainWindow.minimize();
+  });
+
+  ipcMain.handle('maximize-window', () => {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  });
+
+  ipcMain.handle('close-window', () => {
+    mainWindow.close();
   });
 };

@@ -36,6 +36,10 @@ const initWindow = async (store: Store): Promise<BrowserWindow> => {
     x: lastWindowState.x,
     y: lastWindowState.y,
     show: false,
+    frame: false,
+    transparent: true,
+    titleBarStyle: 'hidden',
+    trafficLightPosition: { x: 10, y: 10 },
     autoHideMenuBar: true,
     icon,
     webPreferences: {
@@ -103,6 +107,7 @@ const initWindow = async (store: Store): Promise<BrowserWindow> => {
 
   // Initialize connector manager with the server
   const connectorManager = new ConnectorManager(mainWindow, projectManager, httpServer);
+  await connectorManager.init(httpServer);
 
   // Initialize Versions Manager (this also sets up listeners)
   const versionsManager = new VersionsManager(mainWindow, store);

@@ -1,6 +1,6 @@
-import { ModelInfo, ProjectData } from '@common/types';
+import { ModelInfo, ProjectData, OS } from '@common/types';
 import { useCallback, useEffect, useState } from 'react';
-import { MdBarChart, MdSettings, MdUpload } from 'react-icons/md';
+import { MdBarChart, MdSettings, MdUpload, MdMinimize, MdCropSquare, MdClose } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 
 import { UsageDashboard } from '@/components/usage/UsageDashboard';
@@ -27,6 +27,7 @@ export const Home = () => {
   const [releaseNotesContent, setReleaseNotesContent] = useState<string | null>(null);
   const [modelsInfo, setModelsInfo] = useState<Record<string, ModelInfo>>({});
   const [isUsageDashboardVisible, setIsUsageDashboardVisible] = useState(false);
+  const [currentOS, setCurrentOS] = useState<OS | null>(null);
 
   const activeProject = openProjects.find((project) => project.active) || openProjects[0];
 
@@ -38,6 +39,18 @@ export const Home = () => {
       const currentProjects = await window.api.getOpenProjects();
       setOpenProjects(currentProjects);
     }
+  };
+
+  const handleMinimize = () => {
+    window.electronAPI?.minimizeWindow();
+  };
+
+  const handleMaximize = () => {
+    window.electronAPI?.maximizeWindow();
+  };
+
+  const handleClose = () => {
+    window.electronAPI?.closeWindow();
   };
 
   const isAiderDeskUpdateAvailable = versions?.aiderDeskAvailableVersion && versions.aiderDeskAvailableVersion !== versions.aiderDeskCurrentVersion;
@@ -78,12 +91,25 @@ export const Home = () => {
         const info = await window.api.loadModelsInfo();
         setModelsInfo(info);
       } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error loading models info:', error);
+        console.error('Failed to load models info:', error);
       }
     };
 
     void loadModels();
+  }, []);
+
+  useEffect(() => {
+    const loadOS = async () => {
+      try {
+        const os = await window.api.getOS();
+        setCurrentOS(os);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error loading OS:', error);
+      }
+    };
+
+    void loadOS();
   }, []);
 
   const setActiveProject = async (baseDir: string) => {
@@ -177,60 +203,94 @@ export const Home = () => {
     setReleaseNotesContent(null);
   };
 
+  const isMacOS = currentOS === OS.MacOS;
+  const shouldShowWindowControls = currentOS && currentOS !== OS.MacOS;
+
   return (
-    <div className="flex flex-col h-screen p-[4px] bg-gradient-to-b from-neutral-950 to-neutral-900">
-      <div className="flex flex-col h-screen border-2 border-neutral-600 relative">
-        <div className="flex border-b-2 border-neutral-600 justify-between bg-gradient-to-b from-neutral-950 to-neutral-900">
-          <ProjectTabs
-            openProjects={openProjects}
-            activeProject={activeProject}
-            onAddProject={() => setIsOpenProjectDialogVisible(true)}
-            onSetActiveProject={setActiveProject}
-            onCloseProject={handleCloseProject}
-            onReorderProjects={handleReorderProjects}
-          />
-          <div className="flex items-center">
-            {showUpdateIcon && (
-              <IconButton
-                icon={<MdUpload className="h-5 w-5 text-neutral-100 animate-pulse animate-slow" />}
-                tooltip={getUpdateTooltip()}
-                onClick={() => {
-                  setShowSettingsTab(3);
-                }}
-                className="px-4 py-2 hover:text-neutral-200 hover:bg-neutral-700/30 transition-colors duration-200"
+    <div className="flex flex-col h-screen bg-gradient-to-b from-neutral-950 to-neutral-900">
+      {/* Custom title bar with window controls */}
+      <div className="window-drag custom-title-bar flex justify-between items-center h-8 bg-gradient-to-b from-neutral-950 to-neutral-900 border-b border-neutral-600">
+        {/* Left side - draggable area with macOS padding */}
+        <div className={`flex-1 h-full ${isMacOS ? 'pl-20' : ''}`} />
+        
+        {/* Right side - window controls (only on Windows/Linux) */}
+        {shouldShowWindowControls && (
+          <div className="window-no-drag window-controls">
+            <button className="window-control-button" onClick={handleMinimize} title="Minimize">
+              <MdMinimize />
+            </button>
+            <button className="window-control-button" onClick={handleMaximize} title="Maximize">
+              <MdCropSquare />
+            </button>
+            <button className="window-control-button close" onClick={handleClose} title="Close">
+              <MdClose />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Main content area */}
+      <div className="flex flex-col flex-1 p-[4px]">
+        <div className="flex flex-col h-full border-2 border-neutral-600 relative">
+          {/* Project tabs and settings bar */}
+          <div className="flex border-b-2 border-neutral-600 justify-between bg-gradient-to-b from-neutral-950 to-neutral-900">
+            <div className="window-no-drag flex-1">
+              <ProjectTabs
+                openProjects={openProjects}
+                activeProject={activeProject}
+                onAddProject={() => setIsOpenProjectDialogVisible(true)}
+                onSetActiveProject={setActiveProject}
+                onCloseProject={handleCloseProject}
+                onReorderProjects={handleReorderProjects}
               />
-            )}
-            <IconButton
+            </div>
+            <div className="window-no-drag flex items-center">
+              {showUpdateIcon && (
+                <IconButton
+                  icon={<MdUpload className="h-5 w-5 text-neutral-100 animate-pulse animate-slow" />}
+                  tooltip={getUpdateTooltip()}
+                  onClick={() => {
+                    setShowSettingsTab(3);
+                  }}
+                  className="px-4 py-2 hover:text-neutral-200 hover:bg-neutral-700/30 transition-colors duration-200"
+                />
+              )}
+              <IconButton
               icon={<MdBarChart className="h-5 w-5 text-neutral-200" />}
               tooltip={t('usageDashboard.title')}
               onClick={() => setIsUsageDashboardVisible(true)}
               className="px-4 py-2 hover:text-neutral-200 hover:bg-neutral-700/30 transition-colors duration-200"
             />
             <IconButton
-              icon={<MdSettings className="h-5 w-5 text-neutral-200" />}
-              tooltip={t('settings.title')}
-              onClick={() => {
-                setShowSettingsTab(0);
-              }}
-              className="px-4 py-2 hover:text-neutral-200 hover:bg-neutral-700/30 transition-colors duration-200"
-            />
+                icon={<MdSettings className="h-5 w-5 text-neutral-200" />}
+                tooltip={t('settings.title')}
+                onClick={() => {
+                  setShowSettingsTab(0);
+                }}
+                className="px-4 py-2 hover:text-neutral-200 hover:bg-neutral-700/30 transition-colors duration-200"
+              />
+            </div>
           </div>
-        </div>
-        {isOpenProjectDialogVisible && (
-          <OpenProjectDialog onClose={() => setIsOpenProjectDialogVisible(false)} onAddProject={handleAddProject} openProjects={openProjects} />
-        )}
-        {showSettingsTab !== null && <SettingsDialog onClose={() => setShowSettingsTab(null)} initialTab={showSettingsTab} />}
-        {isUsageDashboardVisible && <UsageDashboard onClose={() => setIsUsageDashboardVisible(false)} />}
+
+          {/* Dialogs */}
+          {isOpenProjectDialogVisible && (
+            <OpenProjectDialog onClose={() => setIsOpenProjectDialogVisible(false)} onAddProject={handleAddProject} openProjects={openProjects} />
+          )}
+          {showSettingsTab !== null && <SettingsDialog onClose={() => setShowSettingsTab(null)} initialTab={showSettingsTab} />}
+          {isUsageDashboardVisible && <UsageDashboard onClose={() => setIsUsageDashboardVisible(false)} />}
         {releaseNotesContent && versions && (
-          <HtmlInfoDialog
-            title={`${t('settings.about.releaseNotes')} - ${versions.aiderDeskCurrentVersion}`}
-            text={releaseNotesContent}
-            onClose={handleCloseReleaseNotes}
-          />
-        )}
-        {!releaseNotesContent && <TelemetryInfoDialog />}
-        <div className="flex-grow overflow-hidden relative">
-          {openProjects.length > 0 ? renderProjectPanels() : <NoProjectsOpen onOpenProject={() => setIsOpenProjectDialogVisible(true)} />}
+            <HtmlInfoDialog
+              title={`${t('settings.about.releaseNotes')} - ${versions.aiderDeskCurrentVersion}`}
+              text={releaseNotesContent}
+              onClose={handleCloseReleaseNotes}
+            />
+          )}
+          {!releaseNotesContent && <TelemetryInfoDialog />}
+
+          {/* Project content area */}
+          <div className="flex-grow overflow-hidden relative">
+            {openProjects.length > 0 ? renderProjectPanels() : <NoProjectsOpen onOpenProject={() => setIsOpenProjectDialogVisible(true)} />}
+          </div>
         </div>
       </div>
     </div>
