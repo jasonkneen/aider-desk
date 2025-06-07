@@ -114,7 +114,11 @@ const api: ApplicationAPI = {
   clearReleaseNotes: () => ipcRenderer.invoke('clear-release-notes'),
   getOS: (): Promise<OS> => ipcRenderer.invoke('get-os'),
   loadModelsInfo: () => ipcRenderer.invoke('load-models-info'),
-  queryUsageData: (from, to) => ipcRenderer.invoke('query-usage-data', from, to),
+    queryUsageData: (from, to) => ipcRenderer.invoke('query-usage-data', from, to),
+
+  // Theme-related methods
+  loadThemes: () => ipcRenderer.invoke('load-themes'),
+  saveThemes: (themes) => ipcRenderer.invoke('save-themes', themes),
 
   addResponseChunkListener: (baseDir, callback) => {
     const listenerId = uuidv4();

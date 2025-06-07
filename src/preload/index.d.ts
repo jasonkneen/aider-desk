@@ -24,6 +24,7 @@ import type {
   ModelInfo,
   TodoItem,
   UsageDataRow,
+  Theme,
 } from '@common/types';
 
 export interface ApplicationAPI {
@@ -94,6 +95,10 @@ export interface ApplicationAPI {
   getOS: () => Promise<OS>;
   loadModelsInfo: () => Promise<Record<string, ModelInfo>>;
   queryUsageData: (from: string, to: string) => Promise<UsageDataRow[]>;
+  
+  // Theme-related methods
+  loadThemes: () => Promise<{ themes: Theme[] }>;
+  saveThemes: (themes: Theme[]) => Promise<boolean>;
 
   addResponseChunkListener: (baseDir: string, callback: (event: Electron.IpcRendererEvent, data: ResponseChunkData) => void) => string;
   removeResponseChunkListener: (listenerId: string) => void;

@@ -57,10 +57,7 @@ type Props = {
 export const GeneralSettings = ({ settings, setSettings, onLanguageChange, onZoomChange, onFontChange }: Props) => {
   const { t } = useTranslation();
 
-  const themeOptions: Option[] = [
-    { label: t('settings.themeOptions.dark'), value: 'dark' },
-    { label: t('settings.themeOptions.light'), value: 'light' },
-  ];
+  // Theme options moved to ThemeSettings
 
   const fontOptions: Option[] = FONT_FAMILIES.map(font => ({
     label: t(`settings.fontOptions.${font}`),
@@ -97,12 +94,7 @@ export const GeneralSettings = ({ settings, setSettings, onLanguageChange, onZoo
     });
   };
 
-  const handleThemeChange = (value: string) => {
-    setSettings({
-      ...settings,
-      theme: value === 'light' ? 'light' : 'dark',
-    });
-  };
+  // Theme change handler moved to ThemeSettings
 
   const handleSuggestionModeChange = (mode: SuggestionMode) => {
     setSettings({
@@ -177,7 +169,7 @@ export const GeneralSettings = ({ settings, setSettings, onLanguageChange, onZoo
         <div className="grid grid-cols-2 gap-4 p-4">
           <LanguageSelector language={settings.language} onChange={onLanguageChange} />
           <Select label={t('settings.zoom')} options={ZOOM_OPTIONS} value={String(settings.zoomLevel ?? 1)} onChange={handleZoomChange} />
-          <Select label={t('settings.theme')} options={themeOptions} value={settings.theme ?? 'dark'} onChange={handleThemeChange} className="col-span-2" />
+          {/* Theme selector moved to ThemeSettings */}
           <Select 
             label={t('settings.fontFamily')} 
             options={fontOptions} 

@@ -29,6 +29,7 @@ export const DEFAULT_SETTINGS: SettingsData = {
   zoomLevel: 1,
   notificationsEnabled: false,
   theme: 'dark',
+  themeId: 'dark-default',
   aiderDeskAutoUpdate: true,
   aider: {
     options: '',

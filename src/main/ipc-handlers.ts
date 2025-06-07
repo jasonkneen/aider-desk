@@ -17,6 +17,7 @@ import logger from './logger';
 import { VersionsManager } from './versions-manager';
 import { TelemetryManager } from './telemetry-manager';
 import { DataManager } from './data-manager';
+import { ThemesManager } from './themes-manager';
 
 export const setupIpcHandlers = (
   mainWindow: BrowserWindow,
@@ -28,6 +29,7 @@ export const setupIpcHandlers = (
   modelInfoManager: ModelInfoManager,
   telemetryManager: TelemetryManager,
   dataManager: DataManager,
+  themesManager: ThemesManager,
 ) => {
   ipcMain.handle('load-settings', () => {
     return store.getSettings();
@@ -394,5 +396,15 @@ export const setupIpcHandlers = (
 
   ipcMain.handle('close-window', () => {
     mainWindow.close();
+  });
+
+  // Theme-related handlers
+  ipcMain.handle('load-themes', async () => {
+    return await themesManager.loadThemes();
+  });
+
+  ipcMain.handle('save-themes', async (_, themes) => {
+    await themesManager.saveThemes(themes);
+    return true;
   });
 };
