@@ -120,13 +120,15 @@ export const DEFAULT_AGENT_PROVIDER_MODELS: Partial<Record<LlmProviderName, stri
   gemini: ['gemini-2.5-pro', 'gemini-2.5-flash'],
   deepseek: ['deepseek-chat'],
   bedrock: ['us.anthropic.claude-3-7-sonnet-20250219-v1:0', 'anthropic.claude-3-7-sonnet-20250219-v1:0'],
+  openrouter: ['anthropic/claude-sonnet-4'],
+  requesty: ['anthropic/claude-sonnet-4-20250514'],
 };
 
 const DEFAULT_AGENT_PROFILE_ID = 'default';
 
 export const DEFAULT_AGENT_PROFILE: AgentProfile = {
   id: DEFAULT_AGENT_PROFILE_ID,
-  name: 'Default',
+  name: 'Aider',
   provider: 'anthropic',
   model: DEFAULT_AGENT_PROVIDER_MODELS.anthropic![0],
   maxIterations: 20,
