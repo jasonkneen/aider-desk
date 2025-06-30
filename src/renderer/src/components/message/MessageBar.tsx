@@ -44,7 +44,8 @@ export const MessageBar = ({ content, usageReport, remove, redo, edit }: Props) 
   };
 
   return (
-    <div className="mt-3 pt-3 h-[30px] flex items-center justify-end gap-3 border-t px-1 relative" style={{ borderColor: 'var(--theme-border-primary)' }}>	
+          
+      <div className="flex flex-col gap-2" >	
       {usageReport && (
         <div className="mt-[4px] flex items-center gap-3 px-2 text-2xs transition-colors" style={{ color: 'var(--theme-foreground-tertiary)' }}>
           {usageReport.cacheWriteTokens && usageReport.cacheWriteTokens > 0 ? (
@@ -57,22 +58,9 @@ export const MessageBar = ({ content, usageReport, remove, redo, edit }: Props) 
               <FaUpload className="w-2.5 h-2.5 mb-[3px] mr-0.5" /> {usageReport.cacheReadTokens}
             </span>
           ) : null}
-    <div className="mt-3 pt-3 h-[30px] flex items-center justify-end gap-2 border-t px-1 relative" style={{ borderColor: 'var(--theme-border-primary)' }}>
-      {usageReport && (
-        <div className="mt-[4px] flex items-center gap-3 px-2 text-2xs transition-colors" style={{ color: 'var(--theme-foreground-tertiary)' }}>
-          <span className="flex items-center gap-1" data-tooltip-id="usage-info-tooltip" data-tooltip-content={t('responseMessage.inputTokens')}>
-            <FaArrowRightToBracket className="w-2.5 h-2.5 mb-[3px] mr-0.5 rotate-90" /> {usageReport.sentTokens}
-          </span>
-          <span className="flex items-center gap-1" data-tooltip-id="usage-info-tooltip" data-tooltip-content={t('responseMessage.outputTokens')}>
-            <FaArrowRightFromBracket className="w-2.5 h-2.5 mb-[3px] mr-0.5 -rotate-90" /> {usageReport.receivedTokens}
-          </span>
-          {usageReport.messageCost > 0 && (
-            <span className="flex items-center gap-1">
-              <FaDollarSign className="w-2.5 h-2.5 mb-[3px]" /> {usageReport.messageCost.toFixed(5)}
-            </span>
-          )}
         </div>
       )}
+      <div className="mt-3 pt-3 h-[30px] flex items-center justify-end gap-3 border-t px-1 relative" style={{ borderColor: 'var(--theme-border-primary)' }}>	
       <CopyMessageButton content={content} className="transition-colors text-[var(--theme-foreground-tertiary)] hover:text-[var(--theme-accent-primary)]" alwaysShow={true} />
       {(remove || redo || edit) && (
         <div ref={buttonRef}>
@@ -140,9 +128,10 @@ export const MessageBar = ({ content, usageReport, remove, redo, edit }: Props) 
                 <span className="whitespace-nowrap mb-[-4px]">{t('messages.delete')}</span>
               </li>
             )}
-          </ul>
+                </ul>
         </div>
-      )}
-    </div>
+          )}
+        </div>
+      </div>    
   );
 };
