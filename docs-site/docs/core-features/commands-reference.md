@@ -1,5 +1,4 @@
 ---
-sidebar_position: 5
 title: "Built-in Commands"
 sidebar_label: "Commands"
 ---

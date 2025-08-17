@@ -1,5 +1,4 @@
 ---
-sidebar_position: 8
 title: "Session Management"
 sidebar_label: "Sessions"
 ---
@@ -18,7 +17,7 @@ You can manually save, load, and manage named sessions using the **Sessions Popu
 
 ### Accessing the Sessions Popup
 
-Click the **History** icon (<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock-history" viewBox="0 0 16 16"><path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022l-.074.997zm2.004.45a7.003 7.003 0 0 0-.985-.299l.219-.976c.383.086.76.2 1.126.342l-.36.933zm1.37.71a7.01 7.01 0 0 0-.439-.27l.493-.87a8.025 8.025 0 0 1 .979.654l-.615.789a6.996 6.996 0 0 0-.418-.302zm1.834 1.798a6.99 6.99 0 0 0-.653-.796l.724-.69a8.025 8.025 0 0 1 1.287 1.387l-.837.545z"/><path d="M8 5.5a.5.5 0 0 1 .5.5v2.5a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm-2.493 5.01A7 7 0 1 1 15 8a.5.5 0 0 1-1 0 6 6 0 1 0-9.583 4.29l.478-.856a.5.5 0 0 1 .866.486l-.608 1.082a.5.5 0 0 1-.866-.486l.116-.207a.5.5 0 0 1-.42-.64l.013-.025z"/></svg>) in the project bar at the top of the chat window.
+Click the **Sessions** icon n the project bar at the top of the chat window. ![Sessions Icon](../images/sessions-icon.png)
 
 ### Features
 

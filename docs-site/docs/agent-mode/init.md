@@ -1,10 +1,9 @@
 ---
-sidebar_position: 2
-title: "Project Analysis" 
-sidebar_label: "Project Analysis"
+title: "AGENTS.md"
+sidebar_label: "AGENTS.md"
 ---
 
-# `/init` Command
+# Create AGENTS.md with `/init` command
 
 The `/init` command is a powerful feature that helps the AI agent understand the specifics of your project. It automatically analyzes your codebase and generates a special `AGENTS.md` file in your current project.
 

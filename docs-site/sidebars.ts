@@ -32,6 +32,7 @@ const sidebars: SidebarsConfig = {
         'core-features/custom-commands',
         'core-features/reviewing-code-changes',
         'core-features/session-management',
+        'core-features/usage-dashboard',
       ],
     },
     {
@@ -40,11 +41,13 @@ const sidebars: SidebarsConfig = {
       collapsed: true,
       items: [
         'agent-mode/agent-mode',
-        'agent-mode/init',
-        'agent-mode/task-management',
+        'agent-mode/how-to-use',
+        'agent-mode/agent-profiles',
         'agent-mode/aider-tools',
         'agent-mode/power-tools',
         'agent-mode/mcp-servers',
+        'agent-mode/init',
+        'agent-mode/task-management',
       ],
     },
     {
@@ -53,6 +56,7 @@ const sidebars: SidebarsConfig = {
       collapsed: true,
       items: [
         'configuration/settings',
+        'configuration/providers',
         'configuration/aider-configuration',
         'configuration/project-specific-rules',
         'configuration/prompt-behavior',

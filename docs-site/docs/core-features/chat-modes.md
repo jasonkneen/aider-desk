@@ -1,5 +1,4 @@
 ---
-sidebar_position: 4
 title: "Chat Modes"
 sidebar_label: "Chat Modes"
 ---

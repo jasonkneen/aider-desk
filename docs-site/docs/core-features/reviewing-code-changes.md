@@ -1,7 +1,5 @@
 ---
-sidebar_position: 7
-title: "Reviewing Code Changes"
-sidebar_label: "Code Changes"
+sidebar_label: "Diff Viewer"
 ---
 
 # Reviewing Code Changes
@@ -17,6 +15,8 @@ Whenever Aider modifies a file, the changes are presented in a **diff view** wit
 - **Darker shades** within a highlighted line pinpoint the exact characters that were changed.
 
 This visual format makes it easy to quickly assess the impact and correctness of the AI's modifications.
+
+![Diff Viewer](../images/diff-viewer.png)
 
 ## Understanding Aider's Diff Format
 

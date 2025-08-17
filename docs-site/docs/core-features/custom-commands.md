@@ -1,5 +1,4 @@
 ---
-sidebar_position: 6
 title: "Custom Commands"
 sidebar_label: "Custom Commands"
 ---
