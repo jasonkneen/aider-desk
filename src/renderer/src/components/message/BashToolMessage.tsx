@@ -21,7 +21,7 @@ export const BashToolMessage = ({ message, onRemove, compact = false }: Props) =
   const isError = content && typeof content === 'object' && 'exitCode' in content && content.exitCode !== 0;
 
   const title = (
-    <div className="flex items-center gap-2 w-full">
+    <div className="flex items-center gap-2 w-full text-left">
       <div className="text-text-muted">
         <RiTerminalLine className="w-4 h-4" />
       </div>
