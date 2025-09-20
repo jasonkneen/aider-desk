@@ -283,10 +283,10 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
       setText(newText);
     };
 
-    const prepareForNextPrompt = () => {
+    const prepareForNextPrompt = useCallback(() => {
       setTextWithDispatch('');
       setPendingCommand(null);
-    };
+    }, []);
 
     const executeCommand = useCallback(
       (command: string, args?: string): void => {
@@ -781,7 +781,6 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
           <div className="relative flex-shrink-0">
             <CodeMirror
               ref={editorRef}
-              value={text}
               onChange={onChange}
               placeholder={question ? t('promptField.questionPlaceholder') : t(`promptField.placeholders.${placeholderIndex}`)}
               editable={!disabled}
