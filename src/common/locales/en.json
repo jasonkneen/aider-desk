@@ -209,6 +209,9 @@
     "sessionToken": "Session Token",
     "sessionTokenTooltip": "Optional session token for temporary credentials."
   },
+  "cerebras": {
+    "apiKey": "API Key"
+  },
   "openRouter": {
     "apiKey": "API Key",
     "modelPlaceholder": "e.g. anthropic/claude-3.7-sonnet"
@@ -226,6 +229,7 @@
   "providers": {
     "anthropic": "Anthropic",
     "bedrock": "Bedrock",
+    "cerebras": "Cerebras",
     "deepseek": "Deepseek",
     "gemini": "Gemini",
     "groq": "Groq",

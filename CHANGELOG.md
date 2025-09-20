@@ -11,6 +11,7 @@
 - added warning for Gemini models' tool limitation with search grounding
 - added compact information about current actions to subagent messages
 - added 'clear_context' tool to AiderDesk MCP server
+- added Cerebras provider
 
 ## [0.31.0]
 
