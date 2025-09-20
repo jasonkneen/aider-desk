@@ -10,9 +10,10 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 type Props = {
   message: ToolMessage;
   onRemove?: () => void;
+  compact?: boolean;
 };
 
-export const BashToolMessage = ({ message, onRemove }: Props) => {
+export const BashToolMessage = ({ message, onRemove, compact = false }: Props) => {
   const { t } = useTranslation();
 
   const command = message.args.command as string;
@@ -73,6 +74,10 @@ export const BashToolMessage = ({ message, onRemove }: Props) => {
       </div>
     );
   };
+
+  if (compact) {
+    return title;
+  }
 
   return <ExpandableMessageBlock title={title} content={renderContent()} usageReport={message.usageReport} onRemove={onRemove} />;
 };

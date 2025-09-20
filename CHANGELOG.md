@@ -9,6 +9,7 @@
 - yes-always options correctly respected
 - correctly using the selected edit format in Architect mode
 - added warning for Gemini models' tool limitation with search grounding
+- added compact information about current actions to subagent messages
 
 ## [0.31.0]
 
