@@ -227,6 +227,7 @@ src/
           StyledTooltip.tsx
           TextArea.tsx
           TriStateCheckbox.tsx
+          WarningIcon.tsx
         ContextFiles/
           ContextFiles.css
           ContextFiles.tsx
@@ -620,6 +621,12 @@ def tool_warning(self, message="", strip=True)
 def is_error_ignored(self, message)
 ⋮----
 def tool_error(self, message="", strip=True)
+⋮----
+result = None
+⋮----
+result = "y"
+⋮----
+result = "n"
 ⋮----
 # Reset the result
 ⋮----
@@ -1284,7 +1291,8 @@ File: src/common/locales/en.json
     "includeThoughts": "Include thoughts",
     "includeThoughtsTooltip": "When enabled, the model's internal thought process will be included in the conversation.",
     "useSearchGrounding": "Use Search grounding",
-    "useSearchGroundingTooltip": "When enabled, the model will use search results to ground its responses, improving accuracy and relevance."
+    "useSearchGroundingTooltip": "When enabled, the model will use search results to ground its responses, improving accuracy and relevance.",
+    "useSearchGroundingWarning": "When enabled, Gemini models are not able to use tools, e.g. Power tools, MCP tools, etc."
   },
   "groq": {
     "apiKey": "API Key",
@@ -1582,7 +1590,8 @@ File: src/common/locales/en.json
     "projectPathPlaceholder": "Type the path to your project or use icon to browse",
     "openButton": "Open",
     "browseFoldersTooltip": "Browse folders",
-    "projectAlreadyOpenWarning": "This project is already open."
+    "projectAlreadyOpenWarning": "This project is already open.",
+    "cantOpenProject": "This project can not be opened."
   },
   "mode": {
     "code": "Code",
@@ -2186,7 +2195,8 @@ File: src/common/locales/zh.json
     "includeThoughts": "包含思考过程",
     "includeThoughtsTooltip": "启用后，代理的内部思考过程将包含在对话历史中，这有助于调试或理解其决策。",
     "useSearchGrounding": "使用搜索基础",
-    "useSearchGroundingTooltip": "启用后，代理将使用搜索结果作为其响应的基础，从而提高准确性和相关性。"
+    "useSearchGroundingTooltip": "启用后，代理将使用搜索结果作为其响应的基础，从而提高准确性和相关性。",
+    "useSearchGroundingWarning": "当启用时，Gemini 模型的工具使用受到限制。"
   },
   "groq": {
     "apiKey": "API 密钥",
@@ -2436,7 +2446,8 @@ File: src/common/locales/zh.json
     "projectPathPlaceholder": "输入项目路径或使用图标浏览",
     "openButton": "打开",
     "browseFoldersTooltip": "浏览文件夹",
-    "projectAlreadyOpenWarning": "此项目已打开。"
+    "projectAlreadyOpenWarning": "此项目已打开。",
+    "cantOpenProject": "无法打开此项目。"
   },
   "mode": {
     "code": "代码",
@@ -8785,6 +8796,26 @@ type Props = InputHTMLAttributes<HTMLInputElement> & {
 };
 
 ================
+File: src/renderer/src/components/common/WarningIcon.tsx
+================
+import { FaExclamationTriangle } from 'react-icons/fa';
+import { ReactNode } from 'react';
+import { clsx } from 'clsx';
+⋮----
+import { IconButton } from './IconButton';
+⋮----
+type Props = {
+  tooltip: ReactNode;
+  tooltipId?: string;
+  className?: string;
+  size?: 'sm' | 'md' | 'lg';
+};
+⋮----
+export const WarningIcon = (
+⋮----
+className=
+
+================
 File: src/renderer/src/components/ContextFiles/ContextFiles.css
 ================
 .rct-tree-items-container {
@@ -10503,6 +10534,10 @@ const completionSource = async (context: CompletionContext): Promise<CompletionR
 ⋮----
 // Ensure cursor is at the end after appending text
 ⋮----
+const setTextWithDispatch = (newText: string) =>
+⋮----
+const prepareForNextPrompt = () =>
+⋮----
 url = commandArgs; // Only URL provided
 ⋮----
 filePath = undefined; // If only spaces after URL, treat as no filePath
@@ -10512,8 +10547,6 @@ const requiresConfirmation = (command: string): boolean =>
 const handleConfirmCommand = () =>
 ⋮----
 const onChange = (newText: string) =>
-⋮----
-const prepareForNextPrompt = () =>
 ⋮----
 const handleSubmit = () =>
 ⋮----
@@ -10635,6 +10668,7 @@ import { Slider } from '@/components/common/Slider';
 import { Checkbox } from '@/components/common/Checkbox';
 import { InfoIcon } from '@/components/common/InfoIcon';
 import { useEffectiveEnvironmentVariable } from '@/hooks/useEffectiveEnvironmentVariable';
+import { WarningIcon } from '@/components/common/WarningIcon';
 ⋮----
 type Props = {
   provider: GeminiProvider;
@@ -10656,6 +10690,7 @@ label=
 ? t('settings.agent.envVarFoundPlaceholder',
 ⋮----
 <InfoIcon tooltip=
+⋮----
 
 ================
 File: src/renderer/src/components/settings/agent/providers/GroqParameters.tsx
