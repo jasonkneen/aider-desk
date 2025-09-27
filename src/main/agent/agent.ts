@@ -68,7 +68,7 @@ import { createSubagentsToolset } from '@/agent/tools/subagents';
 const MAX_RETRIES = 3;
 
 export class Agent {
-  private abortController: AbortController | null = null;
+  private abortControllers: Record<string, AbortController> = {};
   private aiderEnv: Record<string, string> | null = null;
   private lastToolCallTime: number = 0;
 
@@ -531,9 +531,9 @@ export class Agent {
     // Create new abort controller for this run only if abortSignal is not provided
     const shouldCreateAbortController = !abortSignal;
     if (shouldCreateAbortController) {
-      this.abortController = new AbortController();
+      this.abortControllers[project.baseDir] = new AbortController();
     }
-    const effectiveAbortSignal = abortSignal || this.abortController?.signal;
+    const effectiveAbortSignal = abortSignal || this.abortControllers[project.baseDir]?.signal;
 
     const llmProvider = provider.provider;
     const cacheControl = this.modelManager.getCacheControl(profile, llmProvider);
@@ -877,7 +877,7 @@ export class Agent {
     } finally {
       // Clean up abort controller only if we created it
       if (shouldCreateAbortController) {
-        this.abortController = null;
+        delete this.abortControllers[project.baseDir];
       }
 
       // Always send a final "finished" message, regardless of whether there was text or tools
@@ -1008,9 +1008,9 @@ export class Agent {
     }
   }
 
-  interrupt() {
-    logger.info('Interrupting Agent run');
-    this.abortController?.abort();
+  interrupt(baseDir: string) {
+    logger.info('Interrupting Agent run', { baseDir });
+    this.abortControllers[baseDir]?.abort();
   }
 
   private processStep<TOOLS extends ToolSet>(

@@ -6,6 +6,7 @@
 - added model library for provider and model management
 - allow to customize AIDER_DESK_DATA_DIR via environment variable
 - added support for Azure provider
+- fixed not being possible to interrupt agent run when switching between projects
 
 ## [0.32.0]
 

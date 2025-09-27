@@ -1266,7 +1266,7 @@ export class Project {
     }
 
     this.findMessageConnectors('interrupt-response').forEach((connector) => connector.sendInterruptResponseMessage());
-    this.agent.interrupt();
+    this.agent.interrupt(this.baseDir);
     this.promptFinished();
   }
 
