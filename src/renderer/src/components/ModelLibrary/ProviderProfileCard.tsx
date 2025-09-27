@@ -10,6 +10,7 @@ import { IconButton } from '@/components/common/IconButton';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import {
   AnthropicIcon,
+  AzureIcon,
   BedrockIcon,
   CerebrasIcon,
   DeepseekIcon,
@@ -28,6 +29,7 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 
 const PROVIDER_ICON_MAP: Record<LlmProviderName, ComponentType<{ width?: number; height?: number; className?: string }>> = {
   anthropic: AnthropicIcon,
+  azure: AzureIcon,
   bedrock: BedrockIcon,
   cerebras: CerebrasIcon,
   deepseek: DeepseekIcon,

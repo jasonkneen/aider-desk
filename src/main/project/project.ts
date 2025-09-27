@@ -1119,7 +1119,10 @@ export class Project {
       editFormat,
     });
 
-    this.sendSetModels(mainModelName, weakModelName, editFormat, { ...envFromMain, ...envFromWeak });
+    this.sendSetModels(mainModelName, weakModelName, editFormat, {
+      ...envFromMain,
+      ...envFromWeak,
+    });
   }
 
   private sendSetModels(mainModel: string, weakModel: string | null, editFormat: EditFormat = 'diff', environmentVariables?: Record<string, string>) {
@@ -1488,20 +1491,20 @@ export class Project {
       return;
     }
 
-    const tokens = await this.debouncedEstimateTokens(agentProfile);
-
-    if (tokens !== undefined) {
-      this.updateTokensInfo({
-        agent: {
-          cost: this.agentTotalCost,
-          tokens,
-          tokensEstimated: true,
-        },
-      });
-    }
+    void this.debouncedEstimateTokens(agentProfile);
   }
 
-  debouncedEstimateTokens = debounce(async (agentProfile: AgentProfile) => this.agent.estimateTokens(this, agentProfile), 1000);
+  private debouncedEstimateTokens = debounce(async (agentProfile: AgentProfile) => {
+    const tokens = await this.agent.estimateTokens(this, agentProfile);
+
+    this.updateTokensInfo({
+      agent: {
+        cost: this.agentTotalCost,
+        tokens,
+        tokensEstimated: true,
+      },
+    });
+  }, 500);
 
   settingsChanged(oldSettings: SettingsData, newSettings: SettingsData) {
     const projectSettings = this.store.getProjectSettings(this.baseDir);

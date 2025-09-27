@@ -17,6 +17,7 @@ import { openaiCompatibleProviderStrategy } from './providers/openai-compatible'
 import { openrouterProviderStrategy } from './providers/openrouter';
 import { requestyProviderStrategy } from './providers/requesty';
 import { vertexAiProviderStrategy } from './providers/vertex-ai';
+import { azureProviderStrategy } from './providers/azure';
 
 import type { JSONValue, LanguageModel, LanguageModelUsage } from 'ai';
 
@@ -52,6 +53,7 @@ export class ModelManager {
   private providerRegistry: LlmProviderRegistry = {
     anthropic: anthropicProviderStrategy,
     openai: openaiProviderStrategy,
+    azure: azureProviderStrategy,
     gemini: geminiProviderStrategy,
     'vertex-ai': vertexAiProviderStrategy,
     deepseek: deepseekProviderStrategy,

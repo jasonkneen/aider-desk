@@ -22,6 +22,7 @@ import {
 // TODO: move to providers.ts
 export type LlmProviderName =
   | 'anthropic'
+  | 'azure'
   | 'bedrock'
   | 'cerebras'
   | 'deepseek'
@@ -46,6 +47,7 @@ export interface OllamaProvider extends LlmProviderBase {
 
 export const AVAILABLE_PROVIDERS: LlmProviderName[] = [
   'anthropic',
+  'azure',
   'bedrock',
   'cerebras',
   'deepseek',
@@ -66,6 +68,14 @@ export interface OpenAiProvider extends LlmProviderBase {
   reasoningEffort?: ReasoningEffort;
 }
 export const isOpenAiProvider = (provider: LlmProviderBase): provider is OpenAiProvider => provider.name === 'openai';
+
+export interface AzureProvider extends LlmProviderBase {
+  name: 'azure';
+  apiKey: string;
+  resourceName: string;
+  apiVersion?: string;
+}
+export const isAzureProvider = (provider: LlmProviderBase): provider is AzureProvider => provider.name === 'azure';
 
 export interface AnthropicProvider extends LlmProviderBase {
   name: 'anthropic';
@@ -163,6 +173,7 @@ export const isRequestyProvider = (provider: LlmProviderBase): provider is Reque
 export type LlmProvider =
   | OpenAiProvider
   | AnthropicProvider
+  | AzureProvider
   | GeminiProvider
   | VertexAiProvider
   | LmStudioProvider
@@ -335,6 +346,7 @@ export const COMPACT_CONVERSATION_AGENT_PROFILE: AgentProfile = {
 };
 
 // TODO: move to providers.ts
+export const AZURE_DEFAULT_API_VERSION = '2025-01-01-preview';
 export const getDefaultProviderParams = (providerName: LlmProviderName): LlmProvider => {
   let provider: LlmProvider;
 
@@ -348,6 +360,14 @@ export const getDefaultProviderParams = (providerName: LlmProviderName): LlmProv
         name: 'openai',
         apiKey: '',
       } satisfies OpenAiProvider;
+      break;
+    case 'azure':
+      provider = {
+        name: 'azure',
+        apiKey: '',
+        resourceName: '',
+        apiVersion: AZURE_DEFAULT_API_VERSION,
+      } satisfies AzureProvider;
       break;
     case 'anthropic':
       provider = {

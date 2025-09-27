@@ -279,6 +279,11 @@
     "apiKey": "API 密钥",
     "modelPlaceholder": "例如 claude-4-sonnet"
   },
+  "azure": {
+    "apiKey": "API 密钥",
+    "resourceName": "资源名称",
+    "apiVersion": "API 版本"
+  },
   "providers": {
     "anthropic": "Anthropic",
     "bedrock": "Bedrock",
@@ -293,20 +298,7 @@
     "openrouter": "OpenRouter",
     "requesty": "Requesty",
     "vertex-ai": "Vertex AI",
-    "auto": {
-      "anthropic": "自动检测的 Anthropic",
-      "bedrock": "自动检测的 Bedrock",
-      "deepseek": "自动检测的 Deepseek",
-      "gemini": "自动检测的 Gemini",
-      "groq": "自动检测的 Groq",
-      "lmstudio": "自动检测的 LM Studio",
-      "ollama": "自动检测的 Ollama",
-      "openai": "自动检测的 OpenAI",
-      "openai-compatible": "自动检测的 OpenAI Compatible",
-      "openrouter": "自动检测的 OpenRouter",
-      "requesty": "自动检测的 Requesty",
-      "vertex-ai": "自动检测的 Vertex AI"
-    }
+    "azure": "Azure"
   },
   "select": {
     "placeholder": "选择选项",

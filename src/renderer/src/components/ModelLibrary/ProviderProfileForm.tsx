@@ -7,6 +7,7 @@ import { FaPlus, FaTrash } from 'react-icons/fa';
 
 import {
   AnthropicParameters,
+  AzureParameters,
   BedrockParameters,
   DeepseekParameters,
   GeminiParameters,
@@ -32,6 +33,7 @@ type ProviderParametersProps<T extends LlmProvider> = {
 // @ts-expect-error using LlmProvider as type
 const PROVIDER_PARAMETERS_MAP: Record<LlmProviderName, ComponentType<ProviderParametersProps>> = {
   anthropic: AnthropicParameters,
+  azure: AzureParameters,
   bedrock: BedrockParameters,
   deepseek: DeepseekParameters,
   gemini: GeminiParameters,

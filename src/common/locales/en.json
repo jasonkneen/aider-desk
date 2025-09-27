@@ -282,6 +282,11 @@
     "baseUrl": "Base URL",
     "baseUrlPlaceholder": "e.g. http://localhost:1234/v1"
   },
+  "azure": {
+    "apiKey": "API Key",
+    "resourceName": "Resource Name",
+    "apiVersion": "API Version"
+  },
   "providers": {
     "anthropic": "Anthropic",
     "bedrock": "Bedrock",
@@ -296,20 +301,7 @@
     "openrouter": "OpenRouter",
     "requesty": "Requesty",
     "vertex-ai": "Vertex AI",
-    "auto": {
-      "anthropic": "Auto-detected Anthropic",
-      "bedrock": "Auto-detected Bedrock",
-      "deepseek": "Auto-detected Deepseek",
-      "gemini": "Auto-detected Gemini",
-      "groq": "Auto-detected Groq",
-      "lmstudio": "Auto-detected LM Studio",
-      "ollama": "Auto-detected Ollama",
-      "openai": "Auto-detected OpenAI",
-      "openai-compatible": "Auto-detected OpenAI Compatible",
-      "openrouter": "Auto-detected OpenRouter",
-      "requesty": "Auto-detected Requesty",
-      "vertex-ai": "Auto-detected Vertex AI"
-    }
+    "azure": "Azure"
   },
   "select": {
     "placeholder": "Select an option",

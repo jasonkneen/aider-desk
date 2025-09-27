@@ -5,6 +5,7 @@
 - fixed issue with diff edit format not being set correctly on startup
 - added model library for provider and model management
 - allow to customize AIDER_DESK_DATA_DIR via environment variable
+- added support for Azure provider
 
 ## [0.32.0]
 

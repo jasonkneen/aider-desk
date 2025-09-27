@@ -1,4 +1,5 @@
 export { AnthropicIcon } from './AnthropicIcon';
+export { AzureIcon } from './AzureIcon';
 export { BedrockIcon } from './BedrockIcon';
 export { CerebrasIcon } from './CerebrasIcon';
 export { DeepseekIcon } from './DeepseekIcon';
