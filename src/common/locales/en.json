@@ -286,7 +286,8 @@
   "azure": {
     "apiKey": "API Key",
     "resourceName": "Resource Name",
-    "apiVersion": "API Version"
+    "apiVersion": "API Version",
+    "addCustomModelInfo": "Models cannot be loaded automatically for Azure provider and you need to add them manually using ”+ Add Model”, ensuring the model name matches the deployment name."
   },
   "providers": {
     "anthropic": "Anthropic",

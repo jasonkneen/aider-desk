@@ -81,6 +81,9 @@ export const AzureParameters = ({ provider, onChange }: Props) => {
           }
         />
       </div>
+      <div className="p-3 bg-info-subtle rounded-lg border border-info-light-emphasis !mt-4">
+        <p className="text-xs text-info-lightest">{t('azure.addCustomModelInfo')}</p>
+      </div>
     </div>
   );
 };
