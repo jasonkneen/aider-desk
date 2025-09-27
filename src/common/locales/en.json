@@ -102,7 +102,8 @@
       "sort": "Sort",
       "sortDescription": "Sort providers by price or throughput.",
       "requireParameters": "Require Parameters",
-      "requireParametersDescription": "Only use providers that support all parameters in your request."
+      "requireParametersDescription": "Only use providers that support all parameters in your request.",
+      "setupLater": "You can also configure the providers and models in Model Library later."
     },
     "agent": {
       "title": "Meet Your AI Agent",
