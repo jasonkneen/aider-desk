@@ -8,6 +8,7 @@
 - added support for Azure provider
 - fixed not being possible to interrupt agent run when switching between projects
 - fixed issue with context files not being highlighted in All files mode on Windows
+- improved parsing of thinking blocks to avoid nested issues
 
 ## [0.32.0]
 
