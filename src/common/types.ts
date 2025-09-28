@@ -516,7 +516,6 @@ export interface ModelInfo {
   outputCostPerToken: number;
   cacheWriteInputTokenCost?: number;
   cacheReadInputTokenCost?: number;
-  supportsTools: boolean;
 }
 
 export interface Task {

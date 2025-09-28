@@ -9,6 +9,7 @@
 - fixed not being possible to interrupt agent run when switching between projects
 - fixed issue with context files not being highlighted in All files mode on Windows
 - improved parsing of thinking blocks to avoid nested issues
+- using models.dev to load models metadata
 
 ## [0.32.0]
 

@@ -1,4 +1,4 @@
-import { ModelInfo, ProjectData } from '@common/types';
+import { ProjectData } from '@common/types';
 import { useCallback, useEffect, useState } from 'react';
 import { MdBarChart, MdSettings, MdUpload } from 'react-icons/md';
 import { PiNotebookFill } from 'react-icons/pi';
@@ -30,7 +30,6 @@ export const Home = () => {
   const [isTabbing, setIsTabbing] = useState(false);
   const [showSettingsTab, setShowSettingsTab] = useState<number | null>(null);
   const [releaseNotesContent, setReleaseNotesContent] = useState<string | null>(null);
-  const [modelsInfo, setModelsInfo] = useState<Record<string, ModelInfo>>({});
   const [isUsageDashboardVisible, setIsUsageDashboardVisible] = useState(false);
   const [isModelLibraryVisible, setIsModelLibraryVisible] = useState(false);
   const [hasShownUpdateNotification, setHasShownUpdateNotification] = useState(false);
@@ -95,20 +94,6 @@ export const Home = () => {
     };
 
     void checkReleaseNotes();
-  }, [api]);
-
-  useEffect(() => {
-    const loadModels = async () => {
-      try {
-        const info = await api.loadModelsInfo();
-        setModelsInfo(info);
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error loading models info:', error);
-      }
-    };
-
-    void loadModels();
   }, [api]);
 
   const setActiveProject = useCallback(
@@ -179,7 +164,7 @@ export const Home = () => {
             display: activeProject?.baseDir === project.baseDir ? 'block' : 'none',
           }}
         >
-          <ProjectView project={project} isActive={activeProject?.baseDir === project.baseDir} modelsInfo={modelsInfo} />
+          <ProjectView project={project} isActive={activeProject?.baseDir === project.baseDir} />
         </div>
       </ProjectSettingsProvider>
     ));

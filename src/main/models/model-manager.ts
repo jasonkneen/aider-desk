@@ -4,43 +4,54 @@ import path from 'path';
 import { AVAILABLE_PROVIDERS, getDefaultProviderParams, LlmProvider, LlmProviderName } from '@common/agent';
 import { AgentProfile, Model, ModelInfo, ModelOverrides, ProviderModelsData, ProviderProfile, UsageReportData } from '@common/types';
 
-import { ollamaProviderStrategy } from './providers/ollama';
-import { lmStudioProviderStrategy } from './providers/lm-studio';
-import { openaiProviderStrategy } from './providers/openai';
 import { anthropicProviderStrategy } from './providers/anthropic';
-import { geminiProviderStrategy } from './providers/gemini';
+import { azureProviderStrategy } from './providers/azure';
 import { bedrockProviderStrategy } from './providers/bedrock';
 import { cerebrasProviderStrategy } from './providers/cerebras';
 import { deepseekProviderStrategy } from './providers/deepseek';
+import { geminiProviderStrategy } from './providers/gemini';
 import { groqProviderStrategy } from './providers/groq';
+import { lmStudioProviderStrategy } from './providers/lm-studio';
+import { ollamaProviderStrategy } from './providers/ollama';
+import { openaiProviderStrategy } from './providers/openai';
 import { openaiCompatibleProviderStrategy } from './providers/openai-compatible';
 import { openrouterProviderStrategy } from './providers/openrouter';
 import { requestyProviderStrategy } from './providers/requesty';
 import { vertexAiProviderStrategy } from './providers/vertex-ai';
-import { azureProviderStrategy } from './providers/azure';
 
 import type { JSONValue, LanguageModel, LanguageModelUsage } from 'ai';
 
-import { AIDER_DESK_DATA_DIR } from '@/constants';
+import { AIDER_DESK_DATA_DIR, AIDER_DESK_CACHE_DIR } from '@/constants';
 import logger from '@/logger';
 import { Store } from '@/store';
 import { EventManager } from '@/events';
 import { Project } from '@/project/project';
 import { AiderModelMapping, CacheControl, LlmProviderRegistry } from '@/models/types';
 
-const MODEL_INFO_URL = 'https://raw.githubusercontent.com/BerriAI/litellm/main/model_prices_and_context_window.json';
+const MODELS_META_URL = 'https://models.dev/api.json';
 const MODELS_FILE = path.join(AIDER_DESK_DATA_DIR, 'models.json');
 
-interface RawModelData {
-  max_input_tokens?: number;
-  max_output_tokens?: number;
-  input_cost_per_token?: number;
-  output_cost_per_token?: number;
-  supports_function_calling?: boolean;
-  cache_read_input_token_cost?: number;
-  cache_creation_input_token_cost?: number;
-  // Add other fields from the JSON if needed, marking them as optional
-}
+type ModelsMetaResponse = Record<
+  string,
+  {
+    models: Record<
+      string,
+      {
+        id: string;
+        cost?: {
+          input?: number;
+          output?: number;
+          cache_read?: number;
+          cache_write?: number;
+        };
+        limit: {
+          context: number;
+          output: number;
+        };
+      }
+    >;
+  }
+>;
 
 export class ModelManager {
   private readonly modelsInfo: Record<string, ModelInfo> = {};
@@ -52,19 +63,19 @@ export class ModelManager {
   // Provider registry for strategy pattern
   private providerRegistry: LlmProviderRegistry = {
     anthropic: anthropicProviderStrategy,
-    openai: openaiProviderStrategy,
     azure: azureProviderStrategy,
-    gemini: geminiProviderStrategy,
-    'vertex-ai': vertexAiProviderStrategy,
-    deepseek: deepseekProviderStrategy,
-    groq: groqProviderStrategy,
-    cerebras: cerebrasProviderStrategy,
-    lmstudio: lmStudioProviderStrategy,
-    'openai-compatible': openaiCompatibleProviderStrategy,
     bedrock: bedrockProviderStrategy,
+    cerebras: cerebrasProviderStrategy,
+    deepseek: deepseekProviderStrategy,
+    gemini: geminiProviderStrategy,
+    groq: groqProviderStrategy,
+    lmstudio: lmStudioProviderStrategy,
     ollama: ollamaProviderStrategy,
+    openai: openaiProviderStrategy,
+    'openai-compatible': openaiCompatibleProviderStrategy,
     openrouter: openrouterProviderStrategy,
     requesty: requestyProviderStrategy,
+    'vertex-ai': vertexAiProviderStrategy,
   };
 
   constructor(
@@ -80,7 +91,7 @@ export class ModelManager {
 
       this.updateEnvVarsProviders();
 
-      await this.fetchAndProcessModelInfo();
+      await this.loadModelsInfo();
       await this.loadModelOverrides();
       await this.loadProviderModels(this.store.getProviders());
 
@@ -92,51 +103,99 @@ export class ModelManager {
     }
   }
 
-  private async fetchAndProcessModelInfo(): Promise<void> {
-    const response = await fetch(MODEL_INFO_URL);
-    if (!response.ok) {
-      logger.error('Failed to fetch model info:', {
-        status: response.status,
-        statusText: response.statusText,
-      });
-      throw new Error('Failed to fetch model info');
+  private async loadModelsInfo(): Promise<void> {
+    const cacheFile = path.join(AIDER_DESK_CACHE_DIR, 'models-meta.json');
+    let cacheLoaded = false;
+
+    // Try to load from cache first
+    try {
+      await fs.access(cacheFile);
+      const cachedData = await fs.readFile(cacheFile, 'utf-8');
+      const cachedJson = JSON.parse(cachedData) as ModelsMetaResponse;
+      this.processModelsMeta(cachedJson);
+      logger.info('Loaded models info from cache');
+      cacheLoaded = true;
+    } catch {
+      // Cache file doesn't exist or is invalid, we'll fetch fresh data
+      logger.info('Cache file not found or invalid, fetching fresh data');
     }
-    const data = (await response.json()) as Record<string, RawModelData>;
 
-    for (const key in data) {
-      if (key === 'sample_spec') {
-        // Skip the sample_spec entry
+    const fetchFreshDataAndCache = async (cacheFile: string): Promise<void> => {
+      const response = await fetch(MODELS_META_URL);
+      if (!response.ok) {
+        logger.error('Failed to fetch model info:', {
+          status: response.status,
+          statusText: response.statusText,
+        });
+        throw new Error('Failed to fetch model info');
+      }
+      const data = (await response.json()) as ModelsMetaResponse;
+      this.processModelsMeta(data);
+
+      // Save the fresh data to cache
+      try {
+        await fs.mkdir(AIDER_DESK_CACHE_DIR, { recursive: true });
+        await fs.writeFile(cacheFile, JSON.stringify(data, null, 2));
+        logger.info('Saved models info to cache');
+      } catch (error) {
+        logger.error('Failed to save models info to cache:', error);
+      }
+    };
+
+    // Fetch fresh data in background if cache was loaded, otherwise await it
+    const freshDataPromise = fetchFreshDataAndCache(cacheFile);
+
+    if (cacheLoaded) {
+      freshDataPromise.catch((error) => {
+        logger.error('Background fetch of fresh models data failed:', error);
+      });
+    } else {
+      await freshDataPromise;
+    }
+  }
+
+  private processModelsMeta(data: ModelsMetaResponse) {
+    for (const providerId in data) {
+      const providerData = data[providerId];
+      if (!providerData.models) {
         continue;
       }
-      if (key.startsWith('wandb/')) {
-        // Ignore wandb/ models
-        continue;
+
+      for (const modelKey in providerData.models) {
+        const modelData = providerData.models[modelKey];
+        const existingModelInfo = this.modelsInfo[modelKey];
+
+        if (existingModelInfo) {
+          // Add properties only if they don't exist
+          if (!existingModelInfo.maxInputTokens) {
+            existingModelInfo.maxInputTokens = modelData.limit.context;
+          }
+          if (!existingModelInfo.maxOutputTokens) {
+            existingModelInfo.maxOutputTokens = modelData.limit.output;
+          }
+          if (!existingModelInfo.inputCostPerToken && modelData.cost?.input) {
+            existingModelInfo.inputCostPerToken = modelData.cost.input / 1_000_000;
+          }
+          if (!existingModelInfo.outputCostPerToken && modelData.cost?.output) {
+            existingModelInfo.outputCostPerToken = modelData.cost.output / 1_000_000;
+          }
+          if (!existingModelInfo.cacheReadInputTokenCost && modelData.cost?.cache_read) {
+            existingModelInfo.cacheReadInputTokenCost = modelData.cost.cache_read / 1_000_000;
+          }
+          if (!existingModelInfo.cacheWriteInputTokenCost && modelData.cost?.cache_write) {
+            existingModelInfo.cacheReadInputTokenCost = modelData.cost.cache_write / 1_000_000;
+          }
+        } else {
+          this.modelsInfo[modelData.id] = {
+            maxInputTokens: modelData.limit.context,
+            maxOutputTokens: modelData.limit.output,
+            inputCostPerToken: (modelData.cost?.input || 0) / 1_000_000,
+            outputCostPerToken: (modelData.cost?.output || 0) / 1_000_000,
+            cacheReadInputTokenCost: modelData.cost?.cache_read ? modelData.cost.cache_read / 1_000_000 : undefined,
+            cacheWriteInputTokenCost: modelData.cost?.cache_write ? modelData.cost.cache_write / 1_000_000 : undefined,
+          } satisfies ModelInfo;
+        }
       }
-
-      const modelData = data[key];
-      // Ensure modelData is not undefined and has the expected properties
-      if (
-        !modelData ||
-        typeof modelData.max_input_tokens === 'undefined' ||
-        typeof modelData.max_output_tokens === 'undefined' ||
-        typeof modelData.input_cost_per_token === 'undefined' ||
-        typeof modelData.output_cost_per_token === 'undefined'
-      ) {
-        // console.warn(`Skipping model ${key} due to missing or invalid data`);
-        continue;
-      }
-
-      const modelName = key.split('/').pop() || key;
-
-      this.modelsInfo[modelName] = {
-        maxInputTokens: modelData.max_input_tokens,
-        maxOutputTokens: modelData.max_output_tokens,
-        inputCostPerToken: modelData.input_cost_per_token,
-        outputCostPerToken: modelData.output_cost_per_token,
-        cacheReadInputTokenCost: modelData.cache_read_input_token_cost,
-        cacheWriteInputTokenCost: modelData.cache_creation_input_token_cost,
-        supportsTools: modelData.supports_function_calling === true,
-      };
     }
   }
 
@@ -224,7 +283,10 @@ export class ModelManager {
             for (const modelOverride of providerModelOverrides) {
               const existingIndex = allModels.findIndex((m) => m.id === modelOverride.id);
               if (existingIndex >= 0) {
-                allModels[existingIndex] = { ...allModels[existingIndex], ...modelOverride };
+                allModels[existingIndex] = {
+                  ...allModels[existingIndex],
+                  ...modelOverride,
+                };
               } else if (modelOverride.isCustom) {
                 allModels.push({ ...modelOverride });
               }
@@ -241,7 +303,11 @@ export class ModelManager {
     await Promise.all(toLoadPromises);
 
     // Emit the updated provider models event
-    this.eventManager.sendProviderModelsUpdated({ models: Object.values(this.providerModels).flat(), loading: false, errors: this.providerErrors });
+    this.eventManager.sendProviderModelsUpdated({
+      models: Object.values(this.providerModels).flat(),
+      loading: false,
+      errors: this.providerErrors,
+    });
 
     // Update agent profiles with the new models
     await this.store.updateProviderModelInAgentProfiles(Object.values(this.providerModels).flat());
@@ -279,7 +345,11 @@ export class ModelManager {
       await this.loadProviderModels(this.store.getProviders());
     }
 
-    return { models: Object.values(this.providerModels).flat(), loading: false, errors: this.providerErrors };
+    return {
+      models: Object.values(this.providerModels).flat(),
+      loading: false,
+      errors: this.providerErrors,
+    };
   }
 
   private async loadModelOverrides(): Promise<void> {
