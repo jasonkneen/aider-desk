@@ -7,7 +7,7 @@ export const migrateSettingsV14toV15 = (settings: any): SettingsData => {
   const aiderPreferred = settings.models?.aiderPreferred || [];
   const agentPreferred = settings.models?.agentPreferred || [];
 
-  const preferredModels = [...new Set([...aiderPreferred, ...agentPreferred])].filter((m) => m.split('/').length > 1);
+  const preferredModels = [...new Set([...aiderPreferred, ...agentPreferred])].filter((model) => model && model.split('/').length > 1);
 
   return {
     ...settings,
