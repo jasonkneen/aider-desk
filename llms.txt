@@ -2097,7 +2097,10 @@ File: src/common/locales/en.json
   },
   "contextMenu": {
     "copy": "Copy",
-    "paste": "Paste"
+    "paste": "Paste",
+    "close": "Close",
+    "closeOtherTabs": "Close other tabs",
+    "closeAllTabs": "Close all tabs"
   }
 }
 
@@ -3075,7 +3078,10 @@ File: src/common/locales/zh.json
   },
   "contextMenu": {
     "copy": "复制",
-    "paste": "粘贴"
+    "paste": "粘贴",
+    "close": "关闭",
+    "closeOtherTabs": "关闭其他标签页",
+    "closeAllTabs": "关闭所有标签页"
   }
 }
 
@@ -3933,7 +3939,6 @@ export interface ModelInfo {
   outputCostPerToken: number;
   cacheWriteInputTokenCost?: number;
   cacheReadInputTokenCost?: number;
-  supportsTools: boolean;
 }
 ⋮----
 export interface Task {
@@ -4077,6 +4082,8 @@ File: src/main/agent/middlewares/extract-reasoning-middleware.ts
 ================
 import type { LanguageModelV1Middleware, LanguageModelV1StreamPart } from 'ai';
 ⋮----
+import logger from '@/logger';
+⋮----
 /**
  * Extract an XML-tagged reasoning section from the generated text and exposes it
  * as a `reasoning` property on the result.
@@ -4085,13 +4092,14 @@ import type { LanguageModelV1Middleware, LanguageModelV1StreamPart } from 'ai';
  * @param separator - The separator to use between reasoning and text sections.
  */
 ⋮----
-// For reasoning mode, only look for opening tag at the start of buffer
+// check for additional character at the end, e.g. `
+// if not found, continue with the next chunk
 ⋮----
-// When looking for reasoning opening tag, it must be at the start of buffer
+// if there is a backtick before the closing tag and after, publish the buffer, as this is not ending
 ⋮----
-// no opening or closing tag found, publish the buffer
+// this should not happen
 ⋮----
-// publish text before the tag
+// set and publish the rest of the buffer as non reasoning
 ⋮----
 /**
  * Returns the index of the start of the searchedText in the text, or null if it
@@ -6027,42 +6035,51 @@ import path from 'path';
 import { AVAILABLE_PROVIDERS, getDefaultProviderParams, LlmProvider, LlmProviderName } from '@common/agent';
 import { AgentProfile, Model, ModelInfo, ModelOverrides, ProviderModelsData, ProviderProfile, UsageReportData } from '@common/types';
 ⋮----
-import { ollamaProviderStrategy } from './providers/ollama';
-import { lmStudioProviderStrategy } from './providers/lm-studio';
-import { openaiProviderStrategy } from './providers/openai';
 import { anthropicProviderStrategy } from './providers/anthropic';
-import { geminiProviderStrategy } from './providers/gemini';
+import { azureProviderStrategy } from './providers/azure';
 import { bedrockProviderStrategy } from './providers/bedrock';
 import { cerebrasProviderStrategy } from './providers/cerebras';
 import { deepseekProviderStrategy } from './providers/deepseek';
+import { geminiProviderStrategy } from './providers/gemini';
 import { groqProviderStrategy } from './providers/groq';
+import { lmStudioProviderStrategy } from './providers/lm-studio';
+import { ollamaProviderStrategy } from './providers/ollama';
+import { openaiProviderStrategy } from './providers/openai';
 import { openaiCompatibleProviderStrategy } from './providers/openai-compatible';
 import { openrouterProviderStrategy } from './providers/openrouter';
 import { requestyProviderStrategy } from './providers/requesty';
 import { vertexAiProviderStrategy } from './providers/vertex-ai';
-import { azureProviderStrategy } from './providers/azure';
 ⋮----
 import type { JSONValue, LanguageModel, LanguageModelUsage } from 'ai';
 ⋮----
-import { AIDER_DESK_DATA_DIR } from '@/constants';
+import { AIDER_DESK_DATA_DIR, AIDER_DESK_CACHE_DIR } from '@/constants';
 import logger from '@/logger';
 import { Store } from '@/store';
 import { EventManager } from '@/events';
 import { Project } from '@/project/project';
 import { AiderModelMapping, CacheControl, LlmProviderRegistry } from '@/models/types';
 ⋮----
-interface RawModelData {
-  max_input_tokens?: number;
-  max_output_tokens?: number;
-  input_cost_per_token?: number;
-  output_cost_per_token?: number;
-  supports_function_calling?: boolean;
-  cache_read_input_token_cost?: number;
-  cache_creation_input_token_cost?: number;
-  // Add other fields from the JSON if needed, marking them as optional
-}
-⋮----
-// Add other fields from the JSON if needed, marking them as optional
+type ModelsMetaResponse = Record<
+  string,
+  {
+    models: Record<
+      string,
+      {
+        id: string;
+        cost?: {
+          input?: number;
+          output?: number;
+          cache_read?: number;
+          cache_write?: number;
+        };
+        limit: {
+          context: number;
+          output: number;
+        };
+      }
+    >;
+  }
+>;
 ⋮----
 export class ModelManager
 ⋮----
@@ -6075,15 +6092,21 @@ constructor(
 ⋮----
 private async init(): Promise<void>
 ⋮----
-private async fetchAndProcessModelInfo(): Promise<void>
+private async loadModelsInfo(): Promise<void>
 ⋮----
-// Skip the sample_spec entry
+// Try to load from cache first
 ⋮----
-// Ignore wandb/ models
+// Cache file doesn't exist or is invalid, we'll fetch fresh data
 ⋮----
-// Ensure modelData is not undefined and has the expected properties
+const fetchFreshDataAndCache = async (cacheFile: string): Promise<void> =>
 ⋮----
-// console.warn(`Skipping model ${key} due to missing or invalid data`);
+// Save the fresh data to cache
+⋮----
+// Fetch fresh data in background if cache was loaded, otherwise await it
+⋮----
+private processModelsMeta(data: ModelsMetaResponse)
+⋮----
+// Add properties only if they don't exist
 ⋮----
 getModelInfo(modelName: string): ModelInfo | undefined
 ⋮----
@@ -9865,6 +9888,8 @@ interface TreeItem {
   file?: ContextFile;
 }
 ⋮----
+const normalizePath = (path: string): string =>
+⋮----
 const createFileTree = (files: ContextFile[]) =>
 ⋮----
 // Sort children: folders first, then files, both alphabetically
@@ -11402,15 +11427,24 @@ import { clsx } from 'clsx';
 import { MdAdd, MdClose, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, arrayMove, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable';
+import { useTranslation } from 'react-i18next';
 ⋮----
 import type { DragEndEvent } from '@dnd-kit/core';
+⋮----
+import { MenuOption, useContextMenu } from '@/context/ContextMenuContext';
+⋮----
+type ProjectOperations = {
+  onCloseProject: (baseDir: string) => Promise<void>;
+  onCloseOtherProjects: (baseDir: string) => Promise<void>;
+  onCloseAllProjects: () => Promise<void>;
+};
 ⋮----
 type Props = {
   openProjects: ProjectData[];
   activeProject: ProjectData | undefined;
   onAddProject: () => void;
   onSetActiveProject: (baseDir: string) => void;
-  onCloseProject: (projectBaseDir: string) => void;
+  projectOperations: ProjectOperations;
   onReorderProjects: (projects: ProjectData[]) => void;
 };
 ⋮----
@@ -11428,6 +11462,38 @@ const handleDragEnd = (event: DragEndEvent) =>
 ⋮----
 onChange=
 ⋮----
+<DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={() => setDragging(true)} onDragEnd={handleDragEnd}>
+            <SortableContext items={projectIds} strategy={horizontalListSortingStrategy}>
+              {openProjects.map((project) => (
+                <SortableTabItem
+                  key={project.baseDir}
+                  project={project}
+                  activeProject={activeProject}
+                  projectOperations={projectOperations}
+                  openProjectsNumber={openProjects.length}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
+        </div>
+        {showRightScrollButton && (
+          <button
+            className="absolute right-[52px] z-10 h-full flex items-center px-2 bg-bg-primary-light hover:bg-bg-secondary transition-colors duration-200"
+            onClick={handleScrollRight}
+          >
+            <MdChevronRight className="h-5 w-5 text-text-muted-light" />
+          </button>
+        )}
+        <button
+          className="px-4 py-2 text-text-muted-light hover:text-text-secondary hover:bg-bg-secondary transition-colors duration-200 flex items-center justify-center"
+          onClick={onAddProject}
+        >
+          <MdAdd className="h-5 w-5" />
+        </button>
+      </TabList>
+    </TabGroup>
+  );
+⋮----
 e.stopPropagation(); // Prevent tab selection/drag initiation
 
 ================
@@ -11440,7 +11506,7 @@ import {
   InputHistoryData,
   LogData,
   Mode,
-  ModelInfo,
+  Model,
   ModelsData,
   ProjectData,
   QuestionData,
@@ -11459,6 +11525,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { clsx } from 'clsx';
 import { getActiveAgentProfile } from '@common/utils';
 import { TODO_TOOL_CLEAR_ITEMS, TODO_TOOL_GET_ITEMS, TODO_TOOL_GROUP_NAME, TODO_TOOL_SET_ITEMS, TODO_TOOL_UPDATE_ITEM_COMPLETION } from '@common/tools';
+import { getProviderModelId } from '@common/agent';
 ⋮----
 import {
   CommandOutputMessage,
@@ -11491,6 +11558,7 @@ import { SidebarContent } from '@/components/project/SidebarContent';
 import { useSearchText } from '@/hooks/useSearchText';
 import { useApi } from '@/context/ApiContext';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useModelProviders } from '@/contexts/ModelProviderContext';
 ⋮----
 type AddFileDialogOptions = {
   readOnly: boolean;
@@ -11498,7 +11566,6 @@ type AddFileDialogOptions = {
 ⋮----
 type Props = {
   project: ProjectData;
-  modelsInfo: Record<string, ModelInfo>;
   isActive?: boolean;
 };
 ⋮----
@@ -14366,7 +14433,7 @@ export const VertexAiIcon = ({ width = 64, height = 64, className }: Props) => (
 ================
 File: src/renderer/src/pages/Home.tsx
 ================
-import { ModelInfo, ProjectData } from '@common/types';
+import { ProjectData } from '@common/types';
 import { useCallback, useEffect, useState } from 'react';
 import { MdBarChart, MdSettings, MdUpload } from 'react-icons/md';
 import { PiNotebookFill } from 'react-icons/pi';
@@ -14397,10 +14464,6 @@ const handleOpenSettings = (tabIndex: number) =>
 ⋮----
 const checkReleaseNotes = async () =>
 ⋮----
-const loadModels = async () =>
-⋮----
-// eslint-disable-next-line no-console
-⋮----
 // First TAB press - switch to previous tab
 ⋮----
 // Subsequent TAB presses - cycle through tabs
@@ -14408,6 +14471,10 @@ const loadModels = async () =>
 const handleAddProject = async (baseDir: string) =>
 ⋮----
 const handleCloseProject = async (projectBaseDir: string) =>
+⋮----
+const handleCloseOtherProjects = async (baseDir: string) =>
+⋮----
+const handleCloseAllProjects = async () =>
 ⋮----
 if (versions?.aiderDeskNewVersionReady)
 return t('settings.about.newAiderDeskVersionReady');
