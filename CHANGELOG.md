@@ -3,6 +3,7 @@
 ## [UNRELEASED]
 
 - properly using env vars from Settings -> Aider when loading provider models
+- AIDER_DESK_DATA_DIR now properly respected
 
 ## [0.33.0]
 
