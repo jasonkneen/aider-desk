@@ -1,6 +1,6 @@
 import { v1beta1 } from '@google-cloud/aiplatform';
 import { GoogleAuth } from 'google-auth-library';
-import { Model, ModelInfo, ProviderProfile, UsageReportData } from '@common/types';
+import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 import { isVertexAiProvider, LlmProvider, VertexAiProvider } from '@common/agent';
 import { createVertex } from '@ai-sdk/google-vertex';
 
@@ -11,16 +11,20 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Project } from '@/project/project';
 
-export const loadVertexAIModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> => {
+export const loadVertexAIModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> => {
   if (!isVertexAiProvider(profile.provider)) {
     return { models: [], success: false };
   }
 
   const provider = profile.provider as VertexAiProvider;
 
-  const projectEnv = getEffectiveEnvironmentVariable('VERTEX_PROJECT', undefined);
-  const locationEnv = getEffectiveEnvironmentVariable('VERTEX_LOCATION', undefined);
-  const credentialsEnv = getEffectiveEnvironmentVariable('GOOGLE_APPLICATION_CREDENTIALS', undefined);
+  const projectEnv = getEffectiveEnvironmentVariable('VERTEX_PROJECT', settings);
+  const locationEnv = getEffectiveEnvironmentVariable('VERTEX_LOCATION', settings);
+  const credentialsEnv = getEffectiveEnvironmentVariable('GOOGLE_APPLICATION_CREDENTIALS', settings);
 
   const project = provider.project || projectEnv?.value || '';
   const location = provider.location || locationEnv?.value || 'global';
@@ -88,7 +92,7 @@ export const loadVertexAIModels = async (profile: ProviderProfile, modelsInfo: R
   }
 };
 
-export const hasVertexAiEnvVars = (): boolean => {
+export const hasVertexAiEnvVars = (_settings: SettingsData): boolean => {
   // Vertex AI doesn't have a simple environment variable check like other providers
   // It requires project, location, and potentially credentials
   return false;

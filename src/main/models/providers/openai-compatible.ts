@@ -9,7 +9,11 @@ import logger from '@/logger';
 import { Project } from '@/project/project';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 
-export const loadOpenaiCompatibleModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> => {
+export const loadOpenaiCompatibleModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> => {
   if (!isOpenAiCompatibleProvider(profile.provider)) {
     return { models: [], success: false };
   }
@@ -18,8 +22,8 @@ export const loadOpenaiCompatibleModels = async (profile: ProviderProfile, model
   const apiKey = provider.apiKey || '';
   const baseUrl = provider.baseUrl;
 
-  const apiKeyEnv = getEffectiveEnvironmentVariable('OPENAI_API_KEY', undefined);
-  const baseUrlEnv = getEffectiveEnvironmentVariable('OPENAI_API_BASE', undefined);
+  const apiKeyEnv = getEffectiveEnvironmentVariable('OPENAI_API_KEY', settings);
+  const baseUrlEnv = getEffectiveEnvironmentVariable('OPENAI_API_BASE', settings);
 
   const effectiveApiKey = apiKey || apiKeyEnv?.value;
   const effectiveBaseUrl = baseUrl || baseUrlEnv?.value;
@@ -58,9 +62,9 @@ export const loadOpenaiCompatibleModels = async (profile: ProviderProfile, model
   }
 };
 
-export const hasOpenAiCompatibleEnvVars = (projectDir?: string, settings?: SettingsData): boolean => {
-  const hasApiKey = !!getEffectiveEnvironmentVariable('OPENAI_API_KEY', projectDir, settings)?.value;
-  const hasBaseUrl = !!getEffectiveEnvironmentVariable('OPENAI_API_BASE', projectDir, settings)?.value;
+export const hasOpenAiCompatibleEnvVars = (settings: SettingsData): boolean => {
+  const hasApiKey = !!getEffectiveEnvironmentVariable('OPENAI_API_KEY', settings, undefined)?.value;
+  const hasBaseUrl = !!getEffectiveEnvironmentVariable('OPENAI_API_BASE', settings, undefined)?.value;
   return hasApiKey || hasBaseUrl;
 };
 

@@ -25,8 +25,8 @@ export const initializeLangfuseExporter = (): SpanExporter | undefined => {
 
 export const getLangfuseEnvironmentVariables = (baseDir: string, settings: SettingsData): Record<string, unknown> => {
   return {
-    LANGFUSE_PUBLIC_KEY: getEffectiveEnvironmentVariable('LANGFUSE_PUBLIC_KEY', baseDir, settings)?.value,
-    LANGFUSE_SECRET_KEY: getEffectiveEnvironmentVariable('LANGFUSE_SECRET_KEY', baseDir, settings)?.value,
-    LANGFUSE_HOST: getEffectiveEnvironmentVariable('LANGFUSE_HOST', baseDir, settings)?.value,
+    LANGFUSE_PUBLIC_KEY: getEffectiveEnvironmentVariable('LANGFUSE_PUBLIC_KEY', settings, baseDir)?.value,
+    LANGFUSE_SECRET_KEY: getEffectiveEnvironmentVariable('LANGFUSE_SECRET_KEY', settings, baseDir)?.value,
+    LANGFUSE_HOST: getEffectiveEnvironmentVariable('LANGFUSE_HOST', settings, baseDir)?.value,
   };
 };

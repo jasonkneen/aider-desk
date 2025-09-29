@@ -16,14 +16,18 @@ interface CerebrasModel {
   description?: string;
 }
 
-export const loadCerebrasModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> => {
+export const loadCerebrasModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> => {
   if (!isCerebrasProvider(profile.provider)) {
     return { models: [], success: false };
   }
 
   const provider = profile.provider;
   const apiKey = provider.apiKey || '';
-  const apiKeyEnv = getEffectiveEnvironmentVariable('CEREBRAS_API_KEY', undefined);
+  const apiKeyEnv = getEffectiveEnvironmentVariable('CEREBRAS_API_KEY', settings);
   const effectiveApiKey = apiKey || apiKeyEnv?.value || '';
 
   if (!effectiveApiKey) {
@@ -71,8 +75,8 @@ export const loadCerebrasModels = async (profile: ProviderProfile, modelsInfo: R
   }
 };
 
-export const hasCerebrasEnvVars = (projectDir?: string, settings?: SettingsData): boolean => {
-  return !!getEffectiveEnvironmentVariable('CEREBRAS_API_KEY', projectDir, settings)?.value;
+export const hasCerebrasEnvVars = (settings: SettingsData): boolean => {
+  return !!getEffectiveEnvironmentVariable('CEREBRAS_API_KEY', settings, undefined)?.value;
 };
 
 export const getCerebrasAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {

@@ -39,12 +39,15 @@ const readPropertyFromConfFile = (filePath: string, property: string): string | 
   return undefined;
 };
 
-export const getEffectiveEnvironmentVariable = (key: string, projectDir?: string, settings?: SettingsData): EnvironmentVariable | undefined => {
+export const getEffectiveEnvironmentVariable = (key: string, settings?: SettingsData, projectDir?: string): EnvironmentVariable | undefined => {
   // 1. From settings.aider.environmentVariables
   if (settings) {
     const aiderEnvVars = parse(settings.aider.environmentVariables);
     if (aiderEnvVars[key] !== undefined) {
-      return { value: aiderEnvVars[key], source: 'aider-desk' };
+      return {
+        value: aiderEnvVars[key],
+        source: 'Settings -> Aider -> Env Vars',
+      };
     }
 
     // 2. From --env-file in settings.aider.options
@@ -218,25 +221,25 @@ const getTelemetryEnvironmentVariablesForAider = (settings: SettingsData, baseDi
 };
 
 export const determineProvider = (projectDir?: string, settings?: SettingsData): LlmProviderName => {
-  if (getEffectiveEnvironmentVariable('ANTHROPIC_API_KEY', projectDir, settings)) {
+  if (getEffectiveEnvironmentVariable('ANTHROPIC_API_KEY', settings, projectDir)) {
     return 'anthropic';
   }
-  if (getEffectiveEnvironmentVariable('GEMINI_API_KEY', projectDir, settings)) {
+  if (getEffectiveEnvironmentVariable('GEMINI_API_KEY', settings, projectDir)) {
     return 'gemini';
   }
-  if (getEffectiveEnvironmentVariable('OPENAI_API_KEY', projectDir, settings)) {
+  if (getEffectiveEnvironmentVariable('OPENAI_API_KEY', settings, projectDir)) {
     return 'openai';
   }
-  if (getEffectiveEnvironmentVariable('DEEPSEEK_API_KEY', projectDir, settings)) {
+  if (getEffectiveEnvironmentVariable('DEEPSEEK_API_KEY', settings, projectDir)) {
     return 'deepseek';
   }
-  if (getEffectiveEnvironmentVariable('OPENROUTER_API_KEY', projectDir, settings)) {
+  if (getEffectiveEnvironmentVariable('OPENROUTER_API_KEY', settings, projectDir)) {
     return 'openrouter';
   }
-  if (getEffectiveEnvironmentVariable('CEREBRAS_API_KEY', projectDir, settings)) {
+  if (getEffectiveEnvironmentVariable('CEREBRAS_API_KEY', settings, projectDir)) {
     return 'cerebras';
   }
-  if (getEffectiveEnvironmentVariable('REQUESTY_API_KEY', projectDir, settings)) {
+  if (getEffectiveEnvironmentVariable('REQUESTY_API_KEY', settings, projectDir)) {
     return 'requesty';
   }
   return 'anthropic';

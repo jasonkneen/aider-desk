@@ -12,7 +12,11 @@ import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Project } from '@/project/project';
 import { LoadModelsResponse } from '@/models/types';
 
-export const loadBedrockModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> => {
+export const loadBedrockModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> => {
   if (!isBedrockProvider(profile.provider)) {
     return {
       models: [],
@@ -21,15 +25,15 @@ export const loadBedrockModels = async (profile: ProviderProfile, modelsInfo: Re
   }
 
   const provider = profile.provider as BedrockProvider;
-  const regionEnv = getEffectiveEnvironmentVariable('AWS_REGION', undefined);
+  const regionEnv = getEffectiveEnvironmentVariable('AWS_REGION', settings);
   const region = provider.region || regionEnv?.value || '';
-  const accessKeyIdEnv = getEffectiveEnvironmentVariable('AWS_ACCESS_KEY_ID', undefined);
+  const accessKeyIdEnv = getEffectiveEnvironmentVariable('AWS_ACCESS_KEY_ID', settings);
   const accessKeyId = provider.accessKeyId || accessKeyIdEnv?.value || '';
-  const secretAccessKeyEnv = getEffectiveEnvironmentVariable('AWS_SECRET_ACCESS_KEY', undefined);
+  const secretAccessKeyEnv = getEffectiveEnvironmentVariable('AWS_SECRET_ACCESS_KEY', settings);
   const secretAccessKey = provider.secretAccessKey || secretAccessKeyEnv?.value || '';
-  const sessionTokenEnv = getEffectiveEnvironmentVariable('AWS_SESSION_TOKEN', undefined);
+  const sessionTokenEnv = getEffectiveEnvironmentVariable('AWS_SESSION_TOKEN', settings);
   const sessionToken = provider.sessionToken || sessionTokenEnv?.value || '';
-  const profileEnv = getEffectiveEnvironmentVariable('AWS_PROFILE', undefined);
+  const profileEnv = getEffectiveEnvironmentVariable('AWS_PROFILE', settings);
 
   if (!region) {
     logger.debug('AWS region is required for Bedrock. Please set it in Providers settings or via AWS_REGION environment variable.');
@@ -151,10 +155,10 @@ export const loadBedrockModels = async (profile: ProviderProfile, modelsInfo: Re
   }
 };
 
-export const hasBedrockEnvVars = (projectDir?: string, settings?: SettingsData): boolean => {
-  const region = getEffectiveEnvironmentVariable('AWS_REGION', projectDir, settings)?.value;
-  const accessKeyId = getEffectiveEnvironmentVariable('AWS_ACCESS_KEY_ID', projectDir, settings)?.value;
-  const profile = getEffectiveEnvironmentVariable('AWS_PROFILE', projectDir, settings)?.value;
+export const hasBedrockEnvVars = (settings: SettingsData): boolean => {
+  const region = getEffectiveEnvironmentVariable('AWS_REGION', settings, undefined)?.value;
+  const accessKeyId = getEffectiveEnvironmentVariable('AWS_ACCESS_KEY_ID', settings, undefined)?.value;
+  const profile = getEffectiveEnvironmentVariable('AWS_PROFILE', settings, undefined)?.value;
   return !!region && (!!accessKeyId || !!profile);
 };
 

@@ -9,14 +9,18 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Project } from '@/project/project';
 
-export const loadOllamaModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> => {
+export const loadOllamaModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> => {
   if (!isOllamaProvider(profile.provider)) {
     return { models: [], success: false };
   }
 
   const provider = profile.provider as OllamaProvider;
   const baseUrl = provider.baseUrl || '';
-  const environmentVariable = getEffectiveEnvironmentVariable('OLLAMA_API_BASE', undefined);
+  const environmentVariable = getEffectiveEnvironmentVariable('OLLAMA_API_BASE', settings);
   const effectiveBaseUrl = baseUrl || environmentVariable?.value || '';
 
   if (!effectiveBaseUrl) {
@@ -55,8 +59,8 @@ export const loadOllamaModels = async (profile: ProviderProfile, modelsInfo: Rec
   }
 };
 
-export const hasOllamaEnvVars = (projectDir?: string, settings?: SettingsData): boolean => {
-  return !!getEffectiveEnvironmentVariable('OLLAMA_API_BASE', projectDir, settings)?.value;
+export const hasOllamaEnvVars = (settings: SettingsData): boolean => {
+  return !!getEffectiveEnvironmentVariable('OLLAMA_API_BASE', settings, undefined)?.value;
 };
 
 export const getOllamaAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {

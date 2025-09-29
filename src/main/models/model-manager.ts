@@ -266,15 +266,19 @@ export class ModelManager {
           // Load models from each profile for this provider type
           for (const profile of profilesForProvider) {
             const allModels: Model[] = [];
-            const response = await strategy.loadModels(profile, this.modelsInfo);
+            const response = await strategy.loadModels(profile, this.modelsInfo, this.store.getSettings());
 
             delete this.providerErrors[profile.id];
             if (response.success) {
               allModels.push(...response.models);
             } else {
-              logger.error(`Failed to load models for provider profile ${profile.id}:`, response.error);
               if (response.error) {
+                logger.error(`Failed to load models for provider profile ${profile.id}:`, {
+                  error: response.error,
+                });
                 this.providerErrors[profile.id] = response.error;
+              } else {
+                logger.warn(`Models for provider profile '${profile.id}' were not loaded due to misconfiguration.`);
               }
             }
 
@@ -319,13 +323,13 @@ export class ModelManager {
    */
   private updateEnvVarsProviders() {
     let providers = this.store.getProviders();
-    const existingNames = new Set(providers.map((p) => p.provider.name));
+    const existingNames = new Set(providers.map((provider) => provider.provider.name));
     const envVarProviders: ProviderProfile[] = [];
 
     for (const providerName of AVAILABLE_PROVIDERS) {
       if (!existingNames.has(providerName)) {
         const strategy = this.providerRegistry[providerName];
-        if (strategy?.hasEnvVars()) {
+        if (strategy?.hasEnvVars(this.store.getSettings())) {
           envVarProviders.push(this.createEnvVarProvider(providerName));
         }
       }

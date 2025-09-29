@@ -9,7 +9,11 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Project } from '@/project/project';
 
-export const loadLmStudioModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> => {
+export const loadLmStudioModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> => {
   if (!isLmStudioProvider(profile.provider)) {
     return {
       models: [],
@@ -19,7 +23,7 @@ export const loadLmStudioModels = async (profile: ProviderProfile, modelsInfo: R
 
   const provider = profile.provider as LmStudioProvider;
   const baseUrl = provider.baseUrl || '';
-  const environmentVariable = getEffectiveEnvironmentVariable('LM_STUDIO_API_BASE', undefined);
+  const environmentVariable = getEffectiveEnvironmentVariable('LM_STUDIO_API_BASE', settings);
   const effectiveBaseUrl = baseUrl || environmentVariable?.value || '';
 
   if (!effectiveBaseUrl) {
@@ -56,8 +60,8 @@ export const loadLmStudioModels = async (profile: ProviderProfile, modelsInfo: R
   }
 };
 
-export const hasLmStudioEnvVars = (projectDir?: string, settings?: SettingsData): boolean => {
-  const base = getEffectiveEnvironmentVariable('LMSTUDIO_API_BASE', projectDir, settings)?.value;
+export const hasLmStudioEnvVars = (settings: SettingsData): boolean => {
+  const base = getEffectiveEnvironmentVariable('LMSTUDIO_API_BASE', settings, undefined)?.value;
   return !!base;
 };
 

@@ -9,14 +9,18 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Project } from '@/project/project';
 
-export const loadOpenAiModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> => {
+export const loadOpenAiModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> => {
   if (!isOpenAiProvider(profile.provider)) {
     return { models: [], success: false };
   }
 
   const provider = profile.provider as OpenAiProvider;
   const apiKey = provider.apiKey || '';
-  const environmentVariable = getEffectiveEnvironmentVariable('OPENAI_API_KEY', undefined);
+  const environmentVariable = getEffectiveEnvironmentVariable('OPENAI_API_KEY', settings);
   const effectiveApiKey = apiKey || environmentVariable?.value || '';
 
   if (!effectiveApiKey) {
@@ -76,8 +80,8 @@ export const loadOpenAiModels = async (profile: ProviderProfile, modelsInfo: Rec
   }
 };
 
-export const hasOpenAiEnvVars = (projectDir?: string, settings?: SettingsData): boolean => {
-  return !!getEffectiveEnvironmentVariable('OPENAI_API_KEY', projectDir, settings)?.value;
+export const hasOpenAiEnvVars = (settings: SettingsData): boolean => {
+  return !!getEffectiveEnvironmentVariable('OPENAI_API_KEY', settings, undefined)?.value;
 };
 
 export const getOpenAiAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {

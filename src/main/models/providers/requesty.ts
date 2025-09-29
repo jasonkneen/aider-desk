@@ -31,14 +31,18 @@ interface RequestyModelsResponse {
   data: RequestyModel[];
 }
 
-export const loadRequestyModels = async (profile: ProviderProfile): Promise<LoadModelsResponse> => {
+export const loadRequestyModels = async (
+  profile: ProviderProfile,
+  _modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> => {
   if (!isRequestyProvider(profile.provider)) {
     return { models: [], success: false };
   }
 
   const provider = profile.provider as RequestyProvider;
   const apiKey = provider.apiKey || '';
-  const apiKeyEnv = getEffectiveEnvironmentVariable('REQUESTY_API_KEY', undefined);
+  const apiKeyEnv = getEffectiveEnvironmentVariable('REQUESTY_API_KEY', settings);
   const effectiveApiKey = apiKey || apiKeyEnv?.value || '';
 
   if (!effectiveApiKey) {
@@ -80,8 +84,8 @@ export const loadRequestyModels = async (profile: ProviderProfile): Promise<Load
   }
 };
 
-export const hasRequestyEnvVars = (projectDir?: string, settings?: SettingsData): boolean => {
-  return !!getEffectiveEnvironmentVariable('REQUESTY_API_KEY', projectDir, settings)?.value;
+export const hasRequestyEnvVars = (settings: SettingsData): boolean => {
+  return !!getEffectiveEnvironmentVariable('REQUESTY_API_KEY', settings, undefined)?.value;
 };
 
 export const getRequestyAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {
@@ -89,7 +93,7 @@ export const getRequestyAiderMapping = (provider: ProviderProfile, modelId: stri
   const envVars: Record<string, string> = {
     OPENAI_API_BASE: 'https://router.requesty.ai/v1',
   };
-  const apiKeyEnv = getEffectiveEnvironmentVariable('REQUESTY_API_KEY', undefined);
+  const apiKeyEnv = getEffectiveEnvironmentVariable('REQUESTY_API_KEY', undefined, undefined);
 
   if (requestyProvider.apiKey) {
     envVars.OPENAI_API_KEY = requestyProvider.apiKey;

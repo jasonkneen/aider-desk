@@ -1,69 +1,12 @@
 import { createAzure } from '@ai-sdk/azure';
 import { ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { AZURE_DEFAULT_API_VERSION, AzureProvider, isAzureProvider } from '@common/agent';
+import { AZURE_DEFAULT_API_VERSION, AzureProvider } from '@common/agent';
 
 import type { LanguageModel, LanguageModelUsage } from 'ai';
 
-import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
-import logger from '@/logger';
+import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Project } from '@/project/project';
-
-export const loadAzureModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> => {
-  if (!isAzureProvider(profile.provider)) {
-    return { models: [], success: false };
-  }
-
-  const provider = profile.provider as AzureProvider;
-  const apiKey = provider.apiKey || '';
-  const environmentVariable = getEffectiveEnvironmentVariable('AZURE_API_KEY', undefined);
-  const effectiveApiKey = apiKey || environmentVariable?.value || '';
-
-  if (!effectiveApiKey) {
-    return { models: [], success: false };
-  }
-
-  const resourceName = provider.resourceName || '';
-  const resourceNameEnvVar = getEffectiveEnvironmentVariable('AZURE_RESOURCE_NAME', undefined);
-  const baseUrlEnvVar = getEffectiveEnvironmentVariable('AZURE_API_BASE', undefined);
-  const effectiveResourceName = resourceName || resourceNameEnvVar?.value || (baseUrlEnvVar?.value ? extractResourceNameFromEndpoint(baseUrlEnvVar.value) : '');
-
-  if (!effectiveResourceName) {
-    return { models: [], success: false };
-  }
-
-  try {
-    const response = await fetch(
-      `https://${effectiveResourceName}.openai.azure.com/openai/deployments?api-version=${provider.apiVersion || AZURE_DEFAULT_API_VERSION}`,
-      {
-        headers: { 'api-key': effectiveApiKey },
-      },
-    );
-    if (!response.ok) {
-      const errorMsg = `Azure OpenAI deployments API response failed: ${response.status} ${response.statusText} ${await response.text()}`;
-      logger.error(errorMsg, response.status, response.statusText);
-      return { models: [], success: false, error: errorMsg };
-    }
-
-    const data = await response.json();
-    const models =
-      data.data?.map((deployment: { model: string; id: string }) => {
-        const info = modelsInfo[deployment.model];
-        return {
-          id: deployment.model,
-          providerId: profile.id,
-          ...info,
-        };
-      }) || [];
-
-    logger.info(`Loaded ${models.length} Azure OpenAI models for profile ${profile.id}`);
-    return { models, success: true };
-  } catch (error) {
-    const errorMsg = typeof error === 'string' ? error : error instanceof Error ? error.message : 'Unknown error loading Azure OpenAI models';
-    logger.error('Error loading Azure OpenAI models:', error);
-    return { models: [], success: false, error: errorMsg };
-  }
-};
 
 const extractResourceNameFromEndpoint = (endpoint: string): string => {
   try {
@@ -80,9 +23,9 @@ const extractResourceNameFromEndpoint = (endpoint: string): string => {
   }
 };
 
-export const hasAzureEnvVars = (projectDir?: string, settings?: SettingsData): boolean => {
-  const apiKey = getEffectiveEnvironmentVariable('AZURE_API_KEY', projectDir, settings)?.value;
-  const endpoint = getEffectiveEnvironmentVariable('AZURE_API_BASE', projectDir, settings)?.value;
+export const hasAzureEnvVars = (settings: SettingsData): boolean => {
+  const apiKey = getEffectiveEnvironmentVariable('AZURE_API_KEY', settings)?.value;
+  const endpoint = getEffectiveEnvironmentVariable('AZURE_API_BASE', settings)?.value;
   return !!(apiKey && endpoint);
 };
 
@@ -189,7 +132,7 @@ export const azureProviderStrategy: LlmProviderStrategy = {
   getUsageReport: getAzureUsageReport,
 
   // Model discovery functions
-  loadModels: async () => ({
+  loadModels: async (_profile: ProviderProfile, _modelsInfo: Record<string, ModelInfo>, _settings: SettingsData) => ({
     models: [],
     success: true,
   }),

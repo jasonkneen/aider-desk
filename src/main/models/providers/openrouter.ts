@@ -37,14 +37,18 @@ interface OpenRouterModelsResponse {
   data: OpenRouterModel[];
 }
 
-export const loadOpenrouterModels = async (profile: ProviderProfile): Promise<LoadModelsResponse> => {
+export const loadOpenrouterModels = async (
+  profile: ProviderProfile,
+  _modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> => {
   if (!isOpenRouterProvider(profile.provider)) {
     return { models: [], success: false };
   }
 
   const provider = profile.provider as OpenRouterProvider;
   const apiKey = provider.apiKey || '';
-  const apiKeyEnv = getEffectiveEnvironmentVariable('OPENROUTER_API_KEY', undefined);
+  const apiKeyEnv = getEffectiveEnvironmentVariable('OPENROUTER_API_KEY', settings);
   const effectiveApiKey = apiKey || apiKeyEnv?.value || '';
 
   if (!effectiveApiKey) {
@@ -87,8 +91,8 @@ export const loadOpenrouterModels = async (profile: ProviderProfile): Promise<Lo
   }
 };
 
-export const hasOpenRouterEnvVars = (projectDir?: string, settings?: SettingsData): boolean => {
-  return !!getEffectiveEnvironmentVariable('OPENROUTER_API_KEY', projectDir, settings)?.value;
+export const hasOpenRouterEnvVars = (settings: SettingsData): boolean => {
+  return !!getEffectiveEnvironmentVariable('OPENROUTER_API_KEY', settings, undefined)?.value;
 };
 
 export const getOpenRouterAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {

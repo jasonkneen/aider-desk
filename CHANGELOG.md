@@ -1,5 +1,9 @@
 # Changelog
 
+## [UNRELEASED]
+
+- properly using env vars from Settings -> Aider when loading provider models
+
 ## [0.33.0]
 
 - fixed issue with diff edit format not being set correctly on startup

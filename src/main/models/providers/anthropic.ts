@@ -9,7 +9,11 @@ import { AiderModelMapping, CacheControl, LlmProviderStrategy } from '@/models';
 import { Project } from '@/project/project';
 import { LoadModelsResponse } from '@/models/types';
 
-export const loadAnthropicModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> => {
+export const loadAnthropicModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> => {
   if (!isAnthropicProvider(profile.provider)) {
     return {
       models: [],
@@ -19,7 +23,7 @@ export const loadAnthropicModels = async (profile: ProviderProfile, modelsInfo: 
 
   const provider = profile.provider;
   const apiKey = provider.apiKey || '';
-  const apiKeyEnv = getEffectiveEnvironmentVariable('ANTHROPIC_API_KEY', undefined);
+  const apiKeyEnv = getEffectiveEnvironmentVariable('ANTHROPIC_API_KEY', settings);
 
   if (!apiKey && !apiKeyEnv?.value) {
     return { models: [], success: false };
@@ -61,8 +65,8 @@ export const loadAnthropicModels = async (profile: ProviderProfile, modelsInfo: 
   }
 };
 
-export const hasAnthropicEnvVars = (projectDir?: string, settings?: SettingsData): boolean => {
-  return !!getEffectiveEnvironmentVariable('ANTHROPIC_API_KEY', projectDir, settings)?.value;
+export const hasAnthropicEnvVars = (settings: SettingsData): boolean => {
+  return !!getEffectiveEnvironmentVariable('ANTHROPIC_API_KEY', settings, undefined)?.value;
 };
 
 export const getAnthropicAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {

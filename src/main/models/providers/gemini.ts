@@ -9,7 +9,11 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Project } from '@/project/project';
 
-export const loadGeminiModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> => {
+export const loadGeminiModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> => {
   if (!isGeminiProvider(profile.provider)) {
     return { models: [], success: false };
   }
@@ -18,8 +22,8 @@ export const loadGeminiModels = async (profile: ProviderProfile, modelsInfo: Rec
   const apiKey = provider.apiKey || '';
   const baseUrl = provider.customBaseUrl || 'https://generativelanguage.googleapis.com';
 
-  const apiKeyEnv = getEffectiveEnvironmentVariable('GEMINI_API_KEY', undefined);
-  const baseUrlEnv = getEffectiveEnvironmentVariable('GEMINI_API_BASE_URL', undefined);
+  const apiKeyEnv = getEffectiveEnvironmentVariable('GEMINI_API_KEY', settings);
+  const baseUrlEnv = getEffectiveEnvironmentVariable('GEMINI_API_BASE_URL', settings);
 
   const effectiveApiKey = apiKey || apiKeyEnv?.value || '';
   const effectiveBaseUrl = baseUrl || baseUrlEnv?.value || 'https://generativelanguage.googleapis.com';
@@ -62,8 +66,8 @@ export const loadGeminiModels = async (profile: ProviderProfile, modelsInfo: Rec
   }
 };
 
-export const hasGeminiEnvVars = (projectDir?: string, settings?: SettingsData): boolean => {
-  return !!getEffectiveEnvironmentVariable('GEMINI_API_KEY', projectDir, settings)?.value;
+export const hasGeminiEnvVars = (settings: SettingsData): boolean => {
+  return !!getEffectiveEnvironmentVariable('GEMINI_API_KEY', settings, undefined)?.value;
 };
 
 export const getGeminiAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {

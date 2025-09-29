@@ -3,13 +3,15 @@ import path from 'path';
 import { is } from '@electron-toolkit/utils';
 import { app } from 'electron';
 
-if (is.dev) {
+if (process.env.AIDER_DESK_DATA_DIR) {
+  app.setPath('userData', process.env.AIDER_DESK_DATA_DIR);
+} else if (is.dev) {
   app.setPath('userData', `${app.getPath('userData')}-dev`);
 }
 
 export const AIDER_DESK_TITLE = 'AiderDesk';
 export const AIDER_DESK_WEBSITE = 'https://aiderdesk.hotovo.com';
-export const AIDER_DESK_DATA_DIR = process.env.AIDER_DESK_DATA_DIR || app.getPath('userData');
+export const AIDER_DESK_DATA_DIR = app.getPath('userData');
 export const AIDER_DESK_CACHE_DIR = path.join(AIDER_DESK_DATA_DIR, 'cache');
 export const RESOURCES_DIR = is.dev ? path.join(__dirname, '..', '..', 'resources') : process.resourcesPath;
 export const LOGS_DIR = path.join(AIDER_DESK_DATA_DIR, 'logs');

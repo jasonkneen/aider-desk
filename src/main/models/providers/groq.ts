@@ -17,14 +17,14 @@ interface GroqApiResponse {
   data: GroqModel[];
 }
 
-export const loadGroqModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> => {
+export const loadGroqModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isGroqProvider(profile.provider)) {
     return { models: [], success: false };
   }
 
   const provider = profile.provider;
   const apiKey = provider.apiKey || '';
-  const apiKeyEnv = getEffectiveEnvironmentVariable('GROQ_API_KEY', undefined);
+  const apiKeyEnv = getEffectiveEnvironmentVariable('GROQ_API_KEY', settings);
   const effectiveApiKey = apiKey || apiKeyEnv?.value || '';
 
   if (!effectiveApiKey) {
@@ -72,8 +72,8 @@ export const loadGroqModels = async (profile: ProviderProfile, modelsInfo: Recor
   }
 };
 
-export const hasGroqEnvVars = (projectDir?: string, settings?: SettingsData): boolean => {
-  return !!getEffectiveEnvironmentVariable('GROQ_API_KEY', projectDir, settings)?.value;
+export const hasGroqEnvVars = (settings: SettingsData): boolean => {
+  return !!getEffectiveEnvironmentVariable('GROQ_API_KEY', settings, undefined)?.value;
 };
 
 export const getGroqAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {

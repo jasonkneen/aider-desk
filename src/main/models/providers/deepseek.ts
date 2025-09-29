@@ -9,14 +9,18 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Project } from '@/project/project';
 
-export const loadDeepseekModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> => {
+export const loadDeepseekModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> => {
   if (!isDeepseekProvider(profile.provider)) {
     return { models: [], success: false };
   }
 
   const provider = profile.provider as DeepseekProvider;
   const apiKey = provider.apiKey || '';
-  const apiKeyEnv = getEffectiveEnvironmentVariable('DEEPSEEK_API_KEY', undefined);
+  const apiKeyEnv = getEffectiveEnvironmentVariable('DEEPSEEK_API_KEY', settings);
 
   if (!apiKey && !apiKeyEnv?.value) {
     return { models: [], success: false };
@@ -52,8 +56,8 @@ export const loadDeepseekModels = async (profile: ProviderProfile, modelsInfo: R
   }
 };
 
-export const hasDeepseekEnvVars = (projectDir?: string, settings?: SettingsData): boolean => {
-  return !!getEffectiveEnvironmentVariable('DEEPSEEK_API_KEY', projectDir, settings)?.value;
+export const hasDeepseekEnvVars = (settings: SettingsData): boolean => {
+  return !!getEffectiveEnvironmentVariable('DEEPSEEK_API_KEY', settings, undefined)?.value;
 };
 
 export const getDeepseekAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {

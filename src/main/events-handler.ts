@@ -556,7 +556,7 @@ export class EventsHandler {
   }
 
   getEffectiveEnvironmentVariable(key: string, baseDir?: string): EnvironmentVariable | undefined {
-    return getEffectiveEnvironmentVariable(key, baseDir, this.store.getSettings());
+    return getEffectiveEnvironmentVariable(key, this.store.getSettings(), baseDir);
   }
 
   async getProviderModels(): Promise<ProviderModelsData> {

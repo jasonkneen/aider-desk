@@ -55,12 +55,12 @@ export interface LlmProviderStrategy {
   /**
    * Loads available models from the provider's API
    */
-  loadModels: (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>) => Promise<LoadModelsResponse>;
+  loadModels: (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>, settings: SettingsData) => Promise<LoadModelsResponse>;
 
   /**
    * Checks if required environment variables are available
    */
-  hasEnvVars: (projectDir?: string, settings?: SettingsData) => boolean;
+  hasEnvVars: (settings: SettingsData) => boolean;
 
   /**
    * Generates Aider-compatible model mapping with environment variables
