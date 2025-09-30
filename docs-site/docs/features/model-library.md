@@ -7,6 +7,8 @@ sidebar_label: "Model Library"
 
 The Model Library is AiderDesk's advanced provider and model management system that gives you complete control over your AI model configuration. It allows you to manage multiple provider profiles, add custom models, configure costs, and organize your model collection efficiently.
 
+![Model Library Interface](../images/model-library.png)
+
 ## Features Overview
 
 - **Multiple Provider Profiles**: Create multiple profiles for the same provider with different configurations
@@ -26,9 +28,6 @@ You can access the Model Library in several ways:
 
 ![Model Library Icon](../images/model-library-icon.png)
 
-The Model Library provides a comprehensive interface for managing all your AI providers and models:
-
-![Model Library Interface](../images/model-library.png)
 
 ## Provider Profiles
 
