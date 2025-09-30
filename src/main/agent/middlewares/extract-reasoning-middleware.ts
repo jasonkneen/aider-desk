@@ -70,6 +70,13 @@ export const extractReasoningMiddleware = function extractReasoningMiddleware({
           new TransformStream<LanguageModelV1StreamPart, LanguageModelV1StreamPart>({
             transform: (chunk, controller) => {
               if (chunk.type !== 'text-delta') {
+                if (fullText && fullText.length < openingTag.length) {
+                  controller.enqueue({
+                    type: 'text-delta',
+                    textDelta: fullText,
+                  });
+                }
+
                 controller.enqueue(chunk);
                 return;
               }
