@@ -28,6 +28,7 @@ const sidebars: SidebarsConfig = {
       collapsed: true,
       items: [
         'features/chat-modes',
+        'features/model-library',
         'features/commands-reference',
         'features/ide-integration',
         'features/reviewing-code-changes',

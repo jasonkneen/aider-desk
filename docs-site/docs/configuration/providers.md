@@ -5,12 +5,13 @@ sidebar_label: "Providers"
 
 # Providers Configuration
 
-AiderDesk supports multiple Large Language Model (LLM) providers to power your AI coding assistant. You can configure these providers in the **Settings → Providers** tab. Each provider has specific configuration requirements, and most support environment variables for secure credential management.
+AiderDesk supports multiple Large Language Model (LLM) providers to power your AI coding assistant. You can configure these providers in the **Model Library** (accessible via the top bar icon). Each provider has specific configuration requirements, and most support environment variables for secure credential management.
 
 ## Table of Contents
 
 - [Anthropic](#anthropic)
 - [OpenAI](#openai)
+- [Azure](#azure)
 - [Gemini](#gemini)
 - [Vertex AI](#vertex-ai)
 - [Deepseek](#deepseek)
@@ -38,8 +39,40 @@ Anthropic provides powerful AI models like Claude that excel at coding and reaso
 
 1. Go to [Anthropic Console](https://console.anthropic.com/settings/keys)
 2. Create a new API key
-3. Enter the API key in the Settings → Providers → Anthropic section
+3. Enter the API key in the Model Library Anthropic configuration
 4. Or set the `ANTHROPIC_API_KEY` environment variable
+
+---
+
+## Azure
+
+Azure OpenAI provides enterprise-grade AI models with enhanced security, compliance, and regional deployment options.
+
+### Configuration Parameters
+
+- **API Key**: Your Azure OpenAI API key for authentication
+  - Environment variable: `AZURE_API_KEY`
+  - Get your API key from [Azure Portal](https://portal.azure.com)
+- **Resource Name**: Your Azure OpenAI resource name
+  - Environment variable: `AZURE_RESOURCE_NAME`
+  - Found in your Azure OpenAI resource overview page
+- **API Version**: The API version to use
+  - Environment variable: `AZURE_API_VERSION`
+  - Default: `2025-01-01-preview`
+
+### Setup
+
+1. Go to [Azure Portal](https://portal.azure.com) and create an Azure OpenAI resource
+2. Navigate to your resource and find the **Keys and Endpoint** section
+3. Copy your API key and resource name
+4. Enter the API key, resource name, and optionally API version in the Model Library Azure configuration
+5. Or set the appropriate environment variables
+
+### Important Notes
+
+- **Custom Models Required**: Azure models are not automatically discovered. You need to add custom models manually through the [Model Library](../features/model-library.md)
+- **Resource Name Format**: Use only the resource name (e.g., `my-openai-resource`), not the full endpoint URL
+- **Regional Deployment**: Models are deployed to specific Azure regions, ensure your resource is in the desired region
 
 ---
 
@@ -61,7 +94,7 @@ OpenAI provides advanced language models including GPT-4 series with enhanced re
 
 1. Go to [OpenAI API Keys](https://platform.openai.com/api-keys)
 2. Create a new API key
-3. Enter the API key in the Settings → Providers → OpenAI section
+3. Enter the API key in the Model Library OpenAI configuration
 4. Configure the Reasoning Effort based on your needs
 5. Or set the `OPENAI_API_KEY` environment variable
 
@@ -86,7 +119,7 @@ Google's Gemini models offer versatile AI capabilities with advanced features li
 
 1. Go to [Google AI Studio](https://ai.google.dev)
 2. Create a new API key
-3. Enter the API key in the Settings → Providers → Gemini section
+3. Enter the API key in the Model Library Gemini configuration
 4. Configure optional parameters based on your needs
 5. Or set appropriate environment variables
 
@@ -110,7 +143,7 @@ Google Cloud's Vertex AI provides enterprise-grade AI models with advanced confi
 2. Enable the Vertex AI API
 3. Create a service account with Vertex AI permissions
 4. Download the service account credentials JSON
-5. Enter the project ID, location, and credentials in the Settings → Providers → Vertex AI section
+5. Enter the project ID, location, and credentials in the Model Library Vertex AI configuration
 6. Configure thinking budget and thoughts inclusion as needed
 
 ---
@@ -129,7 +162,7 @@ Deepseek provides powerful AI models optimized for coding and technical tasks.
 
 1. Go to [Deepseek Platform](https://platform.deepseek.com/api_keys)
 2. Create a new API key
-3. Enter the API key in the Settings → Providers → Deepseek section
+3. Enter the API key in the Model Library Deepseek configuration
 4. Or set the `DEEPSEEK_API_KEY` environment variable
 
 ---
@@ -149,7 +182,7 @@ Groq offers ultra-fast inference with specialized hardware acceleration.
 
 1. Go to [Groq Console](https://console.groq.com)
 2. Create a new API key
-3. Enter the API key in the Settings → Providers → Groq section
+3. Enter the API key in the Model Library Groq configuration
 4. Add the models you want to use (e.g., `llama3-70b-8192`, `mixtral-8x7b-32768`)
 5. Or set the `GROQ_API_KEY` environment variable
 
@@ -176,7 +209,7 @@ Amazon Bedrock provides access to foundation models from leading AI companies th
 1. Ensure you have an AWS account with appropriate permissions
 2. Enable Bedrock in your desired AWS region
 3. Create an IAM user with Bedrock access permissions
-4. Enter the AWS credentials in the Settings → Providers → Bedrock section
+4. Enter the AWS credentials in the Model Library Bedrock configuration
 5. Or set the appropriate AWS environment variables
 
 ---
@@ -193,34 +226,18 @@ Configure any OpenAI-compatible API endpoint to use custom models or self-hosted
   - Environment variable: `OPENAI_API_KEY`
 - **Models**: List of available models (comma-separated)
 
-### Setup for Agent Mode
+### Setup
 
 1. Obtain the base URL and API key from your OpenAI-compatible service provider
-2. Enter the base URL, API key, and available models in the Settings → Providers → OpenAI Compatible section
+2. Enter the base URL and API key in the Model Library OpenAI Compatible configuration
 3. Or set the `OPENAI_API_BASE` and `OPENAI_API_KEY` environment variables
-4. **Use `openai-compatible/` prefix** in Agent mode model selector
-
-### Setup for Aider Modes (Code, Ask, Architect, Context)
-
-To use OpenAI Compatible providers in Aider modes, you need to configure environment variables:
-
-1. **Set Environment Variables** in Settings → Aider → Environment Variables:
-   ```
-   OPENAI_API_BASE=[your_provider_base_url]
-   OPENAI_API_KEY=[your_api_key]
-   ```
-
-2. **Use Model Prefix**: In the Aider model selector, use the `openai/` prefix:
-   ```
-   openai/gpt-4
-   openai/claude-3-sonnet-20240229
-   ```
+4. **Use `openai-compatible/` prefix** in the model selector
 
 ### Important Notes
 
-- **Agent Mode**: Use `openai-compatible/` prefix and configure in Providers section
-- **Aider Modes**: Use `openai/` prefix and configure environment variables in Aider section
-- **API Compatibility**: Aider treats all OpenAI-compatible providers as OpenAI, hence the `openai/` prefix in Aider modes
+- **Unified Prefix**: Both Agent and Aider modes use the same `openai-compatible/` prefix
+- **Model Library**: Use the [Model Library](../features/model-library.md) for advanced configuration and custom model management
+- **API Compatibility**: Configure all settings in the Model Library for unified experience across all modes
 
 ---
 
@@ -238,7 +255,7 @@ Ollama allows you to run open-source models locally on your machine.
 
 1. Install and run Ollama on your local machine
 2. Ensure Ollama is running and accessible
-3. Enter the base URL in the Settings → Providers → Ollama section
+3. Enter the base URL in the Model Library Ollama configuration
 4. Or set the `OLLAMA_API_BASE` environment variable
 
 ---
@@ -257,7 +274,7 @@ LM Studio provides a user-friendly interface for running local language models.
 
 1. Install and run LM Studio on your local machine
 2. Start a local server in LM Studio
-3. Enter the base URL in the Settings → Providers → LM Studio section
+3. Enter the base URL in the Model Library LM Studio configuration
 4. Or set the `LMSTUDIO_API_BASE` environment variable
 
 ---
@@ -286,7 +303,7 @@ OpenRouter provides access to multiple models from various providers through a s
 
 1. Go to [OpenRouter Keys](https://openrouter.ai/keys)
 2. Create a new API key
-3. Enter the API key in the Settings → Providers → OpenRouter section
+3. Enter the API key in the Model Library OpenRouter configuration
 4. Select your preferred models from the auto-populated list
 5. Configure advanced settings as needed
 6. Or set the `OPENROUTER_API_KEY` environment variable
@@ -311,51 +328,59 @@ Requesty provides optimized model routing and caching for improved performance a
   - **High**: Enhanced reasoning
   - **Max**: Maximum reasoning
 
-### Setup for Agent Mode
+### Setup
 
 1. Go to [Requesty API Keys](https://app.requesty.ai/api-keys)
 2. Create a new API key
-3. Enter the API key in the Settings → Providers → Requesty section
+3. Enter the API key in the Model Library Requesty configuration
 4. Select your preferred models from the auto-populated list
 5. Configure auto cache and reasoning effort as needed
 6. Or set the `REQUESTY_API_KEY` environment variable
-7. **Use `requesty/` prefix** in Agent mode model selector
-
-### Setup for Aider Modes (Code, Ask, Architect, Context)
-
-To use Requesty models in Aider modes, you need to configure environment variables:
-
-1. **Set Environment Variables** in Settings → Aider → Environment Variables:
-   ```
-   OPENAI_API_BASE=https://router.requesty.ai/v1
-   OPENAI_API_KEY=[your_requesty_api_key]
-   ```
-
-2. **Use Model Prefix**: In the Aider model selector, use the `openai/` prefix:
-   ```
-   openai/anthropic/claude-3-sonnet-20240229
-   openai/gpt-4-turbo
-   ```
+7. **Use `requesty/` prefix** in the model selector
 
 ### Important Notes
 
-- **Agent Mode**: Use `requesty/` prefix and configure in Providers section
-- **Aider Modes**: Use `openai/` prefix and configure environment variables in Aider section
-- **API Compatibility**: Requesty appears as OpenAI-compatible to Aider, hence the `openai/` prefix in Aider modes
+- **Unified Prefix**: Both Agent and Aider modes use the same `requesty/` prefix
+- **Model Library**: Use the [Model Library](../features/model-library.md) for advanced configuration and custom model management
+- **API Compatibility**: Configure all settings in the Providers section for unified experience across all modes
 
 ---
 
-### Agent Mode vs Aider Mode Prefix Differences
+## Model Library Integration
 
-| Provider | Agent Mode Prefix | Aider Mode Prefix | Notes |
-|----------|------------------|-------------------|-------|
-| Requesty | `requesty/` | `openai/` | Requesty appears as OpenAI-compatible to Aider |
-| OpenAI Compatible | `openai-compatible/` | `openai/` | Aider treats all compatible providers as OpenAI |
-| All Others | `[provider_name]/` | `[provider_name]/` | Same prefix for both modes |
+The **Model Library** provides advanced provider and model management capabilities beyond basic provider configuration:
+
+- **Multiple Profiles**: Create multiple profiles for the same provider (e.g., work and personal OpenAI accounts)
+- **Custom Models**: Add custom models that aren't automatically discovered (e.g., Azure models)
+- **Cost Configuration**: Set custom pricing and token limits for models
+- **Model Management**: Hide irrelevant models, organize by provider profiles
+- **Advanced Configuration**: Configure multiple OpenAI-compatible providers with different prefixes
+
+For comprehensive provider and model management, see [Model Library](../features/model-library.md).
+
+## Unified Model Prefix System
+
+AiderDesk now uses a unified model prefix system across all modes (Agent, Code, Ask, Architect, Context):
+
+| Provider | Model Prefix |
+|----------|--------------|
+| Anthropic | `anthropic/` |
+| OpenAI | `openai/` |
+| Azure | `azure/` |
+| Gemini | `gemini/` |
+| Vertex AI | `vertex_ai/` |
+| Deepseek | `deepseek/` |
+| Groq | `groq/` |
+| Bedrock | `bedrock/` |
+| OpenAI Compatible | `openai-compatible/` |
+| Ollama | `ollama/` |
+| LM Studio | `lmstudio/` |
+| OpenRouter | `openrouter/` |
+| Requesty | `requesty/` |
 
 ### Important Notes
 
-- **Environment Variables**: Aider modes require environment variables to be set in **Settings → Aider → Environment Variables**, not in the Providers section
-- **Model Selection**: Always use the correct prefix based on the mode you're using
-- **API Compatibility**: Requesty and OpenAI Compatible providers appear as OpenAI to Aider, hence the `openai/` prefix in Aider modes
-- **Configuration Location**: Agent mode uses the Providers configuration, while Aider modes use environment variables in the Aider configuration section
+- **Unified Configuration**: Configure all providers in the **Model Library** for consistent behavior across all modes
+- **Model Selection**: Use the same model prefix regardless of the mode you're using
+- **Environment Variables**: Environment variables are supported as fallbacks but primary configuration is through the Model Library
+- **Model Library**: For advanced management of multiple profiles and custom models, use the Model Library

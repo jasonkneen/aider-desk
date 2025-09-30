@@ -26,11 +26,28 @@ Once in Agent Mode, you're ready to configure your model provider and select a m
 
 Before you can use Agent Mode, you need to configure at least one Language Model (LLM) provider.
 
-1. Go to **Settings > Model Providers**.
-2. Select a provider from the list (e.g., OpenAI, Anthropic).
-3. Enter your API key and any other required information for that provider.
+### Basic Provider Setup
 
-![Setting API key for Anthropic](../images/provider-api-key.gif)
+1. Click the **Model Library icon** in the top bar
+2. Click **"Add Provider"** to configure a new provider
+3. Select a provider from the list (e.g., OpenAI, Anthropic, Azure)
+4. Enter your API key and any other required information for that provider
+5. Click **"Save"** to create the provider profile
+
+### Advanced Configuration with Model Library
+
+The Model Library provides comprehensive provider management capabilities:
+
+1. **Multiple Profiles**: Create multiple profiles for the same provider (e.g., work and personal OpenAI accounts)
+2. **Custom Models**: Add models that aren't automatically discovered (especially for Azure OpenAI)
+3. **Cost Configuration**: Set custom pricing and token limits for accurate cost tracking
+4. **Model Organization**: Hide irrelevant models and organize by provider profiles
+
+See [Model Library](../features/model-library.md) for comprehensive provider management, including:
+- Setting up multiple OpenAI-compatible providers with different prefixes
+- Adding Azure OpenAI custom models
+- Configuring costs and token limits
+- Managing model visibility
 
 ## Selecting a Model in Model selector
 
@@ -56,17 +73,24 @@ The model you choose will now be set for the current agent profile and it will b
 
 ## Provider Prefixes
 
-When entering a custom model, you must include the correct prefix for the provider. Here is a list of the available provider prefixes:
+When entering a custom model, you must include the correct prefix for the provider. AiderDesk uses a unified prefix system across all modes (Agent, Code, Ask, Architect, Context):
 
-- `anthropic/`
-- `bedrock/`
-- `deepseek/`
-- `gemini/`
-- `vertex-ai/`
-- `groq/`
-- `lmstudio/`
-- `ollama/`
-- `openai/`
-- `openai-compatible/`
-- `openrouter/`
-- `requesty/`
+| Provider | Model Prefix |
+|----------|--------------|
+| Anthropic | `anthropic/` |
+| OpenAI | `openai/` |
+| Azure | `azure/` |
+| Gemini | `gemini/` |
+| Vertex AI | `vertex_ai/` |
+| Deepseek | `deepseek/` |
+| Groq | `groq/` |
+| Bedrock | `bedrock/` |
+| OpenAI Compatible | `openai-compatible/` |
+| Ollama | `ollama/` |
+| LM Studio | `lmstudio/` |
+| OpenRouter | `openrouter/` |
+| Requesty | `requesty/` |
+
+**Note**: All modes use the same prefixes. Configure providers in the **Model Library** (top bar icon) for unified experience across all modes.
+
+For advanced model management, including multiple profiles per provider and custom model configuration, see the [Model Library](../features/model-library.md).

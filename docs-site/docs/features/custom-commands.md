@@ -144,7 +144,7 @@ includeContext: false
 
 To use it, type `/list-root` in the prompt field and press Enter. The agent will only receive the `!ls -la ./` instruction and no prior conversation.
 
-### Example 4: Command with Variable Arguments using {{ARGUMENTS}}
+### Example 4: Command with Variable Arguments using `{{ARGUMENTS}}`
 
 This command demonstrates how to use `{{ARGUMENTS}}` to handle a variable number of arguments, useful for commands that should accept any number of parameters.
 
@@ -157,7 +157,7 @@ arguments:
   - description: Any number of arguments to echo.
     required: false
 ---
-!echo "All arguments received: {{ARGUMENTS}}"
+!echo "All arguments received: {{ARGUMENTS}}" 
 
 Please process these arguments and provide a summary.
 ```
@@ -167,7 +167,7 @@ To use it, you could type:
 *   `/echo-all "multiple words" single word` (outputs: "All arguments received: multiple words single word")
 *   `/echo-all` (outputs: "All arguments received: ")
 
-The `{{ARGUMENTS}}` placeholder is particularly useful when:
+The `\{\{ARGUMENTS\}\}` placeholder is particularly useful when:
 - You want to pass all arguments to a shell command that accepts variable parameters
 - You need to create flexible commands that don't require a fixed number of arguments
 - You want to preserve the original argument order and spacing when passing them to another tool

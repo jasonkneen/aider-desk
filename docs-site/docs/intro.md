@@ -70,8 +70,9 @@ When you first open AiderDesk:
 
 Before getting started, configure these key settings:
 
-1. **API Keys** (Settings → AI Providers):
-   - Add keys for your preferred providers (OpenAI, Anthropic, etc.)
+1. **API Keys** (Model Library - top bar icon):
+   - Click the Model Library icon in the top bar
+   - Add provider profiles and API keys for your preferred providers (OpenAI, Anthropic, etc.)
    - Test connection for each provider
 
 2. **Model Selection**:
