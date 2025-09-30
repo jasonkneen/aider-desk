@@ -181,7 +181,13 @@ export class CustomCommandManager {
   private substituteArguments(template: string, args: string[], commandArgs: CustomCommand['arguments']): string {
     let prompt = template;
 
-    // First, substitute provided arguments
+    // First, substitute {{ARGUMENTS}} placeholder with all arguments joined by spaces
+    if (template.includes('{{ARGUMENTS}}')) {
+      const allArguments = args.join(' ');
+      prompt = prompt.replaceAll('{{ARGUMENTS}}', allArguments);
+    }
+
+    // Then, substitute provided arguments
     for (let i = 0; i < args.length; i++) {
       const value = args[i] !== undefined ? args[i] : '';
       prompt = prompt.replaceAll(`{{${i + 1}}}`, value);
