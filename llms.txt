@@ -5245,9 +5245,13 @@ import { AiderModelMapping, CacheControl, LlmProviderStrategy } from '@/models';
 import { Project } from '@/project/project';
 import { LoadModelsResponse } from '@/models/types';
 ⋮----
-export const loadAnthropicModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> =>
+export const loadAnthropicModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> =>
 ⋮----
-export const hasAnthropicEnvVars = (projectDir?: string, settings?: SettingsData): boolean =>
+export const hasAnthropicEnvVars = (settings: SettingsData): boolean =>
 ⋮----
 export const getAnthropicAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
@@ -5289,22 +5293,19 @@ File: src/main/models/providers/azure.ts
 ================
 import { createAzure } from '@ai-sdk/azure';
 import { ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { AZURE_DEFAULT_API_VERSION, AzureProvider, isAzureProvider } from '@common/agent';
+import { AZURE_DEFAULT_API_VERSION, AzureProvider } from '@common/agent';
 ⋮----
 import type { LanguageModel, LanguageModelUsage } from 'ai';
 ⋮----
-import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
-import logger from '@/logger';
+import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Project } from '@/project/project';
-⋮----
-export const loadAzureModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> =>
 ⋮----
 const extractResourceNameFromEndpoint = (endpoint: string): string =>
 ⋮----
 // Extract resource name from hostname like "resource-name.openai.azure.com"
 ⋮----
-export const hasAzureEnvVars = (projectDir?: string, settings?: SettingsData): boolean =>
+export const hasAzureEnvVars = (settings: SettingsData): boolean =>
 ⋮----
 export const getAzureAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
@@ -5352,7 +5353,11 @@ import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Project } from '@/project/project';
 import { LoadModelsResponse } from '@/models/types';
 ⋮----
-export const loadBedrockModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> =>
+export const loadBedrockModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> =>
 ⋮----
 // Check if we have explicit keys or if AWS_PROFILE is set in the main process env
 ⋮----
@@ -5366,7 +5371,7 @@ nextToken = response.nextToken; // Will be undefined if no more pages
 ⋮----
 // Check if the model is authorized and available
 ⋮----
-export const hasBedrockEnvVars = (projectDir?: string, settings?: SettingsData): boolean =>
+export const hasBedrockEnvVars = (settings: SettingsData): boolean =>
 ⋮----
 export const getBedrockAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
@@ -5422,11 +5427,15 @@ interface CerebrasModel {
   description?: string;
 }
 ⋮----
-export const loadCerebrasModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> =>
+export const loadCerebrasModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> =>
 ⋮----
 // Filter out models that don't have pricing information
 ⋮----
-export const hasCerebrasEnvVars = (projectDir?: string, settings?: SettingsData): boolean =>
+export const hasCerebrasEnvVars = (settings: SettingsData): boolean =>
 ⋮----
 export const getCerebrasAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
@@ -5467,9 +5476,13 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Project } from '@/project/project';
 ⋮----
-export const loadDeepseekModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> =>
+export const loadDeepseekModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> =>
 ⋮----
-export const hasDeepseekEnvVars = (projectDir?: string, settings?: SettingsData): boolean =>
+export const hasDeepseekEnvVars = (settings: SettingsData): boolean =>
 ⋮----
 export const getDeepseekAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
@@ -5510,9 +5523,13 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Project } from '@/project/project';
 ⋮----
-export const loadGeminiModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> =>
+export const loadGeminiModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> =>
 ⋮----
-export const hasGeminiEnvVars = (projectDir?: string, settings?: SettingsData): boolean =>
+export const hasGeminiEnvVars = (settings: SettingsData): boolean =>
 ⋮----
 export const getGeminiAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
@@ -5567,11 +5584,11 @@ interface GroqApiResponse {
   data: GroqModel[];
 }
 ⋮----
-export const loadGroqModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> =>
+export const loadGroqModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>, settings: SettingsData): Promise<LoadModelsResponse> =>
 ⋮----
 // Filter out models that don't have pricing information
 ⋮----
-export const hasGroqEnvVars = (projectDir?: string, settings?: SettingsData): boolean =>
+export const hasGroqEnvVars = (settings: SettingsData): boolean =>
 ⋮----
 export const getGroqAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
@@ -5612,13 +5629,17 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Project } from '@/project/project';
 ⋮----
-export const loadLmStudioModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> =>
+export const loadLmStudioModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> =>
 ⋮----
 const normalized = effectiveBaseUrl.replace(/\/+$/g, ''); // Remove all trailing slashes
 ⋮----
 ...info, // Merge with existing model info if available
 ⋮----
-export const hasLmStudioEnvVars = (projectDir?: string, settings?: SettingsData): boolean =>
+export const hasLmStudioEnvVars = (settings: SettingsData): boolean =>
 ⋮----
 export const getLmStudioAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
@@ -5659,13 +5680,17 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Project } from '@/project/project';
 ⋮----
-export const loadOllamaModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> =>
+export const loadOllamaModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> =>
 ⋮----
 let normalized = effectiveBaseUrl.replace(/\/+$/, ''); // Remove all trailing slashes
 ⋮----
 ...info, // Merge with existing model info if available
 ⋮----
-export const hasOllamaEnvVars = (projectDir?: string, settings?: SettingsData): boolean =>
+export const hasOllamaEnvVars = (settings: SettingsData): boolean =>
 ⋮----
 export const getOllamaAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
@@ -5706,9 +5731,13 @@ import logger from '@/logger';
 import { Project } from '@/project/project';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 ⋮----
-export const loadOpenaiCompatibleModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> =>
+export const loadOpenaiCompatibleModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> =>
 ⋮----
-export const hasOpenAiCompatibleEnvVars = (projectDir?: string, settings?: SettingsData): boolean =>
+export const hasOpenAiCompatibleEnvVars = (settings: SettingsData): boolean =>
 ⋮----
 export const getOpenAiCompatibleAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
@@ -5758,9 +5787,13 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Project } from '@/project/project';
 ⋮----
-export const loadOpenAiModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> =>
+export const loadOpenAiModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> =>
 ⋮----
-export const hasOpenAiEnvVars = (projectDir?: string, settings?: SettingsData): boolean =>
+export const hasOpenAiEnvVars = (settings: SettingsData): boolean =>
 ⋮----
 export const getOpenAiAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
@@ -5833,9 +5866,13 @@ interface OpenRouterModelsResponse {
   data: OpenRouterModel[];
 }
 ⋮----
-export const loadOpenrouterModels = async (profile: ProviderProfile): Promise<LoadModelsResponse> =>
+export const loadOpenrouterModels = async (
+  profile: ProviderProfile,
+  _modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> =>
 ⋮----
-export const hasOpenRouterEnvVars = (projectDir?: string, settings?: SettingsData): boolean =>
+export const hasOpenRouterEnvVars = (settings: SettingsData): boolean =>
 ⋮----
 export const getOpenRouterAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
@@ -5923,9 +5960,13 @@ interface RequestyModelsResponse {
   data: RequestyModel[];
 }
 ⋮----
-export const loadRequestyModels = async (profile: ProviderProfile): Promise<LoadModelsResponse> =>
+export const loadRequestyModels = async (
+  profile: ProviderProfile,
+  _modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> =>
 ⋮----
-export const hasRequestyEnvVars = (projectDir?: string, settings?: SettingsData): boolean =>
+export const hasRequestyEnvVars = (settings: SettingsData): boolean =>
 ⋮----
 export const getRequestyAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
@@ -5962,7 +6003,7 @@ File: src/main/models/providers/vertex-ai.ts
 ================
 import { v1beta1 } from '@google-cloud/aiplatform';
 import { GoogleAuth } from 'google-auth-library';
-import { Model, ModelInfo, ProviderProfile, UsageReportData } from '@common/types';
+import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 import { isVertexAiProvider, LlmProvider, VertexAiProvider } from '@common/agent';
 import { createVertex } from '@ai-sdk/google-vertex';
 ⋮----
@@ -5973,13 +6014,17 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Project } from '@/project/project';
 ⋮----
-export const loadVertexAIModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>): Promise<LoadModelsResponse> =>
+export const loadVertexAIModels = async (
+  profile: ProviderProfile,
+  modelsInfo: Record<string, ModelInfo>,
+  settings: SettingsData,
+): Promise<LoadModelsResponse> =>
 ⋮----
 // Use provided credentials JSON
 ⋮----
 // Use default credentials (e.g., gcloud, environment variables, or service account)
 ⋮----
-export const hasVertexAiEnvVars = (): boolean =>
+export const hasVertexAiEnvVars = (_settings: SettingsData): boolean =>
 ⋮----
 // Vertex AI doesn't have a simple environment variable check like other providers
 // It requires project, location, and potentially credentials
@@ -6237,12 +6282,12 @@ export interface LlmProviderStrategy {
   /**
    * Loads available models from the provider's API
    */
-  loadModels: (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>) => Promise<LoadModelsResponse>;
+  loadModels: (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>, settings: SettingsData) => Promise<LoadModelsResponse>;
 
   /**
    * Checks if required environment variables are available
    */
-  hasEnvVars: (projectDir?: string, settings?: SettingsData) => boolean;
+  hasEnvVars: (settings: SettingsData) => boolean;
 
   /**
    * Generates Aider-compatible model mapping with environment variables
@@ -7815,7 +7860,7 @@ const readEnvFile = (filePath: string): Record<string, string> | null =>
 ⋮----
 const readPropertyFromConfFile = (filePath: string, property: string): string | undefined =>
 ⋮----
-export const getEffectiveEnvironmentVariable = (key: string, projectDir?: string, settings?: SettingsData): EnvironmentVariable | undefined =>
+export const getEffectiveEnvironmentVariable = (key: string, settings?: SettingsData, projectDir?: string): EnvironmentVariable | undefined =>
 ⋮----
 // 1. From settings.aider.environmentVariables
 ⋮----
@@ -16440,7 +16485,7 @@ File: package.json
 ================
 {
   "name": "aider-desk",
-  "version": "0.33.0-dev",
+  "version": "0.34.0-dev",
   "description": "Aider desktop application wrapper",
   "main": "./out/main/index.js",
   "author": "Hotovo",
