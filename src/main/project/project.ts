@@ -75,7 +75,7 @@ export class Project {
   private tokensInfo: TokensInfoData;
   private currentPromptResponses: ResponseCompletedData[] = [];
   private runPromptResolves: ((value: ResponseCompletedData[]) => void)[] = [];
-  public sessionManager: SessionManager = new SessionManager(this);
+  private sessionManager: SessionManager = new SessionManager(this);
   private customCommandManager: CustomCommandManager;
   private taskManager: TaskManager = new TaskManager();
   private commandOutputs: Map<string, string> = new Map();
@@ -129,8 +129,6 @@ export class Project {
     } catch (error) {
       logger.error('Error loading session:', { error });
     }
-
-    this.sessionManager.enableAutosave();
 
     this.sessionManager.getContextFiles().forEach((contextFile) => {
       this.eventManager.sendFileAdded(this.baseDir, contextFile);
@@ -411,7 +409,6 @@ export class Project {
     this.eventManager.sendClearProject(this.baseDir, true, true);
     await this.killAider();
     this.customCommandManager.dispose();
-    this.sessionManager.disableAutosave();
   }
 
   public async saveSession(name: string): Promise<void> {
@@ -475,8 +472,6 @@ export class Project {
 
         this.runPromptResolves.forEach((resolve) => resolve([]));
         this.runPromptResolves = [];
-
-        this.sessionManager.clearMessages();
       } catch (error: unknown) {
         logger.error('Error killing Aider process:', { error });
         throw error;
@@ -930,7 +925,7 @@ export class Project {
   }
 
   public updateContextFiles(contextFiles: ContextFile[]) {
-    this.sessionManager.setContextFiles(contextFiles);
+    this.sessionManager.setContextFiles(contextFiles, false);
     this.sendContextFilesUpdated();
     void this.updateContextInfo(true, true);
   }

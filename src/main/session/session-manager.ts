@@ -29,10 +29,12 @@ export class SessionManager {
   }
 
   public enableAutosave() {
+    logger.debug('Enabling autosave');
     this.autosaveEnabled = true;
   }
 
   public disableAutosave() {
+    logger.debug('Disabling autosave');
     this.autosaveEnabled = false;
   }
 
@@ -121,6 +123,7 @@ export class SessionManager {
         return [];
       }
 
+      logger.debug('Adding file to context:', { path: contextFile.path });
       const newContextFile = {
         ...contextFile,
         readOnly: contextFile.readOnly ?? false,
@@ -153,6 +156,12 @@ export class SessionManager {
       return true; // Keep in contextFiles
     });
 
+    logger.debug('Dropped files from context:', {
+      path: filePath,
+      absolutePath,
+      droppedFiles: droppedFiles.map((f) => f.path),
+    });
+
     if (droppedFiles.length > 0) {
       this.saveAsAutosaved();
     }
@@ -161,6 +170,9 @@ export class SessionManager {
   }
 
   setContextFiles(contextFiles: ContextFile[], save = true) {
+    logger.debug('Setting context files', {
+      files: contextFiles.map((f) => f.path),
+    });
     this.contextFiles = contextFiles;
     if (save) {
       this.saveAsAutosaved();
@@ -172,6 +184,11 @@ export class SessionManager {
   }
 
   setContextMessages(contextMessages: ContextMessage[], save = true) {
+    logger.debug('Setting context messages', {
+      messages: contextMessages.length,
+      save,
+    });
+
     this.contextMessages = contextMessages;
     if (save) {
       this.saveAsAutosaved();
@@ -183,6 +200,7 @@ export class SessionManager {
   }
 
   clearMessages(save = true) {
+    logger.debug('Clearing messages');
     this.contextMessages = [];
     if (save) {
       this.saveAsAutosaved();
@@ -671,21 +689,22 @@ export class SessionManager {
   }, 1000);
 
   private saveAsAutosaved() {
-    logger.debug('Saving autosaved session', {
-      projectDir: this.project.baseDir,
-      messages: this.contextMessages.length,
-      files: this.contextFiles.length,
-      enabled: this.autosaveEnabled,
-    });
-
     if (this.autosaveEnabled) {
+      logger.debug('Saving autosaved session', {
+        projectDir: this.project.baseDir,
+        messages: this.contextMessages.length,
+        files: this.contextFiles.length,
+        enabled: this.autosaveEnabled,
+      });
       void this.debouncedSaveAsAutosaved();
     }
   }
 
   async loadAutosaved(): Promise<void> {
     try {
+      this.disableAutosave();
       await this.load('.autosaved');
+      this.enableAutosave();
     } catch (error) {
       logger.error('Failed to load autosaved session:', { error });
       throw error;
