@@ -39,7 +39,9 @@ arguments:
 ---
 This is the template for the command.
 You can use `{{1}}`, `{{2}}`, etc., to refer to the arguments passed to the command.
+You can also use `{{ARGUMENTS}}` to refer to all arguments joined by spaces.
 For example, `!git diff {{1}}` will execute `git diff` with the first argument.
+For example, `!echo {{ARGUMENTS}}` will echo all arguments.
 Any line starting with `!` will be treated as a shell command.
 ```
 
@@ -55,7 +57,9 @@ Any line starting with `!` will be treated as a shell command.
 
 The content of the Markdown file below the YAML front matter is the command's template. This template will be sent to the AiderDesk agent as a prompt.
 
-*   **Argument Substitution:** Use `{{1}}`, `{{2}}`, `{{3}}`, and so on, to insert the values of the arguments passed to the command. `{{1}}` corresponds to the first argument, `{{2}}` to the second, and so forth.
+*   **Argument Substitution:** 
+    *   Use `{{1}}`, `{{2}}`, `{{3}}`, and so on, to insert the values of the arguments passed to the command. `{{1}}` corresponds to the first argument, `{{2}}` to the second, and so forth.
+    *   Use `{{ARGUMENTS}}` to substitute all arguments joined by spaces. This is useful when you want to pass all arguments as a single string to a command.
 *   **Shell Commands:** Any line in the template that starts with an exclamation mark (`!`) will be interpreted as a shell command. These commands are executed *before* the final prompt is sent to the LLM, and their `stdout` replaces the command line in the assembled prompt. For example, `!git diff` or `!ls -la {{1}}`.
 
 ## How to Use Custom Commands
@@ -139,3 +143,31 @@ includeContext: false
 ```
 
 To use it, type `/list-root` in the prompt field and press Enter. The agent will only receive the `!ls -la ./` instruction and no prior conversation.
+
+### Example 4: Command with Variable Arguments using {{ARGUMENTS}}
+
+This command demonstrates how to use `{{ARGUMENTS}}` to handle a variable number of arguments, useful for commands that should accept any number of parameters.
+
+Create a file named `~/.aider-desk/commands/echo-all.md`:
+
+```markdown
+---
+description: Echoes all provided arguments as a single string.
+arguments:
+  - description: Any number of arguments to echo.
+    required: false
+---
+!echo "All arguments received: {{ARGUMENTS}}"
+
+Please process these arguments and provide a summary.
+```
+
+To use it, you could type:
+*   `/echo-all hello world` (outputs: "All arguments received: hello world")
+*   `/echo-all "multiple words" single word` (outputs: "All arguments received: multiple words single word")
+*   `/echo-all` (outputs: "All arguments received: ")
+
+The `{{ARGUMENTS}}` placeholder is particularly useful when:
+- You want to pass all arguments to a shell command that accepts variable parameters
+- You need to create flexible commands that don't require a fixed number of arguments
+- You want to preserve the original argument order and spacing when passing them to another tool
