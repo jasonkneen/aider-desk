@@ -5022,7 +5022,9 @@ async processCommandTemplate(command: CustomCommand, args: string[]): Promise<st
 ⋮----
 private substituteArguments(template: string, args: string[], commandArgs: CustomCommand['arguments']): string
 ⋮----
-// First, substitute provided arguments
+// First, substitute {{ARGUMENTS}} placeholder with all arguments joined by spaces
+⋮----
+// Then, substitute provided arguments
 ⋮----
 // Handle any remaining placeholders that weren't substituted
 ⋮----
