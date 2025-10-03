@@ -9,6 +9,7 @@
 - improved performance of model library by using virtualized table for models
 - added support for provider overrides on model level
 - added support for Z.AI Coding Plan provider
+- updated Electron version to fix issues with latest MacOS version
 
 ## [0.33.0]
 
