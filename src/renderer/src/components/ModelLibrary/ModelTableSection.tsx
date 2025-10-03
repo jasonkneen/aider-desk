@@ -5,7 +5,8 @@ import { Model, ProviderProfile } from '@common/types';
 
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
-import { Column, Table } from '@/components/common/Table';
+import { Column } from '@/components/common/Table';
+import { VirtualTable } from '@/components/common/VirtualTable';
 import { IconButton } from '@/components/common/IconButton';
 
 type Props = {
@@ -49,7 +50,8 @@ export const ModelTableSection = ({ models, modelCount, selectedProviderIds, pro
       accessor: 'maxInputTokens',
       header: t('modelLibrary.maxInputTokens'),
       align: 'center',
-      maxWidth: 80,
+      maxWidth: 150,
+      cellClassName: 'text-xs',
     },
     {
       accessor: 'inputCostPerToken',
@@ -61,7 +63,8 @@ export const ModelTableSection = ({ models, modelCount, selectedProviderIds, pro
         return `$${(Number(value) * 1000000).toFixed(2)}`;
       },
       align: 'center',
-      maxWidth: 80,
+      maxWidth: 150,
+      cellClassName: 'text-xs',
     },
     {
       accessor: 'cacheReadInputTokenCost',
@@ -73,7 +76,8 @@ export const ModelTableSection = ({ models, modelCount, selectedProviderIds, pro
         return `$${(Number(value) * 1000000).toFixed(2)}`;
       },
       align: 'center',
-      maxWidth: 80,
+      maxWidth: 150,
+      cellClassName: 'text-xs',
     },
     {
       accessor: 'cacheWriteInputTokenCost',
@@ -85,7 +89,8 @@ export const ModelTableSection = ({ models, modelCount, selectedProviderIds, pro
         return `$${(Number(value) * 1000000).toFixed(2)}`;
       },
       align: 'center',
-      maxWidth: 80,
+      maxWidth: 150,
+      cellClassName: 'text-xs',
     },
     {
       accessor: 'outputCostPerToken',
@@ -97,13 +102,15 @@ export const ModelTableSection = ({ models, modelCount, selectedProviderIds, pro
         return `$${(Number(value) * 1000000).toFixed(2)}`;
       },
       align: 'center',
-      maxWidth: 80,
+      maxWidth: 150,
+      cellClassName: 'text-xs',
     },
     {
       accessor: 'maxOutputTokens',
       header: t('modelLibrary.maxOutputTokens'),
       align: 'center',
-      maxWidth: 80,
+      maxWidth: 180,
+      cellClassName: 'text-xs',
     },
     {
       header: '',
@@ -120,8 +127,8 @@ export const ModelTableSection = ({ models, modelCount, selectedProviderIds, pro
           )}
         </div>
       ),
-      align: 'center',
-      maxWidth: 80,
+      align: 'left',
+      maxWidth: 100,
     },
   ];
 
@@ -154,7 +161,7 @@ export const ModelTableSection = ({ models, modelCount, selectedProviderIds, pro
       </div>
 
       {/* Table */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden mt-2">
         {filteredModels.length === 0 ? (
           <div className="flex items-center justify-center h-full w-full">
             <div className="text-center">
@@ -168,7 +175,7 @@ export const ModelTableSection = ({ models, modelCount, selectedProviderIds, pro
             </div>
           </div>
         ) : (
-          <Table data={filteredModels} columns={columns} />
+          <VirtualTable data={filteredModels} columns={columns} />
         )}
       </div>
     </div>
