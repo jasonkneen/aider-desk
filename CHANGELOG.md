@@ -8,6 +8,7 @@
 - reloading project keeps the current session
 - improved performance of model library by using virtualized table for models
 - added support for provider overrides on model level
+- added support for Z.AI Coding Plan provider
 
 ## [0.33.0]
 

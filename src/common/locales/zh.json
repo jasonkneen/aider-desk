@@ -243,6 +243,9 @@
     "baseUrl": "基础 URL",
     "baseUrlPlaceholder": "例如 http://localhost:1234/v1"
   },
+  "zaiPlan": {
+    "apiKey": "API 密钥"
+  },
   "anthropic": {
     "apiKey": "API 密钥"
   },
@@ -305,6 +308,7 @@
     "openrouter": "OpenRouter",
     "requesty": "Requesty",
     "vertex-ai": "Vertex AI",
+    "zai-plan": "Z.AI Coding Plan",
     "azure": "Azure"
   },
   "select": {

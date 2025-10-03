@@ -12,6 +12,7 @@ export * from './OpenAiCompatibleParameters';
 export * from './OpenRouterParameters';
 export * from './RequestyParameters';
 export * from './VertexAIParameters';
+export * from './ZaiPlanParameters';
 
 // Advanced Settings
 export * from './OpenAiAdvancedSettings';

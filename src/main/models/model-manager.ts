@@ -18,6 +18,7 @@ import { openaiCompatibleProviderStrategy } from './providers/openai-compatible'
 import { openrouterProviderStrategy } from './providers/openrouter';
 import { requestyProviderStrategy } from './providers/requesty';
 import { vertexAiProviderStrategy } from './providers/vertex-ai';
+import { zaiPlanProviderStrategy } from './providers/zai-plan';
 
 import type { JSONValue, LanguageModel, LanguageModelUsage } from 'ai';
 
@@ -76,6 +77,7 @@ export class ModelManager {
     openrouter: openrouterProviderStrategy,
     requesty: requestyProviderStrategy,
     'vertex-ai': vertexAiProviderStrategy,
+    'zai-plan': zaiPlanProviderStrategy,
   };
 
   constructor(

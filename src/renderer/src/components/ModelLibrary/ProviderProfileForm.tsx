@@ -19,6 +19,7 @@ import {
   OpenRouterParameters,
   RequestyParameters,
   VertexAIParameters,
+  ZaiPlanParameters,
 } from '@/components/ModelLibrary/providers';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
@@ -45,6 +46,7 @@ const PROVIDER_PARAMETERS_MAP: Record<LlmProviderName, ComponentType<ProviderPar
   openrouter: OpenRouterParameters,
   requesty: RequestyParameters,
   'vertex-ai': VertexAIParameters,
+  'zai-plan': ZaiPlanParameters,
 };
 
 type Header = { id: string; key: string; value: string };
