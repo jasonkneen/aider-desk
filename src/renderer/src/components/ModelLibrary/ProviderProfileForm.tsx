@@ -19,7 +19,7 @@ import {
   OpenRouterParameters,
   RequestyParameters,
   VertexAIParameters,
-} from '@/components/settings/agent/providers';
+} from '@/components/ModelLibrary/providers';
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
 import { IconButton } from '@/components/common/IconButton';

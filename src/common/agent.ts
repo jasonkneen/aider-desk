@@ -347,7 +347,7 @@ export const COMPACT_CONVERSATION_AGENT_PROFILE: AgentProfile = {
 
 // TODO: move to providers.ts
 export const AZURE_DEFAULT_API_VERSION = '2025-01-01-preview';
-export const getDefaultProviderParams = (providerName: LlmProviderName): LlmProvider => {
+export const getDefaultProviderParams = <T extends LlmProvider>(providerName: LlmProviderName): T => {
   let provider: LlmProvider;
 
   const baseConfig: LlmProviderBase = {
@@ -444,8 +444,8 @@ export const getDefaultProviderParams = (providerName: LlmProviderName): LlmProv
         only: [],
         ignore: [],
         quantizations: [],
-        sort: 'price',
-        requireParameters: true,
+        sort: null,
+        requireParameters: false,
       } satisfies OpenRouterProvider;
       break;
     case 'lmstudio':
@@ -469,7 +469,7 @@ export const getDefaultProviderParams = (providerName: LlmProviderName): LlmProv
       } as LlmProvider;
   }
 
-  return provider;
+  return provider as T;
 };
 
 export const isSubagentEnabled = (agentProfile: AgentProfile, currentProfileId?: string): boolean => {

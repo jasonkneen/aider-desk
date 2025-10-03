@@ -7,6 +7,7 @@
 - added support for ARGUMENTS placeholder in custom commands
 - reloading project keeps the current session
 - improved performance of model library by using virtualized table for models
+- added support for provider overrides on model level
 
 ## [0.33.0]
 

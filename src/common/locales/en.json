@@ -217,6 +217,11 @@
       "invalidTokenCount": "Token count must be a positive number",
       "invalidCost": "Cost must be a non-negative number",
       "duplicateId": "Provider ID already exists"
+    },
+    "overrides": {
+      "title": "Provider Overrides",
+      "resetToDefaults": "Clear overrides",
+      "overridesProviderParameters": "Overrides some provider parameters"
     }
   },
   "openai": {

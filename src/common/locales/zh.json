@@ -216,6 +216,11 @@
       "invalidTokenCount": "令牌数必须为正数",
       "invalidCost": "成本必须为非负数",
       "duplicateId": "提供商 ID 已存在"
+    },
+    "overrides": {
+      "title": "提供商覆盖",
+      "resetToDefaults": "清除覆盖",
+      "overridesProviderParameters": "覆盖一些提供商参数"
     }
   },
   "openai": {

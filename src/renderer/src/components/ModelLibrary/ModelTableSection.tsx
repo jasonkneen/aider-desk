@@ -1,6 +1,7 @@
 import { useState, ReactNode } from 'react';
+import { useDebounce } from '@reactuses/core';
 import { useTranslation } from 'react-i18next';
-import { FiEdit2, FiTrash2, FiPlus, FiEye } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiPlus, FiEye, FiSliders } from 'react-icons/fi';
 import { Model, ProviderProfile } from '@common/types';
 
 import { Input } from '@/components/common/Input';
@@ -23,9 +24,10 @@ type Props = {
 export const ModelTableSection = ({ models, modelCount, selectedProviderIds, providers, onAddModel, onEditModel, onDeleteModel, onToggleHidden }: Props) => {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
 
   const filteredModels = models.filter((model) => {
-    const matchesSearch = model.id.toLowerCase().includes(search.toLowerCase());
+    const matchesSearch = model.id.toLowerCase().includes(debouncedSearch.toLowerCase());
     const matchesProvider = selectedProviderIds.length === 0 || selectedProviderIds.includes(model.providerId);
     return matchesSearch && matchesProvider;
   });
@@ -122,6 +124,9 @@ export const ModelTableSection = ({ models, modelCount, selectedProviderIds, pro
             onClick={() => onToggleHidden(row)}
             tooltip={row.isHidden ? 'Show model' : 'Hide model'}
           />
+          {row.providerOverrides && Object.keys(row.providerOverrides).length > 0 && (
+            <IconButton icon={<FiSliders className="w-4 h-4 text-text-secondary" />} tooltip={t('modelLibrary.overrides.overridesProviderParameters')} />
+          )}
           {row.isCustom && (
             <IconButton icon={<FiTrash2 className="w-4 h-4" />} onClick={() => onDeleteModel(row)} className="text-error hover:text-error-light" />
           )}
