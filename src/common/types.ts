@@ -202,7 +202,6 @@ export const ProjectSettingsSchema = z.object({
   reasoningEffort: z.string().optional(),
   thinkingTokens: z.string().optional(),
   currentMode: z.enum(['code', 'ask', 'architect', 'context', 'agent']),
-  renderMarkdown: z.boolean(),
 });
 
 export type ProjectSettings = z.infer<typeof ProjectSettingsSchema>;
@@ -355,6 +354,8 @@ export interface SettingsData {
   theme?: Theme;
   font?: Font;
   fontSize?: number;
+  renderMarkdown: boolean;
+  virtualizedRendering: boolean;
   aiderDeskAutoUpdate: boolean;
   aider: {
     options: string;

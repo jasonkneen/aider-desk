@@ -29,6 +29,8 @@ export const DEFAULT_SETTINGS: SettingsData = {
   notificationsEnabled: false,
   theme: 'dark',
   font: 'Sono',
+  renderMarkdown: true,
+  virtualizedRendering: false,
   aiderDeskAutoUpdate: true,
   aider: {
     options: '',
@@ -71,7 +73,6 @@ export const getDefaultProjectSettings = (store: Store, providerModels: Model[],
     weakModel: determineWeakModel(baseDir),
     modelEditFormats: {},
     currentMode: 'code',
-    renderMarkdown: true,
     agentProfileId: DEFAULT_AGENT_PROFILE.id,
   };
 };

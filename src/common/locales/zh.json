@@ -488,6 +488,13 @@
       "releaseNotes": "发行说明",
       "openLogsDirectory": "打开日志目录",
       "openLogsError": "打开日志目录出错"
+    },
+    "messages": {
+      "title": "消息显示",
+      "display": "显示选项",
+      "markdownRendering": "启用 Markdown 渲染",
+      "virtualizedRendering": "使用虚拟化渲染（实验性）",
+      "virtualizedRenderingTooltip": "实验性功能，当您在对话历史中有大量消息时可以通过仅渲染可见消息来提高性能。"
     }
   },
   "messages": {
@@ -828,7 +835,6 @@
     "model": "模型"
   },
   "projectBar": {
-    "toggleMarkdown": "Markdown 渲染",
     "editFormatTooltip": "这是用于编辑代码的格式。更改它可能会导致模型表现不如预期。",
     "aider": "Aider",
     "toggleSidebar": "切换侧边栏",

@@ -533,6 +533,13 @@
       "serverControl": "Server Control",
       "tunnelManagement": "Tunnel Management",
       "tunnelDescription": "Create a Cloudflare tunnel to securely access your server from external networks. Make sure to use Authentication when exposing the server externally."
+    },
+    "messages": {
+      "title": "Message Display",
+      "display": "Display Options",
+      "markdownRendering": "Markdown rendering",
+      "virtualizedRendering": "Use virtualized rendering (experimental)",
+      "virtualizedRenderingTooltip": "Experimental feature that can improve performance when you have many messages in your conversation history by only rendering visible messages."
     }
   },
   "messages": {
@@ -859,7 +866,6 @@
     "model": "Model"
   },
   "projectBar": {
-    "toggleMarkdown": "Markdown rendering",
     "editFormatTooltip": "This is the format used for editing code. Changing it might cause the model to not perform as expected.",
     "aider": "Aider",
     "toggleSidebar": "Toggle sidebar",

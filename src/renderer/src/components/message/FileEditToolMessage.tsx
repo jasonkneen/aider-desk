@@ -64,21 +64,21 @@ export const FileEditToolMessage = ({ message, onRemove, compact = false }: Prop
     <div className="px-3 text-xs text-text-tertiary bg-bg-secondary">
       {isRegex ? (
         <div className="p-2 bg-bg-primary-light rounded-md space-y-2">
-          <p>
+          <div>
             <strong>
               {t('toolMessage.power.fileEdit.searchTerm')} ({t('toolMessage.power.fileEdit.regex')}):
             </strong>
             <br />
             <div className="mt-2 p-1 rounded-sm border border-border-dark-light whitespace-pre-wrap text-2xs text-text-secondary">{searchTerm}</div>
-          </p>
-          <p>
+          </div>
+          <div>
             <strong>{t('toolMessage.power.fileEdit.replacementText')}:</strong>
             <br />
             <div className="mt-2 p-1 rounded-sm border border-border-dark-light whitespace-pre-wrap text-2xs text-text-secondary">{replacementText}</div>
-          </p>
-          <p>
+          </div>
+          <div>
             <strong>{t('toolMessage.power.fileEdit.replaceAll')}:</strong> {replaceAll ? t('common.yes') : t('common.no')}
-          </p>
+          </div>
         </div>
       ) : (
         <CodeBlock baseDir="" language={language} file={filePath} isComplete={true} oldValue={searchTerm} newValue={replacementText} />

@@ -183,6 +183,39 @@ export const GeneralSettings = ({ settings, setSettings, onLanguageChange, onZoo
         </div>
       </Section>
 
+      <Section title={t('settings.messages.title')}>
+        <div className="px-4 py-5 grid grid-cols-2 gap-x-10 gap-y-6">
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-text-muted">{t('settings.messages.display')}</h4>
+            <div className="space-y-2 ml-0.5">
+              <Checkbox
+                label={t('settings.messages.markdownRendering')}
+                checked={settings.renderMarkdown ?? true}
+                onChange={(checked) =>
+                  setSettings({
+                    ...settings,
+                    renderMarkdown: checked,
+                  })
+                }
+              />
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  label={t('settings.messages.virtualizedRendering')}
+                  checked={settings.virtualizedRendering ?? false}
+                  onChange={(checked) =>
+                    setSettings({
+                      ...settings,
+                      virtualizedRendering: checked,
+                    })
+                  }
+                />
+                <InfoIcon tooltip={t('settings.messages.virtualizedRenderingTooltip')} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </Section>
+
       <Section title={t('settings.promptBehavior.title')}>
         <div className="px-4 py-5 grid grid-cols-2 gap-x-10 gap-y-6">
           <div className="space-y-3">

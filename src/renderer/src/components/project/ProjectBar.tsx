@@ -5,7 +5,6 @@ import { CgTerminal } from 'react-icons/cg';
 import { GoProjectRoadmap } from 'react-icons/go';
 import { IoMdClose } from 'react-icons/io';
 import { MdHistory } from 'react-icons/md';
-import { IoLogoMarkdown } from 'react-icons/io5';
 import { RiRobot2Line } from 'react-icons/ri';
 import { useTranslation } from 'react-i18next';
 import { getProviderModelId } from '@common/agent';
@@ -34,16 +33,14 @@ type Props = {
   baseDir: string;
   modelsData: ModelsData | null;
   mode: Mode;
-  renderMarkdown: boolean;
   onModelsChange?: (modelsData: ModelsData | null) => void;
-  onRenderMarkdownChanged: (value: boolean) => void;
   onExportSessionToImage: () => void;
   runCommand: (command: string) => void;
   onToggleSidebar: () => void;
 };
 
 export const ProjectBar = React.forwardRef<ProjectTopBarRef, Props>(
-  ({ baseDir, modelsData, mode, renderMarkdown, onModelsChange, onRenderMarkdownChanged, onExportSessionToImage, runCommand, onToggleSidebar }, ref) => {
+  ({ baseDir, modelsData, mode, onModelsChange, onExportSessionToImage, runCommand, onToggleSidebar }, ref) => {
     const { t } = useTranslation();
     const { settings, saveSettings } = useSettings();
     const { projectSettings } = useProjectSettings();
@@ -416,12 +413,6 @@ export const ProjectBar = React.forwardRef<ProjectTopBarRef, Props>(
             )}
           </div>
           <div className="flex items-center space-x-1 mr-2">
-            <IconButton
-              icon={<IoLogoMarkdown className={`w-4 h-4 ${renderMarkdown ? 'text-text-secondary' : 'text-text-muted-dark'}`} />}
-              onClick={() => onRenderMarkdownChanged(!renderMarkdown)}
-              tooltip={t('projectBar.toggleMarkdown')}
-              className="p-1 hover:bg-bg-tertiary rounded-md"
-            />
             <div className="relative" ref={sessionPopupRef}>
               <IconButton
                 icon={<MdHistory className="w-4 h-4" />}

@@ -10,6 +10,8 @@
 - added support for provider overrides on model level
 - added support for Z.AI Coding Plan provider
 - updated Electron version to fix issues with latest MacOS version
+- added support for virtualized rendering of messages
+- moved Markdown rendering option to General settings
 
 ## [0.33.0]
 

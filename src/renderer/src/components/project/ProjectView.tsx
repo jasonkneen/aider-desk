@@ -43,6 +43,7 @@ import {
   UserMessage,
 } from '@/types/message';
 import { Messages, MessagesRef } from '@/components/message/Messages';
+import { VirtualizedMessages, VirtualizedMessagesRef } from '@/components/message/VirtualizedMessages';
 import { useSettings } from '@/context/SettingsContext';
 import { useProjectSettings } from '@/context/ProjectSettingsContext';
 import { AddFileDialog } from '@/components/project/AddFileDialog';
@@ -95,7 +96,7 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
   const processingMessageRef = useRef<ResponseMessage | null>(null);
   const promptFieldRef = useRef<PromptFieldRef>(null);
   const projectTopBarRef = useRef<ProjectTopBarRef>(null);
-  const messagesRef = useRef<MessagesRef>(null);
+  const messagesRef = useRef<MessagesRef | VirtualizedMessagesRef>(null);
   const terminalViewRef = useRef<TerminalViewRef | null>(null);
 
   const { renderSearchInput } = useSearchText(messagesRef.current?.container || null, 'absolute top-1 left-1');
@@ -664,10 +665,6 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
     void saveProjectSettings({ currentMode: mode });
   };
 
-  const handleRenderMarkdownChanged = (renderMarkdown: boolean) => {
-    void saveProjectSettings({ renderMarkdown });
-  };
-
   const runPrompt = (prompt: string) => {
     if (question) {
       setQuestion(null);
@@ -833,9 +830,7 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
           baseDir={project.baseDir}
           modelsData={aiderModelsData}
           mode={projectSettings.currentMode}
-          renderMarkdown={projectSettings.renderMarkdown}
           onModelsChange={handleModelChange}
-          onRenderMarkdownChanged={handleRenderMarkdownChanged}
           onExportSessionToImage={exportMessagesToImage}
           runCommand={runCommand}
           onToggleSidebar={() => setShowSidebar(!showSidebar)}
@@ -853,16 +848,29 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
             />
           )}
           <div className="overflow-hidden flex-grow relative">
-            <Messages
-              ref={messagesRef}
-              baseDir={project.baseDir}
-              messages={messages}
-              allFiles={allFiles}
-              renderMarkdown={projectSettings.renderMarkdown}
-              removeMessage={handleRemoveMessage}
-              redoLastUserPrompt={handleRedoLastUserPrompt}
-              editLastUserMessage={handleEditLastUserMessage}
-            />
+            {settings.virtualizedRendering ? (
+              <VirtualizedMessages
+                ref={messagesRef}
+                baseDir={project.baseDir}
+                messages={messages}
+                allFiles={allFiles}
+                renderMarkdown={settings.renderMarkdown}
+                removeMessage={handleRemoveMessage}
+                redoLastUserPrompt={handleRedoLastUserPrompt}
+                editLastUserMessage={handleEditLastUserMessage}
+              />
+            ) : (
+              <Messages
+                ref={messagesRef}
+                baseDir={project.baseDir}
+                messages={messages}
+                allFiles={allFiles}
+                renderMarkdown={settings.renderMarkdown}
+                removeMessage={handleRemoveMessage}
+                redoLastUserPrompt={handleRedoLastUserPrompt}
+                editLastUserMessage={handleEditLastUserMessage}
+              />
+            )}
           </div>
           <ResizableBox
             className="flex flex-col flex-shrink-0"
