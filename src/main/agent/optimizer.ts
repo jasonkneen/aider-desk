@@ -62,10 +62,10 @@ export const optimizeMessages = (
 
 const addImportantReminders = (profile: AgentProfile, userRequestMessageIndex: number, messages: CoreMessage[], settings: SettingsData): CoreMessage[] => {
   const userRequestMessage = messages[userRequestMessageIndex] as CoreUserMessage;
-  const dontForgets: string[] = [];
+  const reminders: string[] = [];
 
   if (profile.useTodoTools) {
-    dontForgets.push(
+    reminders.push(
       `Always use the TODO list tools to manage the tasks, even if small ones. Before any analyze use ${TODO_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TODO_TOOL_GET_ITEMS} to check the current list of tasks and in case it's related to the current request, resume the existing tasks.`,
     );
   }
@@ -79,19 +79,19 @@ const addImportantReminders = (profile: AgentProfile, userRequestMessageIndex: n
 
     if (automaticSubagents.length > 0) {
       const subagents = automaticSubagents.map((subagent) => `- ${subagent.name}`).join('\n');
-      dontForgets.push(`Use the following automatic subagents when appropriate based on their descriptions:\n${subagents}`);
+      reminders.push(`Use the following automatic subagents when appropriate based on their descriptions:\n${subagents}`);
     }
   }
 
   if (!profile.autoApprove && !profile.isSubagent) {
-    dontForgets.push('Before making any complex changes, present the plan and wait for my approval.');
+    reminders.push('Before making any complex changes, present the plan and wait for my approval.');
   }
 
-  if (dontForgets.length === 0) {
+  if (reminders.length === 0) {
     return messages;
   }
 
-  const importantReminders = `\n\nTHIS IS IMPORTANT:\n- ${dontForgets.join('\n- ')}`;
+  const importantReminders = `\n\nTHIS IS IMPORTANT:\n- ${reminders.join('\n- ')}`;
 
   const updatedFirstUserMessage = {
     ...userRequestMessage,

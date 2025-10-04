@@ -13,6 +13,7 @@
 - added support for virtualized rendering of messages
 - moved Markdown rendering option to General settings
 - improved performance of glob and grep tools by using `git check-ignore`
+- updated subagent run task tool to use ID based on names instead of UUIDs to prevent wrong subagent being run
 
 ## [0.33.0]
 

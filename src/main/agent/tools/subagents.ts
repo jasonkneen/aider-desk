@@ -9,6 +9,10 @@ import { extractServerNameToolName } from '@common/utils';
 import { Project } from '@/project';
 import logger from '@/logger';
 
+const getSubagentId = (subagent: AgentProfile): string => {
+  return subagent.name.toLowerCase().replace(/\s+/g, '-');
+};
+
 export const createSubagentsToolset = (
   settings: SettingsData,
   project: Project,
@@ -28,7 +32,7 @@ export const createSubagentsToolset = (
     if (automaticSubagents.length > 0) {
       description += '\n<automatic-subagents>\n';
       for (const subagent of automaticSubagents) {
-        description += `  <subagent>\n    <id>${subagent.id}</id>\n    <name>${subagent.name}</name>\n    <description>${subagent.subagent.description}</description>\n  </subagent>\n`;
+        description += `  <subagent>\n    <id>${getSubagentId(subagent)}</id>\n    <name>${subagent.name}</name>\n    <description>${subagent.subagent.description}</description>\n  </subagent>\n`;
       }
       description += '</automatic-subagents>\n';
     }
@@ -36,7 +40,7 @@ export const createSubagentsToolset = (
     if (onDemandSubagents.length > 0) {
       description += '\n<on-demand-subagents>\n';
       for (const subagent of onDemandSubagents) {
-        description += `  <subagent>\n    <id>${subagent.id}</id>\n    <name>${subagent.name}</name>\n  </subagent>\n`;
+        description += `  <subagent>\n    <id>${getSubagentId(subagent)}</id>\n    <name>${subagent.name}</name>\n  </subagent>\n`;
       }
       description += '</on-demand-subagents>\n';
     }
@@ -58,7 +62,7 @@ export const createSubagentsToolset = (
         ),
     }),
     execute: async ({ prompt, subagentId }, { toolCallId }) => {
-      const targetSubagent = enabledSubagents.find((agentProfile) => agentProfile.id === subagentId);
+      const targetSubagent = enabledSubagents.find((agentProfile) => getSubagentId(agentProfile) === subagentId);
       if (!targetSubagent) {
         return `Error: Subagent with ID '${subagentId}' not found or not enabled.`;
       }
