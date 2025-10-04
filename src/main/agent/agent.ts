@@ -801,7 +801,7 @@ export class Agent {
               return;
             }
 
-            responseMessages = this.processStep<typeof toolSet>(currentResponseId, stepResult, project, profile, provider, promptContext);
+            responseMessages = this.processStep<typeof toolSet>(currentResponseId, stepResult, project, profile, provider, promptContext, abortSignal);
             currentResponseId = uuidv4();
             hasReasoning = false;
           },
@@ -1020,6 +1020,7 @@ export class Agent {
     profile: AgentProfile,
     provider: ProviderProfile,
     promptContext?: PromptContext,
+    abortSignal?: AbortSignal,
   ): ContextMessage[] {
     logger.info(`Step finished. Reason: ${finishReason}`, {
       reasoning: reasoning?.substring(0, 100), // Log truncated reasoning
@@ -1060,7 +1061,9 @@ export class Agent {
       }
     }
 
-    project.addLogMessage('loading', undefined, false, promptContext);
+    if (!abortSignal?.aborted) {
+      project.addLogMessage('loading', undefined, false, promptContext);
+    }
 
     response.messages.forEach((message) => {
       if (message.role === 'assistant') {
