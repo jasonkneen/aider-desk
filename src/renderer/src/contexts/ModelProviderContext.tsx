@@ -126,7 +126,6 @@ export const ModelProviderProvider: React.FC<{ children: ReactNode }> = ({ child
 
   useEffect(() => {
     return api.addProviderModelsUpdatedListener(({ models, loading, errors }) => {
-      console.log('Provider models updated', models, loading, errors);
       if (models) {
         setModels(models);
       }
