@@ -30,7 +30,7 @@ import { ApprovalManager } from './approval-manager';
 import { PROBE_BINARY_PATH } from '@/constants';
 import { Project } from '@/project';
 import logger from '@/logger';
-import { isFileIgnored, scrapeWeb } from '@/utils';
+import { filterIgnoredFiles, scrapeWeb } from '@/utils';
 
 const execAsync = promisify(exec);
 
@@ -318,15 +318,13 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
           nodir: false,
           absolute: false, // Keep paths relative to cwd for easier processing
         });
-        const result: string[] = [];
 
-        for (const file of files) {
-          if (await isFileIgnored(project.baseDir, file)) {
-            continue;
-          }
-          // Ensure paths are relative to project.baseDir
-          result.push(path.relative(project.baseDir, path.resolve(absoluteCwd, file)));
-        }
+        // Convert to absolute paths for filtering, then back to relative
+        const absoluteFiles = files.map((file) => path.resolve(absoluteCwd, file));
+        const filteredFiles = await filterIgnoredFiles(project.baseDir, absoluteFiles);
+
+        // Ensure paths are relative to project.baseDir
+        const result = filteredFiles.map((file) => path.relative(project.baseDir, file));
 
         return result;
       } catch (error) {
@@ -386,6 +384,13 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
           return `No files found matching pattern '${filePattern}'.`;
         }
 
+        // Filter out ignored files in batch
+        const filteredFiles = await filterIgnoredFiles(project.baseDir, files);
+
+        if (filteredFiles.length === 0) {
+          return `No files found matching pattern '${filePattern}' (all files were ignored).`;
+        }
+
         const results: Array<{
           filePath: string;
           lineNumber: number;
@@ -394,10 +399,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         }> = [];
         const searchRegex = new RegExp(searchTerm, caseSensitive ? undefined : 'i'); // Simpler for line-by-line test
 
-        for (const absoluteFilePath of files) {
-          if (await isFileIgnored(project.baseDir, absoluteFilePath)) {
-            continue;
-          }
+        for (const absoluteFilePath of filteredFiles) {
           const fileContent = await fs.readFile(absoluteFilePath, 'utf8');
           const lines = fileContent.split('\n');
           const relativeFilePath = path.relative(project.baseDir, absoluteFilePath);

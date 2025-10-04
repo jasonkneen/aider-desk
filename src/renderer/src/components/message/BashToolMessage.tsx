@@ -72,6 +72,7 @@ export const BashToolMessage = ({ message, onRemove, compact = false }: Props) =
               </pre>
             </div>
           )}
+          {!content && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light" />}
         </div>
       </div>
     );

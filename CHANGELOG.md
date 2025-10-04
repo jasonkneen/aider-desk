@@ -12,6 +12,7 @@
 - updated Electron version to fix issues with latest MacOS version
 - added support for virtualized rendering of messages
 - moved Markdown rendering option to General settings
+- improved performance of glob and grep tools by using `git check-ignore`
 
 ## [0.33.0]
 

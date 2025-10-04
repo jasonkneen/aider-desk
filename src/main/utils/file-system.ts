@@ -1,10 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import fsPromises from 'fs/promises';
 
-import ignore from 'ignore';
 import { simpleGit } from 'simple-git';
-import { fileExists } from '@common/utils';
 
 import logger from '@/logger';
 
@@ -80,27 +77,58 @@ export const isDirectory = async (path: string): Promise<boolean> => {
 };
 
 export const isFileIgnored = async (projectBaseDir: string, filePath: string): Promise<boolean> => {
-  const gitignorePath = path.join(projectBaseDir, '.gitignore');
-
-  if (!(await fileExists(gitignorePath))) {
-    logger.debug('No .gitignore file found, not checking for ignored files');
-    return false;
-  }
-
   try {
-    const gitignoreContent = await fsPromises.readFile(gitignorePath, 'utf8');
-    const ig = ignore().add(gitignoreContent);
+    const git = simpleGit(projectBaseDir);
 
-    // Make the path relative to the base directory
+    // Make the path relative to the base directory for git check-ignore
     const absolutePath = path.resolve(projectBaseDir, filePath);
     const relativePath = path.relative(projectBaseDir, absolutePath);
 
-    logger.debug(`Checking if file is ignored: ${relativePath}, ${absolutePath}`);
+    logger.debug(`Checking if file is ignored: ${relativePath}`);
 
-    return ig.ignores(relativePath);
+    const ignored = await git.checkIgnore(relativePath);
+    return ignored.length > 0;
   } catch (error) {
-    logger.debug(`Failed to check if file is ignored: ${filePath}`, { error });
+    logger.error(`Failed to check if file is ignored: ${filePath}`, { error });
     return false;
+  }
+};
+
+export const filterIgnoredFiles = async (projectBaseDir: string, filePaths: string[]): Promise<string[]> => {
+  try {
+    const git = simpleGit(projectBaseDir);
+
+    // Convert all file paths to relative paths for git check-ignore
+    const relativePaths = filePaths.map((filePath) => {
+      const absolutePath = path.resolve(projectBaseDir, filePath);
+      return path.relative(projectBaseDir, absolutePath);
+    });
+
+    logger.debug(`Checking if ${relativePaths.length} files are ignored`);
+
+    const CHUNK_SIZE = 100;
+    const ignoredSet = new Set<string>();
+
+    // Process files in chunks of max 100
+    for (let i = 0; i < relativePaths.length; i += CHUNK_SIZE) {
+      const chunk = relativePaths.slice(i, i + CHUNK_SIZE);
+      const ignored = await git.checkIgnore(chunk);
+      ignored.forEach((file) => ignoredSet.add(file));
+    }
+
+    // Return only files that are not ignored
+    return filePaths.filter((_, index) => {
+      const relativePath = relativePaths[index];
+      const isIgnored = ignoredSet.has(relativePath);
+      if (isIgnored) {
+        logger.debug(`File is ignored: ${relativePath}`);
+      }
+      return !isIgnored;
+    });
+  } catch (error) {
+    logger.error('Failed to filter ignored files', { error });
+    // Return all files if git check fails (safer default)
+    return filePaths;
   }
 };
 
