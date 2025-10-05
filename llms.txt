@@ -266,6 +266,7 @@ src/
           UsageInfo.tsx
           UserMessageBlock.tsx
           utils.tsx
+          VirtualizedMessages.tsx
         ModelLibrary/
           providers/
             AnthropicParameters.tsx
@@ -1681,6 +1682,13 @@ File: src/common/locales/en.json
       "serverControl": "Server Control",
       "tunnelManagement": "Tunnel Management",
       "tunnelDescription": "Create a Cloudflare tunnel to securely access your server from external networks. Make sure to use Authentication when exposing the server externally."
+    },
+    "messages": {
+      "title": "Message Display",
+      "display": "Display Options",
+      "markdownRendering": "Markdown rendering",
+      "virtualizedRendering": "Use virtualized rendering (experimental)",
+      "virtualizedRenderingTooltip": "Experimental feature that can improve performance when you have many messages in your conversation history by only rendering visible messages."
     }
   },
   "messages": {
@@ -2007,7 +2015,6 @@ File: src/common/locales/en.json
     "model": "Model"
   },
   "projectBar": {
-    "toggleMarkdown": "Markdown rendering",
     "editFormatTooltip": "This is the format used for editing code. Changing it might cause the model to not perform as expected.",
     "aider": "Aider",
     "toggleSidebar": "Toggle sidebar",
@@ -2620,6 +2627,13 @@ File: src/common/locales/zh.json
       "releaseNotes": "发行说明",
       "openLogsDirectory": "打开日志目录",
       "openLogsError": "打开日志目录出错"
+    },
+    "messages": {
+      "title": "消息显示",
+      "display": "显示选项",
+      "markdownRendering": "启用 Markdown 渲染",
+      "virtualizedRendering": "使用虚拟化渲染（实验性）",
+      "virtualizedRenderingTooltip": "实验性功能，当您在对话历史中有大量消息时可以通过仅渲染可见消息来提高性能。"
     }
   },
   "messages": {
@@ -2960,7 +2974,6 @@ File: src/common/locales/zh.json
     "model": "模型"
   },
   "projectBar": {
-    "toggleMarkdown": "Markdown 渲染",
     "editFormatTooltip": "这是用于编辑代码的格式。更改它可能会导致模型表现不如预期。",
     "aider": "Aider",
     "toggleSidebar": "切换侧边栏",
@@ -3818,6 +3831,8 @@ export interface SettingsData {
   theme?: Theme;
   font?: Font;
   fontSize?: number;
+  renderMarkdown: boolean;
+  virtualizedRendering: boolean;
   aiderDeskAutoUpdate: boolean;
   aider: {
     options: string;
@@ -4271,7 +4286,7 @@ import { ApprovalManager } from './approval-manager';
 import { PROBE_BINARY_PATH } from '@/constants';
 import { Project } from '@/project';
 import logger from '@/logger';
-import { isFileIgnored, scrapeWeb } from '@/utils';
+import { filterIgnoredFiles, scrapeWeb } from '@/utils';
 ⋮----
 export const createPowerToolset = (project: Project, profile: AgentProfile, promptContext?: PromptContext): ToolSet =>
 ⋮----
@@ -4294,7 +4309,11 @@ const addToGit = async () =>
 ⋮----
 absolute: false, // Keep paths relative to cwd for easier processing
 ⋮----
+// Convert to absolute paths for filtering, then back to relative
+⋮----
 // Ensure paths are relative to project.baseDir
+⋮----
+// Filter out ignored files in batch
 ⋮----
 const searchRegex = new RegExp(searchTerm, caseSensitive ? undefined : 'i'); // Simpler for line-by-line test
 ⋮----
@@ -4319,6 +4338,8 @@ import { extractServerNameToolName } from '@common/utils';
 ⋮----
 import { Project } from '@/project';
 import logger from '@/logger';
+⋮----
+const getSubagentId = (subagent: AgentProfile): string =>
 ⋮----
 export const createSubagentsToolset = (
   settings: SettingsData,
@@ -4627,6 +4648,7 @@ private processStep<TOOLS extends ToolSet>(
     profile: AgentProfile,
     provider: ProviderProfile,
     promptContext?: PromptContext,
+    abortSignal?: AbortSignal,
 ): ContextMessage[]
 ⋮----
 reasoning: reasoning?.substring(0, 100), // Log truncated reasoning
@@ -8028,11 +8050,7 @@ export const determineProvider = (projectDir?: string, settings?: SettingsData):
 ================
 File: src/main/utils/file-system.ts
 ================
-import fsPromises from 'fs/promises';
-⋮----
-import ignore from 'ignore';
 import { simpleGit } from 'simple-git';
-import { fileExists } from '@common/utils';
 ⋮----
 import logger from '@/logger';
 ⋮----
@@ -8056,7 +8074,17 @@ export const isDirectory = async (path: string): Promise<boolean> =>
 ⋮----
 export const isFileIgnored = async (projectBaseDir: string, filePath: string): Promise<boolean> =>
 ⋮----
-// Make the path relative to the base directory
+// Make the path relative to the base directory for git check-ignore
+⋮----
+export const filterIgnoredFiles = async (projectBaseDir: string, filePaths: string[]): Promise<string[]> =>
+⋮----
+// Convert all file paths to relative paths for git check-ignore
+⋮----
+// Process files in chunks of max 100
+⋮----
+// Return only files that are not ignored
+⋮----
+// Return all files if git check fails (safer default)
 ⋮----
 export const getAllFiles = async (baseDir: string): Promise<string[]> =>
 ⋮----
@@ -10806,6 +10834,7 @@ File: src/renderer/src/components/message/utils.tsx
 ================
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { Group } from '@common/types';
 ⋮----
 import { CustomCommandBashBlock } from './CustomCommandBashBlock';
@@ -10820,6 +10849,8 @@ import { GroupMessage, Message } from '@/types/message';
 // Use CodeInline for inline code elements generated by markdown
 ⋮----
 // Basic styling for preformatted blocks (e.g., indented code)
+⋮----
+// Table styling
 ⋮----
 const findFileInPreviousLine = (currentLine: number):
 ⋮----
@@ -10945,6 +10976,72 @@ export const groupMessagesByPromptContext = (messages: Message[]): Message[] =>
 // Create GroupMessage for the first message in the group
 ⋮----
 // Only create the group once
+
+================
+File: src/renderer/src/components/message/VirtualizedMessages.tsx
+================
+import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { toPng } from 'html-to-image';
+import { MdKeyboardArrowDown } from 'react-icons/md';
+import { useTranslation } from 'react-i18next';
+import { useVirtualizer } from '@tanstack/react-virtual';
+⋮----
+import { MessageBlock } from './MessageBlock';
+import { GroupMessageBlock } from './GroupMessageBlock';
+⋮----
+import { isGroupMessage, isUserMessage, Message } from '@/types/message';
+import { IconButton } from '@/components/common/IconButton';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { groupMessagesByPromptContext } from '@/components/message/utils';
+⋮----
+export type VirtualizedMessagesRef = {
+  exportToImage: () => void;
+  container: HTMLDivElement | null;
+  scrollToBottom: () => void;
+};
+⋮----
+type Props = {
+  baseDir: string;
+  messages: Message[];
+  allFiles?: string[];
+  renderMarkdown: boolean;
+  removeMessage: (message: Message) => void;
+  redoLastUserPrompt: () => void;
+  editLastUserMessage: (content: string) => void;
+};
+⋮----
+// Group messages by promptContext.group.id
+⋮----
+// Create virtualizer for dynamic sized items
+⋮----
+estimateSize: () => 100, // Initial estimate, will be measured
+⋮----
+const handleScroll = (e: React.UIEvent<HTMLDivElement>) =>
+⋮----
+// Check if content is smaller than scroll area (no scrollbar needed)
+⋮----
+// If content is smaller than area, never pause scrolling
+⋮----
+// Detect scroll direction by comparing current scrollTop with previous scrollTop
+⋮----
+// Store current scrollTop for next scroll event
+⋮----
+// If scrolling up, always pause
+// If scrolling down, only pause if not at bottom
+⋮----
+// Scroll to the last item when new messages arrive
+⋮----
+// eslint-disable-next-line react-hooks/exhaustive-deps
+⋮----
+const exportToImage = async () =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+const scrollToBottom = () =>
+⋮----
+tooltip=
+⋮----
+aria-label=
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/AnthropicParameters.tsx
@@ -12255,7 +12352,6 @@ import { CgTerminal } from 'react-icons/cg';
 import { GoProjectRoadmap } from 'react-icons/go';
 import { IoMdClose } from 'react-icons/io';
 import { MdHistory } from 'react-icons/md';
-import { IoLogoMarkdown } from 'react-icons/io5';
 import { RiRobot2Line } from 'react-icons/ri';
 import { useTranslation } from 'react-i18next';
 import { getProviderModelId } from '@common/agent';
@@ -12284,9 +12380,7 @@ type Props = {
   baseDir: string;
   modelsData: ModelsData | null;
   mode: Mode;
-  renderMarkdown: boolean;
   onModelsChange?: (modelsData: ModelsData | null) => void;
-  onRenderMarkdownChanged: (value: boolean) => void;
   onExportSessionToImage: () => void;
   runCommand: (command: string) => void;
   onToggleSidebar: () => void;
@@ -12446,6 +12540,7 @@ import {
   UserMessage,
 } from '@/types/message';
 import { Messages, MessagesRef } from '@/components/message/Messages';
+import { VirtualizedMessages, VirtualizedMessagesRef } from '@/components/message/VirtualizedMessages';
 import { useSettings } from '@/context/SettingsContext';
 import { useProjectSettings } from '@/context/ProjectSettingsContext';
 import { AddFileDialog } from '@/components/project/AddFileDialog';
@@ -12555,8 +12650,6 @@ const handleInterruptResponse = () =>
 const handleModelChange = (modelsData: ModelsData | null) =>
 ⋮----
 const handleModeChange = (mode: Mode) =>
-⋮----
-const handleRenderMarkdownChanged = (renderMarkdown: boolean) =>
 ⋮----
 const runPrompt = (prompt: string) =>
 ⋮----
@@ -13403,11 +13496,11 @@ const handleCommandConfirmationChange = (command: keyof typeof settings.promptBe
 ⋮----
 label=
 ⋮----
+setSettings(
+⋮----
 onChange=
 ⋮----
 {/* Vim key bindings */}
-⋮----
-setSettings(
 ⋮----
 <InfoIcon tooltip=
 ⋮----
@@ -16974,7 +17067,6 @@ File: package.json
     "html-to-image": "^1.11.13",
     "i18next": "^24.2.3",
     "i18next-browser-languagedetector": "^8.0.4",
-    "ignore": "^5.3.2",
     "istextorbinary": "^9.5.0",
     "js-tiktoken": "^1.0.20",
     "langfuse-vercel": "^3.38.4",
@@ -17005,6 +17097,7 @@ File: package.json
     "refractor": "^3.6.0",
     "rehype-autolink-headings": "^7.1.0",
     "rehype-slug": "^6.0.0",
+    "remark-gfm": "^4.0.1",
     "simple-git": "^3.27.0",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
