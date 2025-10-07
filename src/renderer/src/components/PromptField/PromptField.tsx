@@ -291,6 +291,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
     const executeCommand = useCallback(
       (command: string, args?: string): void => {
         switch (command) {
+          case '/agent':
           case '/code':
           case '/context':
           case '/ask':
@@ -298,17 +299,6 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
             const newMode = command.slice(1) as Mode;
             onModeChanged(newMode);
             setTextWithDispatch(args || '');
-            break;
-          }
-          case '/agent': {
-            const newMode = command.slice(1) as Mode;
-            if (mode === 'agent') {
-              openAgentModelSelector?.(args);
-              prepareForNextPrompt();
-            } else {
-              onModeChanged(newMode);
-              setTextWithDispatch(args || '');
-            }
             break;
           }
           case '/add':
@@ -329,7 +319,11 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
             break;
           case '/model':
             prepareForNextPrompt();
-            openModelSelector?.(args);
+            if (mode === 'agent') {
+              openAgentModelSelector?.(args);
+            } else {
+              openModelSelector?.(args);
+            }
             break;
           case '/web': {
             const commandArgs = text.replace('/web', '').trim();

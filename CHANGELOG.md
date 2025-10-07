@@ -5,6 +5,7 @@
 - updated icon for when the tool is denied
 - using correct OPENAI_ environment variables for Z.AI Coding Plan provider in Aider modes
 - removed _API_KEY environment setting for Aider modes when it's not defined in Provider
+- model command now correctly opens the agent model selector when in agent mode
 
 ## [0.34.0]
 
