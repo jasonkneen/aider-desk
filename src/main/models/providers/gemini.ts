@@ -72,9 +72,11 @@ export const hasGeminiEnvVars = (settings: SettingsData): boolean => {
 
 export const getGeminiAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {
   const geminiProvider = provider.provider as GeminiProvider;
-  const envVars: Record<string, string> = {
-    GEMINI_API_KEY: geminiProvider.apiKey || '',
-  };
+  const envVars: Record<string, string> = {};
+
+  if (geminiProvider.apiKey) {
+    envVars.GEMINI_API_KEY = geminiProvider.apiKey;
+  }
 
   if (geminiProvider.customBaseUrl) {
     envVars.GEMINI_API_BASE = geminiProvider.customBaseUrl;

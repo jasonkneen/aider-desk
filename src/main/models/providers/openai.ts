@@ -88,6 +88,8 @@ export const getOpenAiAiderMapping = (provider: ProviderProfile, modelId: string
   const openaiProvider = provider.provider as OpenAiProvider;
   const envVars: Record<string, string> = {};
 
+  // clear any custom base URL
+  envVars.OPENAI_API_BASE = '';
   if (openaiProvider.apiKey) {
     envVars.OPENAI_API_KEY = openaiProvider.apiKey;
   }

@@ -78,11 +78,15 @@ export const hasGroqEnvVars = (settings: SettingsData): boolean => {
 
 export const getGroqAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {
   const groqProvider = provider.provider as GroqProvider;
+  const envVars: Record<string, string> = {};
+
+  if (groqProvider.apiKey) {
+    envVars.GROQ_API_KEY = groqProvider.apiKey;
+  }
+
   return {
     modelName: `groq/${modelId}`,
-    environmentVariables: {
-      GROQ_API_KEY: groqProvider.apiKey || '',
-    },
+    environmentVariables: envVars,
   };
 };
 
