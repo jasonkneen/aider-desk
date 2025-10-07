@@ -81,6 +81,8 @@ export class Project {
   private commandOutputs: Map<string, string> = new Map();
   private repoMap: string = '';
   private aiderStarting: boolean = false;
+  private aiderStartPromise: Promise<void> | null = null;
+  private aiderStartResolve: (() => void) | null = null;
 
   aiderTotalCost: number = 0;
   agentTotalCost: number = 0;
@@ -160,6 +162,11 @@ export class Project {
     // Set aiderStarting to false when a connector with source==='aider' is added
     if (connector.source === 'aider') {
       this.aiderStarting = false;
+      if (this.aiderStartResolve) {
+        this.aiderStartResolve();
+        this.aiderStartResolve = null;
+        this.aiderStartPromise = null;
+      }
     }
 
     this.connectors.push(connector);
@@ -536,7 +543,23 @@ export class Project {
     }
   }
 
+  private createAiderStartPromise(): Promise<void> {
+    if (this.aiderStartPromise) {
+      return this.aiderStartPromise;
+    }
+
+    this.aiderStartPromise = new Promise((resolve) => {
+      this.aiderStartResolve = resolve;
+      if (!this.aiderStarting) {
+        resolve();
+      }
+    });
+    return this.aiderStartPromise;
+  }
+
   public async runPromptInAider(prompt: string, promptContext: PromptContext, mode?: Mode): Promise<ResponseCompletedData[]> {
+    await this.createAiderStartPromise();
+
     const responses = await this.sendPrompt(prompt, promptContext, mode);
     logger.debug('Responses:', { responses });
 
@@ -547,10 +570,8 @@ export class Project {
       content: prompt,
       promptContext,
     });
+
     for (const response of responses) {
-      // if (response.reflectedMessage) {
-      //   this.sessionManager.addContextMessage(MessageRole.User, response.reflectedMessage);
-      // }
       if (response.content || response.reflectedMessage) {
         // Create enhanced assistant message with full metadata
         const assistantMessage: ContextAssistantMessage = {
@@ -1118,6 +1139,22 @@ export class Project {
       ...envFromMain,
       ...envFromWeak,
     });
+
+    if (this.aiderModels) {
+      this.updateAiderModels({
+        ...this.aiderModels!,
+        mainModel: mainModelName,
+        weakModel: weakModelName || mainModelName,
+        editFormat,
+      });
+    } else {
+      this.updateAiderModels({
+        baseDir: this.baseDir,
+        mainModel: mainModelName,
+        weakModel: weakModelName || mainModelName,
+        editFormat,
+      });
+    }
   }
 
   private sendSetModels(mainModel: string, weakModel: string | null, editFormat: EditFormat = 'diff', environmentVariables?: Record<string, string>) {

@@ -21,7 +21,7 @@ export const loadZaiPlanModels = async (
   const provider = profile.provider as ZaiPlanProvider;
   const apiKey = provider.apiKey || '';
 
-  const apiKeyEnv = getEffectiveEnvironmentVariable('ZAI_API_KEY', settings);
+  const apiKeyEnv = getEffectiveEnvironmentVariable('OPENAI_API_KEY', settings);
 
   const effectiveApiKey = apiKey || apiKeyEnv?.value;
 
@@ -70,12 +70,15 @@ export const getZaiPlanAiderMapping = (provider: ProviderProfile, modelId: strin
   const envVars: Record<string, string> = {};
 
   if (zaiProvider.apiKey) {
-    envVars.ZAI_API_KEY = zaiProvider.apiKey;
+    envVars.OPENAI_API_KEY = zaiProvider.apiKey;
   }
+
+  // Set the base URL for ZAI Plan
+  envVars.OPENAI_API_BASE = 'https://api.z.ai/api/coding/paas/v4';
 
   // Use zai-plan prefix for ZAI providers
   return {
-    modelName: `zai-plan/${modelId}`,
+    modelName: `openai/${modelId}`,
     environmentVariables: envVars,
   };
 };

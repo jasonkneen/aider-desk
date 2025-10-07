@@ -932,7 +932,6 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
               redoLastUserPrompt={handleRedoLastUserPrompt}
               openModelSelector={projectTopBarRef.current?.openMainModelSelector}
               openAgentModelSelector={projectTopBarRef.current?.openAgentModelSelector}
-              disabled={!aiderModelsData}
               promptBehavior={settings.promptBehavior}
               clearLogMessages={clearLogMessages}
               toggleTerminal={api.isTerminalSupported() ? toggleTerminal : undefined}

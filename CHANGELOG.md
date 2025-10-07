@@ -3,6 +3,7 @@
 ## [0.35.0]
 
 - updated icon for when the tool is denied
+- using correct OPENAI_ environment variables for Z.AI Coding Plan provider in Aider modes
 
 ## [0.34.0]
 
