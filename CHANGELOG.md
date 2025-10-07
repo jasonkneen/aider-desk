@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.35.0]
+
+- updated icon for when the tool is denied
+
 ## [0.34.0]
 
 - properly using env vars from Settings -> Aider when loading provider models

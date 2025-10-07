@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { RiErrorWarningFill, RiCheckboxCircleFill } from 'react-icons/ri';
+import { RiErrorWarningFill, RiCheckboxCircleFill, RiCloseCircleFill } from 'react-icons/ri';
 import { FaSearchengin } from 'react-icons/fa6';
 import { CgSpinner } from 'react-icons/cg';
 
@@ -20,7 +20,8 @@ export const SemanticSearchToolMessage = ({ message, onRemove, compact = false }
   const searchQuery = (message.args.searchQuery as string) || (message.args.query as string);
   const path = (message.args.path as string) || '.';
   const content = message.content && JSON.parse(message.content);
-  const isError = content && typeof content === 'string' && (content.startsWith('Error:') || content.startsWith('Search execution denied by user.'));
+  const isError = content && typeof content === 'string' && content.startsWith('Error:');
+  const isDenied = content && typeof content === 'string' && content.startsWith('Search execution denied by user.');
 
   const title = (
     <div className="flex items-center gap-2 w-full">
@@ -44,6 +45,15 @@ export const SemanticSearchToolMessage = ({ message, onRemove, compact = false }
             <StyledTooltip id={`semantic-search-error-tooltip-${message.id}`} maxWidth={600} />
             <RiErrorWarningFill className="w-3 h-3 text-error" data-tooltip-id={`semantic-search-error-tooltip-${message.id}`} data-tooltip-content={content} />
           </span>
+        ) : isDenied ? (
+          <span className="text-left">
+            <StyledTooltip id={`semantic-search-denied-tooltip-${message.id}`} maxWidth={600} />
+            <RiCloseCircleFill
+              className="w-3 h-3 text-warning"
+              data-tooltip-id={`semantic-search-denied-tooltip-${message.id}`}
+              data-tooltip-content={content}
+            />
+          </span>
         ) : (
           <RiCheckboxCircleFill className="w-3 h-3 text-success" />
         ))}
@@ -55,6 +65,18 @@ export const SemanticSearchToolMessage = ({ message, onRemove, compact = false }
       return (
         <div className="px-3 text-xs text-text-tertiary bg-bg-secondary">
           <div className="text-error">{content}</div>
+        </div>
+      );
+    }
+
+    if (isDenied) {
+      return (
+        <div className="px-3 text-xs text-text-tertiary bg-bg-secondary">
+          <div className="text-warning">
+            <pre className="whitespace-pre-wrap bg-bg-primary-light p-3 rounded text-2xs max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth font-mono">
+              {content}
+            </pre>
+          </div>
         </div>
       );
     }

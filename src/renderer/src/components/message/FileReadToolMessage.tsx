@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { RiFileTextLine, RiCheckboxCircleFill, RiErrorWarningFill } from 'react-icons/ri';
+import { RiFileTextLine, RiCheckboxCircleFill, RiErrorWarningFill, RiCloseCircleFill } from 'react-icons/ri';
 import { getLanguageFromPath } from '@common/utils';
 import { CgSpinner } from 'react-icons/cg';
 
@@ -22,7 +22,8 @@ export const FileReadToolMessage = ({ message, onRemove, compact = false }: Prop
   const content = message.content && JSON.parse(message.content);
   const language = getLanguageFromPath(filePath);
 
-  const isError = content && (content.startsWith('Error: ') || content.startsWith(`File read of '${filePath}' denied by user.`));
+  const isError = content && content.startsWith('Error: ');
+  const isDenied = content && content.startsWith(`File read of '${filePath}' denied by user.`);
 
   const title = (
     <div className="flex items-center gap-2 w-full">
@@ -42,6 +43,11 @@ export const FileReadToolMessage = ({ message, onRemove, compact = false }: Prop
             <StyledTooltip id={`file-read-error-tooltip-${message.id}`} maxWidth={600} />
             <RiErrorWarningFill className="w-3 h-3 text-error" data-tooltip-id={`file-read-error-tooltip-${message.id}`} data-tooltip-content={content} />
           </span>
+        ) : isDenied ? (
+          <span className="text-left">
+            <StyledTooltip id={`file-read-denied-tooltip-${message.id}`} maxWidth={600} />
+            <RiCloseCircleFill className="w-3 h-3 text-warning" data-tooltip-id={`file-read-denied-tooltip-${message.id}`} data-tooltip-content={content} />
+          </span>
         ) : (
           <RiCheckboxCircleFill className="w-3 h-3 text-success" />
         ))}
@@ -50,10 +56,17 @@ export const FileReadToolMessage = ({ message, onRemove, compact = false }: Prop
 
   const renderContent = () => (
     <div className="px-3 text-xs text-text-tertiary bg-bg-secondary">
-      {!isError && content && (
+      {!isError && !isDenied && content && (
         <CodeBlock baseDir="" language={language} file={filePath} isComplete={true}>
           {content}
         </CodeBlock>
+      )}
+      {isDenied && (
+        <div className="text-warning">
+          <pre className="whitespace-pre-wrap bg-bg-primary-light p-3 rounded text-2xs max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth font-mono">
+            {content}
+          </pre>
+        </div>
       )}
     </div>
   );

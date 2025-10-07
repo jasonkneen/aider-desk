@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { RiLinkM, RiErrorWarningFill, RiCheckboxCircleFill } from 'react-icons/ri';
+import { RiLinkM, RiErrorWarningFill, RiCheckboxCircleFill, RiCloseCircleFill } from 'react-icons/ri';
 import { CgSpinner } from 'react-icons/cg';
 
 import { ToolMessage } from '@/types/message';
@@ -19,6 +19,7 @@ export const FetchToolMessage = ({ message, onRemove, compact = false }: Props) 
   const url = message.args.url as string;
   const content = message.content && JSON.parse(message.content);
   const isError = content && typeof content === 'string' && content.startsWith('Error:');
+  const isDenied = content && typeof content === 'string' && content.startsWith('URL fetch from');
 
   const title = (
     <div className="flex items-center gap-2 w-full">
@@ -38,6 +39,11 @@ export const FetchToolMessage = ({ message, onRemove, compact = false }: Props) 
             <StyledTooltip id={`fetch-error-tooltip-${message.id}`} maxWidth={600} />
             <RiErrorWarningFill className="w-3 h-3 text-error" data-tooltip-id={`fetch-error-tooltip-${message.id}`} data-tooltip-content={content} />
           </span>
+        ) : isDenied ? (
+          <span className="text-left">
+            <StyledTooltip id={`fetch-denied-tooltip-${message.id}`} maxWidth={600} />
+            <RiCloseCircleFill className="w-3 h-3 text-warning" data-tooltip-id={`fetch-denied-tooltip-${message.id}`} data-tooltip-content={content} />
+          </span>
         ) : (
           <RiCheckboxCircleFill className="w-3 h-3 text-success" />
         ))}
@@ -49,6 +55,18 @@ export const FetchToolMessage = ({ message, onRemove, compact = false }: Props) 
       return (
         <div className="p-3 text-2xs text-text-tertiary bg-bg-secondary">
           <div className="text-error">{content}</div>
+        </div>
+      );
+    }
+
+    if (isDenied) {
+      return (
+        <div className="p-3 text-2xs text-text-tertiary bg-bg-secondary">
+          <div className="text-warning">
+            <pre className="whitespace-pre-wrap bg-bg-primary-light p-3 rounded text-2xs max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth font-mono">
+              {content}
+            </pre>
+          </div>
         </div>
       );
     }
