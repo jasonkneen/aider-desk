@@ -5864,6 +5864,8 @@ export const hasOpenAiEnvVars = (settings: SettingsData): boolean =>
 ⋮----
 export const getOpenAiAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
+// clear any custom base URL
+⋮----
 // === LLM Creation Functions ===
 export const createOpenAiLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
 ⋮----
@@ -6160,6 +6162,8 @@ export const loadZaiPlanModels = async (
 export const hasZaiPlanEnvVars = (settings: SettingsData): boolean =>
 ⋮----
 export const getZaiPlanAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
+⋮----
+// Set the base URL for ZAI Plan
 ⋮----
 // Use zai-plan prefix for ZAI providers
 ⋮----
@@ -6661,13 +6665,11 @@ public async runPrompt(prompt: string, mode?: Mode): Promise<ResponseCompletedDa
 ⋮----
 // Generate promptContext for this run
 ⋮----
+private createAiderStartPromise(): Promise<void>
+⋮----
 public async runPromptInAider(prompt: string, promptContext: PromptContext, mode?: Mode): Promise<ResponseCompletedData[]>
 ⋮----
 // add messages to session
-⋮----
-// if (response.reflectedMessage) {
-//   this.sessionManager.addContextMessage(MessageRole.User, response.reflectedMessage);
-// }
 ⋮----
 // Create enhanced assistant message with full metadata
 ⋮----
@@ -10151,7 +10153,7 @@ File: src/renderer/src/components/ContextFiles/index.ts
 File: src/renderer/src/components/message/BashToolMessage.tsx
 ================
 import { useTranslation } from 'react-i18next';
-import { RiTerminalLine, RiErrorWarningFill, RiCheckboxCircleFill } from 'react-icons/ri';
+import { RiTerminalLine, RiErrorWarningFill, RiCheckboxCircleFill, RiCloseCircleFill } from 'react-icons/ri';
 import { CgSpinner } from 'react-icons/cg';
 ⋮----
 import { ToolMessage } from '@/types/message';
@@ -10249,7 +10251,7 @@ const handleExpandedChange = (open: boolean) =>
 File: src/renderer/src/components/message/FetchToolMessage.tsx
 ================
 import { useTranslation } from 'react-i18next';
-import { RiLinkM, RiErrorWarningFill, RiCheckboxCircleFill } from 'react-icons/ri';
+import { RiLinkM, RiErrorWarningFill, RiCheckboxCircleFill, RiCloseCircleFill } from 'react-icons/ri';
 import { CgSpinner } from 'react-icons/cg';
 ⋮----
 import { ToolMessage } from '@/types/message';
@@ -10269,7 +10271,7 @@ if (isError)
 File: src/renderer/src/components/message/FileEditToolMessage.tsx
 ================
 import { useEffect, useRef, useState } from 'react';
-import { RiCheckboxCircleFill, RiEditLine, RiErrorWarningFill } from 'react-icons/ri';
+import { RiCheckboxCircleFill, RiEditLine, RiErrorWarningFill, RiCloseCircleFill } from 'react-icons/ri';
 import { getLanguageFromPath } from '@common/utils';
 import { CgSpinner } from 'react-icons/cg';
 import { useTranslation } from 'react-i18next';
@@ -10294,7 +10296,7 @@ content=
 File: src/renderer/src/components/message/FileReadToolMessage.tsx
 ================
 import { useTranslation } from 'react-i18next';
-import { RiFileTextLine, RiCheckboxCircleFill, RiErrorWarningFill } from 'react-icons/ri';
+import { RiFileTextLine, RiCheckboxCircleFill, RiErrorWarningFill, RiCloseCircleFill } from 'react-icons/ri';
 import { getLanguageFromPath } from '@common/utils';
 import { CgSpinner } from 'react-icons/cg';
 ⋮----
@@ -10314,7 +10316,7 @@ type Props = {
 File: src/renderer/src/components/message/FileWriteToolMessage.tsx
 ================
 import { useEffect, useRef, useState } from 'react';
-import { RiCheckboxCircleFill, RiEditLine, RiErrorWarningFill } from 'react-icons/ri';
+import { RiCheckboxCircleFill, RiEditLine, RiErrorWarningFill, RiCloseCircleFill } from 'react-icons/ri';
 import { CgSpinner } from 'react-icons/cg';
 import { useTranslation } from 'react-i18next';
 import { FileWriteMode } from '@common/types';
@@ -10342,7 +10344,7 @@ content=
 File: src/renderer/src/components/message/GlobToolMessage.tsx
 ================
 import { useTranslation } from 'react-i18next';
-import { RiFolderLine, RiFileTextLine, RiErrorWarningFill, RiCheckboxCircleFill } from 'react-icons/ri';
+import { RiFolderLine, RiFileTextLine, RiErrorWarningFill, RiCheckboxCircleFill, RiCloseCircleFill } from 'react-icons/ri';
 import { LuFolderSearch } from 'react-icons/lu';
 import { CgSpinner } from 'react-icons/cg';
 ⋮----
@@ -10363,7 +10365,7 @@ if (isError)
 File: src/renderer/src/components/message/GrepToolMessage.tsx
 ================
 import { useTranslation } from 'react-i18next';
-import { RiErrorWarningFill, RiCheckboxCircleFill } from 'react-icons/ri';
+import { RiErrorWarningFill, RiCheckboxCircleFill, RiCloseCircleFill } from 'react-icons/ri';
 import { LuFileSearch } from 'react-icons/lu';
 import { CgSpinner } from 'react-icons/cg';
 ⋮----
@@ -10665,7 +10667,7 @@ type Props = {
 File: src/renderer/src/components/message/SemanticSearchToolMessage.tsx
 ================
 import { useTranslation } from 'react-i18next';
-import { RiErrorWarningFill, RiCheckboxCircleFill } from 'react-icons/ri';
+import { RiErrorWarningFill, RiCheckboxCircleFill, RiCloseCircleFill } from 'react-icons/ri';
 import { FaSearchengin } from 'react-icons/fa6';
 import { CgSpinner } from 'react-icons/cg';
 ⋮----
