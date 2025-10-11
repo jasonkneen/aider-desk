@@ -4,7 +4,8 @@ import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from
 import { BedrockProvider, isBedrockProvider } from '@common/agent';
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
 
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import logger from '@/logger';
@@ -189,7 +190,7 @@ export const getBedrockAiderMapping = (provider: ProviderProfile, modelId: strin
 };
 
 // === LLM Creation Functions ===
-export const createBedrockLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModel => {
+export const createBedrockLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModelV2 => {
   const provider = profile.provider as BedrockProvider;
   const region = provider.region || env['AWS_REGION'];
   const accessKeyId = provider.accessKeyId || env['AWS_ACCESS_KEY_ID'];
@@ -247,8 +248,8 @@ export const getBedrockUsageReport = (
 ): UsageReportData => {
   return {
     model: `${provider.id}/${modelId}`,
-    sentTokens: usage.promptTokens,
-    receivedTokens: usage.completionTokens,
+    sentTokens: usage.inputTokens || 0,
+    receivedTokens: usage.outputTokens || 0,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };

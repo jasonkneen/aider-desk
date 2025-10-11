@@ -1,8 +1,9 @@
 import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 import { GeminiProvider, isGeminiProvider, LlmProvider } from '@common/agent';
-import { createGoogleGenerativeAI, type GoogleGenerativeAIProviderOptions } from '@ai-sdk/google';
+import { createGoogleGenerativeAI, google, type GoogleGenerativeAIProviderOptions } from '@ai-sdk/google';
 
-import type { JSONValue, LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage, ToolSet } from 'ai';
+import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
@@ -89,7 +90,7 @@ export const getGeminiAiderMapping = (provider: ProviderProfile, modelId: string
 };
 
 // === LLM Creation Functions ===
-export const createGeminiLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModel => {
+export const createGeminiLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModelV2 => {
   const provider = profile.provider as GeminiProvider;
   const apiKey = provider.apiKey || env['GEMINI_API_KEY'];
 
@@ -99,22 +100,17 @@ export const createGeminiLlm = (profile: ProviderProfile, model: Model, env: Rec
 
   const baseUrl = provider.customBaseUrl || env['GEMINI_API_BASE_URL'];
 
-  const providerOverrides = model.providerOverrides as Partial<GeminiProvider> | undefined;
-  const useSearchGrounding = providerOverrides?.useSearchGrounding ?? provider.useSearchGrounding;
-
   const googleProvider = createGoogleGenerativeAI({
     apiKey,
     baseURL: baseUrl,
     headers: profile.headers,
   });
-  return googleProvider(model.id, {
-    useSearchGrounding,
-  });
+  return googleProvider(model.id);
 };
 
 type GoogleMetadata = {
   google: {
-    cachedContentTokenCount?: number;
+    cachedInputTokens?: number;
   };
 };
 
@@ -130,7 +126,7 @@ export const calculateGeminiCost = (modelInfo: ModelInfo | undefined, sentTokens
 
   const { google } = (providerMetadata as GoogleMetadata) || {};
   if (google) {
-    const cachedPromptTokens = google.cachedContentTokenCount ?? 0;
+    const cachedPromptTokens = google.cachedInputTokens ?? 0;
 
     inputCost = (sentTokens - cachedPromptTokens) * modelInfo.inputCostPerToken;
     cacheCost = cachedPromptTokens * (modelInfo.cacheReadInputTokenCost ?? modelInfo.inputCostPerToken * 0.25);
@@ -145,26 +141,26 @@ export const getGeminiUsageReport = (
   modelId: string,
   messageCost: number,
   usage: LanguageModelUsage,
-  providerMetadata?: unknown,
+  providerOptions?: unknown,
 ): UsageReportData => {
   const usageReportData: UsageReportData = {
     model: `${provider.id}/${modelId}`,
-    sentTokens: usage.promptTokens,
-    receivedTokens: usage.completionTokens,
+    sentTokens: usage.inputTokens || 0,
+    receivedTokens: usage.outputTokens || 0,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };
 
-  const { google } = (providerMetadata as GoogleMetadata) || {};
+  const { google } = (providerOptions as GoogleMetadata) || {};
   if (google) {
-    usageReportData.cacheReadTokens = google.cachedContentTokenCount;
+    usageReportData.cacheReadTokens = google.cachedInputTokens;
     usageReportData.sentTokens -= usageReportData.cacheReadTokens ?? 0;
   }
 
   return usageReportData;
 };
 
-export const getGeminiProviderOptions = (llmProvider: LlmProvider, model: Model): Record<string, Record<string, JSONValue>> | undefined => {
+export const getGeminiProviderOptions = (llmProvider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined => {
   if (isGeminiProvider(llmProvider)) {
     const providerOverrides = model.providerOverrides as Partial<GeminiProvider> | undefined;
 
@@ -177,7 +173,7 @@ export const getGeminiProviderOptions = (llmProvider: LlmProvider, model: Model)
         ...((includeThoughts || thinkingBudget) && {
           thinkingConfig: {
             includeThoughts: includeThoughts && (thinkingBudget ?? 0) > 0,
-            thinkingBudget: thinkingBudget || null,
+            thinkingBudget,
           },
         }),
       } satisfies GoogleGenerativeAIProviderOptions,
@@ -185,6 +181,25 @@ export const getGeminiProviderOptions = (llmProvider: LlmProvider, model: Model)
   }
 
   return undefined;
+};
+
+// === Provider Tools Functions ===
+export const getGeminiProviderTools = (provider: LlmProvider, model: Model): ToolSet => {
+  if (!isGeminiProvider(provider)) {
+    return {};
+  }
+
+  // Check for model-specific overrides
+  const providerOverrides = model.providerOverrides as Partial<GeminiProvider> | undefined;
+  const useSearchGrounding = providerOverrides?.useSearchGrounding ?? provider.useSearchGrounding;
+
+  if (!useSearchGrounding) {
+    return {};
+  }
+
+  return {
+    google_search: google.tools.googleSearch({}),
+  };
 };
 
 // === Complete Strategy Implementation ===
@@ -200,4 +215,5 @@ export const geminiProviderStrategy: LlmProviderStrategy = {
   getAiderMapping: getGeminiAiderMapping,
 
   getProviderOptions: getGeminiProviderOptions,
+  getProviderTools: getGeminiProviderTools,
 };

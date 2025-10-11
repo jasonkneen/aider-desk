@@ -20,7 +20,8 @@ import { requestyProviderStrategy } from './providers/requesty';
 import { vertexAiProviderStrategy } from './providers/vertex-ai';
 import { zaiPlanProviderStrategy } from './providers/zai-plan';
 
-import type { JSONValue, LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
+import type { LanguageModelUsage, ToolSet } from 'ai';
 
 import { AIDER_DESK_DATA_DIR, AIDER_DESK_CACHE_DIR } from '@/constants';
 import logger from '@/logger';
@@ -488,7 +489,7 @@ export class ModelManager {
     return providerModels.find((m) => m.id === modelId);
   }
 
-  createLlm(profile: ProviderProfile, model: string | Model, env: Record<string, string | undefined> = {}): LanguageModel {
+  createLlm(profile: ProviderProfile, model: string | Model, env: Record<string, string | undefined> = {}): LanguageModelV2 {
     const strategy = this.providerRegistry[profile.provider.name];
     if (!strategy) {
       throw new Error(`Unsupported LLM provider: ${profile.provider.name}`);
@@ -547,34 +548,57 @@ export class ModelManager {
     return strategy.getCacheControl(profile, llmProvider);
   }
 
-  getProviderOptions(llmProvider: LlmProvider, model: string): Record<string, Record<string, JSONValue>> | undefined {
+  getProviderOptions(providerId: string, modelId: string): SharedV2ProviderOptions | undefined {
+    // Find the provider profile for this LLM provider
+    const providers = this.store.getProviders();
+    const providerProfile = providers.find((p) => p.id === providerId);
+    if (!providerProfile) {
+      return undefined;
+    }
+
+    const llmProvider = providerProfile.provider;
     const strategy = this.providerRegistry[llmProvider.name];
     if (!strategy?.getProviderOptions) {
       return undefined;
     }
 
-    // Find the provider profile for this LLM provider
-    const providers = this.store.getProviders();
-    const providerProfile = providers.find((p) => p.provider.name === llmProvider.name);
-    if (!providerProfile) {
-      // Fallback to old behavior if provider not found
-      return strategy.getProviderOptions(llmProvider, {
-        id: model,
-        providerId: '',
-      });
-    }
-
     // Resolve Model object
-    const modelObj = this.getModel(providerProfile.id, model);
+    const modelObj = this.getModel(providerProfile.id, modelId);
     if (!modelObj) {
       // Fallback to minimal Model object if not found
       const fallbackModel: Model = {
-        id: model,
+        id: modelId,
         providerId: providerProfile.id,
       };
       return strategy.getProviderOptions(llmProvider, fallbackModel);
     }
 
     return strategy.getProviderOptions(llmProvider, modelObj);
+  }
+
+  /**
+   * Returns provider-specific tools for the given provider and model
+   */
+  async getProviderTools(providerId: string, modelId: string): Promise<ToolSet> {
+    const providers = this.store.getProviders();
+    const providerProfile = providers.find((p) => p.id === providerId);
+    if (!providerProfile) {
+      logger.warn(`Provider profile not found for ${providerId}`);
+      return {};
+    }
+    const llmProvider = providerProfile.provider;
+    const strategy = this.providerRegistry[llmProvider.name];
+    if (!strategy?.getProviderTools) {
+      return {};
+    }
+
+    // Resolve Model object
+    const modelObj = this.getModel(providerProfile.id, modelId);
+    if (!modelObj) {
+      logger.warn(`Model ${modelId} not found in provider ${llmProvider.name}`);
+      return {};
+    }
+
+    return strategy.getProviderTools(llmProvider, modelObj);
   }
 }

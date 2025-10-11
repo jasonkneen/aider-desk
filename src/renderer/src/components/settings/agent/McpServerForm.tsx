@@ -1,6 +1,6 @@
 import { McpServerConfig } from '@common/types';
 import { useState, useMemo, ChangeEvent } from 'react';
-import { z } from 'zod';
+import { z } from 'zod/v3';
 import { useTranslation } from 'react-i18next';
 import { MdInfoOutline } from 'react-icons/md';
 

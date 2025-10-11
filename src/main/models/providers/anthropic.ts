@@ -2,7 +2,8 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { AnthropicProvider, isAnthropicProvider } from '@common/agent';
 import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AiderModelMapping, CacheControl, LlmProviderStrategy } from '@/models';
 import { LoadModelsResponse } from '@/models/types';
@@ -84,7 +85,7 @@ export const getAnthropicAiderMapping = (provider: ProviderProfile, modelId: str
 };
 
 // === LLM Creation Functions ===
-export const createAnthropicLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModel => {
+export const createAnthropicLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModelV2 => {
   const provider = profile.provider as AnthropicProvider;
   const apiKey = provider.apiKey || env['ANTHROPIC_API_KEY'];
 
@@ -134,17 +135,17 @@ export const getAnthropicUsageReport = (
   modelId: string,
   messageCost: number,
   usage: LanguageModelUsage,
-  providerMetadata?: unknown,
+  providerOptions?: unknown,
 ): UsageReportData => {
   const usageReportData: UsageReportData = {
     model: `${provider.id}/${modelId}`,
-    sentTokens: usage.promptTokens,
-    receivedTokens: usage.completionTokens,
+    sentTokens: usage.inputTokens || 0,
+    receivedTokens: usage.outputTokens || 0,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };
 
-  const { anthropic } = (providerMetadata as AnthropicMetadata) || {};
+  const { anthropic } = (providerOptions as AnthropicMetadata) || {};
   if (anthropic) {
     usageReportData.cacheWriteTokens = anthropic.cacheCreationInputTokens;
     usageReportData.cacheReadTokens = anthropic.cacheReadInputTokens;

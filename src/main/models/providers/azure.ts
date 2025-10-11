@@ -2,7 +2,8 @@ import { createAzure } from '@ai-sdk/azure';
 import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 import { AZURE_DEFAULT_API_VERSION, AzureProvider } from '@common/agent';
 
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import { getEffectiveEnvironmentVariable } from '@/utils';
@@ -50,7 +51,7 @@ export const getAzureAiderMapping = (provider: ProviderProfile, modelId: string)
 };
 
 // === LLM Creation Functions ===
-export const createAzureLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModel => {
+export const createAzureLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModelV2 => {
   const provider = profile.provider as AzureProvider;
   const apiKey = provider.apiKey || env['AZURE_API_KEY'];
   const resourceName = provider.resourceName || (env['AZURE_RESOURCE_NAME'] ? extractResourceNameFromEndpoint(env['AZURE_RESOURCE_NAME']) : '');
@@ -105,17 +106,17 @@ export const getAzureUsageReport = (
   modelId: string,
   messageCost: number,
   usage: LanguageModelUsage,
-  providerMetadata?: unknown,
+  providerOptions?: unknown,
 ): UsageReportData => {
   const usageReportData: UsageReportData = {
     model: `${provider.id}/${modelId}`,
-    sentTokens: usage.promptTokens,
-    receivedTokens: usage.completionTokens,
+    sentTokens: usage.inputTokens || 0,
+    receivedTokens: usage.outputTokens || 0,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };
 
-  const { openai } = (providerMetadata as AzureMetadata) || {};
+  const { openai } = (providerOptions as AzureMetadata) || {};
   if (openai) {
     usageReportData.cacheReadTokens = openai.cachedPromptTokens;
     usageReportData.sentTokens -= openai.cachedPromptTokens ?? 0;

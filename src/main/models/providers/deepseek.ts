@@ -2,7 +2,8 @@ import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from
 import { DeepseekProvider, isDeepseekProvider } from '@common/agent';
 import { createDeepSeek } from '@ai-sdk/deepseek';
 
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
@@ -75,7 +76,7 @@ export const getDeepseekAiderMapping = (provider: ProviderProfile, modelId: stri
 };
 
 // === LLM Creation Functions ===
-export const createDeepseekLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModel => {
+export const createDeepseekLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModelV2 => {
   const provider = profile.provider as DeepseekProvider;
   const apiKey = provider.apiKey || env['DEEPSEEK_API_KEY'];
 
@@ -113,8 +114,8 @@ export const getDeepseekUsageReport = (
 ): UsageReportData => {
   return {
     model: `${provider.id}/${modelId}`,
-    sentTokens: usage.promptTokens,
-    receivedTokens: usage.completionTokens,
+    sentTokens: usage.inputTokens || 0,
+    receivedTokens: usage.outputTokens || 0,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };

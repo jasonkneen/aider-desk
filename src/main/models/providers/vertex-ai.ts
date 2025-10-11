@@ -4,7 +4,8 @@ import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from
 import { isVertexAiProvider, LlmProvider, VertexAiProvider } from '@common/agent';
 import { createVertex } from '@ai-sdk/google-vertex';
 
-import type { JSONValue, LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
@@ -122,7 +123,7 @@ export const getVertexAiAiderMapping = (provider: ProviderProfile, modelId: stri
 };
 
 // === LLM Creation Functions ===
-export const createVertexAiLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModel => {
+export const createVertexAiLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModelV2 => {
   const provider = profile.provider as VertexAiProvider;
   const project = provider.project || env['VERTEXAI_PROJECT'];
   const location = provider.location || env['VERTEXAI_LOCATION'] || 'global';
@@ -177,17 +178,17 @@ export const getVertexAiUsageReport = (
   modelId: string,
   messageCost: number,
   usage: LanguageModelUsage,
-  providerMetadata?: unknown,
+  providerOptions?: unknown,
 ): UsageReportData => {
   const usageReportData: UsageReportData = {
     model: `${provider.id}/${modelId}`,
-    sentTokens: usage.promptTokens,
-    receivedTokens: usage.completionTokens,
+    sentTokens: usage.inputTokens || 0,
+    receivedTokens: usage.outputTokens || 0,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };
 
-  const { google } = (providerMetadata as VertexGoogleMetadata) || {};
+  const { google } = (providerOptions as VertexGoogleMetadata) || {};
   if (google) {
     usageReportData.cacheReadTokens = google.cachedContentTokenCount;
     usageReportData.sentTokens -= usageReportData.cacheReadTokens ?? 0;
@@ -196,7 +197,7 @@ export const getVertexAiUsageReport = (
   return usageReportData;
 };
 
-export const getVertexAiProviderOptions = (llmProvider: LlmProvider, model: Model): Record<string, Record<string, JSONValue>> | undefined => {
+export const getVertexAiProviderOptions = (llmProvider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined => {
   if (isVertexAiProvider(llmProvider)) {
     const providerOverrides = model.providerOverrides as Partial<VertexAiProvider> | undefined;
 
@@ -209,7 +210,7 @@ export const getVertexAiProviderOptions = (llmProvider: LlmProvider, model: Mode
         ...((includeThoughts || thinkingBudget) && {
           thinkingConfig: {
             includeThoughts: includeThoughts && (thinkingBudget ?? 0) > 0,
-            thinkingBudget: thinkingBudget || null,
+            thinkingBudget,
           },
         }),
       },

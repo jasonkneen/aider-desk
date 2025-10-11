@@ -256,8 +256,7 @@
     "includeThoughts": "包含思考过程",
     "includeThoughtsTooltip": "启用后，代理的内部思考过程将包含在对话历史中，这有助于调试或理解其决策。",
     "useSearchGrounding": "使用搜索基础",
-    "useSearchGroundingTooltip": "启用后，代理将使用搜索结果作为其响应的基础，从而提高准确性和相关性。",
-    "useSearchGroundingWarning": "当启用时，Gemini 模型的工具使用受到限制。"
+    "useSearchGroundingTooltip": "启用后，代理将使用搜索结果作为其响应的基础，从而提高准确性和相关性。"
   },
   "groq": {
     "apiKey": "API 密钥",

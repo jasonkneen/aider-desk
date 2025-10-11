@@ -2,7 +2,8 @@ import { AgentProfile, Model, ModelInfo, ProviderProfile, ReasoningEffort, Setti
 import { isRequestyProvider, LlmProvider, RequestyProvider } from '@common/agent';
 import { createRequesty, type RequestyProviderMetadata } from '@requesty/ai-sdk';
 
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AIDER_DESK_TITLE, AIDER_DESK_WEBSITE } from '@/constants';
 import { AiderModelMapping, LlmProviderStrategy, CacheControl, LoadModelsResponse } from '@/models';
@@ -106,7 +107,7 @@ export const getRequestyAiderMapping = (provider: ProviderProfile, modelId: stri
 };
 
 // === LLM Creation Functions ===
-export const createRequestyLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModel => {
+export const createRequestyLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModelV2 => {
   const provider = profile.provider as RequestyProvider;
   const apiKey = provider.apiKey || env['REQUESTY_API_KEY'];
 
@@ -143,8 +144,8 @@ export const calculateRequestyCost = (modelInfo: ModelInfo | undefined, sentToke
   }
 
   const { requesty } = providerMetadata as RequestyProviderMetadata;
-  const cachingTokens = requesty.usage?.cachingTokens ?? 0;
-  const cachedTokens = requesty.usage?.cachedTokens ?? 0;
+  const cachingTokens = requesty?.usage?.cachingTokens ?? 0;
+  const cachedTokens = requesty?.usage?.cachedTokens ?? 0;
 
   const cacheCreationCost = cachingTokens * (modelInfo.cacheWriteInputTokenCost ?? modelInfo.inputCostPerToken);
   const cacheReadCost = cachedTokens * (modelInfo.cacheReadInputTokenCost ?? 0);
@@ -162,19 +163,19 @@ export const getRequestyUsageReport = (
   modelId: string,
   messageCost: number,
   usage: LanguageModelUsage,
-  providerMetadata?: unknown,
+  providerOptions?: unknown,
 ): UsageReportData => {
   const usageReportData: UsageReportData = {
     model: `${provider.id}/${modelId}`,
-    sentTokens: usage.promptTokens,
-    receivedTokens: usage.completionTokens,
+    sentTokens: usage.inputTokens || 0,
+    receivedTokens: usage.outputTokens || 0,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };
 
-  const { requesty } = providerMetadata as RequestyProviderMetadata;
-  usageReportData.cacheWriteTokens = requesty.usage?.cachingTokens;
-  usageReportData.cacheReadTokens = requesty.usage?.cachedTokens;
+  const { requesty } = providerOptions as RequestyProviderMetadata;
+  usageReportData.cacheWriteTokens = requesty?.usage?.cachingTokens;
+  usageReportData.cacheReadTokens = requesty?.usage?.cachedTokens;
   usageReportData.sentTokens -= usageReportData.cacheReadTokens ?? 0;
 
   return usageReportData;

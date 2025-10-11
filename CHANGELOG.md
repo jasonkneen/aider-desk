@@ -6,6 +6,9 @@
 - using correct OPENAI_ environment variables for Z.AI Coding Plan provider in Aider modes
 - removed _API_KEY environment setting for Aider modes when it's not defined in Provider
 - model command now correctly opens the agent model selector when in agent mode
+- fixed issue with duplicated parts of the message appearing while streaming
+- migrated AI SDK from v4 to v5 for better future support and improvements
+- search grounding with Gemini models now also available to be used with other tools
 
 ## [0.34.0]
 

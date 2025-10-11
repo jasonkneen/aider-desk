@@ -1,8 +1,10 @@
 import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 import { isOllamaProvider, OllamaProvider } from '@common/agent';
-import { createOllama } from 'ollama-ai-provider';
+import { createOllama } from 'ollama-ai-provider-v2';
+import { simulateStreamingMiddleware, wrapLanguageModel } from 'ai';
 
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
@@ -79,7 +81,7 @@ export const getOllamaAiderMapping = (provider: ProviderProfile, modelId: string
 };
 
 // === LLM Creation Functions ===
-export const createOllamaLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModel => {
+export const createOllamaLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModelV2 => {
   const provider = profile.provider as OllamaProvider;
   const baseUrl = provider.baseUrl || env['OLLAMA_API_BASE'];
 
@@ -87,12 +89,18 @@ export const createOllamaLlm = (profile: ProviderProfile, model: Model, env: Rec
     throw new Error('Base URL is required for Ollama provider. Set it in Providers settings or via the OLLAMA_API_BASE environment variable.');
   }
 
+  let normalized = baseUrl.replace(/\/+$/, ''); // Remove all trailing slashes
+  if (!normalized.endsWith('/api')) {
+    normalized = `${normalized}/api`;
+  }
+
   const ollamaInstance = createOllama({
-    baseURL: baseUrl,
+    baseURL: normalized,
     headers: profile.headers,
   });
-  return ollamaInstance(model.id, {
-    simulateStreaming: true,
+  return wrapLanguageModel({
+    model: ollamaInstance(model.id),
+    middleware: simulateStreamingMiddleware(),
   });
 };
 
@@ -119,8 +127,8 @@ export const getOllamaUsageReport = (
 ): UsageReportData => {
   return {
     model: `${provider.id}/${modelId}`,
-    sentTokens: usage.promptTokens,
-    receivedTokens: usage.completionTokens,
+    sentTokens: usage.inputTokens || 0,
+    receivedTokens: usage.outputTokens || 0,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };

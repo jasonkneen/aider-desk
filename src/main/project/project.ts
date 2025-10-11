@@ -129,6 +129,7 @@ export class Project {
           break;
       }
     } catch (error) {
+      console.error(error);
       logger.error('Error loading session:', { error });
     }
 
@@ -1311,7 +1312,7 @@ export class Project {
     id: string,
     serverName: string,
     toolName: string,
-    args?: Record<string, unknown>,
+    args?: unknown,
     response?: string,
     usageReport?: UsageReportData,
     promptContext?: PromptContext,

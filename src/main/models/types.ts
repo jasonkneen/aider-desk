@@ -1,11 +1,12 @@
 import { AgentProfile, Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 import { LlmProvider, LlmProviderName } from '@common/agent';
 
-import type { JSONValue, LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
+import type { LanguageModelUsage, ToolSet } from 'ai';
 
 import { Project } from '@/project';
 
-export type CacheControl = Record<string, Record<string, JSONValue>> | undefined;
+export type CacheControl = SharedV2ProviderOptions | undefined;
 
 export interface AiderModelMapping {
   modelName: string;
@@ -32,7 +33,7 @@ export interface LlmProviderStrategy {
   /**
    * Creates a LanguageModel instance for the given provider and model
    */
-  createLlm: (profile: ProviderProfile, model: Model, env: Record<string, string | undefined>) => LanguageModel;
+  createLlm: (profile: ProviderProfile, model: Model, env: Record<string, string | undefined>) => LanguageModelV2;
 
   /**
    * Calculates the cost for token usage with provider-specific caching adjustments
@@ -76,7 +77,12 @@ export interface LlmProviderStrategy {
   /**
    * Returns provider-specific options for model instantiation
    */
-  getProviderOptions?: (provider: LlmProvider, model: Model) => Record<string, Record<string, JSONValue>> | undefined;
+  getProviderOptions?: (provider: LlmProvider, model: Model) => SharedV2ProviderOptions | undefined;
+
+  /**
+   * Returns provider-specific tools that should be available to the agent
+   */
+  getProviderTools?: (provider: LlmProvider, model: Model) => ToolSet | Promise<ToolSet>;
 }
 
 export type LlmProviderRegistry = Record<LlmProviderName, LlmProviderStrategy>;

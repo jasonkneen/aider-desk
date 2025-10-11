@@ -53,7 +53,7 @@ export const createSubagentsToolset = (
 
   const runTaskTool = tool({
     description: generateSubagentsRunTaskDescription(),
-    parameters: z.object({
+    inputSchema: z.object({
       subagentId: z.string().describe('The ID of the specific subagent to use.'),
       prompt: z
         .string()
@@ -101,17 +101,12 @@ export const createSubagentsToolset = (
             }
 
             const matchingParts = message.content.filter(
-              (part) =>
-                part.type === 'tool-result' &&
-                part.toolCallId === toolCallId &&
-                part.result &&
-                typeof part.result === 'object' &&
-                'messages' in part.result &&
-                Array.isArray(part.result.messages),
+              (part) => part.type === 'tool-result' && part.toolCallId === toolCallId && part.output.type === 'json',
             );
 
             for (const part of matchingParts) {
-              const messages = (part.result as { messages: ContextMessage[] }).messages;
+              // @ts-expect-error part.output.value is expected to be in the output
+              const messages = (part.output.value as { messages: ContextMessage[] }).messages;
               if (messages.length > 0) {
                 acc.push(...messages);
               }
@@ -139,10 +134,10 @@ export const createSubagentsToolset = (
                   serverName,
                   toolName,
                   subagentId,
-                  args: part.args,
+                  input: part.input,
                 });
-                // @ts-expect-error subagentId is expected to be in the args
-                if (serverName === SUBAGENTS_TOOL_GROUP_NAME && toolName === SUBAGENTS_TOOL_RUN_TASK && part.args?.subagentId === subagentId) {
+                // @ts-expect-error subagentId is expected to be in the input
+                if (serverName === SUBAGENTS_TOOL_GROUP_NAME && toolName === SUBAGENTS_TOOL_RUN_TASK && part.input?.subagentId === subagentId) {
                   const resultMessages = findResultMessagesForToolCallId(part.toolCallId);
 
                   logger.info('Subagent context messages: tool-call: resultMessages', {
@@ -152,8 +147,8 @@ export const createSubagentsToolset = (
                     subagentContextMessages.push({
                       id: message.id,
                       role: 'user',
-                      // @ts-expect-error prompt is expected to be in the args
-                      content: part.args.prompt,
+                      // @ts-expect-error prompt is expected to be in the input
+                      content: part.input.prompt,
                     });
 
                     switch (contextMemory) {

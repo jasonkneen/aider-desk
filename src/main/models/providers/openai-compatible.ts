@@ -2,7 +2,8 @@ import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from
 import { isOpenAiCompatibleProvider, OpenAiCompatibleProvider } from '@common/agent';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
@@ -87,7 +88,7 @@ export const getOpenAiCompatibleAiderMapping = (provider: ProviderProfile, model
 };
 
 // === LLM Creation Functions ===
-export const createOpenAiCompatibleLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModel => {
+export const createOpenAiCompatibleLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModelV2 => {
   const provider = profile.provider as OpenAiCompatibleProvider;
   const apiKey = provider.apiKey || env['OPENAI_API_KEY'];
   if (!apiKey) {
@@ -136,8 +137,8 @@ export const getOpenAiCompatibleUsageReport = (
 ): UsageReportData => {
   return {
     model: `${provider.id}/${modelId}`,
-    sentTokens: usage.promptTokens,
-    receivedTokens: usage.completionTokens,
+    sentTokens: usage.inputTokens || 0,
+    receivedTokens: usage.outputTokens || 0,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };

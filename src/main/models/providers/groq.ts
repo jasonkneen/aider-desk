@@ -2,7 +2,8 @@ import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from
 import { GroqProvider, isGroqProvider } from '@common/agent';
 import { createGroq } from '@ai-sdk/groq';
 
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
@@ -91,7 +92,7 @@ export const getGroqAiderMapping = (provider: ProviderProfile, modelId: string):
 };
 
 // === LLM Creation Functions ===
-export const createGroqLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModel => {
+export const createGroqLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModelV2 => {
   const provider = profile.provider as GroqProvider;
   const apiKey = provider.apiKey || env['GROQ_API_KEY'];
 
@@ -129,8 +130,8 @@ export const getGroqUsageReport = (
 ): UsageReportData => {
   return {
     model: `${provider.id}/${modelId}`,
-    sentTokens: usage.promptTokens,
-    receivedTokens: usage.completionTokens,
+    sentTokens: usage.inputTokens || 0,
+    receivedTokens: usage.outputTokens || 0,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };

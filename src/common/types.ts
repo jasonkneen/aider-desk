@@ -15,8 +15,8 @@ import {
 } from '@common/agent';
 import { z } from 'zod';
 
+import type { JSONSchema7Definition } from '@ai-sdk/provider';
 import type { AssistantContent, ToolContent, UserContent } from 'ai';
-import type { JsonSchema } from '@n8n/json-schema-to-zod';
 
 export type LocalizedString = {
   key: string;
@@ -84,7 +84,7 @@ export interface ToolData {
   id: string;
   serverName: string;
   toolName: string;
-  args?: Record<string, unknown>;
+  args?: unknown;
   response?: string;
   usageReport?: UsageReportData;
   promptContext?: PromptContext;
@@ -479,11 +479,16 @@ export interface GenericTool {
   description: string;
 }
 
+export interface McpToolInputSchema {
+  type: 'object';
+  properties: Record<string, JSONSchema7Definition>;
+}
+
 export interface McpTool {
   serverName: string;
   name: string;
   description?: string;
-  inputSchema: JsonSchema;
+  inputSchema: McpToolInputSchema;
 }
 
 export interface McpServerConfig {

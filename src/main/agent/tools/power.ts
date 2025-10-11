@@ -23,7 +23,7 @@ import {
 } from '@common/tools';
 import { isBinary } from 'istextorbinary';
 import { isURL } from '@common/utils';
-import { search, searchSchema } from '@buger/probe';
+import { search } from '@probelabs/probe';
 
 import { ApprovalManager } from './approval-manager';
 
@@ -39,7 +39,7 @@ export const createPowerToolset = (project: Project, profile: AgentProfile, prom
 
   const fileEditTool = tool({
     description: POWER_TOOL_DESCRIPTIONS[TOOL_FILE_EDIT],
-    parameters: z.object({
+    inputSchema: z.object({
       filePath: z.string().describe('The path to the file to be edited (relative to the project root).'),
       searchTerm: z.string().describe(
         `The string or regular expression to find in the file.
@@ -149,7 +149,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
   const fileReadTool = tool({
     description: POWER_TOOL_DESCRIPTIONS[TOOL_FILE_READ],
-    parameters: z.object({
+    inputSchema: z.object({
       filePath: z.string().describe('The path to the file to be read (relative to the project root or absolute if outside of project directory).'),
     }),
     execute: async ({ filePath }, { toolCallId }) => {
@@ -193,7 +193,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
   const fileWriteTool = tool({
     description: POWER_TOOL_DESCRIPTIONS[TOOL_FILE_WRITE],
-    parameters: z.object({
+    inputSchema: z.object({
       filePath: z.string().describe('The path to the file to be written (relative to the project root).'),
       content: z.string().describe('The content to write to the file. Do not use escape characters \\ in the string like \\n or \\" and others.'),
       mode: z
@@ -278,7 +278,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
   const globTool = tool({
     description: POWER_TOOL_DESCRIPTIONS[TOOL_GLOB],
-    parameters: z.object({
+    inputSchema: z.object({
       pattern: z.string().describe('The glob pattern to search for (e.g., src/**/*.ts, *.md).'),
       cwd: z
         .string()
@@ -336,7 +336,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
   const grepTool = tool({
     description: POWER_TOOL_DESCRIPTIONS[TOOL_GREP],
-    parameters: z.object({
+    inputSchema: z.object({
       filePattern: z.string().describe('A glob pattern specifying the files to search within (e.g., src/**/*.tsx, *.py).'),
       searchTerm: z.string().describe('The regular expression to search for within the files.'),
       contextLines: z
@@ -440,7 +440,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
   const bashTool = tool({
     description: POWER_TOOL_DESCRIPTIONS[TOOL_BASH],
-    parameters: z.object({
+    inputSchema: z.object({
       command: z.string().describe('The shell command to execute (e.g., ls -la, npm install).'),
       cwd: z.string().optional().describe('The working directory for the command (relative to project root). Default: project root.'),
       timeout: z.number().int().min(0).optional().default(60000).describe('Timeout for the command execution in milliseconds. Default: 60000 ms.'),
@@ -495,7 +495,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
   const fetchTool = tool({
     description: POWER_TOOL_DESCRIPTIONS[TOOL_FETCH],
-    parameters: z.object({
+    inputSchema: z.object({
       url: z.string().describe('The URL to fetch.'),
       timeout: z.number().int().min(0).optional().default(60000).describe('Timeout for the fetch operation in milliseconds. Default: 60000 ms.'),
     }),
@@ -538,13 +538,25 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
   const searchTool = tool({
     description: POWER_TOOL_DESCRIPTIONS[TOOL_SEMANTIC_SEARCH],
-    parameters: searchSchema,
-    execute: async ({ query: searchQuery, path, allow_tests, exact, maxTokens: paramMaxTokens, language }, { toolCallId }) => {
+    inputSchema: z.object({
+      query: z.string().describe('Search query with Elasticsearch syntax. Use + for important terms.'),
+      path: z
+        .string()
+        .optional()
+        .default('.')
+        .describe('Path to search in. For dependencies use "go:github.com/owner/repo", "js:package_name", or "rust:cargo_name" etc.'),
+      allowTests: z.boolean().optional().default(false).describe('Allow test files in search results'),
+      exact: z.boolean().optional().default(false).describe('Perform exact search without tokenization (case-insensitive)'),
+      maxResults: z.number().optional().describe('Maximum number of results to return'),
+      maxTokens: z.number().optional().default(10000).describe('Maximum number of tokens to return'),
+      language: z.string().optional().describe('Limit search to files of a specific programming language'),
+    }),
+    execute: async ({ query: searchQuery, path, allowTests, exact, maxTokens: paramMaxTokens, language }, { toolCallId }) => {
       project.addToolMessage(toolCallId, TOOL_GROUP_NAME, TOOL_SEMANTIC_SEARCH, { searchQuery, path }, undefined, undefined, promptContext);
 
       const questionKey = `${TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TOOL_SEMANTIC_SEARCH}`;
       const questionText = 'Approve running codebase search?';
-      const questionSubject = `Query: ${searchQuery}\nPath: ${path || '.'}\nAllow Tests: ${allow_tests}\nExact: ${exact}\nLanguage: ${language}`;
+      const questionSubject = `Query: ${searchQuery}\nPath: ${path || '.'}\nAllow Tests: ${allowTests}\nExact: ${exact}\nLanguage: ${language}`;
 
       const [isApproved, userInput] = await approvalManager.handleApproval(questionKey, questionText, questionSubject);
 
@@ -562,10 +574,11 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
       }
 
       try {
+        // @ts-expect-error probe is not typed properly
         const results = await search({
           query: searchQuery,
           path: searchPath,
-          allow_tests,
+          allowTests,
           exact,
           json: false,
           maxTokens: effectiveMaxTokens,

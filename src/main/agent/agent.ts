@@ -10,6 +10,7 @@ import {
   ContextMessage,
   ContextUserMessage,
   McpTool,
+  McpToolInputSchema,
   PromptContext,
   ProviderProfile,
   SettingsData,
@@ -18,16 +19,17 @@ import {
 } from '@common/types';
 import {
   APICallError,
-  type CoreMessage,
   type FinishReason,
   generateText,
   type ImagePart,
-  InvalidToolArgumentsError,
+  InvalidToolInputError,
+  jsonSchema,
+  type ModelMessage,
   NoSuchToolError,
   type StepResult,
   streamText,
   type Tool,
-  type ToolExecutionOptions,
+  type ToolCallOptions,
   type ToolSet,
   wrapLanguageModel,
 } from 'ai';
@@ -35,9 +37,7 @@ import { delay, extractServerNameToolName } from '@common/utils';
 import { LlmProvider, LlmProviderName } from '@common/agent';
 // @ts-expect-error gpt-tokenizer is not typed
 import { countTokens } from 'gpt-tokenizer/model/gpt-4o';
-import { jsonSchemaToZod } from '@n8n/json-schema-to-zod';
 import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.js';
-import { ZodSchema } from 'zod';
 import { isBinary } from 'istextorbinary';
 import { fileTypeFromBuffer } from 'file-type';
 import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
@@ -51,8 +51,6 @@ import { MCP_CLIENT_TIMEOUT, McpManager } from './mcp-manager';
 import { ApprovalManager } from './tools/approval-manager';
 import { ANSWER_RESPONSE_START_TAG, extractPromptContextFromToolResult, THINKING_RESPONSE_STAR_TAG } from './utils';
 import { extractReasoningMiddleware } from './middlewares/extract-reasoning-middleware';
-
-import type { JsonSchema } from '@n8n/json-schema-to-zod';
 
 import { AIDER_DESK_PROJECT_RULES_DIR } from '@/constants';
 import { Project } from '@/project';
@@ -158,7 +156,7 @@ export class Agent {
         imageParts.push({
           type: 'image',
           image: `data:${file!.mimeType};base64,${file!.imageBase64}`,
-          mimeType: file!.mimeType,
+          mediaType: file!.mimeType,
         });
       } else if (!file!.isImage && file!.content) {
         // Add to textFileContents array
@@ -171,8 +169,8 @@ export class Agent {
     return { textFileContents, imageParts };
   }
 
-  private async getContextFilesMessages(project: Project, profile: AgentProfile, contextFiles: ContextFile[]): Promise<CoreMessage[]> {
-    const messages: CoreMessage[] = [];
+  private async getContextFilesMessages(project: Project, profile: AgentProfile, contextFiles: ContextFile[]): Promise<ModelMessage[]> {
+    const messages: ModelMessage[] = [];
 
     // Filter out rule files as they are already included in the system prompt
     const filteredContextFiles = contextFiles.filter((file) => {
@@ -256,8 +254,8 @@ export class Agent {
     return messages;
   }
 
-  private async getWorkingFilesMessages(contextFiles: ContextFile[]): Promise<CoreMessage[]> {
-    const messages: CoreMessage[] = [];
+  private async getWorkingFilesMessages(contextFiles: ContextFile[]): Promise<ModelMessage[]> {
+    const messages: ModelMessage[] = [];
 
     if (contextFiles.length > 0) {
       const fileList = contextFiles
@@ -356,6 +354,10 @@ export class Agent {
     const helperTools = createHelpersToolset();
     Object.assign(toolSet, helperTools);
 
+    // Add provider-specific tools
+    const providerTools = await this.modelManager.getProviderTools(profile.provider, profile.model);
+    Object.assign(toolSet, providerTools);
+
     return toolSet;
   }
 
@@ -370,16 +372,8 @@ export class Agent {
     promptContext?: PromptContext,
   ): Tool {
     const toolId = `${serverName}${TOOL_GROUP_NAME_SEPARATOR}${toolDef.name}`;
-    let zodSchema: ZodSchema;
-    try {
-      zodSchema = jsonSchemaToZod(this.fixInputSchema(providerName, toolDef.inputSchema));
-    } catch (e) {
-      logger.error(`Failed to convert JSON schema to Zod for tool ${toolDef.name}:`, e);
-      // Fallback to a generic object schema if conversion fails
-      zodSchema = jsonSchemaToZod({ type: 'object', properties: {} });
-    }
 
-    const execute = async (args: { [x: string]: unknown } | undefined, { toolCallId }: ToolExecutionOptions) => {
+    const execute = async (args: { [x: string]: unknown } | undefined, { toolCallId }: ToolCallOptions) => {
       project.addToolMessage(toolCallId, serverName, toolDef.name, args, undefined, undefined, promptContext);
 
       // --- Tool Approval Logic ---
@@ -433,10 +427,15 @@ export class Agent {
     };
 
     logger.debug(`Converting MCP tool to AI SDK tool: ${toolDef.name}`, toolDef);
+    const inputSchema = this.fixInputSchema(providerName, toolDef.inputSchema);
 
     return {
       description: toolDef.description ?? '',
-      parameters: zodSchema,
+      inputSchema: jsonSchema({
+        ...inputSchema,
+        properties: inputSchema.properties ? inputSchema.properties : {},
+        additionalProperties: false,
+      }),
       execute,
     };
   }
@@ -444,7 +443,7 @@ export class Agent {
   /**
    * Fixes the input schema for various providers.
    */
-  private fixInputSchema(provider: LlmProviderName, inputSchema: JsonSchema): JsonSchema {
+  private fixInputSchema(provider: LlmProviderName, inputSchema: McpToolInputSchema): McpToolInputSchema {
     if (provider === 'gemini') {
       // Deep clone to avoid modifying the original schema
       const fixedSchema = JSON.parse(JSON.stringify(inputSchema));
@@ -537,7 +536,7 @@ export class Agent {
 
     const llmProvider = provider.provider;
     const cacheControl = this.modelManager.getCacheControl(profile, llmProvider);
-    const providerOptions = this.modelManager.getProviderOptions(llmProvider, profile.model);
+    const providerOptions = this.modelManager.getProviderOptions(profile.id, profile.model);
 
     const userRequestMessage: ContextUserMessage = {
       id: promptContext?.id || uuidv4(),
@@ -589,36 +588,32 @@ export class Agent {
           if (matchingTool) {
             logger.info(`Found matching tool for ${error.toolName}: ${matchingTool}. Retrying with full name.`);
             return {
-              toolCallType: 'function' as const,
-              toolCallId: toolCall.toolCallId,
+              ...toolCall,
               toolName: matchingTool,
-              args: toolCall.args,
             };
           } else {
             return {
-              toolCallType: 'function' as const,
-              toolCallId: toolCall.toolCallId,
+              ...toolCall,
               toolName: `helpers${TOOL_GROUP_NAME_SEPARATOR}no_such_tool`,
-              args: JSON.stringify({
+              input: JSON.stringify({
                 toolName: error.toolName,
                 availableTools: error.availableTools,
               }),
             };
           }
-        } else if (InvalidToolArgumentsError.isInstance(error)) {
+        } else if (InvalidToolInputError.isInstance(error)) {
           // If the arguments are invalid, return a call to the helper tool
           // to inform the LLM about the argument error.
-          logger.warn(`Invalid arguments for tool: ${error.toolName}`, {
-            args: error.toolArgs,
+          logger.warn(`Invalid input for tool: ${error.toolName}`, {
+            input: error.toolInput,
             error: error.message,
           });
           return {
-            toolCallType: 'function' as const,
-            toolCallId: toolCall.toolCallId,
+            ...toolCall,
             toolName: `helpers${TOOL_GROUP_NAME_SEPARATOR}invalid_tool_arguments`,
-            args: JSON.stringify({
+            input: JSON.stringify({
               toolName: error.toolName,
-              toolArgs: JSON.stringify(error.toolArgs), // Pass the problematic args
+              toolInput: JSON.stringify(error.toolInput), // Pass the problematic input
               error: error.message, // Pass the validation error message
             }),
           };
@@ -634,18 +629,18 @@ export class Agent {
               ...messages,
               {
                 role: 'assistant',
-                content: [
+                parts: [
                   {
                     type: 'tool-call',
                     toolCallId: toolCall.toolCallId,
                     toolName: toolCall.toolName,
-                    args: JSON.stringify(toolCall.args),
+                    input: JSON.stringify(toolCall.input),
                   },
                 ],
               },
               {
                 role: 'tool' as const,
-                content: [
+                parts: [
                   {
                     type: 'tool-result',
                     toolCallId: toolCall.toolCallId,
@@ -662,11 +657,9 @@ export class Agent {
           const newToolCall = result.toolCalls.find((newToolCall) => newToolCall.toolName === toolCall.toolName);
           return newToolCall != null
             ? {
-                toolCallType: 'function' as const,
-                toolCallId: toolCall.toolCallId,
-                toolName: toolCall.toolName,
+                ...toolCall,
                 // Ensure args are stringified for the AI SDK tool call format
-                args: typeof newToolCall.args === 'string' ? newToolCall.args : JSON.stringify(newToolCall.args),
+                input: typeof newToolCall.input === 'string' ? newToolCall.input : JSON.stringify(newToolCall.input),
               }
             : null; // Return null if the LLM couldn't repair the call
         } catch (repairError) {
@@ -708,10 +701,9 @@ export class Agent {
           }),
           system: systemPrompt,
           messages: optimizeMessages(profile, initialUserRequestMessageIndex, messages, cacheControl, settings),
-          toolCallStreaming: true,
           tools: toolSet,
           abortSignal: effectiveAbortSignal,
-          maxTokens: profile.maxTokens,
+          maxOutputTokens: profile.maxTokens,
           maxRetries: 5,
           temperature: profile.temperature,
           experimental_telemetry: {
@@ -748,17 +740,17 @@ export class Agent {
                 hasReasoning = false;
               }
 
-              if (chunk.textDelta?.trim() || currentTextResponse.trim()) {
+              if (chunk.text?.trim() || currentTextResponse.trim()) {
                 project.processResponseMessage({
                   id: currentResponseId,
                   action: 'response',
-                  content: chunk.textDelta,
+                  content: chunk.text,
                   finished: false,
                   promptContext,
                 });
-                currentTextResponse += chunk.textDelta;
+                currentTextResponse += chunk.text;
               }
-            } else if (chunk.type === 'reasoning') {
+            } else if (chunk.type === 'reasoning-delta') {
               if (!hasReasoning) {
                 project.processResponseMessage({
                   id: currentResponseId,
@@ -773,19 +765,16 @@ export class Agent {
               project.processResponseMessage({
                 id: currentResponseId,
                 action: 'response',
-                content: chunk.textDelta,
+                content: chunk.text,
                 finished: false,
                 promptContext,
               });
-            } else if (chunk.type === 'tool-call-streaming-start') {
+            } else if (chunk.type === 'tool-input-start') {
               project.addLogMessage('loading', 'Preparing tool...', false, promptContext);
             } else if (chunk.type === 'tool-call') {
               project.addLogMessage('loading', 'Executing tool...', false, promptContext);
-            } else {
-              // @ts-expect-error key exists
-              if (chunk.type === 'tool-result') {
-                project.addLogMessage('loading', undefined, false, promptContext);
-              }
+            } else if (chunk.type === 'tool-result') {
+              project.addLogMessage('loading', undefined, false, promptContext);
             }
           },
           onStepFinish: (stepResult) => {
@@ -870,7 +859,7 @@ export class Agent {
 
       logger.error('Error running prompt:', error);
       if (error instanceof Error && (error.message.includes('API key') || error.message.includes('credentials'))) {
-        project.addLogMessage('error', `${error.message}. Configure credentials in the Settings -> Providers.`, false, promptContext);
+        project.addLogMessage('error', `${error.message}. Configure credentials in the Model Library.`, false, promptContext);
       } else {
         project.addLogMessage('error', `${error instanceof Error ? error.message : String(error)}`, false, promptContext);
       }
@@ -930,8 +919,13 @@ export class Agent {
     return this.aiderEnv;
   }
 
-  private async prepareMessages(project: Project, profile: AgentProfile, contextMessages: CoreMessage[], contextFiles: ContextFile[]): Promise<CoreMessage[]> {
-    const messages: CoreMessage[] = [];
+  private async prepareMessages(
+    project: Project,
+    profile: AgentProfile,
+    contextMessages: ModelMessage[],
+    contextFiles: ContextFile[],
+  ): Promise<ModelMessage[]> {
+    const messages: ModelMessage[] = [];
 
     // Add repo map if enabled
     if (profile.includeRepoMap) {
@@ -988,7 +982,7 @@ export class Agent {
       const toolDefinitions = Object.entries(toolSet).map(([name, tool]) => ({
         name,
         description: tool.description,
-        parameters: tool.parameters ? tool.parameters.describe() : '', // Get Zod schema description
+        inputSchema: tool.inputSchema ? tool.inputSchema : '', // Get Zod schema description
       }));
       const toolDefinitionsString = `Available tools: ${JSON.stringify(toolDefinitions, null, 2)}`;
 
@@ -1015,7 +1009,7 @@ export class Agent {
 
   private processStep<TOOLS extends ToolSet>(
     currentResponseId: string,
-    { reasoning, text, toolCalls, toolResults, finishReason, usage, providerMetadata, response }: StepResult<TOOLS>,
+    { reasoningText, text, toolCalls, toolResults, finishReason, usage, providerMetadata, response }: StepResult<TOOLS>,
     project: Project,
     profile: AgentProfile,
     provider: ProviderProfile,
@@ -1023,7 +1017,7 @@ export class Agent {
     abortSignal?: AbortSignal,
   ): ContextMessage[] {
     logger.info(`Step finished. Reason: ${finishReason}`, {
-      reasoning: reasoning?.substring(0, 100), // Log truncated reasoning
+      reasoningText: reasoningText?.substring(0, 100), // Log truncated reasoning
       text: text?.substring(0, 100), // Log truncated text
       toolCalls: toolCalls?.map((tc) => tc.toolName),
       toolResults: toolResults?.map((tr) => tr.toolName),
@@ -1033,15 +1027,16 @@ export class Agent {
     });
 
     const messages: ContextMessage[] = [];
-    const messageCost = this.modelManager.calculateCost(provider, profile.model, usage.promptTokens, usage.completionTokens, providerMetadata);
+    const messageCost = this.modelManager.calculateCost(provider, profile.model, usage.inputTokens || 0, usage.outputTokens || 0, providerMetadata);
     const usageReport: UsageReportData = this.modelManager.getUsageReport(project, provider, profile.model, messageCost, usage, providerMetadata);
 
     // Process text/reasoning content
-    if (reasoning || text?.trim()) {
+    if (reasoningText || text?.trim()) {
       const message: ResponseMessage = {
         id: currentResponseId,
         action: 'response',
-        content: reasoning && text ? `${THINKING_RESPONSE_STAR_TAG}${reasoning.trim()}${ANSWER_RESPONSE_START_TAG}${text.trim()}` : reasoning || text,
+        content:
+          reasoningText && text ? `${THINKING_RESPONSE_STAR_TAG}${reasoningText.trim()}${ANSWER_RESPONSE_START_TAG}${text.trim()}` : reasoningText || text,
         finished: true,
         // only send usage report if there are no tool results
         usageReport: toolResults?.length ? undefined : usageReport,
@@ -1054,10 +1049,18 @@ export class Agent {
       // Process successful tool results *after* sending text/reasoning and handling errors
       for (const toolResult of toolResults) {
         const [serverName, toolName] = extractServerNameToolName(toolResult.toolName);
-        const toolPromptContext = extractPromptContextFromToolResult(toolResult.result) ?? promptContext;
+        const toolPromptContext = extractPromptContextFromToolResult(toolResult.output) ?? promptContext;
 
         // Update the existing tool message with the result
-        project.addToolMessage(toolResult.toolCallId, serverName, toolName, toolResult.args, JSON.stringify(toolResult.result), usageReport, toolPromptContext);
+        project.addToolMessage(
+          toolResult.toolCallId,
+          serverName,
+          toolName,
+          toolResult.input,
+          JSON.stringify(toolResult.output),
+          usageReport,
+          toolPromptContext,
+        );
       }
     }
 
@@ -1069,12 +1072,16 @@ export class Agent {
       if (message.role === 'assistant') {
         messages.push({
           ...message,
+          // @ts-expect-error the id is there
+          id: message.id,
           usageReport: toolResults?.length ? undefined : usageReport,
           promptContext,
         });
       } else if (message.role === 'tool') {
         messages.push({
           ...message,
+          // @ts-expect-error the id is there
+          id: message.id,
           usageReport,
           promptContext,
         });

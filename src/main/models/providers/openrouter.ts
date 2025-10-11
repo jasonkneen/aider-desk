@@ -2,7 +2,8 @@ import { AgentProfile, Model, ModelInfo, ProviderProfile, SettingsData, UsageRep
 import { isOpenRouterProvider, LlmProvider, OpenRouterProvider } from '@common/agent';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AIDER_DESK_TITLE, AIDER_DESK_WEBSITE } from '@/constants';
 import { AiderModelMapping, LlmProviderStrategy, CacheControl, LoadModelsResponse } from '@/models';
@@ -110,7 +111,7 @@ export const getOpenRouterAiderMapping = (provider: ProviderProfile, modelId: st
 };
 
 // === LLM Creation Functions ===
-export const createOpenRouterLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModel => {
+export const createOpenRouterLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModelV2 => {
   const provider = profile.provider as OpenRouterProvider;
   const apiKey = provider.apiKey || env['OPENROUTER_API_KEY'];
 
@@ -190,17 +191,17 @@ export const getOpenRouterUsageReport = (
   modelId: string,
   messageCost: number,
   usage: LanguageModelUsage,
-  providerMetadata?: unknown,
+  providerOptions?: unknown,
 ): UsageReportData => {
   const usageReportData: UsageReportData = {
     model: `${provider.id}/${modelId}`,
-    sentTokens: usage.promptTokens,
-    receivedTokens: usage.completionTokens,
+    sentTokens: usage.inputTokens || 0,
+    receivedTokens: usage.outputTokens || 0,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };
 
-  const { openrouter } = providerMetadata as OpenRouterMetadata;
+  const { openrouter } = providerOptions as OpenRouterMetadata;
   usageReportData.cacheReadTokens = openrouter.usage.promptTokensDetails?.cachedTokens;
   usageReportData.sentTokens -= usageReportData.cacheReadTokens ?? 0;
 

@@ -22,8 +22,8 @@ export const FileReadToolMessage = ({ message, onRemove, compact = false }: Prop
   const content = message.content && JSON.parse(message.content);
   const language = getLanguageFromPath(filePath);
 
-  const isError = content && content.startsWith('Error: ');
-  const isDenied = content && content.startsWith(`File read of '${filePath}' denied by user.`);
+  const isError = typeof content === 'string' && content.startsWith('Error: ');
+  const isDenied = typeof content === 'string' && content.startsWith(`File read of '${filePath}' denied by user.`);
 
   const title = (
     <div className="flex items-center gap-2 w-full">

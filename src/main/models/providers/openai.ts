@@ -2,7 +2,8 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { isOpenAiProvider, OpenAiProvider } from '@common/agent';
 import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import logger from '@/logger';
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
@@ -101,7 +102,7 @@ export const getOpenAiAiderMapping = (provider: ProviderProfile, modelId: string
 };
 
 // === LLM Creation Functions ===
-export const createOpenAiLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModel => {
+export const createOpenAiLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModelV2 => {
   const provider = profile.provider as OpenAiProvider;
   const apiKey = provider.apiKey || env['OPENAI_API_KEY'];
 
@@ -111,17 +112,16 @@ export const createOpenAiLlm = (profile: ProviderProfile, model: Model, env: Rec
 
   const openAIProvider = createOpenAI({
     apiKey,
-    compatibility: 'strict',
     headers: profile.headers,
   });
 
-  const providerOverrides = model.providerOverrides as Partial<OpenAiProvider> | undefined;
-  const reasoningEffort = providerOverrides?.reasoningEffort ?? provider.reasoningEffort;
+  // const providerOverrides = model.providerOverrides as Partial<OpenAiProvider> | undefined;
+  // const reasoningEffort = providerOverrides?.reasoningEffort ?? provider.reasoningEffort;
+  // , {
+  //   reasoningEffort: reasoningEffort === undefined ? undefined : (reasoningEffort as 'low' | 'medium' | 'high' | undefined),
+  // }
 
-  return openAIProvider(model.id, {
-    structuredOutputs: false,
-    reasoningEffort: reasoningEffort === undefined ? undefined : (reasoningEffort as 'low' | 'medium' | 'high' | undefined),
-  });
+  return openAIProvider(model.id);
 };
 
 type OpenAiMetadata = {
@@ -157,17 +157,17 @@ export const getOpenAiUsageReport = (
   modelId: string,
   messageCost: number,
   usage: LanguageModelUsage,
-  providerMetadata?: unknown,
+  providerOptions?: unknown,
 ): UsageReportData => {
   const usageReportData: UsageReportData = {
     model: `${provider.id}/${modelId}`,
-    sentTokens: usage.promptTokens,
-    receivedTokens: usage.completionTokens,
+    sentTokens: usage.inputTokens || 0,
+    receivedTokens: usage.outputTokens || 0,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };
 
-  const { openai } = (providerMetadata as OpenAiMetadata) || {};
+  const { openai } = (providerOptions as OpenAiMetadata) || {};
   if (openai) {
     usageReportData.cacheReadTokens = openai.cachedPromptTokens;
     usageReportData.sentTokens -= openai.cachedPromptTokens ?? 0;

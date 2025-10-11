@@ -343,7 +343,7 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
 
     const handleTool = ({ id, serverName, toolName, args, response, usageReport, promptContext }: ToolData) => {
       if (serverName === TODO_TOOL_GROUP_NAME) {
-        handleTodoTool(toolName, args, response);
+        handleTodoTool(toolName, args as Record<string, unknown>, response);
 
         if (usageReport?.aiderTotalCost !== undefined) {
           setAiderTotalCost(usageReport.aiderTotalCost);
@@ -357,7 +357,7 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
           type: 'tool',
           serverName,
           toolName,
-          args: args || {},
+          args: (args as Record<string, unknown> | undefined) || {},
           content: response || '',
           usageReport,
           promptContext,

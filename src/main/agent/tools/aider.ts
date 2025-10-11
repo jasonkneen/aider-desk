@@ -26,7 +26,7 @@ export const createAiderToolset = (project: Project, profile: AgentProfile, prom
 
   const getContextFilesTool = tool({
     description: AIDER_TOOL_DESCRIPTIONS[TOOL_GET_CONTEXT_FILES],
-    parameters: z.object({
+    inputSchema: z.object({
       projectDir: z.string().describe("The project directory. Can be '.' for current project."),
     }),
     execute: async ({ projectDir }, { toolCallId }) => {
@@ -58,7 +58,7 @@ export const createAiderToolset = (project: Project, profile: AgentProfile, prom
 
   const addContextFilesTool = tool({
     description: AIDER_TOOL_DESCRIPTIONS[TOOL_ADD_CONTEXT_FILES],
-    parameters: z.object({
+    inputSchema: z.object({
       paths: z
         .array(z.string())
         .describe(
@@ -153,7 +153,7 @@ export const createAiderToolset = (project: Project, profile: AgentProfile, prom
 
   const dropContextFilesTool = tool({
     description: AIDER_TOOL_DESCRIPTIONS[TOOL_DROP_CONTEXT_FILES],
-    parameters: z.object({
+    inputSchema: z.object({
       paths: z.array(z.string()).describe('One or more file paths to remove from context.'),
     }),
     execute: async ({ paths }, { toolCallId }) => {
@@ -180,7 +180,7 @@ export const createAiderToolset = (project: Project, profile: AgentProfile, prom
 
   const runPromptTool = tool({
     description: AIDER_TOOL_DESCRIPTIONS[TOOL_RUN_PROMPT],
-    parameters: z.object({
+    inputSchema: z.object({
       prompt: z.string().describe('The prompt to run in natural language.'),
     }),
     execute: async ({ prompt }, { toolCallId }) => {

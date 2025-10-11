@@ -7,12 +7,22 @@ import { ContextFile, ContextMessage, MessageRole, ResponseCompletedData, Sessio
 import { extractServerNameToolName, extractTextContent, fileExists, isMessageEmpty, isTextContent } from '@common/utils';
 import { AIDER_TOOL_GROUP_NAME, AIDER_TOOL_RUN_PROMPT, SUBAGENTS_TOOL_GROUP_NAME, SUBAGENTS_TOOL_RUN_TASK } from '@common/tools';
 
+import { migrateSessionV1toV2 } from './migrations/v1-to-v2';
+
 import { extractPromptContextFromToolResult, THINKING_RESPONSE_STAR_TAG, ANSWER_RESPONSE_START_TAG } from '@/agent/utils';
 import logger from '@/logger';
 import { Project } from '@/project';
 import { isDirectory, isFileIgnored } from '@/utils';
 
 const AUTOSAVED_SESSION_NAME = '.autosaved';
+
+const CURRENT_SESSION_VERSION = 2;
+
+export interface PersistedSessionData {
+  version: number;
+  contextMessages: ContextMessage[];
+  contextFiles: ContextFile[];
+}
 
 export class SessionManager {
   private contextMessages: ContextMessage[];
@@ -295,15 +305,15 @@ export class SessionManager {
           for (const part of message.content) {
             if (part.type === 'tool-call') {
               const [serverName, toolName] = extractServerNameToolName(part.toolName);
-              // @ts-expect-error part.args contains the prompt in this case
-              if (serverName === AIDER_TOOL_GROUP_NAME && toolName === AIDER_TOOL_RUN_PROMPT && part.args && 'prompt' in part.args) {
-                aiderPrompt = part.args.prompt as string;
+              // @ts-expect-error part.input contains the prompt in this case
+              if (serverName === AIDER_TOOL_GROUP_NAME && toolName === AIDER_TOOL_RUN_PROMPT && part.input && 'prompt' in part.input) {
+                aiderPrompt = part.input.prompt as string;
                 // Found the prompt, no need to check other parts of this message
                 break;
               }
-              // @ts-expect-error part.args contains the prompt in this case
-              if (serverName === SUBAGENTS_TOOL_GROUP_NAME && toolName === SUBAGENTS_TOOL_RUN_TASK && part.args && 'prompt' in part.args) {
-                subAgentsPrompt = part.args.prompt as string;
+              // @ts-expect-error part.input contains the prompt in this case
+              if (serverName === SUBAGENTS_TOOL_GROUP_NAME && toolName === SUBAGENTS_TOOL_RUN_TASK && part.input && 'prompt' in part.input) {
+                subAgentsPrompt = part.input.prompt as string;
                 // Found the prompt, no need to check other parts of this message
                 break;
               }
@@ -332,15 +342,15 @@ export class SessionManager {
               },
             ];
 
-            if (typeof part.result === 'string' && part.result) {
+            if (part.output?.type === 'text') {
               // old format
               messages.push({
                 role: MessageRole.Assistant,
-                content: part.result as string,
+                content: part.output.value,
               });
-            } else {
-              // @ts-expect-error part.result.responses is expected to be in the result
-              const responses = part.result?.responses;
+            } else if (part.output?.type === 'json') {
+              // @ts-expect-error part.output.responses is expected to be in the output
+              const responses: ResponseCompletedData[] = part.output.value.responses;
               if (responses) {
                 responses.forEach((response: ResponseCompletedData) => {
                   if (response.reflectedMessage) {
@@ -369,9 +379,9 @@ export class SessionManager {
             ];
 
             // Extract the last assistant message from the result
-            if (Array.isArray(part.result) && part.result.length > 0) {
-              const lastMessage = part.result[part.result.length - 1];
-              if (lastMessage && lastMessage.role === MessageRole.Assistant) {
+            if (Array.isArray(part.output.value) && part.output.value.length > 0) {
+              const lastMessage = part.output.value[part.output.value.length - 1];
+              if (lastMessage && typeof lastMessage === 'object' && 'role' in lastMessage && lastMessage.role === MessageRole.Assistant) {
                 const content = extractTextContent(lastMessage.content);
                 if (content) {
                   messages.push({
@@ -387,7 +397,7 @@ export class SessionManager {
             return [
               {
                 role: MessageRole.Assistant,
-                content: `I called tool ${part.toolName} and got result:\n${JSON.stringify(part.result)}`,
+                content: `I called tool ${part.toolName} and got result:\n${JSON.stringify(part.output.value)}`,
               },
             ];
           }
@@ -404,7 +414,8 @@ export class SessionManager {
       await fs.mkdir(sessionsDir, { recursive: true });
       const sessionPath = path.join(sessionsDir, `${name}.json`);
 
-      const sessionData = {
+      const sessionData: PersistedSessionData = {
+        version: CURRENT_SESSION_VERSION,
         contextMessages: this.contextMessages,
         contextFiles: this.contextFiles,
       };
@@ -416,6 +427,28 @@ export class SessionManager {
       logger.error('Failed to save session:', { error });
       throw error;
     }
+  }
+
+  private async migrateSession(sessionData: unknown): Promise<PersistedSessionData> {
+    let migratedData = sessionData as PersistedSessionData;
+    const sessionDataObj = sessionData as { version?: number };
+    let sessionVersion = sessionDataObj.version ?? 1; // Default to 1 if no version is found
+
+    logger.debug(`Migrating session from version ${sessionVersion} to ${CURRENT_SESSION_VERSION}`);
+
+    // Sequential migration chain
+    if (sessionVersion === 1) {
+      migratedData = migrateSessionV1toV2(migratedData);
+      sessionVersion = 2;
+    }
+    // Future migrations will be added here
+    // if (sessionVersion === 2) {
+    //   migratedData = migrateSessionV2toV3(migratedData);
+    //   sessionVersion = 3;
+    // }
+
+    migratedData.version = CURRENT_SESSION_VERSION;
+    return migratedData;
   }
 
   async loadMessages(contextMessages: ContextMessage[]): Promise<void> {
@@ -481,7 +514,7 @@ export class SessionManager {
                 toolCall.toolCallId,
                 serverName,
                 toolName,
-                toolCall.args as Record<string, unknown>,
+                toolCall.input,
                 undefined,
                 message.usageReport,
                 message.promptContext,
@@ -514,22 +547,22 @@ export class SessionManager {
         for (const part of message.content) {
           if (part.type === 'tool-result') {
             const [serverName, toolName] = extractServerNameToolName(part.toolName);
-            const promptContext = extractPromptContextFromToolResult(part.result);
+            const promptContext = extractPromptContextFromToolResult(part.output.value);
             this.project.addToolMessage(
               part.toolCallId,
               serverName,
               toolName,
               undefined,
-              JSON.stringify(part.result),
+              JSON.stringify(part.output.value),
               message.usageReport,
               promptContext,
               false,
             );
 
             if (serverName === AIDER_TOOL_GROUP_NAME && toolName === AIDER_TOOL_RUN_PROMPT) {
-              // @ts-expect-error part.result.responses is expected to be in the result
-              const responses = part.result?.responses;
-              if (responses) {
+              // @ts-expect-error value is expected to have responses
+              const responses = part.output.value.responses;
+              if (Array.isArray(responses)) {
                 responses.forEach((response: ResponseCompletedData) => {
                   this.project.sendResponseCompleted({
                     ...response,
@@ -540,8 +573,8 @@ export class SessionManager {
 
             // Handle agent tool results - process all messages from subagent
             if (serverName === SUBAGENTS_TOOL_GROUP_NAME && toolName === SUBAGENTS_TOOL_RUN_TASK) {
-              // @ts-expect-error part.result.messages is expected to be in the result
-              const messages = part.result?.messages ?? part.result;
+              // @ts-expect-error value is expected to have messages
+              const messages = part.output?.value.messages;
               if (Array.isArray(messages)) {
                 messages.forEach((subMessage: ContextMessage) => {
                   if (subMessage.role === 'assistant') {
@@ -592,7 +625,7 @@ export class SessionManager {
                             subPart.toolCallId,
                             subServerName,
                             subToolName,
-                            subPart.args as Record<string, unknown>,
+                            subPart.input,
                             undefined,
                             undefined,
                             subMessage.promptContext,
@@ -618,13 +651,13 @@ export class SessionManager {
                     for (const subPart of subMessage.content) {
                       if (subPart.type === 'tool-result') {
                         const [subServerName, subToolName] = extractServerNameToolName(subPart.toolName);
-                        const promptContext = extractPromptContextFromToolResult(subPart.result) ?? subMessage.promptContext;
+                        const promptContext = extractPromptContextFromToolResult(subPart.output.value) ?? subMessage.promptContext;
                         this.project.addToolMessage(
                           subPart.toolCallId,
                           subServerName,
                           subToolName,
                           undefined,
-                          JSON.stringify(subPart.result),
+                          JSON.stringify(subPart.output.value),
                           subMessage.usageReport,
                           promptContext,
                           false,
@@ -704,10 +737,11 @@ export class SessionManager {
     try {
       this.disableAutosave();
       await this.load('.autosaved');
-      this.enableAutosave();
     } catch (error) {
       logger.error('Failed to load autosaved session:', { error });
       throw error;
+    } finally {
+      this.enableAutosave();
     }
   }
 
@@ -763,21 +797,15 @@ export class SessionManager {
       const content = await fs.readFile(sessionPath, 'utf8');
       const sessionData = content ? JSON.parse(content) : null;
 
-      if (sessionData && sessionData.contextMessages) {
-        // Migrate old format messages to new format if needed
-        sessionData.contextMessages = sessionData.contextMessages.map((message: ContextMessage & Record<string, unknown>) => {
-          // If message doesn't have usageReport property, it's old format
-          if (message.usageReport === undefined) {
-            return {
-              ...message,
-              usageReport: undefined,
-            } as ContextMessage;
-          }
-          return message as ContextMessage;
-        });
+      if (!sessionData) {
+        return null;
       }
 
-      return sessionData;
+      const migratedData = await this.migrateSession(sessionData);
+      return {
+        name,
+        ...migratedData,
+      };
     } catch (error) {
       logger.error('Failed to get session data:', { name, error });
       return null;
@@ -802,7 +830,7 @@ export class SessionManager {
               const [, toolName] = extractServerNameToolName(part.toolName);
               markdown += `**Tool Call ID:** \`${part.toolCallId}\`\n`;
               markdown += `**Tool:** \`${toolName}\`\n`;
-              markdown += `**Result:**\n\`\`\`json\n${JSON.stringify(part.result, null, 2)}\n\`\`\`\n\n`;
+              markdown += `**Result:**\n\`\`\`json\n${JSON.stringify(part.output.value, null, 2)}\n\`\`\`\n\n`;
             }
           }
         }

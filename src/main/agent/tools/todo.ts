@@ -20,7 +20,7 @@ export const createTodoToolset = (project: Project, profile: AgentProfile, promp
 
   const setTodoItemsTool = tool({
     description: TODO_TOOL_DESCRIPTIONS[TODO_TOOL_SET_ITEMS],
-    parameters: z.object({
+    inputSchema: z.object({
       items: z
         .array(
           z.object({
@@ -57,7 +57,7 @@ Items: ${JSON.stringify(args.items)}`;
 
   const getTodoItemsTool = tool({
     description: TODO_TOOL_DESCRIPTIONS[TODO_TOOL_GET_ITEMS],
-    parameters: z.object({}),
+    inputSchema: z.object({}),
     execute: async (_, { toolCallId }) => {
       project.addToolMessage(toolCallId, TODO_TOOL_GROUP_NAME, TODO_TOOL_GET_ITEMS, {}, undefined, undefined, promptContext);
 
@@ -85,7 +85,7 @@ Items: ${JSON.stringify(args.items)}`;
 
   const updateTodoItemCompletionTool = tool({
     description: TODO_TOOL_DESCRIPTIONS[TODO_TOOL_UPDATE_ITEM_COMPLETION],
-    parameters: z.object({
+    inputSchema: z.object({
       name: z.string().describe('The name of the todo item to update.'),
       completed: z.boolean().describe('The new completion status for the todo item.'),
     }),
@@ -117,7 +117,7 @@ Items: ${JSON.stringify(args.items)}`;
 
   const clearTodoItemsTool = tool({
     description: TODO_TOOL_DESCRIPTIONS[TODO_TOOL_CLEAR_ITEMS],
-    parameters: z.object({}),
+    inputSchema: z.object({}),
     execute: async (_, { toolCallId }) => {
       project.addToolMessage(toolCallId, TODO_TOOL_GROUP_NAME, TODO_TOOL_CLEAR_ITEMS, {}, undefined, undefined, promptContext);
 

@@ -1,4 +1,4 @@
-import type { LanguageModelV1Middleware, LanguageModelV1StreamPart } from 'ai';
+import type { LanguageModelV2StreamPart, LanguageModelV2Middleware } from '@ai-sdk/provider';
 
 import logger from '@/logger';
 
@@ -16,42 +16,12 @@ export const extractReasoningMiddleware = function extractReasoningMiddleware({
   tagName: string;
   separator?: string;
   startWithReasoning?: boolean;
-}): LanguageModelV1Middleware {
+}): LanguageModelV2Middleware {
   const openingTag = `<${tagName}>`;
   const closingTag = `</${tagName}>`;
 
   return {
-    middlewareVersion: 'v1',
-    wrapGenerate: async ({ doGenerate }) => {
-      const { text: rawText, ...rest } = await doGenerate();
-
-      if (rawText == null) {
-        return { text: rawText, ...rest };
-      }
-
-      const text = rawText;
-
-      const regexp = new RegExp(`${openingTag}(.*?)${closingTag}`, 'gs');
-      const matches = Array.from(text.matchAll(regexp));
-
-      if (!matches.length) {
-        return { text, ...rest };
-      }
-
-      const reasoning = matches.map((match) => match[1]).join(separator);
-
-      let textWithoutReasoning = text;
-      for (let i = matches.length - 1; i >= 0; i--) {
-        const match = matches[i];
-
-        const beforeMatch = textWithoutReasoning.slice(0, match.index);
-        const afterMatch = textWithoutReasoning.slice(match.index! + match[0].length);
-
-        textWithoutReasoning = beforeMatch + (beforeMatch.length > 0 && afterMatch.length > 0 ? separator : '') + afterMatch;
-      }
-
-      return { ...rest, text: textWithoutReasoning, reasoning };
-    },
+    middlewareVersion: 'v2',
 
     wrapStream: async ({ doStream }) => {
       const { stream, ...rest } = await doStream();
@@ -64,16 +34,18 @@ export const extractReasoningMiddleware = function extractReasoningMiddleware({
       let fullText = '';
       let reasoningText = '';
       let buffer = '';
+      let lastId: string | undefined;
 
       return {
         stream: stream.pipeThrough(
-          new TransformStream<LanguageModelV1StreamPart, LanguageModelV1StreamPart>({
+          new TransformStream<LanguageModelV2StreamPart, LanguageModelV2StreamPart>({
             transform: (chunk, controller) => {
               if (chunk.type !== 'text-delta') {
-                if (fullText.trim() && fullText.trim().length < openingTag.length) {
+                if (lastId && chunk.type === 'text-end' && fullText.trim() && fullText.trim().length < openingTag.length) {
                   controller.enqueue({
+                    id: lastId,
                     type: 'text-delta',
-                    textDelta: fullText,
+                    delta: fullText,
                   });
                   fullText = '';
                 }
@@ -82,10 +54,11 @@ export const extractReasoningMiddleware = function extractReasoningMiddleware({
                 return;
               }
 
-              buffer += chunk.textDelta;
-              fullText += chunk.textDelta;
+              lastId = chunk.id;
+              buffer += chunk.delta;
+              fullText += chunk.delta;
               if (isReasoning) {
-                reasoningText += chunk.textDelta;
+                reasoningText += chunk.delta;
               }
 
               const publish = function publish(text: string) {
@@ -93,8 +66,9 @@ export const extractReasoningMiddleware = function extractReasoningMiddleware({
                   const prefix = afterSwitch && (isReasoning ? !isFirstReasoning : !isFirstText) ? separator : '';
 
                   controller.enqueue({
-                    type: isReasoning ? 'reasoning' : 'text-delta',
-                    textDelta: prefix + text,
+                    ...chunk,
+                    type: isReasoning ? 'reasoning-delta' : 'text-delta',
+                    delta: prefix + text,
                   });
                   afterSwitch = false;
 

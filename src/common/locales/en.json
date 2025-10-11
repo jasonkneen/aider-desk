@@ -250,8 +250,7 @@
     "includeThoughts": "Include thoughts",
     "includeThoughtsTooltip": "When enabled, the model's internal thought process will be included in the conversation.",
     "useSearchGrounding": "Use Search grounding",
-    "useSearchGroundingTooltip": "When enabled, the model will use search results to ground its responses, improving accuracy and relevance.",
-    "useSearchGroundingWarning": "When enabled, Gemini models are not able to use tools, e.g. Power tools, MCP tools, etc."
+    "useSearchGroundingTooltip": "When enabled, the model will use search results to ground its responses, improving accuracy and relevance."
   },
   "groq": {
     "apiKey": "API Key",

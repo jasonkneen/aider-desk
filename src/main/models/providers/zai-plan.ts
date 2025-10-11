@@ -2,18 +2,15 @@ import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from
 import { isZaiPlanProvider, ZaiPlanProvider } from '@common/agent';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { Project } from '@/project/project';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 
-export const loadZaiPlanModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> => {
+const loadZaiPlanModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isZaiPlanProvider(profile.provider)) {
     return { models: [], success: false };
   }
@@ -60,12 +57,9 @@ export const loadZaiPlanModels = async (
   }
 };
 
-export const hasZaiPlanEnvVars = (settings: SettingsData): boolean => {
-  const hasApiKey = !!getEffectiveEnvironmentVariable('ZAI_API_KEY', settings, undefined)?.value;
-  return hasApiKey;
-};
+const hasZaiPlanEnvVars = (): boolean => false;
 
-export const getZaiPlanAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {
+const getZaiPlanAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {
   const zaiProvider = provider.provider as ZaiPlanProvider;
   const envVars: Record<string, string> = {};
 
@@ -84,7 +78,7 @@ export const getZaiPlanAiderMapping = (provider: ProviderProfile, modelId: strin
 };
 
 // === LLM Creation Functions ===
-export const createZaiPlanLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModel => {
+const createZaiPlanLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> = {}): LanguageModelV2 => {
   const provider = profile.provider as ZaiPlanProvider;
   const apiKey = provider.apiKey || env['ZAI_API_KEY'];
   if (!apiKey) {
@@ -103,7 +97,7 @@ export const createZaiPlanLlm = (profile: ProviderProfile, model: Model, env: Re
 };
 
 // === Cost and Usage Functions ===
-export const calculateZaiPlanCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number => {
+const calculateZaiPlanCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number => {
   if (!modelInfo) {
     return 0;
   }
@@ -115,7 +109,7 @@ export const calculateZaiPlanCost = (modelInfo: ModelInfo | undefined, sentToken
   return inputCost + outputCost;
 };
 
-export const getZaiPlanUsageReport = (
+const getZaiPlanUsageReport = (
   project: Project,
   provider: ProviderProfile,
   modelId: string,
@@ -125,8 +119,8 @@ export const getZaiPlanUsageReport = (
 ): UsageReportData => {
   return {
     model: `${provider.id}/${modelId}`,
-    sentTokens: usage.promptTokens,
-    receivedTokens: usage.completionTokens,
+    sentTokens: usage.inputTokens || 0,
+    receivedTokens: usage.outputTokens || 0,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };

@@ -12,7 +12,7 @@ import type { ToolSet } from 'ai';
 export const createHelpersToolset = (): ToolSet => {
   const noSuchTool = tool({
     description: 'Internal helper tool to inform the LLM that a requested tool does not exist. Do not use this tool.',
-    parameters: z.object({
+    inputSchema: z.object({
       toolName: z.string().describe('The name of the tool that was requested but not found.'),
       availableTools: z.array(z.string()).describe('The list of available tools.'),
     }),
@@ -26,7 +26,7 @@ export const createHelpersToolset = (): ToolSet => {
 
   const invalidToolArguments = tool({
     description: 'Internal helper tool to inform the LLM that a tool was called with invalid arguments. Do not use this tool.',
-    parameters: z.object({
+    inputSchema: z.object({
       toolName: z.string().describe('The name of the tool that was called.'),
       toolArgs: z.string().describe('The arguments that were passed to the tool (stringified JSON).'),
       error: z.string().describe('The error message describing why the arguments were invalid.'),

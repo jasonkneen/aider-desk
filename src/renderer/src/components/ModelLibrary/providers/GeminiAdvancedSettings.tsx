@@ -4,7 +4,6 @@ import { GeminiProvider } from '@common/agent';
 import { Slider } from '@/components/common/Slider';
 import { Checkbox } from '@/components/common/Checkbox';
 import { InfoIcon } from '@/components/common/InfoIcon';
-import { WarningIcon } from '@/components/common/WarningIcon';
 
 type Props = {
   provider: GeminiProvider;
@@ -53,7 +52,6 @@ export const GeminiAdvancedSettings = ({ provider, onChange }: Props) => {
           onChange={handleUseSearchGroundingChange}
         />
         <InfoIcon tooltip={t('gemini.useSearchGroundingTooltip')} />
-        {useSearchGrounding && <WarningIcon tooltip={t('gemini.useSearchGroundingWarning')} />}
       </div>
     </div>
   );
