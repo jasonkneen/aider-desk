@@ -38,7 +38,7 @@ export interface LlmProviderStrategy {
   /**
    * Calculates the cost for token usage with provider-specific caching adjustments
    */
-  calculateCost: (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, providerMetadata?: unknown) => number;
+  calculateCost: (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown) => number;
 
   /**
    * Generates usage reports with provider-specific metadata

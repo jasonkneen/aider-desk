@@ -99,14 +99,13 @@ export const createLmStudioLlm = (profile: ProviderProfile, model: Model, env: R
 };
 
 // === Cost and Usage Functions ===
-export const calculateLmStudioCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number => {
-  if (!modelInfo) {
-    return 0;
-  }
+export const calculateLmStudioCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number => {
+  const inputCostPerToken = model.inputCostPerToken ?? 0;
+  const outputCostPerToken = model.outputCostPerToken ?? 0;
 
   // Standard cost calculation without caching adjustments
-  const inputCost = sentTokens * modelInfo.inputCostPerToken;
-  const outputCost = receivedTokens * modelInfo.outputCostPerToken;
+  const inputCost = sentTokens * inputCostPerToken;
+  const outputCost = receivedTokens * outputCostPerToken;
 
   return inputCost + outputCost;
 };

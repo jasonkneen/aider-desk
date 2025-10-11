@@ -97,14 +97,14 @@ const createZaiPlanLlm = (profile: ProviderProfile, model: Model, env: Record<st
 };
 
 // === Cost and Usage Functions ===
-const calculateZaiPlanCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number => {
-  if (!modelInfo) {
-    return 0;
-  }
+const calculateZaiPlanCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number => {
+  // Use model overrides if available, otherwise use base model info
+  const inputCostPerToken = model.inputCostPerToken ?? 0;
+  const outputCostPerToken = model.outputCostPerToken ?? 0;
 
   // Standard cost calculation without caching adjustments
-  const inputCost = sentTokens * modelInfo.inputCostPerToken;
-  const outputCost = receivedTokens * modelInfo.outputCostPerToken;
+  const inputCost = sentTokens * inputCostPerToken;
+  const outputCost = receivedTokens * outputCostPerToken;
 
   return inputCost + outputCost;
 };

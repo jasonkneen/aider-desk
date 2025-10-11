@@ -108,14 +108,13 @@ export const createGroqLlm = (profile: ProviderProfile, model: Model, env: Recor
 };
 
 // === Cost and Usage Functions ===
-export const calculateGroqCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number => {
-  if (!modelInfo) {
-    return 0;
-  }
+export const calculateGroqCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number => {
+  const inputCostPerToken = model.inputCostPerToken ?? 0;
+  const outputCostPerToken = model.outputCostPerToken ?? 0;
 
   // Standard cost calculation without caching adjustments
-  const inputCost = sentTokens * modelInfo.inputCostPerToken;
-  const outputCost = receivedTokens * modelInfo.outputCostPerToken;
+  const inputCost = sentTokens * inputCostPerToken;
+  const outputCost = receivedTokens * outputCostPerToken;
 
   return inputCost + outputCost;
 };

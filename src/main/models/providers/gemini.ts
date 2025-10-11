@@ -115,21 +115,21 @@ type GoogleMetadata = {
 };
 
 // === Cost and Usage Functions ===
-export const calculateGeminiCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number => {
-  if (!modelInfo) {
-    return 0;
-  }
+export const calculateGeminiCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number => {
+  const inputCostPerToken = model.inputCostPerToken ?? 0;
+  const outputCostPerToken = model.outputCostPerToken ?? 0;
+  const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? inputCostPerToken * 0.25;
 
-  let inputCost = sentTokens * modelInfo.inputCostPerToken;
-  const outputCost = receivedTokens * modelInfo.outputCostPerToken;
+  let inputCost = sentTokens * inputCostPerToken;
+  const outputCost = receivedTokens * outputCostPerToken;
   let cacheCost = 0;
 
   const { google } = (providerMetadata as GoogleMetadata) || {};
   if (google) {
     const cachedPromptTokens = google.cachedInputTokens ?? 0;
 
-    inputCost = (sentTokens - cachedPromptTokens) * modelInfo.inputCostPerToken;
-    cacheCost = cachedPromptTokens * (modelInfo.cacheReadInputTokenCost ?? modelInfo.inputCostPerToken * 0.25);
+    inputCost = (sentTokens - cachedPromptTokens) * inputCostPerToken;
+    cacheCost = cachedPromptTokens * cacheReadInputTokenCost;
   }
 
   return inputCost + outputCost + cacheCost;

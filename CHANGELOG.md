@@ -9,6 +9,7 @@
 - fixed issue with duplicated parts of the message appearing while streaming
 - migrated AI SDK from v4 to v5 for better future support and improvements
 - search grounding with Gemini models now also available to be used with other tools
+- properly using overridden custom token cost values for model
 
 ## [0.34.0]
 

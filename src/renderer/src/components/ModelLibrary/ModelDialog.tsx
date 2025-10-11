@@ -156,8 +156,8 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
             <Input
               label={t('modelLibrary.maxInputTokens')}
               type="number"
-              value={formData.maxInputTokens || ''}
-              onChange={(e) => handleInputChange('maxInputTokens', e.target.value ? parseInt(e.target.value) : undefined)}
+              value={formData.maxInputTokens !== undefined && formData.maxInputTokens !== null ? formData.maxInputTokens : ''}
+              onChange={(e) => handleInputChange('maxInputTokens', e.target.value !== '' ? parseInt(e.target.value) : undefined)}
             />
             {errors.maxInputTokens && <p className="text-error text-2xs mt-1">{errors.maxInputTokens}</p>}
           </div>
@@ -166,8 +166,8 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
             <Input
               label={t('modelLibrary.maxOutputTokens')}
               type="number"
-              value={formData.maxOutputTokens || ''}
-              onChange={(e) => handleInputChange('maxOutputTokens', e.target.value ? parseInt(e.target.value) : undefined)}
+              value={formData.maxOutputTokens !== undefined && formData.maxOutputTokens !== null ? formData.maxOutputTokens : ''}
+              onChange={(e) => handleInputChange('maxOutputTokens', e.target.value !== '' ? parseInt(e.target.value) : undefined)}
             />
             {errors.maxOutputTokens && <p className="text-error text-2xs mt-1">{errors.maxOutputTokens}</p>}
           </div>
@@ -179,10 +179,10 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
               label={t('modelLibrary.inputTokenCost')}
               type="number"
               step="0.01"
-              value={formData.inputCostPerToken ? (formData.inputCostPerToken * 1000000).toFixed(4) : ''}
+              value={formData.inputCostPerToken !== undefined && formData.inputCostPerToken !== null ? (formData.inputCostPerToken * 1000000).toFixed(4) : ''}
               onChange={(e) => {
-                const perMillionValue = e.target.value ? parseFloat(e.target.value) : undefined;
-                const perTokenValue = perMillionValue ? perMillionValue / 1000000 : undefined;
+                const perMillionValue = e.target.value !== '' ? parseFloat(e.target.value) : undefined;
+                const perTokenValue = perMillionValue !== undefined ? perMillionValue / 1000000 : undefined;
                 handleInputChange('inputCostPerToken', perTokenValue);
               }}
             />
@@ -194,10 +194,12 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
               label={t('modelLibrary.outputTokenCost')}
               type="number"
               step="0.01"
-              value={formData.outputCostPerToken ? (formData.outputCostPerToken * 1000000).toFixed(4) : ''}
+              value={
+                formData.outputCostPerToken !== undefined && formData.outputCostPerToken !== null ? (formData.outputCostPerToken * 1000000).toFixed(4) : ''
+              }
               onChange={(e) => {
-                const perMillionValue = e.target.value ? parseFloat(e.target.value) : undefined;
-                const perTokenValue = perMillionValue ? perMillionValue / 1000000 : undefined;
+                const perMillionValue = e.target.value !== '' ? parseFloat(e.target.value) : undefined;
+                const perTokenValue = perMillionValue !== undefined ? perMillionValue / 1000000 : undefined;
                 handleInputChange('outputCostPerToken', perTokenValue);
               }}
             />
@@ -211,10 +213,14 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
               label={t('modelLibrary.cacheReadInputTokenCost')}
               type="number"
               step="0.01"
-              value={formData.cacheReadInputTokenCost ? (formData.cacheReadInputTokenCost * 1000000).toFixed(4) : ''}
+              value={
+                formData.cacheReadInputTokenCost !== undefined && formData.cacheReadInputTokenCost !== null
+                  ? (formData.cacheReadInputTokenCost * 1000000).toFixed(4)
+                  : ''
+              }
               onChange={(e) => {
-                const perMillionValue = e.target.value ? parseFloat(e.target.value) : undefined;
-                const perTokenValue = perMillionValue ? perMillionValue / 1000000 : undefined;
+                const perMillionValue = e.target.value !== '' ? parseFloat(e.target.value) : undefined;
+                const perTokenValue = perMillionValue !== undefined ? perMillionValue / 1000000 : undefined;
                 handleInputChange('cacheReadInputTokenCost', perTokenValue);
               }}
             />
@@ -225,10 +231,14 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
               label={t('modelLibrary.cacheWriteInputTokenCost')}
               type="number"
               step="0.01"
-              value={formData.cacheWriteInputTokenCost ? (formData.cacheWriteInputTokenCost * 1000000).toFixed(4) : ''}
+              value={
+                formData.cacheWriteInputTokenCost !== undefined && formData.cacheWriteInputTokenCost !== null
+                  ? (formData.cacheWriteInputTokenCost * 1000000).toFixed(4)
+                  : ''
+              }
               onChange={(e) => {
-                const perMillionValue = e.target.value ? parseFloat(e.target.value) : undefined;
-                const perTokenValue = perMillionValue ? perMillionValue / 1000000 : undefined;
+                const perMillionValue = e.target.value !== '' ? parseFloat(e.target.value) : undefined;
+                const perTokenValue = perMillionValue !== undefined ? perMillionValue / 1000000 : undefined;
                 handleInputChange('cacheWriteInputTokenCost', perTokenValue);
               }}
             />

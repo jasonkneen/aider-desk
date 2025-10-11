@@ -138,20 +138,21 @@ export const createRequestyLlm = (profile: ProviderProfile, model: Model, env: R
 };
 
 // === Cost and Usage Functions ===
-export const calculateRequestyCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number => {
-  if (!modelInfo) {
-    return 0;
-  }
+export const calculateRequestyCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number => {
+  const inputCostPerToken = model.inputCostPerToken ?? 0;
+  const outputCostPerToken = model.outputCostPerToken ?? 0;
+  const cacheWriteInputTokenCost = model.cacheWriteInputTokenCost ?? inputCostPerToken;
+  const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? 0;
 
   const { requesty } = providerMetadata as RequestyProviderMetadata;
   const cachingTokens = requesty?.usage?.cachingTokens ?? 0;
   const cachedTokens = requesty?.usage?.cachedTokens ?? 0;
 
-  const cacheCreationCost = cachingTokens * (modelInfo.cacheWriteInputTokenCost ?? modelInfo.inputCostPerToken);
-  const cacheReadCost = cachedTokens * (modelInfo.cacheReadInputTokenCost ?? 0);
+  const cacheCreationCost = cachingTokens * cacheWriteInputTokenCost;
+  const cacheReadCost = cachedTokens * cacheReadInputTokenCost;
 
-  const inputCost = (sentTokens - cachedTokens) * modelInfo.inputCostPerToken;
-  const outputCost = receivedTokens * modelInfo.outputCostPerToken;
+  const inputCost = (sentTokens - cachedTokens) * inputCostPerToken;
+  const outputCost = receivedTokens * outputCostPerToken;
   const cacheCost = cacheCreationCost + cacheReadCost;
 
   return inputCost + outputCost + cacheCost;

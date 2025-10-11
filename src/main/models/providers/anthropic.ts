@@ -108,21 +108,22 @@ type AnthropicMetadata = {
 };
 
 // === Cost and Usage Functions ===
-export const calculateAnthropicCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number => {
-  if (!modelInfo) {
-    return 0;
-  }
+export const calculateAnthropicCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number => {
+  const inputCostPerToken = model.inputCostPerToken ?? 0;
+  const outputCostPerToken = model.outputCostPerToken ?? 0;
+  const cacheWriteInputTokenCost = model.cacheWriteInputTokenCost ?? inputCostPerToken;
+  const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? 0;
 
-  const inputCost = sentTokens * modelInfo.inputCostPerToken;
-  const outputCost = receivedTokens * modelInfo.outputCostPerToken;
+  const inputCost = sentTokens * inputCostPerToken;
+  const outputCost = receivedTokens * outputCostPerToken;
   let cacheCost = 0;
 
   const { anthropic } = (providerMetadata as AnthropicMetadata) || {};
   if (anthropic) {
     const cacheCreationInputTokens = anthropic.cacheCreationInputTokens ?? 0;
     const cacheReadInputTokens = anthropic.cacheReadInputTokens ?? 0;
-    const cacheCreationCost = cacheCreationInputTokens * (modelInfo.cacheWriteInputTokenCost ?? modelInfo.inputCostPerToken);
-    const cacheReadCost = cacheReadInputTokens * (modelInfo.cacheReadInputTokenCost ?? 0);
+    const cacheCreationCost = cacheCreationInputTokens * cacheWriteInputTokenCost;
+    const cacheReadCost = cacheReadInputTokens * cacheReadInputTokenCost;
     cacheCost = cacheCreationCost + cacheReadCost;
   }
 

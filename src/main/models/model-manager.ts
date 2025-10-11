@@ -249,6 +249,8 @@ export class ModelManager {
   }
 
   private async loadProviderModels(providers: ProviderProfile[]): Promise<void> {
+    this.eventManager.sendProviderModelsUpdated({ loading: true });
+
     // Group providers by their provider name
     const providersByName: Record<LlmProviderName, ProviderProfile[]> = {} as Record<LlmProviderName, ProviderProfile[]>;
     for (const provider of providers || []) {
@@ -290,9 +292,18 @@ export class ModelManager {
             for (const modelOverride of providerModelOverrides) {
               const existingIndex = allModels.findIndex((m) => m.id === modelOverride.id);
               if (existingIndex >= 0) {
+                const cleanedOverride = Object.fromEntries(Object.entries(modelOverride).filter(([_, value]) => value !== undefined));
+                logger.info(`Overriding model: ${profile.id}/${modelOverride.id}`, {
+                  existing: allModels[existingIndex],
+                  override: modelOverride,
+                  cleanedOverrides: cleanedOverride,
+                });
+
                 allModels[existingIndex] = {
                   ...allModels[existingIndex],
-                  ...modelOverride,
+                  ...cleanedOverride,
+                  isCustom: false,
+                  hasModelOverrides: Object.keys(cleanedOverride).length > 0,
                 };
               } else if (modelOverride.isCustom) {
                 allModels.push({ ...modelOverride });
@@ -300,6 +311,9 @@ export class ModelManager {
             }
 
             this.providerModels[profile.id] = allModels;
+            logger.info(`Loaded ${allModels.length} models for provider profile ${profile.id}`, {
+              models: allModels,
+            });
           }
         };
 
@@ -419,9 +433,7 @@ export class ModelManager {
     }
 
     await this.saveModelOverrides();
-    this.eventManager.sendProviderModelsUpdated({ loading: true });
     await this.loadProviderModels(this.store.getProviders().filter((provider) => provider.id === providerId));
-    this.eventManager.sendProviderModelsUpdated(await this.getProviderModels());
   }
 
   async deleteModel(providerId: string, modelId: string): Promise<void> {
@@ -437,9 +449,7 @@ export class ModelManager {
     if (this.modelOverrides.length < initialLength) {
       await this.saveModelOverrides();
       logger.info(`Deleted model override: ${providerId}/${modelId}`);
-      this.eventManager.sendProviderModelsUpdated({ loading: true });
       await this.loadProviderModels(this.store.getProviders().filter((provider) => provider.id === providerId));
-      this.eventManager.sendProviderModelsUpdated(await this.getProviderModels());
     } else {
       logger.warn(`Model override not found for deletion: ${providerId}/${modelId}`);
     }
@@ -522,7 +532,20 @@ export class ModelManager {
     if (!strategy) {
       throw new Error(`Unsupported LLM provider: ${provider.provider.name}`);
     }
-    return strategy.calculateCost(this.getModelInfo(model), sentTokens, receivedTokens, providerMetadata);
+
+    // Resolve Model object
+    let modelObj = this.getModel(provider.id, model);
+    if (!modelObj) {
+      // Fallback to creating a minimal Model object if not found
+      const modelInfo = this.getModelInfo(model);
+      modelObj = {
+        ...modelInfo,
+        id: model,
+        providerId: provider.id,
+      };
+    }
+
+    return strategy.calculateCost(modelObj, sentTokens, receivedTokens, providerMetadata);
   }
 
   getUsageReport(

@@ -558,6 +558,7 @@ export interface Model {
   supportsTools?: boolean;
   isCustom?: boolean;
   isHidden?: boolean;
+  hasModelOverrides?: boolean;
   providerOverrides?: Record<string, unknown>;
 }
 

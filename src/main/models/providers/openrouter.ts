@@ -175,12 +175,7 @@ type OpenRouterMetadata = {
 };
 
 // === Cost and Usage Functions ===
-export const calculateOpenRouterCost = (
-  _modelInfo: ModelInfo | undefined,
-  _sentTokens: number,
-  _receivedTokens: number,
-  providerMetadata?: unknown,
-): number => {
+export const calculateOpenRouterCost = (_model: Model, _sentTokens: number, _receivedTokens: number, providerMetadata?: unknown): number => {
   const { openrouter } = providerMetadata as OpenRouterMetadata;
   return openrouter.usage.cost;
 };
