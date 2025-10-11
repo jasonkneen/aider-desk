@@ -293,7 +293,7 @@ export class ModelManager {
               const existingIndex = allModels.findIndex((m) => m.id === modelOverride.id);
               if (existingIndex >= 0) {
                 const cleanedOverride = Object.fromEntries(Object.entries(modelOverride).filter(([_, value]) => value !== undefined));
-                logger.info(`Overriding model: ${profile.id}/${modelOverride.id}`, {
+                logger.debug(`Overriding model: ${profile.id}/${modelOverride.id}`, {
                   existing: allModels[existingIndex],
                   override: modelOverride,
                   cleanedOverrides: cleanedOverride,
@@ -311,9 +311,6 @@ export class ModelManager {
             }
 
             this.providerModels[profile.id] = allModels;
-            logger.info(`Loaded ${allModels.length} models for provider profile ${profile.id}`, {
-              models: allModels,
-            });
           }
         };
 
