@@ -47,10 +47,10 @@ export const PROBE_BINARY_PATH = path.join(
   RESOURCES_DIR,
   'app.asar.unpacked',
   'node_modules',
-  '@buger',
+  '@probelabs',
   'probe',
   'bin',
-  process.platform === 'win32' ? 'probe.exe' : 'probe',
+  process.platform === 'win32' ? 'probe.exe' : 'probe-binary',
 );
 
 export const CLOUDFLARED_BINARY_PATH = path.join(

@@ -543,20 +543,20 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
       path: z
         .string()
         .optional()
-        .default('.')
-        .describe('Path to search in. For dependencies use "go:github.com/owner/repo", "js:package_name", or "rust:cargo_name" etc.'),
+        .default(project.baseDir)
+        .describe('Absolute path to search in. For dependencies use "go:github.com/owner/repo", "js:package_name", or "rust:cargo_name" etc.'),
       allowTests: z.boolean().optional().default(false).describe('Allow test files in search results'),
       exact: z.boolean().optional().default(false).describe('Perform exact search without tokenization (case-insensitive)'),
       maxResults: z.number().optional().describe('Maximum number of results to return'),
       maxTokens: z.number().optional().default(10000).describe('Maximum number of tokens to return'),
       language: z.string().optional().describe('Limit search to files of a specific programming language'),
     }),
-    execute: async ({ query: searchQuery, path, allowTests, exact, maxTokens: paramMaxTokens, language }, { toolCallId }) => {
-      project.addToolMessage(toolCallId, TOOL_GROUP_NAME, TOOL_SEMANTIC_SEARCH, { searchQuery, path }, undefined, undefined, promptContext);
+    execute: async ({ query: searchQuery, path: inputPath, allowTests, exact, maxTokens: paramMaxTokens, language }, { toolCallId }) => {
+      project.addToolMessage(toolCallId, TOOL_GROUP_NAME, TOOL_SEMANTIC_SEARCH, { searchQuery, path: inputPath }, undefined, undefined, promptContext);
 
       const questionKey = `${TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TOOL_SEMANTIC_SEARCH}`;
       const questionText = 'Approve running codebase search?';
-      const questionSubject = `Query: ${searchQuery}\nPath: ${path || '.'}\nAllow Tests: ${allowTests}\nExact: ${exact}\nLanguage: ${language}`;
+      const questionSubject = `Query: ${searchQuery}\nPath: ${inputPath || '.'}\nAllow Tests: ${allowTests}\nExact: ${exact}\nLanguage: ${language}`;
 
       const [isApproved, userInput] = await approvalManager.handleApproval(questionKey, questionText, questionSubject);
 
@@ -567,10 +567,14 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
       // Use parameter maxTokens if provided, otherwise use the default
       const effectiveMaxTokens = paramMaxTokens || 10000;
 
-      let searchPath = path || project.baseDir;
-      if (searchPath === '.' || searchPath === './') {
-        // If path is "." or "./", use the project baseDir
-        searchPath = project.baseDir;
+      let searchPath = inputPath || project.baseDir;
+
+      // Check if it's a dependency path (format: language:rest)
+      const isDependencyPath = /^[a-zA-Z]+:/.test(searchPath);
+
+      if (!isDependencyPath && !path.isAbsolute(searchPath)) {
+        // If path is relative (including "." and "./"), resolve it relative to project.baseDir
+        searchPath = path.resolve(project.baseDir, searchPath);
       }
 
       try {
