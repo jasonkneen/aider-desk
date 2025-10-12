@@ -68,6 +68,7 @@ export interface OpenAiProvider extends LlmProviderBase {
   name: 'openai';
   apiKey: string;
   reasoningEffort?: ReasoningEffort;
+  useWebSearch: boolean;
 }
 export const isOpenAiProvider = (provider: LlmProviderBase): provider is OpenAiProvider => provider.name === 'openai';
 
@@ -368,6 +369,7 @@ export const getDefaultProviderParams = <T extends LlmProvider>(providerName: Ll
       provider = {
         name: 'openai',
         apiKey: '',
+        useWebSearch: false,
       } satisfies OpenAiProvider;
       break;
     case 'azure':

@@ -18,6 +18,7 @@ export const OpenAiModelOverrides = ({ overrides, onChange }: Props) => {
   const handleProviderChange = (updatedProvider: OpenAiProvider) => {
     const newOverrides = {
       reasoningEffort: updatedProvider.reasoningEffort,
+      useWebSearch: updatedProvider.useWebSearch,
     };
 
     // Remove undefined values

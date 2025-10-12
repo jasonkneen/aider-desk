@@ -2,7 +2,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { isOpenAiProvider, OpenAiProvider, LlmProvider } from '@common/agent';
 import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, ReasoningEffort } from '@common/types';
 
-import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage, ToolSet } from 'ai';
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 
 import logger from '@/logger';
@@ -200,6 +200,31 @@ export const getOpenAiProviderOptions = (provider: LlmProvider, model: Model): S
   return undefined;
 };
 
+// === Provider Tools Functions ===
+export const getOpenAiProviderTools = (provider: LlmProvider, model: Model): ToolSet => {
+  if (!isOpenAiProvider(provider)) {
+    return {};
+  }
+
+  const openAiProvider = provider as OpenAiProvider;
+
+  // Check for model-specific overrides
+  const providerOverrides = model.providerOverrides as Partial<OpenAiProvider> | undefined;
+  const useWebSearch = providerOverrides?.useWebSearch ?? openAiProvider.useWebSearch;
+
+  if (!useWebSearch) {
+    return {};
+  }
+
+  const openaiProvider = createOpenAI({
+    apiKey: openAiProvider.apiKey,
+  });
+
+  return {
+    web_search: openaiProvider.tools.webSearch({}),
+  };
+};
+
 // === Complete Strategy Implementation ===
 export const openaiProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
@@ -213,4 +238,5 @@ export const openaiProviderStrategy: LlmProviderStrategy = {
 
   // Configuration helper functions
   getProviderOptions: getOpenAiProviderOptions,
+  getProviderTools: getOpenAiProviderTools,
 };

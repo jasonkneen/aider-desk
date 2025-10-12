@@ -234,7 +234,9 @@
     "reasoningEffortMinimal": "Minimal",
     "reasoningEffortLow": "Low",
     "reasoningEffortMedium": "Medium",
-    "reasoningEffortHigh": "High"
+    "reasoningEffortHigh": "High",
+    "useWebSearch": "Use Web Search",
+    "useWebSearchTooltip": "When enabled, the model will use OpenAI's web search tool to access current information from the internet."
   },
   "ollama": {
     "baseUrl": "Base URL",

@@ -233,7 +233,9 @@
     "reasoningEffortMinimal": "最小",
     "reasoningEffortLow": "低",
     "reasoningEffortMedium": "中",
-    "reasoningEffortHigh": "高"
+    "reasoningEffortHigh": "高",
+    "useWebSearch": "使用网络搜索",
+    "useWebSearchTooltip": "启用后，模型将使用 OpenAI 的网络搜索工具来访问互联网上的当前信息。"
   },
   "ollama": {
     "baseUrl": "基础 URL",
