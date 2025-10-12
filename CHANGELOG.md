@@ -12,6 +12,7 @@
 - properly using overridden custom token cost values for model
 - show info that Export to Image of messages is not available when using virtualized rendering
 - added support for Web Search tool for OpenAI models
+- properly reconstructing thinking messages after loading the session when there are multiple message parts
 
 ## [0.34.0]
 

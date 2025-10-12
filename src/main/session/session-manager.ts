@@ -470,10 +470,10 @@ export class SessionManager {
 
           for (const part of message.content) {
             if (part.type === 'reasoning' && part.text?.trim()) {
-              reasoningContent = part.text.trim();
+              reasoningContent += `${part.text.trim()}\n\n`;
               hasReasoning = true;
             } else if (part.type === 'text' && part.text) {
-              textContent = part.text.trim();
+              textContent += `${part.text.trim()}\n\n`;
               hasText = true;
             }
           }
@@ -482,7 +482,7 @@ export class SessionManager {
           if (hasReasoning || hasText) {
             let finalContent = '';
             if (hasReasoning && hasText) {
-              finalContent = `${THINKING_RESPONSE_STAR_TAG}${reasoningContent}${ANSWER_RESPONSE_START_TAG}${textContent}`;
+              finalContent = `${THINKING_RESPONSE_STAR_TAG}${reasoningContent.trim()}${ANSWER_RESPONSE_START_TAG}${textContent.trim()}`;
             } else {
               finalContent = reasoningContent || textContent;
             }
@@ -491,7 +491,7 @@ export class SessionManager {
               {
                 id: uuidv4(),
                 action: 'response',
-                content: finalContent,
+                content: finalContent.trim(),
                 finished: true,
                 reflectedMessage: message.reflectedMessage,
                 usageReport: message.usageReport,
@@ -518,6 +518,20 @@ export class SessionManager {
                 undefined,
                 message.usageReport,
                 message.promptContext,
+                false,
+              );
+            } else if (part.type === 'tool-result') {
+              const toolResult = part;
+              const [serverName, toolName] = extractServerNameToolName(toolResult.toolName);
+              const promptContext = extractPromptContextFromToolResult(toolResult.output.value) ?? message.promptContext;
+              this.project.addToolMessage(
+                toolResult.toolCallId,
+                serverName,
+                toolName,
+                undefined,
+                JSON.stringify(toolResult.output.value),
+                message.usageReport,
+                promptContext,
                 false,
               );
             }
