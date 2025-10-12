@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import React, { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
@@ -42,7 +42,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
     const virtualizer = useVirtualizer({
       count: processedMessages.length,
       getScrollElement: () => messagesContainerRef.current,
-      estimateSize: () => 100, // Initial estimate, will be measured
+      estimateSize: () => 44, // Initial estimate, will be measured
       overscan: 5,
       scrollToFn: (offset, { behavior }) => {
         messagesContainerRef.current?.scrollTo({
@@ -54,7 +54,6 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
       const element = e.currentTarget;
-      const isAtBottom = element.scrollHeight - element.scrollTop < element.clientHeight + 20;
 
       // Check if content is smaller than scroll area (no scrollbar needed)
       const contentSmallerThanArea = element.scrollHeight <= element.clientHeight;
@@ -62,25 +61,42 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
       // If content is smaller than area, never pause scrolling
       if (contentSmallerThanArea) {
         setScrollingPaused(false);
-        return;
       }
-
-      // Detect scroll direction by comparing current scrollTop with previous scrollTop
-      const currentScrollTop = element.scrollTop;
-      const previousScrollTop = element.dataset.previousScrollTop ? parseInt(element.dataset.previousScrollTop, 10) : currentScrollTop;
-
-      // Store current scrollTop for next scroll event
-      element.dataset.previousScrollTop = currentScrollTop.toString();
-
-      // If scrolling up, always pause
-      // If scrolling down, only pause if not at bottom
-      const isScrollingUp = currentScrollTop < previousScrollTop;
-      const shouldPause = isScrollingUp || !isAtBottom;
-
-      setScrollingPaused(shouldPause);
     };
 
-    useEffect(() => {
+    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+      // Only pause when scrolling up (negative deltaY)
+      if (e.deltaY < 0) {
+        setScrollingPaused(true);
+      } else if (e.deltaY > 0) {
+        const element = e.currentTarget;
+        const isAtBottom = element.scrollHeight - element.scrollTop < element.clientHeight + e.deltaY + 20;
+
+        if (isAtBottom) {
+          setScrollingPaused(false);
+        }
+      }
+    };
+
+    const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+      const touch = e.touches[0];
+      const element = e.currentTarget;
+      element.dataset.touchStartY = touch.clientY.toString();
+    };
+
+    const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+      const touch = e.touches[0];
+      const element = e.currentTarget;
+      const touchStartY = element.dataset.touchStartY ? parseFloat(element.dataset.touchStartY) : touch.clientY;
+
+      // Detect swipe up (touch moving up, so current Y is less than start Y)
+      if (touch.clientY < touchStartY - 10) {
+        // 10px threshold to avoid accidental triggers
+        setScrollingPaused(true);
+      }
+    };
+
+    useLayoutEffect(() => {
       if (!scrollingPaused && processedMessages.length > 0) {
         // Scroll to the last item when new messages arrive
         virtualizer.scrollToIndex(processedMessages.length - 1, {
@@ -141,6 +157,9 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
             scrollbar-thumb-bg-tertiary
             hover:scrollbar-thumb-bg-fourth"
           onScroll={handleScroll}
+          onWheel={handleWheel}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
         >
           <div
             style={{
