@@ -1,5 +1,4 @@
 import React, { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { toPng } from 'html-to-image';
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -11,6 +10,7 @@ import { isGroupMessage, isUserMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
+import { showInfoNotification } from '@/utils/notifications';
 
 export type VirtualizedMessagesRef = {
   exportToImage: () => void;
@@ -107,25 +107,8 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
     }, [processedMessages]);
 
     const exportToImage = async () => {
-      const messagesContainer = messagesContainerRef.current;
-      if (messagesContainer === null) {
-        return;
-      }
-
-      try {
-        const dataUrl = await toPng(messagesContainer, {
-          cacheBust: true,
-          height: messagesContainer.scrollHeight,
-        });
-        const link = document.createElement('a');
-        link.download = `session-${new Date().toISOString().replace(/:/g, '-').substring(0, 19)}.png`;
-        link.href = dataUrl;
-        link.click();
-        link.remove();
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to export chat as PNG', err);
-      }
+      // Show notification that export is not available with virtualized rendering
+      showInfoNotification(t('messages.exportNotAvailableWithVirtualized'));
     };
 
     const scrollToBottom = () => {

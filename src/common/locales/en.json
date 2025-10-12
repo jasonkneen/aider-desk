@@ -554,7 +554,8 @@
     "cancelEdit": "Cancel",
     "group": "Group",
     "scrollToBottom": "Scroll to bottom",
-    "messageBar": "Message Bar"
+    "messageBar": "Message Bar",
+    "exportNotAvailableWithVirtualized": "Export to image is not available when using virtualized message rendering. Change to standard rendering in Settings -> General -> Message Display."
   },
   "errors": {
     "frozenTitle": "AIDER FROZEN?",

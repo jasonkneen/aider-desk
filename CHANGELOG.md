@@ -10,6 +10,7 @@
 - migrated AI SDK from v4 to v5 for better future support and improvements
 - search grounding with Gemini models now also available to be used with other tools
 - properly using overridden custom token cost values for model
+- show info that Export to Image of messages is not available when using virtualized rendering
 
 ## [0.34.0]
 
