@@ -137,6 +137,8 @@ src/
       index.ts
       server-controller.ts
     session/
+      migrations/
+        v1-to-v2.ts
       index.ts
       session-manager.ts
     store/
@@ -1399,8 +1401,7 @@ File: src/common/locales/en.json
     "includeThoughts": "Include thoughts",
     "includeThoughtsTooltip": "When enabled, the model's internal thought process will be included in the conversation.",
     "useSearchGrounding": "Use Search grounding",
-    "useSearchGroundingTooltip": "When enabled, the model will use search results to ground its responses, improving accuracy and relevance.",
-    "useSearchGroundingWarning": "When enabled, Gemini models are not able to use tools, e.g. Power tools, MCP tools, etc."
+    "useSearchGroundingTooltip": "When enabled, the model will use search results to ground its responses, improving accuracy and relevance."
   },
   "groq": {
     "apiKey": "API Key",
@@ -2395,8 +2396,7 @@ File: src/common/locales/zh.json
     "includeThoughts": "包含思考过程",
     "includeThoughtsTooltip": "启用后，代理的内部思考过程将包含在对话历史中，这有助于调试或理解其决策。",
     "useSearchGrounding": "使用搜索基础",
-    "useSearchGroundingTooltip": "启用后，代理将使用搜索结果作为其响应的基础，从而提高准确性和相关性。",
-    "useSearchGroundingWarning": "当启用时，Gemini 模型的工具使用受到限制。"
+    "useSearchGroundingTooltip": "启用后，代理将使用搜索结果作为其响应的基础，从而提高准确性和相关性。"
   },
   "groq": {
     "apiKey": "API 密钥",
@@ -3534,8 +3534,8 @@ import {
 } from '@common/agent';
 import { z } from 'zod';
 ⋮----
+import type { JSONSchema7Definition } from '@ai-sdk/provider';
 import type { AssistantContent, ToolContent, UserContent } from 'ai';
-import type { JsonSchema } from '@n8n/json-schema-to-zod';
 ⋮----
 export type LocalizedString = {
   key: string;
@@ -3603,7 +3603,7 @@ export interface ToolData {
   id: string;
   serverName: string;
   toolName: string;
-  args?: Record<string, unknown>;
+  args?: unknown;
   response?: string;
   usageReport?: UsageReportData;
   promptContext?: PromptContext;
@@ -3956,11 +3956,16 @@ export interface GenericTool {
   description: string;
 }
 ⋮----
+export interface McpToolInputSchema {
+  type: 'object';
+  properties: Record<string, JSONSchema7Definition>;
+}
+⋮----
 export interface McpTool {
   serverName: string;
   name: string;
   description?: string;
-  inputSchema: JsonSchema;
+  inputSchema: McpToolInputSchema;
 }
 ⋮----
 export interface McpServerConfig {
@@ -4030,6 +4035,7 @@ export interface Model {
   supportsTools?: boolean;
   isCustom?: boolean;
   isHidden?: boolean;
+  hasModelOverrides?: boolean;
   providerOverrides?: Record<string, unknown>;
 }
 ⋮----
@@ -4136,7 +4142,7 @@ export const getActiveAgentProfile = (settings: SettingsData | null, projectSett
 ================
 File: src/main/agent/middlewares/extract-reasoning-middleware.ts
 ================
-import type { LanguageModelV1Middleware, LanguageModelV1StreamPart } from 'ai';
+import type { LanguageModelV2StreamPart, LanguageModelV2Middleware } from '@ai-sdk/provider';
 ⋮----
 import logger from '@/logger';
 ⋮----
@@ -4279,7 +4285,7 @@ import {
 } from '@common/tools';
 import { isBinary } from 'istextorbinary';
 import { isURL } from '@common/utils';
-import { search, searchSchema } from '@buger/probe';
+import { search } from '@probelabs/probe';
 ⋮----
 import { ApprovalManager } from './approval-manager';
 ⋮----
@@ -4320,6 +4326,8 @@ const searchRegex = new RegExp(searchTerm, caseSensitive ? undefined : 'i'); // 
 // Use parameter maxTokens if provided, otherwise use the default
 ⋮----
 // If path is "." or "./", use the project baseDir
+⋮----
+// @ts-expect-error probe is not typed properly
 ⋮----
 // we need to set the PROBE_PATH env variable for production asar.unpacked, as the binary is not determined correctly inside the probe package
 ⋮----
@@ -4363,9 +4371,11 @@ const getSubagentContextMessages = (contextMemory: ContextMemoryMode) =>
 ⋮----
 const findResultMessagesForToolCallId = (toolCallId: string) =>
 ⋮----
-// @ts-expect-error subagentId is expected to be in the args
+// @ts-expect-error part.output.value is expected to be in the output
 ⋮----
-// @ts-expect-error prompt is expected to be in the args
+// @ts-expect-error subagentId is expected to be in the input
+⋮----
+// @ts-expect-error prompt is expected to be in the input
 ⋮----
 // Run the subagent with the focused context
 ⋮----
@@ -4410,6 +4420,7 @@ import {
   ContextMessage,
   ContextUserMessage,
   McpTool,
+  McpToolInputSchema,
   PromptContext,
   ProviderProfile,
   SettingsData,
@@ -4418,16 +4429,17 @@ import {
 } from '@common/types';
 import {
   APICallError,
-  type CoreMessage,
   type FinishReason,
   generateText,
   type ImagePart,
-  InvalidToolArgumentsError,
+  InvalidToolInputError,
+  jsonSchema,
+  type ModelMessage,
   NoSuchToolError,
   type StepResult,
   streamText,
   type Tool,
-  type ToolExecutionOptions,
+  type ToolCallOptions,
   type ToolSet,
   wrapLanguageModel,
 } from 'ai';
@@ -4435,9 +4447,7 @@ import { delay, extractServerNameToolName } from '@common/utils';
 import { LlmProvider, LlmProviderName } from '@common/agent';
 // @ts-expect-error gpt-tokenizer is not typed
 import { countTokens } from 'gpt-tokenizer/model/gpt-4o';
-import { jsonSchemaToZod } from '@n8n/json-schema-to-zod';
 import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.js';
-import { ZodSchema } from 'zod';
 import { isBinary } from 'istextorbinary';
 import { fileTypeFromBuffer } from 'file-type';
 import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
@@ -4451,8 +4461,6 @@ import { MCP_CLIENT_TIMEOUT, McpManager } from './mcp-manager';
 import { ApprovalManager } from './tools/approval-manager';
 import { ANSWER_RESPONSE_START_TAG, extractPromptContextFromToolResult, THINKING_RESPONSE_STAR_TAG } from './utils';
 import { extractReasoningMiddleware } from './middlewares/extract-reasoning-middleware';
-⋮----
-import type { JsonSchema } from '@n8n/json-schema-to-zod';
 ⋮----
 import { AIDER_DESK_PROJECT_RULES_DIR } from '@/constants';
 import { Project } from '@/project';
@@ -4487,7 +4495,7 @@ private async getFilesContentForPrompt(files: ContextFile[], project: Project): 
 ⋮----
 // Add to textFileContents array
 ⋮----
-private async getContextFilesMessages(project: Project, profile: AgentProfile, contextFiles: ContextFile[]): Promise<CoreMessage[]>
+private async getContextFilesMessages(project: Project, profile: AgentProfile, contextFiles: ContextFile[]): Promise<ModelMessage[]>
 ⋮----
 // Filter out rule files as they are already included in the system prompt
 ⋮----
@@ -4499,7 +4507,7 @@ private async getContextFilesMessages(project: Project, profile: AgentProfile, c
 ⋮----
 // Process editable files
 ⋮----
-private async getWorkingFilesMessages(contextFiles: ContextFile[]): Promise<CoreMessage[]>
+private async getWorkingFilesMessages(contextFiles: ContextFile[]): Promise<ModelMessage[]>
 ⋮----
 private async getAvailableTools(
     project: Project,
@@ -4525,6 +4533,8 @@ return; // Do not add the tool if it's never approved
 ⋮----
 // Add helper tools
 ⋮----
+// Add provider-specific tools
+⋮----
 private convertMpcToolToAiSdkTool(
     providerName: LlmProviderName,
     serverName: string,
@@ -4535,8 +4545,6 @@ private convertMpcToolToAiSdkTool(
     approvalManager: ApprovalManager,
     promptContext?: PromptContext,
 ): Tool
-⋮----
-// Fallback to a generic object schema if conversion fails
 ⋮----
 const execute = async (args:
 ⋮----
@@ -4555,7 +4563,7 @@ const execute = async (args:
 /**
    * Fixes the input schema for various providers.
    */
-private fixInputSchema(provider: LlmProviderName, inputSchema: JsonSchema): JsonSchema
+private fixInputSchema(provider: LlmProviderName, inputSchema: McpToolInputSchema): McpToolInputSchema
 ⋮----
 // Deep clone to avoid modifying the original schema
 ⋮----
@@ -4589,7 +4597,7 @@ const repairToolCall = async (
 // If the arguments are invalid, return a call to the helper tool
 // to inform the LLM about the argument error.
 ⋮----
-toolArgs: JSON.stringify(error.toolArgs), // Pass the problematic args
+toolInput: JSON.stringify(error.toolInput), // Pass the problematic input
 error: error.message, // Pass the validation error message
 ⋮----
 // Attempt generic repair for other types of errors
@@ -4599,8 +4607,6 @@ error: error.message, // Pass the validation error message
 : null; // Return null if the LLM couldn't repair the call
 ⋮----
 // @ts-expect-error checking keys in error
-⋮----
-// @ts-expect-error key exists
 ⋮----
 // try again
 ⋮----
@@ -4620,7 +4626,12 @@ private async getLlmEnv(project: Project)
 ⋮----
 private getAiderEnv(): Record<string, string>
 ⋮----
-private async prepareMessages(project: Project, profile: AgentProfile, contextMessages: CoreMessage[], contextFiles: ContextFile[]): Promise<CoreMessage[]>
+private async prepareMessages(
+    project: Project,
+    profile: AgentProfile,
+    contextMessages: ModelMessage[],
+    contextFiles: ContextFile[],
+): Promise<ModelMessage[]>
 ⋮----
 // Add repo map if enabled
 ⋮----
@@ -4632,7 +4643,7 @@ async estimateTokens(project: Project, profile: AgentProfile): Promise<number>
 ⋮----
 // Format tools for the prompt
 ⋮----
-parameters: tool.parameters ? tool.parameters.describe() : '', // Get Zod schema description
+inputSchema: tool.inputSchema ? tool.inputSchema : '', // Get Zod schema description
 ⋮----
 // Add tool definitions and system prompt to the beginning
 ⋮----
@@ -4643,7 +4654,7 @@ interrupt(baseDir: string)
 ⋮----
 private processStep<TOOLS extends ToolSet>(
     currentResponseId: string,
-    { reasoning, text, toolCalls, toolResults, finishReason, usage, providerMetadata, response }: StepResult<TOOLS>,
+    { reasoningText, text, toolCalls, toolResults, finishReason, usage, providerMetadata, response }: StepResult<TOOLS>,
     project: Project,
     profile: AgentProfile,
     provider: ProviderProfile,
@@ -4651,7 +4662,7 @@ private processStep<TOOLS extends ToolSet>(
     abortSignal?: AbortSignal,
 ): ContextMessage[]
 ⋮----
-reasoning: reasoning?.substring(0, 100), // Log truncated reasoning
+reasoningText: reasoningText?.substring(0, 100), // Log truncated reasoning
 text: text?.substring(0, 100), // Log truncated text
 ⋮----
 // Process text/reasoning content
@@ -4661,6 +4672,10 @@ text: text?.substring(0, 100), // Log truncated text
 // Process successful tool results *after* sending text/reasoning and handling errors
 ⋮----
 // Update the existing tool message with the result
+⋮----
+// @ts-expect-error the id is there
+⋮----
+// @ts-expect-error the id is there
 
 ================
 File: src/main/agent/index.ts
@@ -4755,7 +4770,7 @@ File: src/main/agent/optimizer.ts
 import { type AgentProfile, InvocationMode, type SettingsData } from '@common/types';
 import { isSubagentEnabled } from '@common/agent';
 import { cloneDeep } from 'lodash';
-import { type CoreMessage, type CoreUserMessage, type ToolContent, type ToolResultPart } from 'ai';
+import { type ModelMessage, type ToolContent, type ToolResultPart, type UserModelMessage } from 'ai';
 import {
   AIDER_TOOL_GROUP_NAME,
   AIDER_TOOL_RUN_PROMPT,
@@ -4765,6 +4780,7 @@ import {
   TODO_TOOL_GROUP_NAME,
   TOOL_GROUP_NAME_SEPARATOR,
 } from '@common/tools';
+import { extractTextContent } from '@common/utils';
 ⋮----
 import logger from '@/logger';
 import { CacheControl } from '@/models';
@@ -4775,37 +4791,39 @@ import { CacheControl } from '@/models';
 export const optimizeMessages = (
   profile: AgentProfile,
   userRequestMessageIndex: number,
-  messages: CoreMessage[],
+  messages: ModelMessage[],
   cacheControl: CacheControl,
   settings: SettingsData,
 ) =>
 ⋮----
-const addImportantReminders = (profile: AgentProfile, userRequestMessageIndex: number, messages: CoreMessage[], settings: SettingsData): CoreMessage[] =>
+const addImportantReminders = (profile: AgentProfile, userRequestMessageIndex: number, messages: ModelMessage[], settings: SettingsData): ModelMessage[] =>
 ⋮----
 // Add reminder about automatic subagents
 ⋮----
 /**
  * For run_prompt tool, which returns `responses` array, we should replace this array with empty array.
  */
-const optimizeAiderMessages = (messages: CoreMessage[]): CoreMessage[] =>
+const optimizeAiderMessages = (messages: ModelMessage[]): ModelMessage[] =>
+⋮----
+// @ts-expect-error result is expected to have responses
+⋮----
+// @ts-expect-error result is expected to have promptContext
 ⋮----
 // ignore
 ⋮----
 /**
  * For subagent tool, which now returns an array of messages, we should replace this array with only the last message for LLM processing.
  */
-const optimizeSubagentMessages = (messages: CoreMessage[]): CoreMessage[] =>
+const optimizeSubagentMessages = (messages: ModelMessage[]): ModelMessage[] =>
 ⋮----
-// Check if result is an array of messages
-⋮----
-// Replace the array with only the last message for LLM processing
+// @ts-expect-error result is expected to have messages
 ⋮----
 // ignore
 ⋮----
 /**
  * Converts tool results containing images into a separate user message containing the image.
  */
-const convertImageToolResults = (messages: CoreMessage[]): CoreMessage[] =>
+const convertImageToolResults = (messages: ModelMessage[]): ModelMessage[] =>
 ⋮----
 // If result is not valid JSON, or doesn't match the image format,
 // just keep the original toolResultPart as is.
@@ -4821,7 +4839,7 @@ const convertImageToolResults = (messages: CoreMessage[]): CoreMessage[] =>
  * This function detects this pattern (assistant tool call -> tool result -> same assistant tool call)
  * and modifies the result of the second tool call to return an error, preventing a loop.
  */
-const removeDoubleToolCalls = (messages: CoreMessage[]): CoreMessage[] =>
+const removeDoubleToolCalls = (messages: ModelMessage[]): ModelMessage[] =>
 ⋮----
 // Need at least 4 messages for the pattern: assistant, tool, assistant, tool
 ⋮----
@@ -5303,7 +5321,8 @@ import { createAnthropic } from '@ai-sdk/anthropic';
 import { AnthropicProvider, isAnthropicProvider } from '@common/agent';
 import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 ⋮----
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, CacheControl, LlmProviderStrategy } from '@/models';
 import { LoadModelsResponse } from '@/models/types';
@@ -5331,7 +5350,7 @@ type AnthropicMetadata = {
 };
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateAnthropicCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
+export const calculateAnthropicCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
 ⋮----
 export const getAnthropicUsageReport = (
   project: Project,
@@ -5339,7 +5358,7 @@ export const getAnthropicUsageReport = (
   modelId: string,
   messageCost: number,
   usage: LanguageModelUsage,
-  providerMetadata?: unknown,
+  providerOptions?: unknown,
 ): UsageReportData =>
 ⋮----
 // === Configuration Helper Functions ===
@@ -5360,7 +5379,8 @@ import { createAzure } from '@ai-sdk/azure';
 import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 import { AZURE_DEFAULT_API_VERSION, AzureProvider } from '@common/agent';
 ⋮----
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import { getEffectiveEnvironmentVariable } from '@/utils';
@@ -5384,7 +5404,7 @@ type AzureMetadata = {
 };
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateAzureCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
+export const calculateAzureCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
 ⋮----
 export const getAzureUsageReport = (
   project: Project,
@@ -5392,7 +5412,7 @@ export const getAzureUsageReport = (
   modelId: string,
   messageCost: number,
   usage: LanguageModelUsage,
-  providerMetadata?: unknown,
+  providerOptions?: unknown,
 ): UsageReportData =>
 ⋮----
 // === Complete Strategy Implementation ===
@@ -5410,7 +5430,8 @@ import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from
 import { BedrockProvider, isBedrockProvider } from '@common/agent';
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
 ⋮----
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import logger from '@/logger';
@@ -5452,7 +5473,7 @@ export const createBedrockLlm = (profile: ProviderProfile, model: Model, env: Re
 // Let the SDK handle the default chain if explicit keys aren't provided
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateBedrockCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
+export const calculateBedrockCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
 ⋮----
 // Standard cost calculation without caching adjustments
 ⋮----
@@ -5478,7 +5499,8 @@ import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from
 import { CerebrasProvider, isCerebrasProvider } from '@common/agent';
 import { createCerebras } from '@ai-sdk/cerebras';
 ⋮----
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import logger from '@/logger';
@@ -5508,7 +5530,7 @@ export const getCerebrasAiderMapping = (provider: ProviderProfile, modelId: stri
 export const createCerebrasLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateCerebrasCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
+export const calculateCerebrasCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
 ⋮----
 // Standard cost calculation without caching adjustments
 ⋮----
@@ -5534,7 +5556,8 @@ import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from
 import { DeepseekProvider, isDeepseekProvider } from '@common/agent';
 import { createDeepSeek } from '@ai-sdk/deepseek';
 ⋮----
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
@@ -5555,7 +5578,7 @@ export const getDeepseekAiderMapping = (provider: ProviderProfile, modelId: stri
 export const createDeepseekLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateDeepseekCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
+export const calculateDeepseekCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
 ⋮----
 // Standard cost calculation without caching adjustments
 ⋮----
@@ -5579,9 +5602,10 @@ File: src/main/models/providers/gemini.ts
 ================
 import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 import { GeminiProvider, isGeminiProvider, LlmProvider } from '@common/agent';
-import { createGoogleGenerativeAI, type GoogleGenerativeAIProviderOptions } from '@ai-sdk/google';
+import { createGoogleGenerativeAI, google, type GoogleGenerativeAIProviderOptions } from '@ai-sdk/google';
 ⋮----
-import type { JSONValue, LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage, ToolSet } from 'ai';
+import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
@@ -5603,12 +5627,12 @@ export const createGeminiLlm = (profile: ProviderProfile, model: Model, env: Rec
 ⋮----
 type GoogleMetadata = {
   google: {
-    cachedContentTokenCount?: number;
+    cachedInputTokens?: number;
   };
 };
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateGeminiCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
+export const calculateGeminiCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
 ⋮----
 export const getGeminiUsageReport = (
   project: Project,
@@ -5616,12 +5640,17 @@ export const getGeminiUsageReport = (
   modelId: string,
   messageCost: number,
   usage: LanguageModelUsage,
-  providerMetadata?: unknown,
+  providerOptions?: unknown,
 ): UsageReportData =>
 ⋮----
-export const getGeminiProviderOptions = (llmProvider: LlmProvider, model: Model): Record<string, Record<string, JSONValue>> | undefined =>
+export const getGeminiProviderOptions = (llmProvider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined =>
 ⋮----
 // Use model-specific overrides, falling back to provider defaults
+⋮----
+// === Provider Tools Functions ===
+export const getGeminiProviderTools = (provider: LlmProvider, model: Model): ToolSet =>
+⋮----
+// Check for model-specific overrides
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -5636,7 +5665,8 @@ import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from
 import { GroqProvider, isGroqProvider } from '@common/agent';
 import { createGroq } from '@ai-sdk/groq';
 ⋮----
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
@@ -5663,7 +5693,7 @@ export const getGroqAiderMapping = (provider: ProviderProfile, modelId: string):
 export const createGroqLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateGroqCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
+export const calculateGroqCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
 ⋮----
 // Standard cost calculation without caching adjustments
 ⋮----
@@ -5689,7 +5719,8 @@ import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from
 import { isLmStudioProvider, LmStudioProvider } from '@common/agent';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 ⋮----
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
@@ -5714,7 +5745,7 @@ export const getLmStudioAiderMapping = (provider: ProviderProfile, modelId: stri
 export const createLmStudioLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateLmStudioCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
+export const calculateLmStudioCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
 ⋮----
 // Standard cost calculation without caching adjustments
 ⋮----
@@ -5738,9 +5769,11 @@ File: src/main/models/providers/ollama.ts
 ================
 import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 import { isOllamaProvider, OllamaProvider } from '@common/agent';
-import { createOllama } from 'ollama-ai-provider';
+import { createOllama } from 'ollama-ai-provider-v2';
+import { simulateStreamingMiddleware, wrapLanguageModel } from 'ai';
 ⋮----
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
@@ -5764,8 +5797,10 @@ export const getOllamaAiderMapping = (provider: ProviderProfile, modelId: string
 // === LLM Creation Functions ===
 export const createOllamaLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
 ⋮----
+let normalized = baseUrl.replace(/\/+$/, ''); // Remove all trailing slashes
+⋮----
 // === Cost and Usage Functions ===
-export const calculateOllamaCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
+export const calculateOllamaCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
 ⋮----
 // Standard cost calculation without caching adjustments
 ⋮----
@@ -5791,7 +5826,8 @@ import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from
 import { isOpenAiCompatibleProvider, OpenAiCompatibleProvider } from '@common/agent';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 ⋮----
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
@@ -5816,12 +5852,7 @@ export const createOpenAiCompatibleLlm = (profile: ProviderProfile, model: Model
 // Use createOpenAICompatible to get a provider instance, then get the model
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateOpenAiCompatibleCost = (
-  modelInfo: ModelInfo | undefined,
-  sentTokens: number,
-  receivedTokens: number,
-  _providerMetadata?: unknown,
-): number =>
+export const calculateOpenAiCompatibleCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
 ⋮----
 // Standard cost calculation without caching adjustments
 ⋮----
@@ -5847,7 +5878,8 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { isOpenAiProvider, OpenAiProvider } from '@common/agent';
 import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 ⋮----
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import logger from '@/logger';
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
@@ -5869,6 +5901,12 @@ export const getOpenAiAiderMapping = (provider: ProviderProfile, modelId: string
 // === LLM Creation Functions ===
 export const createOpenAiLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
 ⋮----
+// const providerOverrides = model.providerOverrides as Partial<OpenAiProvider> | undefined;
+// const reasoningEffort = providerOverrides?.reasoningEffort ?? provider.reasoningEffort;
+// , {
+//   reasoningEffort: reasoningEffort === undefined ? undefined : (reasoningEffort as 'low' | 'medium' | 'high' | undefined),
+// }
+⋮----
 type OpenAiMetadata = {
   openai: {
     cachedPromptTokens?: number;
@@ -5876,7 +5914,7 @@ type OpenAiMetadata = {
 };
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateOpenAiCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
+export const calculateOpenAiCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
 ⋮----
 export const getOpenAiUsageReport = (
   project: Project,
@@ -5884,7 +5922,7 @@ export const getOpenAiUsageReport = (
   modelId: string,
   messageCost: number,
   usage: LanguageModelUsage,
-  providerMetadata?: unknown,
+  providerOptions?: unknown,
 ): UsageReportData =>
 ⋮----
 // === Complete Strategy Implementation ===
@@ -5900,7 +5938,8 @@ import { AgentProfile, Model, ModelInfo, ProviderProfile, SettingsData, UsageRep
 import { isOpenRouterProvider, LlmProvider, OpenRouterProvider } from '@common/agent';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 ⋮----
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AIDER_DESK_TITLE, AIDER_DESK_WEBSITE } from '@/constants';
 import { AiderModelMapping, LlmProviderStrategy, CacheControl, LoadModelsResponse } from '@/models';
@@ -5966,12 +6005,7 @@ type OpenRouterMetadata = {
 };
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateOpenRouterCost = (
-  _modelInfo: ModelInfo | undefined,
-  _sentTokens: number,
-  _receivedTokens: number,
-  providerMetadata?: unknown,
-): number =>
+export const calculateOpenRouterCost = (_model: Model, _sentTokens: number, _receivedTokens: number, providerMetadata?: unknown): number =>
 ⋮----
 export const getOpenRouterUsageReport = (
   project: Project,
@@ -5979,7 +6013,7 @@ export const getOpenRouterUsageReport = (
   modelId: string,
   messageCost: number,
   usage: LanguageModelUsage,
-  providerMetadata?: unknown,
+  providerOptions?: unknown,
 ): UsageReportData =>
 ⋮----
 // === Configuration Helper Functions ===
@@ -6000,7 +6034,8 @@ import { AgentProfile, Model, ModelInfo, ProviderProfile, ReasoningEffort, Setti
 import { isRequestyProvider, LlmProvider, RequestyProvider } from '@common/agent';
 import { createRequesty, type RequestyProviderMetadata } from '@requesty/ai-sdk';
 ⋮----
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AIDER_DESK_TITLE, AIDER_DESK_WEBSITE } from '@/constants';
 import { AiderModelMapping, LlmProviderStrategy, CacheControl, LoadModelsResponse } from '@/models';
@@ -6045,7 +6080,7 @@ export const getRequestyAiderMapping = (provider: ProviderProfile, modelId: stri
 export const createRequestyLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateRequestyCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
+export const calculateRequestyCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
 ⋮----
 export const getRequestyUsageReport = (
   project: Project,
@@ -6053,7 +6088,7 @@ export const getRequestyUsageReport = (
   modelId: string,
   messageCost: number,
   usage: LanguageModelUsage,
-  providerMetadata?: unknown,
+  providerOptions?: unknown,
 ): UsageReportData =>
 ⋮----
 // === Configuration Helper Functions ===
@@ -6076,7 +6111,8 @@ import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from
 import { isVertexAiProvider, LlmProvider, VertexAiProvider } from '@common/agent';
 import { createVertex } from '@ai-sdk/google-vertex';
 ⋮----
-import type { JSONValue, LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
@@ -6114,7 +6150,9 @@ type VertexGoogleMetadata = {
 };
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateVertexAiCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
+export const calculateVertexAiCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
+⋮----
+// Use model overrides if available, otherwise use base model info
 ⋮----
 export const getVertexAiUsageReport = (
   project: Project,
@@ -6122,10 +6160,10 @@ export const getVertexAiUsageReport = (
   modelId: string,
   messageCost: number,
   usage: LanguageModelUsage,
-  providerMetadata?: unknown,
+  providerOptions?: unknown,
 ): UsageReportData =>
 ⋮----
-export const getVertexAiProviderOptions = (llmProvider: LlmProvider, model: Model): Record<string, Record<string, JSONValue>> | undefined =>
+export const getVertexAiProviderOptions = (llmProvider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined =>
 ⋮----
 // Use model-specific overrides, falling back to provider defaults
 ⋮----
@@ -6144,41 +6182,40 @@ import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from
 import { isZaiPlanProvider, ZaiPlanProvider } from '@common/agent';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 ⋮----
-import type { LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { Project } from '@/project/project';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 ⋮----
-export const loadZaiPlanModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> =>
+const loadZaiPlanModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>, settings: SettingsData): Promise<LoadModelsResponse> =>
 ⋮----
 // ZAI uses specific endpoint for model discovery
 ⋮----
-export const hasZaiPlanEnvVars = (settings: SettingsData): boolean =>
+const hasZaiPlanEnvVars = (): boolean
 ⋮----
-export const getZaiPlanAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
+const getZaiPlanAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
 // Set the base URL for ZAI Plan
 ⋮----
 // Use zai-plan prefix for ZAI providers
 ⋮----
 // === LLM Creation Functions ===
-export const createZaiPlanLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
+const createZaiPlanLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
 ⋮----
 // Use createOpenAICompatible to get a provider instance, then get the model
 // ZAI uses specific base URL for chat completions
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateZaiPlanCost = (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
+const calculateZaiPlanCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
+⋮----
+// Use model overrides if available, otherwise use base model info
 ⋮----
 // Standard cost calculation without caching adjustments
 ⋮----
-export const getZaiPlanUsageReport = (
+const getZaiPlanUsageReport = (
   project: Project,
   provider: ProviderProfile,
   modelId: string,
@@ -6223,7 +6260,8 @@ import { requestyProviderStrategy } from './providers/requesty';
 import { vertexAiProviderStrategy } from './providers/vertex-ai';
 import { zaiPlanProviderStrategy } from './providers/zai-plan';
 ⋮----
-import type { JSONValue, LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
+import type { LanguageModelUsage, ToolSet } from 'ai';
 ⋮----
 import { AIDER_DESK_DATA_DIR, AIDER_DESK_CACHE_DIR } from '@/constants';
 import logger from '@/logger';
@@ -6338,6 +6376,10 @@ createLlm(profile: ProviderProfile, model: string | Model, env: Record<string, s
 ⋮----
 calculateCost(provider: ProviderProfile, model: string, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number
 ⋮----
+// Resolve Model object
+⋮----
+// Fallback to creating a minimal Model object if not found
+⋮----
 getUsageReport(
     project: Project,
     provider: ProviderProfile,
@@ -6349,15 +6391,20 @@ getUsageReport(
 ⋮----
 getCacheControl(profile: AgentProfile, llmProvider: LlmProvider): CacheControl
 ⋮----
-getProviderOptions(llmProvider: LlmProvider, model: string): Record<string, Record<string, JSONValue>> | undefined
+getProviderOptions(providerId: string, modelId: string): SharedV2ProviderOptions | undefined
 ⋮----
 // Find the provider profile for this LLM provider
-⋮----
-// Fallback to old behavior if provider not found
 ⋮----
 // Resolve Model object
 ⋮----
 // Fallback to minimal Model object if not found
+⋮----
+/**
+   * Returns provider-specific tools for the given provider and model
+   */
+async getProviderTools(providerId: string, modelId: string): Promise<ToolSet>
+⋮----
+// Resolve Model object
 
 ================
 File: src/main/models/models.ts
@@ -6370,11 +6417,12 @@ File: src/main/models/types.ts
 import { AgentProfile, Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 import { LlmProvider, LlmProviderName } from '@common/agent';
 ⋮----
-import type { JSONValue, LanguageModel, LanguageModelUsage } from 'ai';
+import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
+import type { LanguageModelUsage, ToolSet } from 'ai';
 ⋮----
 import { Project } from '@/project';
 ⋮----
-export type CacheControl = Record<string, Record<string, JSONValue>> | undefined;
+export type CacheControl = SharedV2ProviderOptions | undefined;
 ⋮----
 export interface AiderModelMapping {
   modelName: string;
@@ -6401,12 +6449,12 @@ export interface LlmProviderStrategy {
   /**
    * Creates a LanguageModel instance for the given provider and model
    */
-  createLlm: (profile: ProviderProfile, model: Model, env: Record<string, string | undefined>) => LanguageModel;
+  createLlm: (profile: ProviderProfile, model: Model, env: Record<string, string | undefined>) => LanguageModelV2;
 
   /**
    * Calculates the cost for token usage with provider-specific caching adjustments
    */
-  calculateCost: (modelInfo: ModelInfo | undefined, sentTokens: number, receivedTokens: number, providerMetadata?: unknown) => number;
+  calculateCost: (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown) => number;
 
   /**
    * Generates usage reports with provider-specific metadata
@@ -6445,7 +6493,12 @@ export interface LlmProviderStrategy {
   /**
    * Returns provider-specific options for model instantiation
    */
-  getProviderOptions?: (provider: LlmProvider, model: Model) => Record<string, Record<string, JSONValue>> | undefined;
+  getProviderOptions?: (provider: LlmProvider, model: Model) => SharedV2ProviderOptions | undefined;
+
+  /**
+   * Returns provider-specific tools that should be available to the agent
+   */
+  getProviderTools?: (provider: LlmProvider, model: Model) => ToolSet | Promise<ToolSet>;
 }
 ⋮----
 // === LLM Creation and Usage Functions ===
@@ -6481,6 +6534,10 @@ export interface LlmProviderStrategy {
 ⋮----
 /**
    * Returns provider-specific options for model instantiation
+   */
+⋮----
+/**
+   * Returns provider-specific tools that should be available to the agent
    */
 ⋮----
 export type LlmProviderRegistry = Record<LlmProviderName, LlmProviderStrategy>;
@@ -6829,7 +6886,7 @@ public addToolMessage(
     id: string,
     serverName: string,
     toolName: string,
-    args?: Record<string, unknown>,
+    args?: unknown,
     response?: string,
     usageReport?: UsageReportData,
     promptContext?: PromptContext,
@@ -7383,6 +7440,53 @@ async startServer()
 async stopServer()
 
 ================
+File: src/main/session/migrations/v1-to-v2.ts
+================
+import { ContextMessage } from '@common/types';
+import { AIDER_TOOL_GROUP_NAME, AIDER_TOOL_RUN_PROMPT, SUBAGENTS_TOOL_GROUP_NAME, SUBAGENTS_TOOL_RUN_TASK } from '@common/tools';
+import { extractServerNameToolName } from '@common/utils';
+⋮----
+import { PersistedSessionData } from '../session-manager';
+⋮----
+import logger from '@/logger';
+⋮----
+/**
+ * Migrates a single ContextMessage from V1 (AI SDK v4) to V2 (AI SDK v5) format.
+ * This function is reusable and can handle recursive migration for subagent messages.
+ */
+const migrateContextMessage = (message: ContextMessage): ContextMessage =>
+⋮----
+// If content is already an array, it might be V1 format that needs migration or already V2 format
+⋮----
+// Check if this is V1 format by looking for 'args' or 'result' properties
+⋮----
+// Migrate V1 format to V2
+⋮----
+// V1 tool-call: change 'args' to 'input'
+⋮----
+args: undefined, // Remove old property
+⋮----
+// V1 tool-result: change 'result' to 'output' with proper typing
+⋮----
+// Check if this is a subagent tool result with messages that need migration
+⋮----
+// @ts-expect-error value is expected to have messages
+⋮----
+// Recursively migrate each message in the subagent result
+⋮----
+// @ts-expect-error value is expected to have responses
+⋮----
+// Recursively migrate each response message
+⋮----
+result: undefined, // Remove old property
+⋮----
+// Leave other parts (text, reasoning, etc.) unchanged
+⋮----
+// Return the message as is if it doesn't match migration conditions
+⋮----
+export const migrateSessionV1toV2 = (sessionData: PersistedSessionData): PersistedSessionData =>
+
+================
 File: src/main/session/index.ts
 ================
 
@@ -7399,10 +7503,18 @@ import { ContextFile, ContextMessage, MessageRole, ResponseCompletedData, Sessio
 import { extractServerNameToolName, extractTextContent, fileExists, isMessageEmpty, isTextContent } from '@common/utils';
 import { AIDER_TOOL_GROUP_NAME, AIDER_TOOL_RUN_PROMPT, SUBAGENTS_TOOL_GROUP_NAME, SUBAGENTS_TOOL_RUN_TASK } from '@common/tools';
 ⋮----
+import { migrateSessionV1toV2 } from './migrations/v1-to-v2';
+⋮----
 import { extractPromptContextFromToolResult, THINKING_RESPONSE_STAR_TAG, ANSWER_RESPONSE_START_TAG } from '@/agent/utils';
 import logger from '@/logger';
 import { Project } from '@/project';
 import { isDirectory, isFileIgnored } from '@/utils';
+⋮----
+export interface PersistedSessionData {
+  version: number;
+  contextMessages: ContextMessage[];
+  contextFiles: ContextFile[];
+}
 ⋮----
 export class SessionManager
 ⋮----
@@ -7488,21 +7600,33 @@ toConnectorMessages(contextMessages: ContextMessage[] = this.contextMessages):
 ⋮----
 // Check for aider run_prompt tool call in assistant messages to extract the original prompt
 ⋮----
-// @ts-expect-error part.args contains the prompt in this case
+// @ts-expect-error part.input contains the prompt in this case
 ⋮----
 // Found the prompt, no need to check other parts of this message
 ⋮----
-// @ts-expect-error part.args contains the prompt in this case
+// @ts-expect-error part.input contains the prompt in this case
 ⋮----
 // Found the prompt, no need to check other parts of this message
 ⋮----
 // old format
 ⋮----
-// @ts-expect-error part.result.responses is expected to be in the result
+// @ts-expect-error part.output.responses is expected to be in the output
 ⋮----
 // Extract the last assistant message from the result
 ⋮----
 async save(name: string)
+⋮----
+private async migrateSession(sessionData: unknown): Promise<PersistedSessionData>
+⋮----
+let sessionVersion = sessionDataObj.version ?? 1; // Default to 1 if no version is found
+⋮----
+// Sequential migration chain
+⋮----
+// Future migrations will be added here
+// if (sessionVersion === 2) {
+//   migratedData = migrateSessionV2toV3(migratedData);
+//   sessionVersion = 3;
+// }
 ⋮----
 async loadMessages(contextMessages: ContextMessage[]): Promise<void>
 ⋮----
@@ -7518,11 +7642,11 @@ async loadMessages(contextMessages: ContextMessage[]): Promise<void>
 ⋮----
 // Ensure toolCall.toolCallId exists before proceeding
 ⋮----
-// @ts-expect-error part.result.responses is expected to be in the result
+// @ts-expect-error value is expected to have responses
 ⋮----
 // Handle agent tool results - process all messages from subagent
 ⋮----
-// @ts-expect-error part.result.messages is expected to be in the result
+// @ts-expect-error value is expected to have messages
 ⋮----
 // Collect reasoning and text parts to combine them if both exist
 ⋮----
@@ -7553,10 +7677,6 @@ async findSession(name: string): Promise<
   > {
     try {
 const sessionPath = path.join(this.project.baseDir, '.aider-desk', 'sessions', `$
-⋮----
-// Migrate old format messages to new format if needed
-⋮----
-// If message doesn't have usageReport property, it's old format
 ⋮----
 async generateSessionMarkdown(): Promise<string | null>
 ⋮----
@@ -11182,7 +11302,6 @@ import { GeminiProvider } from '@common/agent';
 import { Slider } from '@/components/common/Slider';
 import { Checkbox } from '@/components/common/Checkbox';
 import { InfoIcon } from '@/components/common/InfoIcon';
-import { WarningIcon } from '@/components/common/WarningIcon';
 ⋮----
 type Props = {
   provider: GeminiProvider;
@@ -11198,7 +11317,6 @@ const handleUseSearchGroundingChange = (checked: boolean) =>
 label=
 ⋮----
 <InfoIcon tooltip=
-⋮----
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/GeminiModelOverrides.tsx
@@ -11758,7 +11876,7 @@ disabled={!!model} // Don't allow changing provider for existing models
 placeholder=
 disabled={!!model} // Don't allow changing ID for existing models
 ⋮----
-const perMillionValue = e.target.value ? parseFloat(e.target.value) : undefined;
+const perMillionValue = e.target.value !== '' ? parseFloat(e.target.value) : undefined;
 ⋮----
 handleInputChange('inputCostPerToken', perTokenValue);
 ⋮----
@@ -13279,7 +13397,7 @@ File: src/renderer/src/components/settings/agent/McpServerForm.tsx
 ================
 import { McpServerConfig } from '@common/types';
 import { useState, useMemo, ChangeEvent } from 'react';
-import { z } from 'zod';
+import { z } from 'zod/v3';
 import { useTranslation } from 'react-i18next';
 import { MdInfoOutline } from 'react-icons/md';
 ⋮----
@@ -17001,21 +17119,21 @@ File: package.json
     "prepare": "husky"
   },
   "dependencies": {
-    "@ai-sdk/amazon-bedrock": "^2.2.12",
-    "@ai-sdk/anthropic": "^1.2.12",
-    "@ai-sdk/azure": "^1.3.25",
-    "@ai-sdk/cerebras": "^0.2.16",
-    "@ai-sdk/deepseek": "^0.2.16",
-    "@ai-sdk/google": "^1.2.22",
-    "@ai-sdk/google-vertex": "^2.2.27",
-    "@ai-sdk/groq": "^1.2.9",
-    "@ai-sdk/openai": "^1.3.24",
+    "@ai-sdk/amazon-bedrock": "^3.0.30",
+    "@ai-sdk/anthropic": "^2.0.23",
+    "@ai-sdk/azure": "^2.0.42",
+    "@ai-sdk/cerebras": "^1.0.21",
+    "@ai-sdk/deepseek": "^1.0.20",
+    "@ai-sdk/google": "^2.0.17",
+    "@ai-sdk/google-vertex": "^3.0.34",
+    "@ai-sdk/groq": "^2.0.22",
+    "@ai-sdk/openai": "^2.0.42",
+    "@ai-sdk/provider": "^2.0.0",
     "@aws-crypto/sha256-js": "^5.0.0",
     "@aws-sdk/client-bedrock": "^3.887.0",
     "@aws-sdk/credential-provider-node": "^3.772.0",
     "@aws-sdk/credential-providers": "^3.782.0",
     "@aws-sdk/types": "^3.540.0",
-    "@buger/probe": "^0.6.0-rc53",
     "@codemirror/autocomplete": "^6.18.7",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
@@ -17025,14 +17143,14 @@ File: package.json
     "@google-cloud/aiplatform": "^5.7.0",
     "@headlessui/react": "^2.2.0",
     "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
-    "@n8n/json-schema-to-zod": "^1.1.0",
-    "@openrouter/ai-sdk-provider": "^0.7.5",
+    "@openrouter/ai-sdk-provider": "^1.2.0",
     "@opentelemetry/auto-instrumentations-node": "^0.62.0",
     "@opentelemetry/sdk-node": "^0.203.0",
     "@opentelemetry/sdk-trace-base": "^2.0.1",
+    "@probelabs/probe": "^0.6.0-rc115",
     "@reactuses/core": "^6.0.6",
     "@replit/codemirror-vim": "^6.3.0",
-    "@requesty/ai-sdk": "^0.0.9",
+    "@requesty/ai-sdk": "^1.0.1",
     "@smithy/eventstream-codec": "^2.0.0",
     "@smithy/protocol-http": "^3.3.0",
     "@smithy/signature-v4": "^2.0.0",
@@ -17047,7 +17165,7 @@ File: package.json
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/xterm": "^5.5.0",
-    "ai": "^4.3.16",
+    "ai": "^5.0.60",
     "axios": "^1.8.3",
     "babel-plugin-react-compiler": "^19.1.0-rc.3",
     "better-sqlite3": "^12.0.0",
@@ -17076,7 +17194,7 @@ File: package.json
     "mark.js": "^8.11.1",
     "match-sorter": "^8.0.0",
     "object-hash": "^3.0.0",
-    "ollama-ai-provider": "^1.2.0",
+    "ollama-ai-provider-v2": "^1.4.1",
     "os-name": "^6.0.0",
     "patch-package": "^8.0.0",
     "posthog-node": "^4.18.0",
@@ -17116,7 +17234,7 @@ File: package.json
     "ws": "^8.18.0",
     "yaml": "^2.8.0",
     "yaml-front-matter": "^4.1.1",
-    "zod": "^3.24.2"
+    "zod": "^4.1.11"
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "^1.0.1",
