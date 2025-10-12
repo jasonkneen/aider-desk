@@ -1027,8 +1027,7 @@ export class Agent {
     });
 
     const messages: ContextMessage[] = [];
-    const messageCost = this.modelManager.calculateCost(provider, profile.model, usage.inputTokens || 0, usage.outputTokens || 0, providerMetadata);
-    const usageReport: UsageReportData = this.modelManager.getUsageReport(project, provider, profile.model, messageCost, usage, providerMetadata);
+    const usageReport: UsageReportData = this.modelManager.getUsageReport(project, provider, profile.model, usage, providerMetadata);
 
     // Process text/reasoning content
     if (reasoningText || text?.trim()) {

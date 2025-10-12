@@ -97,30 +97,33 @@ const createZaiPlanLlm = (profile: ProviderProfile, model: Model, env: Record<st
 };
 
 // === Cost and Usage Functions ===
-const calculateZaiPlanCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number => {
+const calculateZaiPlanCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
   // Use model overrides if available, otherwise use base model info
   const inputCostPerToken = model.inputCostPerToken ?? 0;
   const outputCostPerToken = model.outputCostPerToken ?? 0;
+  const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? inputCostPerToken;
 
-  // Standard cost calculation without caching adjustments
   const inputCost = sentTokens * inputCostPerToken;
   const outputCost = receivedTokens * outputCostPerToken;
+  const cacheCost = cacheReadTokens * cacheReadInputTokenCost;
 
-  return inputCost + outputCost;
+  return inputCost + outputCost + cacheCost;
 };
 
-const getZaiPlanUsageReport = (
-  project: Project,
-  provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
-  usage: LanguageModelUsage,
-  _providerMetadata?: unknown,
-): UsageReportData => {
+const getZaiPlanUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
+  const totalSentTokens = usage.inputTokens || 0;
+  const receivedTokens = usage.outputTokens || 0;
+  const cacheReadTokens = usage.cachedInputTokens || 0;
+  const sentTokens = totalSentTokens - cacheReadTokens;
+
+  // Calculate cost internally (no caching for ZAI Plan)
+  const messageCost = calculateZaiPlanCost(model, sentTokens, receivedTokens, cacheReadTokens);
+
   return {
-    model: `${provider.id}/${modelId}`,
-    sentTokens: usage.inputTokens || 0,
-    receivedTokens: usage.outputTokens || 0,
+    model: `${provider.id}/${model.id}`,
+    sentTokens,
+    receivedTokens,
+    cacheReadTokens,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };
@@ -130,7 +133,6 @@ const getZaiPlanUsageReport = (
 export const zaiPlanProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
   createLlm: createZaiPlanLlm,
-  calculateCost: calculateZaiPlanCost,
   getUsageReport: getZaiPlanUsageReport,
 
   // Model discovery functions

@@ -524,40 +524,34 @@ export class ModelManager {
     return strategy.createLlm(profile, modelObj, env);
   }
 
-  calculateCost(provider: ProviderProfile, model: string, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number {
+  getUsageReport(project: Project, provider: ProviderProfile, model: string | Model, usage: LanguageModelUsage, providerMetadata?: unknown): UsageReportData {
     const strategy = this.providerRegistry[provider.provider.name];
     if (!strategy) {
       throw new Error(`Unsupported LLM provider: ${provider.provider.name}`);
     }
 
     // Resolve Model object
-    let modelObj = this.getModel(provider.id, model);
+    let modelObj: Model | undefined;
+    if (typeof model === 'string') {
+      modelObj = this.getModel(provider.id, model);
+      if (!modelObj) {
+        // Fallback to creating a minimal Model object if not found
+        const modelInfo = this.getModelInfo(model);
+        modelObj = {
+          ...modelInfo,
+          id: model,
+          providerId: provider.id,
+        };
+      }
+    } else {
+      modelObj = model;
+    }
+
     if (!modelObj) {
-      // Fallback to creating a minimal Model object if not found
-      const modelInfo = this.getModelInfo(model);
-      modelObj = {
-        ...modelInfo,
-        id: model,
-        providerId: provider.id,
-      };
+      throw new Error(`Model not found: ${model}`);
     }
 
-    return strategy.calculateCost(modelObj, sentTokens, receivedTokens, providerMetadata);
-  }
-
-  getUsageReport(
-    project: Project,
-    provider: ProviderProfile,
-    modelId: string,
-    messageCost: number,
-    usage: LanguageModelUsage,
-    providerMetadata?: unknown,
-  ): UsageReportData {
-    const strategy = this.providerRegistry[provider.provider.name];
-    if (!strategy) {
-      throw new Error(`Unsupported LLM provider: ${provider.provider.name}`);
-    }
-    return strategy.getUsageReport(project, provider, modelId, messageCost, usage, providerMetadata);
+    return strategy.getUsageReport(project, provider, modelObj, usage, providerMetadata);
   }
 
   getCacheControl(profile: AgentProfile, llmProvider: LlmProvider): CacheControl {

@@ -108,7 +108,13 @@ type AnthropicMetadata = {
 };
 
 // === Cost and Usage Functions ===
-export const calculateAnthropicCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number => {
+export const calculateAnthropicCost = (
+  model: Model,
+  sentTokens: number,
+  receivedTokens: number,
+  cacheWriteTokens: number = 0,
+  cacheReadTokens: number = 0,
+): number => {
   const inputCostPerToken = model.inputCostPerToken ?? 0;
   const outputCostPerToken = model.outputCostPerToken ?? 0;
   const cacheWriteInputTokenCost = model.cacheWriteInputTokenCost ?? inputCostPerToken;
@@ -116,16 +122,9 @@ export const calculateAnthropicCost = (model: Model, sentTokens: number, receive
 
   const inputCost = sentTokens * inputCostPerToken;
   const outputCost = receivedTokens * outputCostPerToken;
-  let cacheCost = 0;
-
-  const { anthropic } = (providerMetadata as AnthropicMetadata) || {};
-  if (anthropic) {
-    const cacheCreationInputTokens = anthropic.cacheCreationInputTokens ?? 0;
-    const cacheReadInputTokens = anthropic.cacheReadInputTokens ?? 0;
-    const cacheCreationCost = cacheCreationInputTokens * cacheWriteInputTokenCost;
-    const cacheReadCost = cacheReadInputTokens * cacheReadInputTokenCost;
-    cacheCost = cacheCreationCost + cacheReadCost;
-  }
+  const cacheCreationCost = cacheWriteTokens * cacheWriteInputTokenCost;
+  const cacheReadCost = cacheReadTokens * cacheReadInputTokenCost;
+  const cacheCost = cacheCreationCost + cacheReadCost;
 
   return inputCost + outputCost + cacheCost;
 };
@@ -133,24 +132,33 @@ export const calculateAnthropicCost = (model: Model, sentTokens: number, receive
 export const getAnthropicUsageReport = (
   project: Project,
   provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
+  model: Model,
   usage: LanguageModelUsage,
-  providerOptions?: unknown,
+  providerMetadata?: unknown,
 ): UsageReportData => {
+  const totalSentTokens = usage.inputTokens || 0;
+  const receivedTokens = usage.outputTokens || 0;
+
+  // Extract cache tokens from provider metadata
+  const { anthropic } = (providerMetadata as AnthropicMetadata) || {};
+  const cacheWriteTokens = anthropic?.cacheCreationInputTokens ?? 0;
+  const cacheReadTokens = anthropic?.cacheReadInputTokens ?? usage?.cachedInputTokens ?? 0;
+
+  // Calculate sentTokens after deducting cached tokens
+  const sentTokens = totalSentTokens - cacheReadTokens;
+
+  // Calculate cost internally with already deducted sentTokens
+  const messageCost = calculateAnthropicCost(model, sentTokens, receivedTokens, cacheWriteTokens, cacheReadTokens);
+
   const usageReportData: UsageReportData = {
-    model: `${provider.id}/${modelId}`,
-    sentTokens: usage.inputTokens || 0,
-    receivedTokens: usage.outputTokens || 0,
+    model: `${provider.id}/${model.id}`,
+    sentTokens,
+    receivedTokens,
+    cacheWriteTokens,
+    cacheReadTokens,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };
-
-  const { anthropic } = (providerOptions as AnthropicMetadata) || {};
-  if (anthropic) {
-    usageReportData.cacheWriteTokens = anthropic.cacheCreationInputTokens;
-    usageReportData.cacheReadTokens = anthropic.cacheReadInputTokens;
-  }
 
   return usageReportData;
 };
@@ -168,7 +176,6 @@ export const getAnthropicCacheControl = (): CacheControl => {
 export const anthropicProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
   createLlm: createAnthropicLlm,
-  calculateCost: calculateAnthropicCost,
   getUsageReport: getAnthropicUsageReport,
 
   // Model discovery functions

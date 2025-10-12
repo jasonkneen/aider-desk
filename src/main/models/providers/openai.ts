@@ -125,22 +125,14 @@ type OpenAiMetadata = {
 };
 
 // === Cost and Usage Functions ===
-export const calculateOpenAiCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number => {
+export const calculateOpenAiCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
   const inputCostPerToken = model.inputCostPerToken ?? 0;
   const outputCostPerToken = model.outputCostPerToken ?? 0;
   const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? inputCostPerToken;
 
-  let inputCost = sentTokens * inputCostPerToken;
+  const inputCost = sentTokens * inputCostPerToken;
   const outputCost = receivedTokens * outputCostPerToken;
-  let cacheCost = 0;
-
-  const { openai } = (providerMetadata as OpenAiMetadata) || {};
-  if (openai) {
-    const cachedPromptTokens = openai.cachedPromptTokens ?? 0;
-
-    inputCost = (sentTokens - cachedPromptTokens) * inputCostPerToken;
-    cacheCost = cachedPromptTokens * cacheReadInputTokenCost;
-  }
+  const cacheCost = cacheReadTokens * cacheReadInputTokenCost;
 
   return inputCost + outputCost + cacheCost;
 };
@@ -148,24 +140,31 @@ export const calculateOpenAiCost = (model: Model, sentTokens: number, receivedTo
 export const getOpenAiUsageReport = (
   project: Project,
   provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
+  model: Model,
   usage: LanguageModelUsage,
-  providerOptions?: unknown,
+  providerMetadata?: unknown,
 ): UsageReportData => {
+  const totalSentTokens = usage.inputTokens || 0;
+  const receivedTokens = usage.outputTokens || 0;
+
+  // Extract cache read tokens from provider metadata or usage
+  const { openai } = (providerMetadata as OpenAiMetadata) || {};
+  const cacheReadTokens = openai?.cachedPromptTokens ?? usage.cachedInputTokens ?? 0;
+
+  // Calculate sentTokens after deducting cached tokens
+  const sentTokens = totalSentTokens - cacheReadTokens;
+
+  // Calculate cost internally with already deducted sentTokens
+  const messageCost = calculateOpenAiCost(model, sentTokens, receivedTokens, cacheReadTokens);
+
   const usageReportData: UsageReportData = {
-    model: `${provider.id}/${modelId}`,
-    sentTokens: usage.inputTokens || 0,
-    receivedTokens: usage.outputTokens || 0,
+    model: `${provider.id}/${model.id}`,
+    sentTokens,
+    receivedTokens,
+    cacheReadTokens,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };
-
-  const { openai } = (providerOptions as OpenAiMetadata) || {};
-  if (openai) {
-    usageReportData.cacheReadTokens = openai.cachedPromptTokens;
-    usageReportData.sentTokens -= openai.cachedPromptTokens ?? 0;
-  }
 
   return usageReportData;
 };
@@ -205,7 +204,6 @@ export const getOpenAiProviderOptions = (provider: LlmProvider, model: Model): S
 export const openaiProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
   createLlm: createOpenAiLlm,
-  calculateCost: calculateOpenAiCost,
   getUsageReport: getOpenAiUsageReport,
 
   // Model discovery functions

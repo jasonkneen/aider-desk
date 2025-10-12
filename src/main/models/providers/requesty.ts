@@ -138,20 +138,22 @@ export const createRequestyLlm = (profile: ProviderProfile, model: Model, env: R
 };
 
 // === Cost and Usage Functions ===
-export const calculateRequestyCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number => {
+export const calculateRequestyCost = (
+  model: Model,
+  sentTokens: number,
+  receivedTokens: number,
+  cacheWriteTokens: number = 0,
+  cacheReadTokens: number = 0,
+): number => {
   const inputCostPerToken = model.inputCostPerToken ?? 0;
   const outputCostPerToken = model.outputCostPerToken ?? 0;
   const cacheWriteInputTokenCost = model.cacheWriteInputTokenCost ?? inputCostPerToken;
   const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? 0;
 
-  const { requesty } = providerMetadata as RequestyProviderMetadata;
-  const cachingTokens = requesty?.usage?.cachingTokens ?? 0;
-  const cachedTokens = requesty?.usage?.cachedTokens ?? 0;
+  const cacheCreationCost = cacheWriteTokens * cacheWriteInputTokenCost;
+  const cacheReadCost = cacheReadTokens * cacheReadInputTokenCost;
 
-  const cacheCreationCost = cachingTokens * cacheWriteInputTokenCost;
-  const cacheReadCost = cachedTokens * cacheReadInputTokenCost;
-
-  const inputCost = (sentTokens - cachedTokens) * inputCostPerToken;
+  const inputCost = sentTokens * inputCostPerToken;
   const outputCost = receivedTokens * outputCostPerToken;
   const cacheCost = cacheCreationCost + cacheReadCost;
 
@@ -161,23 +163,33 @@ export const calculateRequestyCost = (model: Model, sentTokens: number, received
 export const getRequestyUsageReport = (
   project: Project,
   provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
+  model: Model,
   usage: LanguageModelUsage,
-  providerOptions?: unknown,
+  providerMetadata?: unknown,
 ): UsageReportData => {
+  const totalSentTokens = usage.inputTokens || 0;
+  const receivedTokens = usage.outputTokens || 0;
+
+  // Extract cache tokens from provider metadata
+  const { requesty } = providerMetadata as RequestyProviderMetadata;
+  const cacheWriteTokens = requesty?.usage?.cachingTokens ?? 0;
+  const cacheReadTokens = requesty?.usage?.cachedTokens ?? 0;
+
+  // Calculate sentTokens after deducting cached tokens
+  const sentTokens = totalSentTokens - cacheReadTokens;
+
+  // Calculate cost internally with already deducted sentTokens
+  const messageCost = calculateRequestyCost(model, sentTokens, receivedTokens, cacheWriteTokens, cacheReadTokens);
+
   const usageReportData: UsageReportData = {
-    model: `${provider.id}/${modelId}`,
-    sentTokens: usage.inputTokens || 0,
-    receivedTokens: usage.outputTokens || 0,
+    model: `${provider.id}/${model.id}`,
+    sentTokens,
+    receivedTokens,
+    cacheWriteTokens,
+    cacheReadTokens,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };
-
-  const { requesty } = providerOptions as RequestyProviderMetadata;
-  usageReportData.cacheWriteTokens = requesty?.usage?.cachingTokens;
-  usageReportData.cacheReadTokens = requesty?.usage?.cachedTokens;
-  usageReportData.sentTokens -= usageReportData.cacheReadTokens ?? 0;
 
   return usageReportData;
 };
@@ -201,7 +213,6 @@ export const getRequestyCacheControl = (profile: AgentProfile, llmProvider: LlmP
 export const requestyProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
   createLlm: createRequestyLlm,
-  calculateCost: calculateRequestyCost,
   getUsageReport: getRequestyUsageReport,
 
   // Model discovery functions

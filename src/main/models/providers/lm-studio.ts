@@ -99,29 +99,32 @@ export const createLmStudioLlm = (profile: ProviderProfile, model: Model, env: R
 };
 
 // === Cost and Usage Functions ===
-export const calculateLmStudioCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number => {
+export const calculateLmStudioCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
   const inputCostPerToken = model.inputCostPerToken ?? 0;
   const outputCostPerToken = model.outputCostPerToken ?? 0;
+  const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? inputCostPerToken;
 
-  // Standard cost calculation without caching adjustments
   const inputCost = sentTokens * inputCostPerToken;
   const outputCost = receivedTokens * outputCostPerToken;
+  const cacheCost = cacheReadTokens * cacheReadInputTokenCost;
 
-  return inputCost + outputCost;
+  return inputCost + outputCost + cacheCost;
 };
 
-export const getLmStudioUsageReport = (
-  project: Project,
-  provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
-  usage: LanguageModelUsage,
-  _providerMetadata?: unknown,
-): UsageReportData => {
+export const getLmStudioUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
+  const totalSentTokens = usage.inputTokens || 0;
+  const receivedTokens = usage.outputTokens || 0;
+  const cacheReadTokens = usage.cachedInputTokens || 0;
+  const sentTokens = totalSentTokens - cacheReadTokens;
+
+  // Calculate cost internally (no caching for LM Studio)
+  const messageCost = calculateLmStudioCost(model, sentTokens, receivedTokens, cacheReadTokens);
+
   return {
-    model: `${provider.id}/${modelId}`,
-    sentTokens: usage.inputTokens || 0,
-    receivedTokens: usage.outputTokens || 0,
+    model: `${provider.id}/${model.id}`,
+    sentTokens,
+    receivedTokens,
+    cacheReadTokens,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };
@@ -131,7 +134,6 @@ export const getLmStudioUsageReport = (
 export const lmStudioProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
   createLlm: createLmStudioLlm,
-  calculateCost: calculateLmStudioCost,
   getUsageReport: getLmStudioUsageReport,
 
   // Model discovery functions

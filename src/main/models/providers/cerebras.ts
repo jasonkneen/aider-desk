@@ -111,29 +111,32 @@ export const createCerebrasLlm = (profile: ProviderProfile, model: Model, env: R
 };
 
 // === Cost and Usage Functions ===
-export const calculateCerebrasCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number => {
+export const calculateCerebrasCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
   const inputCostPerToken = model.inputCostPerToken ?? 0;
   const outputCostPerToken = model.outputCostPerToken ?? 0;
+  const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? inputCostPerToken;
 
-  // Standard cost calculation without caching adjustments
   const inputCost = sentTokens * inputCostPerToken;
   const outputCost = receivedTokens * outputCostPerToken;
+  const cacheCost = cacheReadTokens * cacheReadInputTokenCost;
 
-  return inputCost + outputCost;
+  return inputCost + outputCost + cacheCost;
 };
 
-export const getCerebrasUsageReport = (
-  project: Project,
-  provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
-  usage: LanguageModelUsage,
-  _providerMetadata?: unknown,
-): UsageReportData => {
+export const getCerebrasUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
+  const totalSentTokens = usage.inputTokens || 0;
+  const receivedTokens = usage.outputTokens || 0;
+  const cacheReadTokens = usage.cachedInputTokens || 0;
+  const sentTokens = totalSentTokens - cacheReadTokens;
+
+  // Calculate cost internally (no caching for Cerebras)
+  const messageCost = calculateCerebrasCost(model, sentTokens, receivedTokens, cacheReadTokens);
+
   return {
-    model: `${provider.id}/${modelId}`,
-    sentTokens: usage.inputTokens || 0,
-    receivedTokens: usage.outputTokens || 0,
+    model: `${provider.id}/${model.id}`,
+    sentTokens,
+    receivedTokens,
+    cacheReadTokens,
     messageCost,
     agentTotalCost: project.agentTotalCost + messageCost,
   };
@@ -143,7 +146,6 @@ export const getCerebrasUsageReport = (
 export const cerebrasProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
   createLlm: createCerebrasLlm,
-  calculateCost: calculateCerebrasCost,
   getUsageReport: getCerebrasUsageReport,
 
   // Model discovery functions

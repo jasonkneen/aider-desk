@@ -36,21 +36,9 @@ export interface LlmProviderStrategy {
   createLlm: (profile: ProviderProfile, model: Model, env: Record<string, string | undefined>) => LanguageModelV2;
 
   /**
-   * Calculates the cost for token usage with provider-specific caching adjustments
+   * Generates usage reports with provider-specific metadata and calculates cost internally
    */
-  calculateCost: (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown) => number;
-
-  /**
-   * Generates usage reports with provider-specific metadata
-   */
-  getUsageReport: (
-    project: Project,
-    provider: ProviderProfile,
-    modelId: string,
-    messageCost: number,
-    usage: LanguageModelUsage,
-    providerMetadata?: unknown,
-  ) => UsageReportData;
+  getUsageReport: (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage, providerMetadata?: unknown) => UsageReportData;
 
   // === Model Discovery and Configuration Functions ===
   /**
