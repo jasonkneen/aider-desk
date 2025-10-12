@@ -129,7 +129,6 @@ export class Project {
           break;
       }
     } catch (error) {
-      console.error(error);
       logger.error('Error loading session:', { error });
     }
 

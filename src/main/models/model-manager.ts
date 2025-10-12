@@ -573,12 +573,14 @@ export class ModelManager {
     const providers = this.store.getProviders();
     const providerProfile = providers.find((p) => p.id === providerId);
     if (!providerProfile) {
+      logger.debug(`Provider profile not found for ${providerId}`);
       return undefined;
     }
 
     const llmProvider = providerProfile.provider;
     const strategy = this.providerRegistry[llmProvider.name];
     if (!strategy?.getProviderOptions) {
+      logger.debug(`Provider options not available for ${llmProvider.name}`);
       return undefined;
     }
 

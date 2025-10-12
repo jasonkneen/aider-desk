@@ -1,9 +1,9 @@
 import { createOpenAI } from '@ai-sdk/openai';
-import { isOpenAiProvider, OpenAiProvider } from '@common/agent';
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { isOpenAiProvider, OpenAiProvider, LlmProvider } from '@common/agent';
+import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, ReasoningEffort } from '@common/types';
 
 import type { LanguageModelUsage } from 'ai';
-import type { LanguageModelV2 } from '@ai-sdk/provider';
+import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 
 import logger from '@/logger';
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
@@ -115,12 +115,6 @@ export const createOpenAiLlm = (profile: ProviderProfile, model: Model, env: Rec
     headers: profile.headers,
   });
 
-  // const providerOverrides = model.providerOverrides as Partial<OpenAiProvider> | undefined;
-  // const reasoningEffort = providerOverrides?.reasoningEffort ?? provider.reasoningEffort;
-  // , {
-  //   reasoningEffort: reasoningEffort === undefined ? undefined : (reasoningEffort as 'low' | 'medium' | 'high' | undefined),
-  // }
-
   return openAIProvider(model.id);
 };
 
@@ -176,6 +170,37 @@ export const getOpenAiUsageReport = (
   return usageReportData;
 };
 
+// === Configuration Helper Functions ===
+export const getOpenAiProviderOptions = (provider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined => {
+  if (!isOpenAiProvider(provider)) {
+    return undefined;
+  }
+
+  const openAiProvider = provider as OpenAiProvider;
+
+  // Extract reasoningEffort from model overrides or provider config
+  const providerOverrides = model.providerOverrides as Partial<OpenAiProvider> | undefined;
+  const reasoningEffort = providerOverrides?.reasoningEffort ?? openAiProvider.reasoningEffort;
+
+  // Map ReasoningEffort enum to AI SDK format
+  const mappedReasoningEffort =
+    reasoningEffort === undefined || reasoningEffort === ReasoningEffort.None
+      ? undefined
+      : (reasoningEffort.toLowerCase() as 'minimal' | 'low' | 'medium' | 'high');
+
+  if (mappedReasoningEffort) {
+    logger.debug('Using reasoning effort:', { mappedReasoningEffort });
+    return {
+      openai: {
+        reasoningSummary: 'auto',
+        reasoningEffort: mappedReasoningEffort,
+      },
+    };
+  }
+
+  return undefined;
+};
+
 // === Complete Strategy Implementation ===
 export const openaiProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
@@ -187,4 +212,7 @@ export const openaiProviderStrategy: LlmProviderStrategy = {
   loadModels: loadOpenAiModels,
   hasEnvVars: hasOpenAiEnvVars,
   getAiderMapping: getOpenAiAiderMapping,
+
+  // Configuration helper functions
+  getProviderOptions: getOpenAiProviderOptions,
 };

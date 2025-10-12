@@ -536,7 +536,7 @@ export class Agent {
 
     const llmProvider = provider.provider;
     const cacheControl = this.modelManager.getCacheControl(profile, llmProvider);
-    const providerOptions = this.modelManager.getProviderOptions(profile.id, profile.model);
+    const providerOptions = this.modelManager.getProviderOptions(profile.provider, profile.model);
 
     const userRequestMessage: ContextUserMessage = {
       id: promptContext?.id || uuidv4(),
