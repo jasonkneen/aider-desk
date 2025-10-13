@@ -341,6 +341,26 @@ src/
         SettingsContext.tsx
       contexts/
         ModelProvider.tsx
+      fonts/
+        Enriqueta.ttf
+        FunnelDisplay.ttf
+        GoogleSansCode.ttf
+        Inter.ttf
+        JetBrainsMono.ttf
+        Lora.ttf
+        Nunito.ttf
+        Orbitron.ttf
+        PlayfairDisplay.ttf
+        Poppins.ttf
+        Quicksand.ttf
+        RobotoMono.ttf
+        Sansation.ttf
+        Silkscreen.ttf
+        Sono.ttf
+        SourceCodePro.ttf
+        SpaceGrotesk.ttf
+        SpaceMono.ttf
+        UbuntuMono.ttf
       hooks/
         useBooleanState.ts
         useClickOutside.ts
@@ -9512,8 +9532,6 @@ rawContentToCopy = JSON.stringify(parsedResult.json); // Copy raw JSON
 ⋮----
 // Fallback to the original raw content if no text was extracted
 ⋮----
-
-⋮----
 {/* Tool Specific Content */}
 
 ================
@@ -9969,8 +9987,6 @@ type Props = {
 {/* Row 2: AIDER */}
 ⋮----
 // Original horizontal layout for other modes
-⋮----
-data-tooltip-content=
 ⋮----
 tooltip=
 
@@ -11347,7 +11363,7 @@ label=
 ⋮----
 onChange=
 ⋮----
-<span>
+<Section title=
 ⋮----
 <Checkbox label=
 
@@ -11735,6 +11751,8 @@ const handleTerminalExit = (data: TerminalExitData) =>
 // Small delay to ensure the container is properly sized
 ⋮----
 // Cleanup on unmount
+⋮----
+<div key=
 
 ================
 File: src/renderer/src/components/terminal/TerminalView.tsx
@@ -12676,6 +12694,8 @@ if (versions?.aiderDeskNewVersionReady)
 return t('settings.about.newAiderDeskVersionReady');
 ⋮----
 return ''; // Should not happen if showUpdateIcon is true
+⋮----
+tooltip=
 
 ================
 File: src/renderer/src/pages/Onboarding.tsx
