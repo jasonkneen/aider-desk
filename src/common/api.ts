@@ -121,8 +121,8 @@ export interface ApplicationAPI {
   getProviderModels: () => Promise<ProviderModelsData>;
   getProviders: () => Promise<ProviderProfile[]>;
   updateProviders: (providers: ProviderProfile[]) => Promise<ProviderProfile[]>;
-  upsertModel: (providerId: string, modelId: string, model: Model) => Promise<Model[]>;
-  deleteModel: (providerId: string, modelId: string) => Promise<Model[]>;
+  upsertModel: (providerId: string, modelId: string, model: Model) => Promise<ProviderModelsData>;
+  deleteModel: (providerId: string, modelId: string) => Promise<ProviderModelsData>;
 
   addSettingsUpdatedListener: (callback: (data: SettingsData) => void) => () => void;
   addResponseChunkListener: (baseDir: string, callback: (data: ResponseChunkData) => void) => () => void;

@@ -210,6 +210,9 @@
     "deleteProfileTitle": "删除配置文件",
     "deleteProfileConfirm": "您确定要删除配置文件 '{{name}}' 吗？",
     "hidden": "隐藏",
+    "showModel": "显示模型",
+    "hideModel": "隐藏模型",
+    "showHidden": "显示隐藏",
     "errors": {
       "idRequired": "模型 ID 必填",
       "providerRequired": "提供商必填",

@@ -101,7 +101,12 @@ export const ModelProviderProvider: React.FC<{ children: ReactNode }> = ({ child
 
       startTransition(async () => {
         setOptimisticModels(updated);
-        await api.upsertModel(providerId, modelId, model);
+        const { models, errors } = await api.upsertModel(providerId, modelId, model);
+        if (models) {
+          setModels(models);
+        } else if (errors) {
+          setErrors(errors);
+        }
       });
     },
     [api, models, setOptimisticModels],
@@ -113,7 +118,12 @@ export const ModelProviderProvider: React.FC<{ children: ReactNode }> = ({ child
 
       startTransition(async () => {
         setOptimisticModels(updated);
-        await api.deleteModel(providerId, modelId);
+        const { models, errors } = await api.deleteModel(providerId, modelId);
+        if (models) {
+          setModels(models);
+        } else if (errors) {
+          setErrors(errors);
+        }
       });
     },
     [api, models, setOptimisticModels],

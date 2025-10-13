@@ -1,5 +1,9 @@
 # Changelog
 
+## [UNRELEASED]
+
+- added checkbox for showing/hiding Hidden models in Model Library
+
 ## [0.35.0]
 
 - updated icon for when the tool is denied

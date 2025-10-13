@@ -143,7 +143,6 @@ export const ModelLibrary = ({ onClose }: Props) => {
         />
         <ModelTableSection
           models={models}
-          modelCount={models.length}
           selectedProviderIds={selectedProviderIds}
           providers={providers}
           onAddModel={handleAddModel}

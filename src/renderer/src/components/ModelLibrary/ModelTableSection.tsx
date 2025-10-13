@@ -6,13 +6,13 @@ import { Model, ProviderProfile } from '@common/types';
 
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
+import { Checkbox } from '@/components/common/Checkbox';
 import { Column } from '@/components/common/Table';
 import { VirtualTable } from '@/components/common/VirtualTable';
 import { IconButton } from '@/components/common/IconButton';
 
 type Props = {
   models: Model[];
-  modelCount: number;
   selectedProviderIds: string[];
   providers: ProviderProfile[];
   onAddModel: () => void;
@@ -21,16 +21,25 @@ type Props = {
   onToggleHidden: (model: Model) => void;
 };
 
-export const ModelTableSection = ({ models, modelCount, selectedProviderIds, providers, onAddModel, onEditModel, onDeleteModel, onToggleHidden }: Props) => {
+export const ModelTableSection = ({ models, selectedProviderIds, providers, onAddModel, onEditModel, onDeleteModel, onToggleHidden }: Props) => {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
+  const [showHidden, setShowHidden] = useState(false);
   const debouncedSearch = useDebounce(search, 300);
 
   const filteredModels = models.filter((model) => {
     const matchesSearch = model.id.toLowerCase().includes(debouncedSearch.toLowerCase());
     const matchesProvider = selectedProviderIds.length === 0 || selectedProviderIds.includes(model.providerId);
-    return matchesSearch && matchesProvider;
+    const matchesHidden = showHidden || !model.isHidden;
+    return matchesSearch && matchesProvider && matchesHidden;
   });
+
+  const getRowClassName = (row: Model) => {
+    if (row.isHidden) {
+      return 'text-text-muted-dark';
+    }
+    return undefined;
+  };
 
   const columns: Column<Model>[] = [
     {
@@ -120,9 +129,9 @@ export const ModelTableSection = ({ models, modelCount, selectedProviderIds, pro
         <div className="flex items-center justify-end space-x-2">
           <IconButton icon={<FiEdit2 className="w-4 h-4" />} onClick={() => onEditModel(row)} />
           <IconButton
-            icon={<FiEye className={`w-4 h-4 ${row.isHidden ? 'text-text-muted' : 'text-text-primary'}`} />}
+            icon={<FiEye className="w-4 h-4" />}
             onClick={() => onToggleHidden(row)}
-            tooltip={row.isHidden ? 'Show model' : 'Hide model'}
+            tooltip={row.isHidden ? t('modelLibrary.showModel') : t('modelLibrary.hideModel')}
           />
           {row.providerOverrides && Object.keys(row.providerOverrides).length > 0 && (
             <IconButton icon={<FiSliders className="w-4 h-4 text-text-secondary" />} tooltip={t('modelLibrary.overrides.overridesProviderParameters')} />
@@ -149,9 +158,10 @@ export const ModelTableSection = ({ models, modelCount, selectedProviderIds, pro
               wrapperClassName="min-w-[250px] flex-1 max-w-md"
               placeholder={t('modelLibrary.searchPlaceholder')}
             />
-            <div className="text-2xs text-text-secondary pr-2">
+            <Checkbox label={t('modelLibrary.showHidden')} checked={showHidden} onChange={setShowHidden} size="sm" />
+            <div className="text-2xs text-text-secondary pr-2 pl-4">
               {selectedProviderIds.length === 0
-                ? t('modelLibrary.showingAllModels', { count: modelCount })
+                ? t('modelLibrary.showingAllModels', { count: filteredModels.length })
                 : t('modelLibrary.showingModelsFromProviders', {
                     modelCount: filteredModels.length,
                     providerCount: selectedProviderIds.length,
@@ -180,7 +190,7 @@ export const ModelTableSection = ({ models, modelCount, selectedProviderIds, pro
             </div>
           </div>
         ) : (
-          <VirtualTable data={filteredModels} columns={columns} />
+          <VirtualTable data={filteredModels} columns={columns} getRowClassName={getRowClassName} />
         )}
       </div>
     </div>

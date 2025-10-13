@@ -410,10 +410,10 @@ export class BrowserApi implements ApplicationAPI {
   updateProviders(providers: ProviderProfile[]): Promise<ProviderProfile[]> {
     return this.post('/providers', providers);
   }
-  upsertModel(providerId: string, modelId: string, model: Model): Promise<Model[]> {
+  upsertModel(providerId: string, modelId: string, model: Model): Promise<ProviderModelsData> {
     return this.put(`/providers/${providerId}/models/${modelId}`, model);
   }
-  deleteModel(providerId: string, modelId: string): Promise<Model[]> {
+  deleteModel(providerId: string, modelId: string): Promise<ProviderModelsData> {
     return this.delete(`/providers/${providerId}/models/${modelId}`);
   }
   queryUsageData(from: string, to: string): Promise<UsageDataRow[]> {

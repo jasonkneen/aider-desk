@@ -2,6 +2,7 @@ import { ReactNode, useMemo } from 'react';
 import * as React from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from '@tanstack/react-table';
+import { twMerge } from 'tailwind-merge';
 
 import { Column, FooterColumn } from './Table';
 
@@ -12,9 +13,18 @@ type Props<T> = {
   rowHeight?: number | ((params: { index: number }) => number);
   overscanCount?: number;
   disableHeader?: boolean;
+  getRowClassName?: (row: T, index: number) => string | undefined;
 };
 
-export const VirtualTable = <T extends object>({ data, columns, footerColumns, rowHeight = 40, overscanCount = 10, disableHeader = false }: Props<T>) => {
+export const VirtualTable = <T extends object>({
+  data,
+  columns,
+  footerColumns,
+  rowHeight = 40,
+  overscanCount = 10,
+  disableHeader = false,
+  getRowClassName,
+}: Props<T>) => {
   // Convert Column<T> to ColumnDef<T> for @tanstack/react-table
   const tableColumns = useMemo<Array<ColumnDef<T>>>(() => {
     return columns.map((column, index) => ({
@@ -98,10 +108,14 @@ export const VirtualTable = <T extends object>({ data, columns, footerColumns, r
           <div className="flex flex-col">
             {virtualizer.getVirtualItems().map((virtualRow, index) => {
               const row = rows[virtualRow.index];
+              const rowClassName = getRowClassName ? getRowClassName(row.original, virtualRow.index) : undefined;
               return (
                 <div
                   key={row.id}
-                  className="bg-bg-primary-light border-b border-border-dark-light hover:bg-bg-secondary text-sm flex items-stretch flex-nowrap"
+                  className={twMerge(
+                    'bg-bg-primary-light border-b border-border-dark-light hover:bg-bg-secondary text-sm flex items-stretch flex-nowrap',
+                    rowClassName,
+                  )}
                   style={{
                     height: `${virtualRow.size}px`,
                     transform: `translateY(${virtualRow.start - index * virtualRow.size}px)`,
