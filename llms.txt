@@ -372,6 +372,26 @@ src/
         SettingsContext.tsx
       contexts/
         ModelProviderContext.tsx
+      fonts/
+        Enriqueta.ttf
+        FunnelDisplay.ttf
+        GoogleSansCode.ttf
+        Inter.ttf
+        JetBrainsMono.ttf
+        Lora.ttf
+        Nunito.ttf
+        Orbitron.ttf
+        PlayfairDisplay.ttf
+        Poppins.ttf
+        Quicksand.ttf
+        RobotoMono.ttf
+        Sansation.ttf
+        Silkscreen.ttf
+        Sono.ttf
+        SourceCodePro.ttf
+        SpaceGrotesk.ttf
+        SpaceMono.ttf
+        UbuntuMono.ttf
       hooks/
         useBooleanState.ts
         useClickOutside.ts
@@ -402,6 +422,7 @@ src/
         OpenAiCompatibleIcon.tsx
         OpenAiIcon.tsx
         OpenRouterIcon.tsx
+        requesty.png
         RequestyIcon.tsx
         VertexAiIcon.tsx
         ZaiPlanIcon.tsx
@@ -1385,7 +1406,9 @@ File: src/common/locales/en.json
     "reasoningEffortMinimal": "Minimal",
     "reasoningEffortLow": "Low",
     "reasoningEffortMedium": "Medium",
-    "reasoningEffortHigh": "High"
+    "reasoningEffortHigh": "High",
+    "useWebSearch": "Use Web Search",
+    "useWebSearchTooltip": "When enabled, the model will use OpenAI's web search tool to access current information from the internet."
   },
   "ollama": {
     "baseUrl": "Base URL",
@@ -1705,7 +1728,8 @@ File: src/common/locales/en.json
     "cancelEdit": "Cancel",
     "group": "Group",
     "scrollToBottom": "Scroll to bottom",
-    "messageBar": "Message Bar"
+    "messageBar": "Message Bar",
+    "exportNotAvailableWithVirtualized": "Export to image is not available when using virtualized message rendering. Change to standard rendering in Settings -> General -> Message Display."
   },
   "errors": {
     "frozenTitle": "AIDER FROZEN?",
@@ -2373,7 +2397,9 @@ File: src/common/locales/zh.json
     "reasoningEffortMinimal": "最小",
     "reasoningEffortLow": "低",
     "reasoningEffortMedium": "中",
-    "reasoningEffortHigh": "高"
+    "reasoningEffortHigh": "高",
+    "useWebSearch": "使用网络搜索",
+    "useWebSearchTooltip": "启用后，模型将使用 OpenAI 的网络搜索工具来访问互联网上的当前信息。"
   },
   "ollama": {
     "baseUrl": "基础 URL",
@@ -2649,7 +2675,8 @@ File: src/common/locales/zh.json
     "cancelEdit": "取消编辑",
     "group": "分组",
     "scrollToBottom": "滚动到底部",
-    "messageBar": "消息栏"
+    "messageBar": "消息栏",
+    "exportNotAvailableWithVirtualized": "使用虚拟化消息渲染时无法导出为图片。请在 设置 -> 常规 -> 消息显示 中更改为标准渲染。"
   },
   "errors": {
     "frozenTitle": "AIDER冻结了?",
@@ -3185,6 +3212,7 @@ export interface OpenAiProvider extends LlmProviderBase {
   name: 'openai';
   apiKey: string;
   reasoningEffort?: ReasoningEffort;
+  useWebSearch: boolean;
 }
 export const isOpenAiProvider = (provider: LlmProviderBase): provider is OpenAiProvider
 ⋮----
@@ -4325,7 +4353,9 @@ const searchRegex = new RegExp(searchTerm, caseSensitive ? undefined : 'i'); // 
 ⋮----
 // Use parameter maxTokens if provided, otherwise use the default
 ⋮----
-// If path is "." or "./", use the project baseDir
+// Check if it's a dependency path (format: language:rest)
+⋮----
+// If path is relative (including "." and "./"), resolve it relative to project.baseDir
 ⋮----
 // @ts-expect-error probe is not typed properly
 ⋮----
@@ -5350,16 +5380,27 @@ type AnthropicMetadata = {
 };
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateAnthropicCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
+export const calculateAnthropicCost = (
+  model: Model,
+  sentTokens: number,
+  receivedTokens: number,
+  cacheWriteTokens: number = 0,
+  cacheReadTokens: number = 0,
+): number =>
 ⋮----
 export const getAnthropicUsageReport = (
   project: Project,
   provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
+  model: Model,
   usage: LanguageModelUsage,
-  providerOptions?: unknown,
+  providerMetadata?: unknown,
 ): UsageReportData =>
+⋮----
+// Extract cache tokens from provider metadata
+⋮----
+// Calculate sentTokens after deducting cached tokens
+⋮----
+// Calculate cost internally with already deducted sentTokens
 ⋮----
 // === Configuration Helper Functions ===
 export const getAnthropicCacheControl = (): CacheControl =>
@@ -5404,16 +5445,21 @@ type AzureMetadata = {
 };
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateAzureCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
+export const calculateAzureCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
 export const getAzureUsageReport = (
   project: Project,
   provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
+  model: Model,
   usage: LanguageModelUsage,
-  providerOptions?: unknown,
+  providerMetadata?: unknown,
 ): UsageReportData =>
+⋮----
+// Extract cache read tokens from provider metadata
+⋮----
+// Calculate sentTokens after deducting cached tokens
+⋮----
+// Calculate cost internally with already deducted sentTokens
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -5473,18 +5519,11 @@ export const createBedrockLlm = (profile: ProviderProfile, model: Model, env: Re
 // Let the SDK handle the default chain if explicit keys aren't provided
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateBedrockCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
+export const calculateBedrockCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
-// Standard cost calculation without caching adjustments
+export const getBedrockUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
-export const getBedrockUsageReport = (
-  project: Project,
-  provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
-  usage: LanguageModelUsage,
-  _providerMetadata?: unknown,
-): UsageReportData =>
+// Calculate cost internally (no caching for Bedrock)
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -5530,18 +5569,11 @@ export const getCerebrasAiderMapping = (provider: ProviderProfile, modelId: stri
 export const createCerebrasLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateCerebrasCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
+export const calculateCerebrasCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
-// Standard cost calculation without caching adjustments
+export const getCerebrasUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
-export const getCerebrasUsageReport = (
-  project: Project,
-  provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
-  usage: LanguageModelUsage,
-  _providerMetadata?: unknown,
-): UsageReportData =>
+// Calculate cost internally (no caching for Cerebras)
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -5578,18 +5610,11 @@ export const getDeepseekAiderMapping = (provider: ProviderProfile, modelId: stri
 export const createDeepseekLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateDeepseekCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
+export const calculateDeepseekCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
-// Standard cost calculation without caching adjustments
+export const getDeepseekUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
-export const getDeepseekUsageReport = (
-  project: Project,
-  provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
-  usage: LanguageModelUsage,
-  _providerMetadata?: unknown,
-): UsageReportData =>
+// Calculate cost internally (no caching for DeepSeek)
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -5632,16 +5657,21 @@ type GoogleMetadata = {
 };
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateGeminiCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
+export const calculateGeminiCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
 export const getGeminiUsageReport = (
   project: Project,
   provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
+  model: Model,
   usage: LanguageModelUsage,
-  providerOptions?: unknown,
+  providerMetadata?: unknown,
 ): UsageReportData =>
+⋮----
+// Extract cache read tokens from provider metadata or usage
+⋮----
+// Calculate sentTokens after deducting cached tokens
+⋮----
+// Calculate cost internally with already deducted sentTokens
 ⋮----
 export const getGeminiProviderOptions = (llmProvider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined =>
 ⋮----
@@ -5693,18 +5723,11 @@ export const getGroqAiderMapping = (provider: ProviderProfile, modelId: string):
 export const createGroqLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateGroqCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
+export const calculateGroqCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
-// Standard cost calculation without caching adjustments
+export const getGroqUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
-export const getGroqUsageReport = (
-  project: Project,
-  provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
-  usage: LanguageModelUsage,
-  _providerMetadata?: unknown,
-): UsageReportData =>
+// Calculate cost internally (no caching for Groq)
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -5745,18 +5768,11 @@ export const getLmStudioAiderMapping = (provider: ProviderProfile, modelId: stri
 export const createLmStudioLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateLmStudioCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
+export const calculateLmStudioCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
-// Standard cost calculation without caching adjustments
+export const getLmStudioUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
-export const getLmStudioUsageReport = (
-  project: Project,
-  provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
-  usage: LanguageModelUsage,
-  _providerMetadata?: unknown,
-): UsageReportData =>
+// Calculate cost internally (no caching for LM Studio)
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -5800,18 +5816,11 @@ export const createOllamaLlm = (profile: ProviderProfile, model: Model, env: Rec
 let normalized = baseUrl.replace(/\/+$/, ''); // Remove all trailing slashes
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateOllamaCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
+export const calculateOllamaCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
-// Standard cost calculation without caching adjustments
+export const getOllamaUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
-export const getOllamaUsageReport = (
-  project: Project,
-  provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
-  usage: LanguageModelUsage,
-  _providerMetadata?: unknown,
-): UsageReportData =>
+// Calculate cost internally (no caching for Ollama)
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -5852,18 +5861,11 @@ export const createOpenAiCompatibleLlm = (profile: ProviderProfile, model: Model
 // Use createOpenAICompatible to get a provider instance, then get the model
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateOpenAiCompatibleCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
+export const calculateOpenAiCompatibleCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
-// Standard cost calculation without caching adjustments
+export const getOpenAiCompatibleUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
-export const getOpenAiCompatibleUsageReport = (
-  project: Project,
-  provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
-  usage: LanguageModelUsage,
-  _providerMetadata?: unknown,
-): UsageReportData =>
+// Calculate cost internally (no caching for OpenAI Compatible)
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -5875,11 +5877,11 @@ export const getOpenAiCompatibleUsageReport = (
 File: src/main/models/providers/openai.ts
 ================
 import { createOpenAI } from '@ai-sdk/openai';
-import { isOpenAiProvider, OpenAiProvider } from '@common/agent';
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { isOpenAiProvider, OpenAiProvider, LlmProvider } from '@common/agent';
+import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, ReasoningEffort } from '@common/types';
 ⋮----
-import type { LanguageModelUsage } from 'ai';
-import type { LanguageModelV2 } from '@ai-sdk/provider';
+import type { LanguageModelUsage, ToolSet } from 'ai';
+import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 ⋮----
 import logger from '@/logger';
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
@@ -5901,12 +5903,6 @@ export const getOpenAiAiderMapping = (provider: ProviderProfile, modelId: string
 // === LLM Creation Functions ===
 export const createOpenAiLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
 ⋮----
-// const providerOverrides = model.providerOverrides as Partial<OpenAiProvider> | undefined;
-// const reasoningEffort = providerOverrides?.reasoningEffort ?? provider.reasoningEffort;
-// , {
-//   reasoningEffort: reasoningEffort === undefined ? undefined : (reasoningEffort as 'low' | 'medium' | 'high' | undefined),
-// }
-⋮----
 type OpenAiMetadata = {
   openai: {
     cachedPromptTokens?: number;
@@ -5914,22 +5910,41 @@ type OpenAiMetadata = {
 };
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateOpenAiCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
+export const calculateOpenAiCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
 export const getOpenAiUsageReport = (
   project: Project,
   provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
+  model: Model,
   usage: LanguageModelUsage,
-  providerOptions?: unknown,
+  providerMetadata?: unknown,
 ): UsageReportData =>
+⋮----
+// Extract cache read tokens from provider metadata or usage
+⋮----
+// Calculate sentTokens after deducting cached tokens
+⋮----
+// Calculate cost internally with already deducted sentTokens
+⋮----
+// === Configuration Helper Functions ===
+export const getOpenAiProviderOptions = (provider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined =>
+⋮----
+// Extract reasoningEffort from model overrides or provider config
+⋮----
+// Map ReasoningEffort enum to AI SDK format
+⋮----
+// === Provider Tools Functions ===
+export const getOpenAiProviderTools = (provider: LlmProvider, model: Model): ToolSet =>
+⋮----
+// Check for model-specific overrides
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
 // Core LLM functions
 ⋮----
 // Model discovery functions
+⋮----
+// Configuration helper functions
 
 ================
 File: src/main/models/providers/openrouter.ts
@@ -6005,16 +6020,23 @@ type OpenRouterMetadata = {
 };
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateOpenRouterCost = (_model: Model, _sentTokens: number, _receivedTokens: number, providerMetadata?: unknown): number =>
+export const calculateOpenRouterCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
+⋮----
+// OpenRouter provides cost directly from provider metadata, but we'll calculate it as fallback
 ⋮----
 export const getOpenRouterUsageReport = (
   project: Project,
   provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
+  model: Model,
   usage: LanguageModelUsage,
-  providerOptions?: unknown,
+  providerMetadata?: unknown,
 ): UsageReportData =>
+⋮----
+// Extract cache read tokens from provider metadata
+⋮----
+// Calculate sentTokens after deducting cached tokens
+⋮----
+// Use cost from provider metadata if available, otherwise calculate
 ⋮----
 // === Configuration Helper Functions ===
 export const getOpenRouterCacheControl = (profile: AgentProfile, llmProvider: LlmProvider): CacheControl =>
@@ -6080,16 +6102,27 @@ export const getRequestyAiderMapping = (provider: ProviderProfile, modelId: stri
 export const createRequestyLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateRequestyCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
+export const calculateRequestyCost = (
+  model: Model,
+  sentTokens: number,
+  receivedTokens: number,
+  cacheWriteTokens: number = 0,
+  cacheReadTokens: number = 0,
+): number =>
 ⋮----
 export const getRequestyUsageReport = (
   project: Project,
   provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
+  model: Model,
   usage: LanguageModelUsage,
-  providerOptions?: unknown,
+  providerMetadata?: unknown,
 ): UsageReportData =>
+⋮----
+// Extract cache tokens from provider metadata
+⋮----
+// Calculate sentTokens after deducting cached tokens
+⋮----
+// Calculate cost internally with already deducted sentTokens
 ⋮----
 // === Configuration Helper Functions ===
 export const getRequestyCacheControl = (profile: AgentProfile, llmProvider: LlmProvider): CacheControl =>
@@ -6150,18 +6183,23 @@ type VertexGoogleMetadata = {
 };
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateVertexAiCost = (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number =>
+export const calculateVertexAiCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
 // Use model overrides if available, otherwise use base model info
 ⋮----
 export const getVertexAiUsageReport = (
   project: Project,
   provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
+  model: Model,
   usage: LanguageModelUsage,
-  providerOptions?: unknown,
+  providerMetadata?: unknown,
 ): UsageReportData =>
+⋮----
+// Extract cache read tokens from provider metadata
+⋮----
+// Calculate sentTokens after deducting cached tokens
+⋮----
+// Calculate cost internally with already deducted sentTokens
 ⋮----
 export const getVertexAiProviderOptions = (llmProvider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined =>
 ⋮----
@@ -6209,20 +6247,13 @@ const createZaiPlanLlm = (profile: ProviderProfile, model: Model, env: Record<st
 // ZAI uses specific base URL for chat completions
 ⋮----
 // === Cost and Usage Functions ===
-const calculateZaiPlanCost = (model: Model, sentTokens: number, receivedTokens: number, _providerMetadata?: unknown): number =>
+const calculateZaiPlanCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
 // Use model overrides if available, otherwise use base model info
 ⋮----
-// Standard cost calculation without caching adjustments
+const getZaiPlanUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
-const getZaiPlanUsageReport = (
-  project: Project,
-  provider: ProviderProfile,
-  modelId: string,
-  messageCost: number,
-  usage: LanguageModelUsage,
-  _providerMetadata?: unknown,
-): UsageReportData =>
+// Calculate cost internally (no caching for ZAI Plan)
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -6374,20 +6405,11 @@ createLlm(profile: ProviderProfile, model: string | Model, env: Record<string, s
 ⋮----
 // Fallback to creating a minimal Model object if not found
 ⋮----
-calculateCost(provider: ProviderProfile, model: string, sentTokens: number, receivedTokens: number, providerMetadata?: unknown): number
+getUsageReport(project: Project, provider: ProviderProfile, model: string | Model, usage: LanguageModelUsage, providerMetadata?: unknown): UsageReportData
 ⋮----
 // Resolve Model object
 ⋮----
 // Fallback to creating a minimal Model object if not found
-⋮----
-getUsageReport(
-    project: Project,
-    provider: ProviderProfile,
-    modelId: string,
-    messageCost: number,
-    usage: LanguageModelUsage,
-    providerMetadata?: unknown,
-): UsageReportData
 ⋮----
 getCacheControl(profile: AgentProfile, llmProvider: LlmProvider): CacheControl
 ⋮----
@@ -6452,21 +6474,9 @@ export interface LlmProviderStrategy {
   createLlm: (profile: ProviderProfile, model: Model, env: Record<string, string | undefined>) => LanguageModelV2;
 
   /**
-   * Calculates the cost for token usage with provider-specific caching adjustments
+   * Generates usage reports with provider-specific metadata and calculates cost internally
    */
-  calculateCost: (model: Model, sentTokens: number, receivedTokens: number, providerMetadata?: unknown) => number;
-
-  /**
-   * Generates usage reports with provider-specific metadata
-   */
-  getUsageReport: (
-    project: Project,
-    provider: ProviderProfile,
-    modelId: string,
-    messageCost: number,
-    usage: LanguageModelUsage,
-    providerMetadata?: unknown,
-  ) => UsageReportData;
+  getUsageReport: (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage, providerMetadata?: unknown) => UsageReportData;
 
   // === Model Discovery and Configuration Functions ===
   /**
@@ -6507,11 +6517,7 @@ export interface LlmProviderStrategy {
    */
 ⋮----
 /**
-   * Calculates the cost for token usage with provider-specific caching adjustments
-   */
-⋮----
-/**
-   * Generates usage reports with provider-specific metadata
+   * Generates usage reports with provider-specific metadata and calculates cost internally
    */
 ⋮----
 // === Model Discovery and Configuration Functions ===
@@ -10911,8 +10917,6 @@ rawContentToCopy = JSON.stringify(parsedResult.json); // Copy raw JSON
 ⋮----
 // Fallback to the original raw content if no text was extracted
 ⋮----
-
-⋮----
 {/* Tool Specific Content */}
 
 ================
@@ -11102,8 +11106,7 @@ export const groupMessagesByPromptContext = (messages: Message[]): Message[] =>
 ================
 File: src/renderer/src/components/message/VirtualizedMessages.tsx
 ================
-import React, { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { toPng } from 'html-to-image';
+import React, { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -11115,6 +11118,7 @@ import { isGroupMessage, isUserMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
+import { showInfoNotification } from '@/utils/notifications';
 ⋮----
 export type VirtualizedMessagesRef = {
   exportToImage: () => void;
@@ -11136,7 +11140,7 @@ type Props = {
 ⋮----
 // Create virtualizer for dynamic sized items
 ⋮----
-estimateSize: () => 100, // Initial estimate, will be measured
+estimateSize: () => 44, // Initial estimate, will be measured
 ⋮----
 const handleScroll = (e: React.UIEvent<HTMLDivElement>) =>
 ⋮----
@@ -11144,12 +11148,17 @@ const handleScroll = (e: React.UIEvent<HTMLDivElement>) =>
 ⋮----
 // If content is smaller than area, never pause scrolling
 ⋮----
-// Detect scroll direction by comparing current scrollTop with previous scrollTop
+const handleWheel = (e: React.WheelEvent<HTMLDivElement>) =>
 ⋮----
-// Store current scrollTop for next scroll event
+// Only pause when scrolling up (negative deltaY)
 ⋮----
-// If scrolling up, always pause
-// If scrolling down, only pause if not at bottom
+const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) =>
+⋮----
+const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) =>
+⋮----
+// Detect swipe up (touch moving up, so current Y is less than start Y)
+⋮----
+// 10px threshold to avoid accidental triggers
 ⋮----
 // Scroll to the last item when new messages arrive
 ⋮----
@@ -11157,7 +11166,7 @@ const handleScroll = (e: React.UIEvent<HTMLDivElement>) =>
 ⋮----
 const exportToImage = async () =>
 ⋮----
-// eslint-disable-next-line no-console
+// Show notification that export is not available with virtualized rendering
 ⋮----
 const scrollToBottom = () =>
 ⋮----
@@ -11448,15 +11457,17 @@ import { OpenAiProvider } from '@common/agent';
 import { ReasoningEffort } from '@common/types';
 ⋮----
 import { Select, Option } from '@/components/common/Select';
+import { Checkbox } from '@/components/common/Checkbox';
+import { InfoIcon } from '@/components/common/InfoIcon';
 ⋮----
 type Props = {
   provider: OpenAiProvider;
   onChange: (updated: OpenAiProvider) => void;
 };
 ⋮----
-export const OpenAiAdvancedSettings = (
-⋮----
 const handleReasoningEffortChange = (value: string) =>
+⋮----
+const handleUseWebSearchChange = (checked: boolean) =>
 ⋮----
 <Select label=
 
@@ -12528,8 +12539,6 @@ type Props = {
 ⋮----
 // Original horizontal layout for other modes
 ⋮----
-data-tooltip-content=
-⋮----
 tooltip=
 
 ================
@@ -13522,7 +13531,7 @@ label=
 ⋮----
 onChange=
 ⋮----
-<span>
+<Section title=
 ⋮----
 <Checkbox label=
 
@@ -13804,6 +13813,8 @@ const handleTerminalExit = (data: TerminalExitData) =>
 // Small delay to ensure the container is properly sized
 ⋮----
 // Cleanup on unmount
+⋮----
+<div key=
 
 ================
 File: src/renderer/src/components/terminal/TerminalView.tsx
@@ -15130,6 +15141,8 @@ if (versions?.aiderDeskNewVersionReady)
 return t('settings.about.newAiderDeskVersionReady');
 ⋮----
 return ''; // Should not happen if showUpdateIcon is true
+⋮----
+tooltip=
 
 ================
 File: src/renderer/src/pages/Onboarding.tsx
