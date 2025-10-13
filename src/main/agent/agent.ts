@@ -821,7 +821,7 @@ export class Agent {
         messages.push(...responseMessages);
         resultMessages.push(...responseMessages);
 
-        if ((finishReason === 'unknown' || finishReason === 'other') && retryCount < MAX_RETRIES) {
+        if ((finishReason === 'unknown' || finishReason === 'other' || !finishReason) && retryCount < MAX_RETRIES) {
           logger.debug(`Finish reason is "${finishReason}". Retrying...`);
           retryCount++;
           continue;
