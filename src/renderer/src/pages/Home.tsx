@@ -227,7 +227,7 @@ export const Home = () => {
                 icon={<MdUpload className="h-5 w-5 text-text-primary animate-pulse animate-slow" />}
                 tooltip={getUpdateTooltip()}
                 onClick={() => {
-                  setShowSettingsTab(3);
+                  setShowSettingsTab(4);
                 }}
                 className="px-4 py-2 hover:bg-bg-tertiary-emphasis transition-colors duration-200"
               />
