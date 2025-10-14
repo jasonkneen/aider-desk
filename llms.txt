@@ -1365,6 +1365,9 @@ File: src/common/locales/en.json
     "selectProvidersToViewModels": "Select provider profiles above to view their models",
     "noModelsFromSelectedProviders": "No models available from selected providers",
     "hidden": "Hidden",
+    "showModel": "Show model",
+    "hideModel": "Hide model",
+    "showHidden": "Show hidden",
     "deleteProfileTitle": "Delete Profile",
     "deleteProfileConfirm": "Are you sure you want to delete the profile '{{name}}'?",
     "addModel": "Add Model",
@@ -2374,6 +2377,9 @@ File: src/common/locales/zh.json
     "deleteProfileTitle": "删除配置文件",
     "deleteProfileConfirm": "您确定要删除配置文件 '{{name}}' 吗？",
     "hidden": "隐藏",
+    "showModel": "显示模型",
+    "hideModel": "隐藏模型",
+    "showHidden": "显示隐藏",
     "errors": {
       "idRequired": "模型 ID 必填",
       "providerRequired": "提供商必填",
@@ -3493,8 +3499,8 @@ export interface ApplicationAPI {
   getProviderModels: () => Promise<ProviderModelsData>;
   getProviders: () => Promise<ProviderProfile[]>;
   updateProviders: (providers: ProviderProfile[]) => Promise<ProviderProfile[]>;
-  upsertModel: (providerId: string, modelId: string, model: Model) => Promise<Model[]>;
-  deleteModel: (providerId: string, modelId: string) => Promise<Model[]>;
+  upsertModel: (providerId: string, modelId: string, model: Model) => Promise<ProviderModelsData>;
+  deleteModel: (providerId: string, modelId: string) => Promise<ProviderModelsData>;
 
   addSettingsUpdatedListener: (callback: (data: SettingsData) => void) => () => void;
   addResponseChunkListener: (baseDir: string, callback: (data: ResponseChunkData) => void) => () => void;
@@ -9327,8 +9333,8 @@ loadModelsInfo(): Promise<Record<string, ModelInfo>>
 getProviderModels(): Promise<ProviderModelsData>
 getProviders(): Promise<ProviderProfile[]>
 updateProviders(providers: ProviderProfile[]): Promise<ProviderProfile[]>
-upsertModel(providerId: string, modelId: string, model: Model): Promise<Model[]>
-deleteModel(providerId: string, modelId: string): Promise<Model[]>
+upsertModel(providerId: string, modelId: string, model: Model): Promise<ProviderModelsData>
+deleteModel(providerId: string, modelId: string): Promise<ProviderModelsData>
 queryUsageData(from: string, to: string): Promise<UsageDataRow[]>
 getEffectiveEnvironmentVariable(key: string, baseDir?: string): Promise<EnvironmentVariable | undefined>
 addSettingsUpdatedListener(callback: (data: SettingsData) => void): () => void
@@ -10138,6 +10144,7 @@ import { ReactNode, useMemo } from 'react';
 ⋮----
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from '@tanstack/react-table';
+import { twMerge } from 'tailwind-merge';
 ⋮----
 import { Column, FooterColumn } from './Table';
 ⋮----
@@ -10148,6 +10155,7 @@ type Props<T> = {
   rowHeight?: number | ((params: { index: number }) => number);
   overscanCount?: number;
   disableHeader?: boolean;
+  getRowClassName?: (row: T, index: number) => string | undefined;
 };
 ⋮----
 // Convert Column<T> to ColumnDef<T> for @tanstack/react-table
@@ -11995,13 +12003,13 @@ import { Model, ProviderProfile } from '@common/types';
 ⋮----
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
+import { Checkbox } from '@/components/common/Checkbox';
 import { Column } from '@/components/common/Table';
 import { VirtualTable } from '@/components/common/VirtualTable';
 import { IconButton } from '@/components/common/IconButton';
 ⋮----
 type Props = {
   models: Model[];
-  modelCount: number;
   selectedProviderIds: string[];
   providers: ProviderProfile[];
   onAddModel: () => void;
@@ -12010,7 +12018,13 @@ type Props = {
   onToggleHidden: (model: Model) => void;
 };
 ⋮----
+const getRowClassName = (row: Model) =>
+⋮----
 {/* Search and Info Header */}
+⋮----
+<Checkbox label=
+⋮----
+? t('modelLibrary.showingAllModels',
 ⋮----
 {/* Table */}
 
@@ -17103,7 +17117,7 @@ File: package.json
 ================
 {
   "name": "aider-desk",
-  "version": "0.35.0-dev",
+  "version": "0.36.0-dev",
   "description": "Aider desktop application wrapper",
   "main": "./out/main/index.js",
   "author": "Hotovo",
@@ -17160,7 +17174,7 @@ File: package.json
     "@opentelemetry/auto-instrumentations-node": "^0.62.0",
     "@opentelemetry/sdk-node": "^0.203.0",
     "@opentelemetry/sdk-trace-base": "^2.0.1",
-    "@probelabs/probe": "^0.6.0-rc115",
+    "@probelabs/probe": "0.6.0-rc128",
     "@reactuses/core": "^6.0.6",
     "@replit/codemirror-vim": "^6.3.0",
     "@requesty/ai-sdk": "^1.0.1",
