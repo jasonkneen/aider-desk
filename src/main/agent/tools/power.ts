@@ -3,7 +3,6 @@ import path from 'path';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
-import { is } from '@electron-toolkit/utils';
 import { tool, type ToolSet } from 'ai';
 import { z } from 'zod';
 import { glob } from 'glob';
@@ -587,12 +586,9 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
           json: false,
           maxTokens: effectiveMaxTokens,
           language,
-          binaryOptions: !is.dev
-            ? {
-                // we need to set the PROBE_PATH env variable for production asar.unpacked, as the binary is not determined correctly inside the probe package
-                path: PROBE_BINARY_PATH,
-              }
-            : undefined,
+          binaryOptions: {
+            path: PROBE_BINARY_PATH,
+          },
         });
 
         logger.debug(`Search results: ${JSON.stringify(results)}`);
