@@ -2,7 +2,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import axios from 'axios';
-import { z } from 'zod';
+import { z } from 'zod/v3';
 
 // Get project directory from command line arguments or use default
 const projectDir = process.argv[2] || '.';

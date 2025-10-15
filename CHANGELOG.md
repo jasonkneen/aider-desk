@@ -4,6 +4,7 @@
 
 - added checkbox for showing/hiding Hidden models in Model Library
 - correctly opening About tab in Settings when Update is available icon is clicked
+- fixed issue with incorrect tool definition for AiderDesk MCP server
 
 ## [0.35.0]
 
