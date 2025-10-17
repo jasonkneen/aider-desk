@@ -63,6 +63,7 @@ export const ModelTableSection = ({ models, selectedProviderIds, providers, onAd
       align: 'center',
       maxWidth: 150,
       cellClassName: 'text-xs',
+      sort: (a, b) => (a.maxInputTokens || 0) - (b.maxInputTokens || 0),
     },
     {
       accessor: 'inputCostPerToken',
@@ -71,11 +72,12 @@ export const ModelTableSection = ({ models, selectedProviderIds, providers, onAd
         if (value === undefined || value === null) {
           return '';
         }
-        return `$${(Number(value) * 1000000).toFixed(2)}`;
+        return `${(Number(value) * 1000000).toFixed(2)}`;
       },
       align: 'center',
       maxWidth: 150,
       cellClassName: 'text-xs',
+      sort: (a, b) => (a.inputCostPerToken || 0) - (b.inputCostPerToken || 0),
     },
     {
       accessor: 'cacheReadInputTokenCost',
@@ -84,11 +86,12 @@ export const ModelTableSection = ({ models, selectedProviderIds, providers, onAd
         if (value === undefined || value === null) {
           return '';
         }
-        return `$${(Number(value) * 1000000).toFixed(2)}`;
+        return `${(Number(value) * 1000000).toFixed(2)}`;
       },
       align: 'center',
       maxWidth: 150,
       cellClassName: 'text-xs',
+      sort: (a, b) => (a.cacheReadInputTokenCost || 0) - (b.cacheReadInputTokenCost || 0),
     },
     {
       accessor: 'cacheWriteInputTokenCost',
@@ -97,11 +100,12 @@ export const ModelTableSection = ({ models, selectedProviderIds, providers, onAd
         if (value === undefined || value === null) {
           return '';
         }
-        return `$${(Number(value) * 1000000).toFixed(2)}`;
+        return `${(Number(value) * 1000000).toFixed(2)}`;
       },
       align: 'center',
       maxWidth: 150,
       cellClassName: 'text-xs',
+      sort: (a, b) => (a.cacheWriteInputTokenCost || 0) - (b.cacheWriteInputTokenCost || 0),
     },
     {
       accessor: 'outputCostPerToken',
@@ -110,11 +114,12 @@ export const ModelTableSection = ({ models, selectedProviderIds, providers, onAd
         if (value === undefined || value === null) {
           return '';
         }
-        return `$${(Number(value) * 1000000).toFixed(2)}`;
+        return `${(Number(value) * 1000000).toFixed(2)}`;
       },
       align: 'center',
       maxWidth: 150,
       cellClassName: 'text-xs',
+      sort: (a, b) => (a.outputCostPerToken || 0) - (b.outputCostPerToken || 0),
     },
     {
       accessor: 'maxOutputTokens',
@@ -122,6 +127,7 @@ export const ModelTableSection = ({ models, selectedProviderIds, providers, onAd
       align: 'center',
       maxWidth: 180,
       cellClassName: 'text-xs',
+      sort: (a, b) => (a.maxOutputTokens || 0) - (b.maxOutputTokens || 0),
     },
     {
       header: '',

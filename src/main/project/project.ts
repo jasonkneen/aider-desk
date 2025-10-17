@@ -57,7 +57,9 @@ export class Project {
       logger.error('Error loading session:', { error });
     }
 
-    await this.createTask('default');
+    if (!this.getTask('default')) {
+      await this.createTask('default');
+    }
 
     this.eventManager.sendProjectStarted(this.baseDir);
   }
