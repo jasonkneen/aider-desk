@@ -20,6 +20,7 @@ import {
   POWER_TOOL_SEMANTIC_SEARCH as TOOL_SEMANTIC_SEARCH,
   TOOL_GROUP_NAME_SEPARATOR,
 } from '@common/tools';
+// @ts-expect-error istextorbinary is not typed properly
 import { isBinary } from 'istextorbinary';
 import { isURL } from '@common/utils';
 import { search } from '@probelabs/probe';

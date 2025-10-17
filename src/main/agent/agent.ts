@@ -35,9 +35,9 @@ import {
 } from 'ai';
 import { delay, extractServerNameToolName } from '@common/utils';
 import { LlmProvider, LlmProviderName } from '@common/agent';
-// @ts-expect-error gpt-tokenizer is not typed
 import { countTokens } from 'gpt-tokenizer/model/gpt-4o';
 import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.js';
+// @ts-expect-error istextorbinary is not typed properly
 import { isBinary } from 'istextorbinary';
 import { fileTypeFromBuffer } from 'file-type';
 import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';

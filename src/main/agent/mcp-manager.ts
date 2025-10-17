@@ -2,8 +2,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { McpServerConfig, McpTool, SettingsData } from '@common/types';
 import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp';
-import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 
 import logger from '@/logger';
 
