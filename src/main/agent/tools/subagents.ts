@@ -16,12 +16,12 @@ const getSubagentId = (subagent: AgentProfile): string => {
 export const createSubagentsToolset = (
   settings: SettingsData,
   task: Task,
-  profile: AgentProfile,
+  mainAgentProfile: AgentProfile,
   abortSignal?: AbortSignal,
   messages: ContextMessage[] = [],
   resultMessages: ContextMessage[] = [],
 ): ToolSet => {
-  const enabledSubagents = settings.agentProfiles.filter((agentProfile) => isSubagentEnabled(agentProfile, profile.id));
+  const enabledSubagents = settings.agentProfiles.filter((agentProfile) => isSubagentEnabled(agentProfile, mainAgentProfile.id));
 
   const generateSubagentsRunTaskDescription = (): string => {
     const automaticSubagents = enabledSubagents.filter((agentProfile) => agentProfile.subagent.invocationMode === InvocationMode.Automatic);
@@ -74,6 +74,7 @@ export const createSubagentsToolset = (
         useTodoTools: false, // Disable todo tools for simplicity,
         useSubagents: false, // Disable nested subagents
         isSubagent: true,
+        autoApprove: mainAgentProfile.autoApprove,
       };
 
       // Create promptContext with working group

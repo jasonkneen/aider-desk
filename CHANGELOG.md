@@ -6,6 +6,7 @@
 - correctly opening About tab in Settings when Update is available icon is clicked
 - fixed issue with incorrect tool definition for AiderDesk MCP server
 - added sorting to tables in Model Library and Usage dashboard
+- auto approve setting from main agent is passed to subagents
 
 ## [0.35.0]
 
