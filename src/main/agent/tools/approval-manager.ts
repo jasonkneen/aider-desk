@@ -1,12 +1,12 @@
 import { AgentProfile, QuestionData, ToolApprovalState } from '@common/types';
 
-import { Project } from '@/project';
+import { Task } from '@/task';
 
 export class ApprovalManager {
   private alwaysApproveForRunKeys: Set<string> = new Set();
 
   constructor(
-    private readonly project: Project,
+    private readonly task: Task,
     private readonly profile: AgentProfile,
   ) {}
 
@@ -22,7 +22,7 @@ export class ApprovalManager {
     }
 
     const questionData: QuestionData = {
-      baseDir: this.project.baseDir,
+      baseDir: this.task.project.baseDir,
       text,
       subject,
       defaultAnswer: 'y',
@@ -35,7 +35,7 @@ export class ApprovalManager {
       key,
     };
 
-    const [answer, userInput] = await this.project.askQuestion(questionData);
+    const [answer, userInput] = await this.task.askQuestion(questionData);
 
     if (answer === 'r') {
       this.alwaysApproveForRunKeys.add(key);

@@ -19,14 +19,6 @@ export abstract class BaseApi {
       return null;
     }
 
-    if (!project.isStarted()) {
-      res.status(403).json({
-        error: 'Project not started',
-        message: 'Please open the project in AiderDesk first',
-      });
-      return null;
-    }
-
     return project;
   }
 

@@ -7,7 +7,7 @@ out
 *.log*
 .aider*
 !.aider-desk
-.aider-desk/sessions
+.aider-desk/tasks
 .aider-desk/todos.json
 .aider-desk/tmp
 .junie*

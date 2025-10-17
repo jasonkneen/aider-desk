@@ -25,6 +25,7 @@ export class Connector {
   constructor(
     readonly socket: Socket,
     readonly baseDir: string,
+    readonly taskId: string | undefined,
     readonly source: string | undefined,
     readonly listenTo: MessageAction[] = [],
     readonly inputHistoryFile?: string,

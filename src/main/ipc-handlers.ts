@@ -187,7 +187,7 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
   });
 
   ipcMain.handle('export-session-to-markdown', async (_, baseDir: string) => {
-    return await eventsHandler.exportSessionToMarkdown(baseDir);
+    return await eventsHandler.exportTaskToMarkdown(baseDir);
   });
 
   ipcMain.handle('set-zoom-level', (_, zoomLevel: number) => {

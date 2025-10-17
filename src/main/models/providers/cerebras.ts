@@ -9,7 +9,7 @@ import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils/environment';
 import { LoadModelsResponse } from '@/models/types';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 
 interface CerebrasModel {
   id: string;
@@ -123,7 +123,7 @@ export const calculateCerebrasCost = (model: Model, sentTokens: number, received
   return inputCost + outputCost + cacheCost;
 };
 
-export const getCerebrasUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
+export const getCerebrasUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
   const totalSentTokens = usage.inputTokens || 0;
   const receivedTokens = usage.outputTokens || 0;
   const cacheReadTokens = usage.cachedInputTokens || 0;
@@ -138,7 +138,7 @@ export const getCerebrasUsageReport = (project: Project, provider: ProviderProfi
     receivedTokens,
     cacheReadTokens,
     messageCost,
-    agentTotalCost: project.agentTotalCost + messageCost,
+    agentTotalCost: task.task.agentTotalCost + messageCost,
   };
 };
 

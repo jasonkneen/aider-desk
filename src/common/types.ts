@@ -425,6 +425,7 @@ export interface ProjectStartedData {
 
 export interface ClearProjectData {
   baseDir: string;
+  taskId: string;
   clearMessages: boolean;
   clearSession: boolean;
 }
@@ -524,10 +525,23 @@ export interface ModelInfo {
   cacheReadInputTokenCost?: number;
 }
 
-export interface Task {
+export interface TaskContext {
+  version: number;
+  taskId: string;
+  contextMessages: ContextMessage[];
+  contextFiles: ContextFile[];
+}
+
+export interface TaskData {
   id: string;
+  baseDir: string;
   title: string;
-  completed: boolean;
+  aiderTotalCost: number;
+  agentTotalCost: number;
+  createdAt: string;
+  updatedAt: string;
+  startedAt?: string;
+  completedAt?: string;
 }
 
 export interface TodoItem {

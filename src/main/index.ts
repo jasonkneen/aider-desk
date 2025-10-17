@@ -9,7 +9,7 @@ import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
 import icon from '../../resources/icon.png?asset';
 
 import { ProgressWindow } from '@/progress-window';
-import { Agent, McpManager } from '@/agent';
+import { McpManager } from '@/agent';
 import { CloudflareTunnelManager, ServerController } from '@/server';
 import { ConnectorManager } from '@/connector';
 import { setupIpcHandlers } from '@/ipc-handlers';
@@ -164,11 +164,8 @@ const initManagers = async (
   const dataManager = new DataManager();
   dataManager.init();
 
-  // Initialize agent
-  const agent = new Agent(store, mcpManager, modelManager, telemetryManager);
-
   // Initialize project manager
-  const projectManager = new ProjectManager(store, agent, telemetryManager, dataManager, eventManager, modelManager);
+  const projectManager = new ProjectManager(store, mcpManager, telemetryManager, dataManager, eventManager, modelManager);
 
   // Initialize terminal manager
   const terminalManager = new TerminalManager(eventManager, telemetryManager);
@@ -188,7 +185,6 @@ const initManagers = async (
     projectManager,
     store,
     mcpManager,
-    agent,
     versionsManager,
     modelManager,
     telemetryManager,

@@ -2,7 +2,7 @@ import { normalizeBaseDir } from '@common/utils';
 import { SettingsData, StartupMode } from '@common/types';
 
 import { TelemetryManager } from '@/telemetry';
-import { Agent } from '@/agent';
+import { McpManager } from '@/agent';
 import { DataManager } from '@/data-manager';
 import logger from '@/logger';
 import { Project } from '@/project';
@@ -15,7 +15,7 @@ export class ProjectManager {
 
   constructor(
     private readonly store: Store,
-    private readonly agent: Agent,
+    private readonly mcpManager: McpManager,
     private readonly telemetryManager: TelemetryManager,
     private readonly dataManager: DataManager,
     private readonly eventManager: EventManager,
@@ -28,7 +28,7 @@ export class ProjectManager {
 
   private createProject(baseDir: string) {
     logger.info('Creating new project', { baseDir });
-    const project = new Project(baseDir, this.store, this.agent, this.telemetryManager, this.dataManager, this.eventManager, this.modelManager);
+    const project = new Project(baseDir, this.store, this.mcpManager, this.telemetryManager, this.dataManager, this.eventManager, this.modelManager);
     this.projects.push(project);
     return project;
   }

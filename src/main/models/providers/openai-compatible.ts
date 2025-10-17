@@ -7,7 +7,7 @@ import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 
 export const loadOpenaiCompatibleModels = async (
@@ -122,7 +122,7 @@ export const calculateOpenAiCompatibleCost = (model: Model, sentTokens: number, 
   return inputCost + outputCost + cacheCost;
 };
 
-export const getOpenAiCompatibleUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
+export const getOpenAiCompatibleUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
   const totalSentTokens = usage.inputTokens || 0;
   const receivedTokens = usage.outputTokens || 0;
   const cacheReadTokens = usage.cachedInputTokens || 0;
@@ -137,7 +137,7 @@ export const getOpenAiCompatibleUsageReport = (project: Project, provider: Provi
     receivedTokens,
     cacheReadTokens,
     messageCost,
-    agentTotalCost: project.agentTotalCost + messageCost,
+    agentTotalCost: task.task.agentTotalCost + messageCost,
   };
 };
 

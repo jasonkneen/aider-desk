@@ -28,19 +28,19 @@ import { search } from '@probelabs/probe';
 import { ApprovalManager } from './approval-manager';
 
 import { PROBE_BINARY_PATH } from '@/constants';
-import { Project } from '@/project';
+import { Task } from '@/task';
 import logger from '@/logger';
 import { filterIgnoredFiles, scrapeWeb } from '@/utils';
 
 const execAsync = promisify(exec);
 
-export const createPowerToolset = (project: Project, profile: AgentProfile, promptContext?: PromptContext): ToolSet => {
-  const approvalManager = new ApprovalManager(project, profile);
+export const createPowerToolset = (task: Task, profile: AgentProfile, promptContext?: PromptContext): ToolSet => {
+  const approvalManager = new ApprovalManager(task, profile);
 
   const fileEditTool = tool({
     description: POWER_TOOL_DESCRIPTIONS[TOOL_FILE_EDIT],
     inputSchema: z.object({
-      filePath: z.string().describe('The path to the file to be edited (relative to the project root).'),
+      filePath: z.string().describe('The path to the file to be edited (relative to the task root).'),
       searchTerm: z.string().describe(
         `The string or regular expression to find in the file.
 *EXACTLY MATCH* the existing file content, character for character, including all comments, docstrings, etc.
@@ -59,7 +59,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
     }),
     execute: async (args, { toolCallId }) => {
       const { filePath, searchTerm, replacementText, isRegex, replaceAll } = args;
-      project.addToolMessage(toolCallId, TOOL_GROUP_NAME, TOOL_FILE_EDIT, args, undefined, undefined, promptContext);
+      task.addToolMessage(toolCallId, TOOL_GROUP_NAME, TOOL_FILE_EDIT, args, undefined, undefined, promptContext);
 
       if (searchTerm === replacementText) {
         return 'Already updated - no changes were needed.';
@@ -106,7 +106,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         return `File edit to '${filePath}' denied by user. Reason: ${userInput}`;
       }
 
-      const absolutePath = path.resolve(project.baseDir, filePath);
+      const absolutePath = path.resolve(task.project.baseDir, filePath);
       try {
         const fileContent = await fs.readFile(absolutePath, 'utf8');
         let modifiedContent: string;
@@ -150,10 +150,10 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
   const fileReadTool = tool({
     description: POWER_TOOL_DESCRIPTIONS[TOOL_FILE_READ],
     inputSchema: z.object({
-      filePath: z.string().describe('The path to the file to be read (relative to the project root or absolute if outside of project directory).'),
+      filePath: z.string().describe('The path to the file to be read (relative to the task root or absolute if outside of task directory).'),
     }),
     execute: async ({ filePath }, { toolCallId }) => {
-      project.addToolMessage(
+      task.addToolMessage(
         toolCallId,
         TOOL_GROUP_NAME,
         TOOL_FILE_READ,
@@ -174,7 +174,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         return `File read of '${filePath}' denied by user. Reason: ${userInput}`;
       }
 
-      const absolutePath = path.resolve(project.baseDir, filePath);
+      const absolutePath = path.resolve(task.project.baseDir, filePath);
       try {
         const fileContentBuffer = await fs.readFile(absolutePath);
         if (isBinary(absolutePath, fileContentBuffer)) {
@@ -194,7 +194,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
   const fileWriteTool = tool({
     description: POWER_TOOL_DESCRIPTIONS[TOOL_FILE_WRITE],
     inputSchema: z.object({
-      filePath: z.string().describe('The path to the file to be written (relative to the project root).'),
+      filePath: z.string().describe('The path to the file to be written (relative to the task root).'),
       content: z.string().describe('The content to write to the file. Do not use escape characters \\ in the string like \\n or \\" and others.'),
       mode: z
         .nativeEnum(FileWriteMode)
@@ -205,7 +205,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         ),
     }),
     execute: async ({ filePath, content, mode }, { toolCallId }) => {
-      project.addToolMessage(
+      task.addToolMessage(
         toolCallId,
         TOOL_GROUP_NAME,
         TOOL_FILE_WRITE,
@@ -233,15 +233,15 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         return `File write to '${filePath}' denied by user. Reason: ${userInput}`;
       }
 
-      const absolutePath = path.resolve(project.baseDir, filePath);
+      const absolutePath = path.resolve(task.project.baseDir, filePath);
 
       const addToGit = async () => {
         try {
           // Add the new file to git staging
-          await project.git.add(absolutePath);
+          await task.git.add(absolutePath);
         } catch (gitError) {
           const gitErrorMessage = gitError instanceof Error ? gitError.message : String(gitError);
-          project.addLogMessage('warning', `Failed to add new file ${absolutePath} to git staging area: ${gitErrorMessage}`, false, promptContext);
+          task.addLogMessage('warning', `Failed to add new file ${absolutePath} to git staging area: ${gitErrorMessage}`, false, promptContext);
           // Continue even if git add fails, as the file was created successfully
         }
       };
@@ -280,14 +280,11 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
     description: POWER_TOOL_DESCRIPTIONS[TOOL_GLOB],
     inputSchema: z.object({
       pattern: z.string().describe('The glob pattern to search for (e.g., src/**/*.ts, *.md).'),
-      cwd: z
-        .string()
-        .optional()
-        .describe('The current working directory from which to apply the glob pattern (relative to project root). Default: project root.'),
+      cwd: z.string().optional().describe('The current working directory from which to apply the glob pattern (relative to task root). Default: task root.'),
       ignore: z.array(z.string()).optional().describe('An array of glob patterns to ignore.'),
     }),
     execute: async ({ pattern, cwd, ignore }, { toolCallId }) => {
-      project.addToolMessage(
+      task.addToolMessage(
         toolCallId,
         TOOL_GROUP_NAME,
         TOOL_GLOB,
@@ -310,7 +307,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         return `Glob search with pattern '${pattern}' denied by user. Reason: ${userInput}`;
       }
 
-      const absoluteCwd = cwd ? path.resolve(project.baseDir, cwd) : project.baseDir;
+      const absoluteCwd = cwd ? path.resolve(task.project.baseDir, cwd) : task.project.baseDir;
       try {
         const files = await glob(pattern, {
           cwd: absoluteCwd,
@@ -321,10 +318,10 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
         // Convert to absolute paths for filtering, then back to relative
         const absoluteFiles = files.map((file) => path.resolve(absoluteCwd, file));
-        const filteredFiles = await filterIgnoredFiles(project.baseDir, absoluteFiles);
+        const filteredFiles = await filterIgnoredFiles(task.project.baseDir, absoluteFiles);
 
-        // Ensure paths are relative to project.baseDir
-        const result = filteredFiles.map((file) => path.relative(project.baseDir, file));
+        // Ensure paths are relative to task.project.baseDir
+        const result = filteredFiles.map((file) => path.relative(task.project.baseDir, file));
 
         return result;
       } catch (error) {
@@ -349,7 +346,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
       caseSensitive: z.boolean().optional().default(false).describe('Whether the search should be case sensitive. Default: false.'),
     }),
     execute: async ({ filePattern, searchTerm, contextLines, caseSensitive }, { toolCallId }) => {
-      project.addToolMessage(
+      task.addToolMessage(
         toolCallId,
         TOOL_GROUP_NAME,
         TOOL_GREP,
@@ -375,7 +372,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
       try {
         const files = await glob(filePattern, {
-          cwd: project.baseDir,
+          cwd: task.project.baseDir,
           nodir: true,
           absolute: true,
         });
@@ -385,7 +382,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         }
 
         // Filter out ignored files in batch
-        const filteredFiles = await filterIgnoredFiles(project.baseDir, files);
+        const filteredFiles = await filterIgnoredFiles(task.project.baseDir, files);
 
         if (filteredFiles.length === 0) {
           return `No files found matching pattern '${filePattern}' (all files were ignored).`;
@@ -402,7 +399,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         for (const absoluteFilePath of filteredFiles) {
           const fileContent = await fs.readFile(absoluteFilePath, 'utf8');
           const lines = fileContent.split('\n');
-          const relativeFilePath = path.relative(project.baseDir, absoluteFilePath);
+          const relativeFilePath = path.relative(task.project.baseDir, absoluteFilePath);
 
           lines.forEach((line, index) => {
             if (searchRegex.test(line)) {
@@ -442,11 +439,11 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
     description: POWER_TOOL_DESCRIPTIONS[TOOL_BASH],
     inputSchema: z.object({
       command: z.string().describe('The shell command to execute (e.g., ls -la, npm install).'),
-      cwd: z.string().optional().describe('The working directory for the command (relative to project root). Default: project root.'),
+      cwd: z.string().optional().describe('The working directory for the command (relative to task root). Default: task root.'),
       timeout: z.number().int().min(0).optional().default(60000).describe('Timeout for the command execution in milliseconds. Default: 60000 ms.'),
     }),
     execute: async ({ command, cwd, timeout }, { toolCallId }) => {
-      project.addToolMessage(
+      task.addToolMessage(
         toolCallId,
         TOOL_GROUP_NAME,
         TOOL_BASH,
@@ -470,7 +467,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         return `Bash command execution denied by user. Reason: ${userInput}`;
       }
 
-      const absoluteCwd = cwd ? path.resolve(project.baseDir, cwd) : project.baseDir;
+      const absoluteCwd = cwd ? path.resolve(task.project.baseDir, cwd) : task.project.baseDir;
       try {
         const { stdout, stderr } = await execAsync(command, {
           cwd: absoluteCwd,
@@ -500,7 +497,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
       timeout: z.number().int().min(0).optional().default(60000).describe('Timeout for the fetch operation in milliseconds. Default: 60000 ms.'),
     }),
     execute: async ({ url, timeout }, { toolCallId }) => {
-      project.addToolMessage(
+      task.addToolMessage(
         toolCallId,
         TOOL_GROUP_NAME,
         TOOL_FETCH,
@@ -543,7 +540,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
       path: z
         .string()
         .optional()
-        .default(project.baseDir)
+        .default(task.project.baseDir)
         .describe('Absolute path to search in. For dependencies use "go:github.com/owner/repo", "js:package_name", or "rust:cargo_name" etc.'),
       allowTests: z.boolean().optional().default(false).describe('Allow test files in search results'),
       exact: z.boolean().optional().default(false).describe('Perform exact search without tokenization (case-insensitive)'),
@@ -552,7 +549,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
       language: z.string().optional().describe('Limit search to files of a specific programming language'),
     }),
     execute: async ({ query: searchQuery, path: inputPath, allowTests, exact, maxTokens: paramMaxTokens, language }, { toolCallId }) => {
-      project.addToolMessage(toolCallId, TOOL_GROUP_NAME, TOOL_SEMANTIC_SEARCH, { searchQuery, path: inputPath }, undefined, undefined, promptContext);
+      task.addToolMessage(toolCallId, TOOL_GROUP_NAME, TOOL_SEMANTIC_SEARCH, { searchQuery, path: inputPath }, undefined, undefined, promptContext);
 
       const questionKey = `${TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TOOL_SEMANTIC_SEARCH}`;
       const questionText = 'Approve running codebase search?';
@@ -567,14 +564,14 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
       // Use parameter maxTokens if provided, otherwise use the default
       const effectiveMaxTokens = paramMaxTokens || 10000;
 
-      let searchPath = inputPath || project.baseDir;
+      let searchPath = inputPath || task.project.baseDir;
 
       // Check if it's a dependency path (format: language:rest)
       const isDependencyPath = /^[a-zA-Z]+:/.test(searchPath);
 
       if (!isDependencyPath && !path.isAbsolute(searchPath)) {
-        // If path is relative (including "." and "./"), resolve it relative to project.baseDir
-        searchPath = path.resolve(project.baseDir, searchPath);
+        // If path is relative (including "." and "./"), resolve it relative to task.project.baseDir
+        searchPath = path.resolve(task.project.baseDir, searchPath);
       }
 
       try {

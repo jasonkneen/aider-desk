@@ -7,7 +7,7 @@ import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 
 const extractResourceNameFromEndpoint = (endpoint: string): string => {
   try {
@@ -93,7 +93,7 @@ export const calculateAzureCost = (model: Model, sentTokens: number, receivedTok
 };
 
 export const getAzureUsageReport = (
-  project: Project,
+  task: Task,
   provider: ProviderProfile,
   model: Model,
   usage: LanguageModelUsage,
@@ -118,7 +118,7 @@ export const getAzureUsageReport = (
     receivedTokens,
     cacheReadTokens,
     messageCost,
-    agentTotalCost: project.agentTotalCost + messageCost,
+    agentTotalCost: task.task.agentTotalCost + messageCost,
   };
 
   return usageReportData;

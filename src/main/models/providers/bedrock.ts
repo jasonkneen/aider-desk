@@ -10,7 +10,7 @@ import type { LanguageModelV2 } from '@ai-sdk/provider';
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 import { LoadModelsResponse } from '@/models/types';
 
 export const loadBedrockModels = async (
@@ -238,7 +238,7 @@ export const calculateBedrockCost = (model: Model, sentTokens: number, receivedT
   return inputCost + outputCost + cacheCost;
 };
 
-export const getBedrockUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
+export const getBedrockUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
   const totalSentTokens = usage.inputTokens || 0;
   const receivedTokens = usage.outputTokens || 0;
   const cacheReadTokens = usage.cachedInputTokens || 0;
@@ -253,7 +253,7 @@ export const getBedrockUsageReport = (project: Project, provider: ProviderProfil
     receivedTokens,
     cacheReadTokens,
     messageCost,
-    agentTotalCost: project.agentTotalCost + messageCost,
+    agentTotalCost: task.task.agentTotalCost + messageCost,
   };
 };
 

@@ -8,7 +8,7 @@ import type { LanguageModelV2 } from '@ai-sdk/provider';
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 
 export const loadDeepseekModels = async (
   profile: ProviderProfile,
@@ -104,7 +104,7 @@ export const calculateDeepseekCost = (model: Model, sentTokens: number, received
   return inputCost + outputCost + cacheCost;
 };
 
-export const getDeepseekUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
+export const getDeepseekUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
   const totalSentTokens = usage.inputTokens || 0;
   const receivedTokens = usage.outputTokens || 0;
   const cacheReadTokens = usage.cachedInputTokens || 0;
@@ -119,7 +119,7 @@ export const getDeepseekUsageReport = (project: Project, provider: ProviderProfi
     receivedTokens,
     cacheReadTokens,
     messageCost,
-    agentTotalCost: project.agentTotalCost + messageCost,
+    agentTotalCost: task.task.agentTotalCost + messageCost,
   };
 };
 

@@ -3,48 +3,44 @@ import { promises as fs } from 'fs';
 
 import { v4 as uuidv4 } from 'uuid';
 import debounce from 'lodash/debounce';
-import { ContextFile, ContextMessage, MessageRole, ResponseCompletedData, SessionData, UsageReportData } from '@common/types';
+import { ContextFile, ContextMessage, MessageRole, ResponseCompletedData, TaskContext, UsageReportData } from '@common/types';
 import { extractServerNameToolName, extractTextContent, fileExists, isMessageEmpty, isTextContent } from '@common/utils';
 import { AIDER_TOOL_GROUP_NAME, AIDER_TOOL_RUN_PROMPT, SUBAGENTS_TOOL_GROUP_NAME, SUBAGENTS_TOOL_RUN_TASK } from '@common/tools';
 
-import { migrateSessionV1toV2 } from './migrations/v1-to-v2';
-
-import { extractPromptContextFromToolResult, THINKING_RESPONSE_STAR_TAG, ANSWER_RESPONSE_START_TAG } from '@/agent/utils';
 import logger from '@/logger';
-import { Project } from '@/project';
+import { Task } from '@/task';
 import { isDirectory, isFileIgnored } from '@/utils';
+import { ANSWER_RESPONSE_START_TAG, extractPromptContextFromToolResult, THINKING_RESPONSE_STAR_TAG } from '@/agent/utils';
+import { migrateContextV1toV2 } from '@/task/migrations/v1-to-v2';
 
-const AUTOSAVED_SESSION_NAME = '.autosaved';
+const CURRENT_CONTEXT_VERSION = 2;
 
-const CURRENT_SESSION_VERSION = 2;
-
-export interface PersistedSessionData {
-  version: number;
-  contextMessages: ContextMessage[];
-  contextFiles: ContextFile[];
-}
-
-export class SessionManager {
-  private contextMessages: ContextMessage[];
-  private contextFiles: ContextFile[];
-  private autosaveEnabled = false;
+export class ContextManager {
+  private messages: ContextMessage[];
+  private files: ContextFile[];
+  private autosaveEnabled = true;
+  private readonly storagePath: string;
 
   constructor(
-    private readonly project: Project,
+    private readonly task: Task,
+    private readonly taskId: string,
     initialMessages: ContextMessage[] = [],
     initialFiles: ContextFile[] = [],
   ) {
-    this.contextMessages = initialMessages;
-    this.contextFiles = initialFiles;
+    this.messages = initialMessages;
+    this.files = initialFiles;
+
+    // Task-specific storage path - single context per task
+    this.storagePath = path.join(task.project.baseDir, '.aider-desk', 'tasks', taskId, 'context.json');
   }
 
   public enableAutosave() {
-    logger.debug('Enabling autosave');
+    logger.debug('Enabling autosave for task', { taskId: this.taskId });
     this.autosaveEnabled = true;
   }
 
   public disableAutosave() {
-    logger.debug('Disabling autosave');
+    logger.debug('Disabling autosave for task', { taskId: this.taskId });
     this.autosaveEnabled = false;
   }
 
@@ -55,11 +51,11 @@ export class SessionManager {
 
     if (typeof roleOrMessage === 'string') {
       if (!content) {
-        // No content provided, do not add the message
         return;
       }
 
       message = {
+        id: uuidv4(),
         role: roleOrMessage,
         content: content || '',
         usageReport,
@@ -68,43 +64,40 @@ export class SessionManager {
       message = roleOrMessage;
 
       if (roleOrMessage.role === 'assistant' && isMessageEmpty(message.content)) {
-        logger.debug('Skipping empty assistant message');
-        // Skip adding empty assistant messages
+        logger.debug('Skipping empty assistant message', { taskId: this.taskId });
         return;
       }
     }
 
-    this.contextMessages.push(message);
-    logger.debug(`Session: Added ${message.role} message. Total messages: ${this.contextMessages.length}`);
-    this.saveAsAutosaved();
+    this.messages.push(message);
+    logger.debug(`Task ${this.taskId}: Added ${message.role} message. Total messages: ${this.messages.length}`);
+    this.autosave();
   }
 
   private async isFileIgnored(contextFile: ContextFile): Promise<boolean> {
     if (contextFile.readOnly) {
-      // not checking gitignore for read-only files
       return false;
     }
-
-    return isFileIgnored(this.project.baseDir, contextFile.path);
+    return isFileIgnored(this.task.project.baseDir, contextFile.path);
   }
 
   async addContextFile(contextFile: ContextFile): Promise<ContextFile[]> {
-    const absolutePath = path.resolve(this.project.baseDir, contextFile.path);
+    const absolutePath = path.resolve(this.task.project.baseDir, contextFile.path);
     const isDir = await isDirectory(absolutePath);
-    const alreadyAdded = this.contextFiles.find((file) => path.resolve(this.project.baseDir, file.path) === absolutePath);
+    const alreadyAdded = this.files.find((file) => path.resolve(this.task.project.baseDir, file.path) === absolutePath);
+
     if (alreadyAdded) {
       return [];
     }
 
-    // For directories, recursively add all files and subdirectories
     if (isDir) {
-      logger.debug('Recursively adding files in directory to context:', {
+      logger.debug('Recursively adding files in directory to task context:', {
+        taskId: this.taskId,
         path: contextFile.path,
         absolutePath,
       });
 
       const addedFiles: ContextFile[] = [];
-
       try {
         const entries = await fs.readdir(absolutePath, { withFileTypes: true });
         for (const entry of entries) {
@@ -113,186 +106,181 @@ export class SessionManager {
             path: entryPath,
             readOnly: contextFile.readOnly ?? false,
           };
-
-          // Recursively add files and directories
           const newAddedFiles = await this.addContextFile(entryContextFile);
           addedFiles.push(...newAddedFiles);
         }
       } catch (error) {
-        logger.error('Failed to read directory:', {
+        logger.error('Failed to read directory for task:', {
+          taskId: this.taskId,
           path: contextFile.path,
           error,
         });
       }
-
       return addedFiles;
     } else {
-      // For files, check if ignored and add if not
       if (await this.isFileIgnored(contextFile)) {
-        logger.debug('Skipping ignored file:', { path: contextFile.path });
+        logger.debug('Skipping ignored file for task:', {
+          taskId: this.taskId,
+          path: contextFile.path,
+        });
         return [];
       }
 
-      logger.debug('Adding file to context:', { path: contextFile.path });
+      logger.debug('Adding file to task context:', {
+        taskId: this.taskId,
+        path: contextFile.path,
+      });
       const newContextFile = {
         ...contextFile,
         readOnly: contextFile.readOnly ?? false,
       };
-      this.contextFiles.push(newContextFile);
-      this.saveAsAutosaved();
+      this.files.push(newContextFile);
+      this.autosave();
       return [newContextFile];
     }
   }
 
   dropContextFile(filePath: string): ContextFile[] {
-    const absolutePath = path.resolve(this.project.baseDir, filePath);
+    const absolutePath = path.resolve(this.task.project.baseDir, filePath);
     const droppedFiles: ContextFile[] = [];
 
-    // Filter out files that match the path or are within the directory path
-    this.contextFiles = this.contextFiles.filter((f) => {
-      const contextFileAbsolutePath = path.resolve(this.project.baseDir, f.path);
-
-      // Check if file matches exactly or is within the directory path
-      const isMatch =
-        f.path === filePath || // Exact match
-        contextFileAbsolutePath === absolutePath || // Absolute path matches
-        !path.relative(absolutePath, contextFileAbsolutePath).startsWith('..'); // File is within the directory
+    this.files = this.files.filter((f) => {
+      const contextFileAbsolutePath = path.resolve(this.task.project.baseDir, f.path);
+      const isMatch = f.path === filePath || contextFileAbsolutePath === absolutePath || !path.relative(absolutePath, contextFileAbsolutePath).startsWith('..');
 
       if (isMatch) {
         droppedFiles.push(f);
-        return false; // Remove from contextFiles
+        return false;
       }
-
-      return true; // Keep in contextFiles
+      return true;
     });
 
-    logger.debug('Dropped files from context:', {
+    logger.debug('Dropped files from task context:', {
+      taskId: this.taskId,
       path: filePath,
       absolutePath,
       droppedFiles: droppedFiles.map((f) => f.path),
     });
 
     if (droppedFiles.length > 0) {
-      this.saveAsAutosaved();
+      this.autosave();
     }
 
     return droppedFiles;
   }
 
   setContextFiles(contextFiles: ContextFile[], save = true) {
-    logger.debug('Setting context files', {
+    logger.debug('Setting task context files', {
+      taskId: this.taskId,
       files: contextFiles.map((f) => f.path),
     });
-    this.contextFiles = contextFiles;
+    this.files = contextFiles;
     if (save) {
-      this.saveAsAutosaved();
+      this.autosave();
     }
   }
 
   getContextFiles(): ContextFile[] {
-    return [...this.contextFiles];
+    return [...this.files];
   }
 
   setContextMessages(contextMessages: ContextMessage[], save = true) {
-    logger.debug('Setting context messages', {
+    logger.debug('Setting task context messages', {
+      taskId: this.taskId,
       messages: contextMessages.length,
       save,
     });
-
-    this.contextMessages = contextMessages;
+    this.messages = contextMessages;
     if (save) {
-      this.saveAsAutosaved();
+      this.autosave();
     }
   }
 
   getContextMessages(): ContextMessage[] {
-    return [...this.contextMessages];
+    return [...this.messages];
   }
 
   clearMessages(save = true) {
-    logger.debug('Clearing messages');
-    this.contextMessages = [];
+    logger.debug('Clearing task messages', { taskId: this.taskId });
+    this.messages = [];
     if (save) {
-      this.saveAsAutosaved();
+      this.autosave();
     }
   }
 
   removeLastMessage(): void {
-    if (this.contextMessages.length === 0) {
-      logger.warn('Attempted to remove last message, but message list is empty.');
+    if (this.messages.length === 0) {
+      logger.warn('Attempted to remove last message from task, but message list is empty.', {
+        taskId: this.taskId,
+      });
       return;
     }
 
-    const lastMessage = this.contextMessages[this.contextMessages.length - 1];
+    const lastMessage = this.messages[this.messages.length - 1];
 
     if (lastMessage.role === 'tool' && Array.isArray(lastMessage.content) && lastMessage.content.length > 0 && lastMessage.content[0].type === 'tool-result') {
-      const toolMessage = this.contextMessages.pop() as ContextMessage & {
+      const toolMessage = this.messages.pop() as ContextMessage & {
         role: 'tool';
-      }; // Remove the tool message
+      };
       const toolCallIdToRemove = toolMessage.content[0].toolCallId;
-      logger.debug(`Session: Removed last tool message (ID: ${toolCallIdToRemove}). Total messages: ${this.contextMessages.length}`);
+      logger.debug(`Task ${this.taskId}: Removed last tool message (ID: ${toolCallIdToRemove}). Total messages: ${this.messages.length}`);
 
-      // Iterate backward to find the corresponding assistant message
-      for (let i = this.contextMessages.length - 1; i >= 0; i--) {
-        const potentialAssistantMessage = this.contextMessages[i];
+      for (let i = this.messages.length - 1; i >= 0; i--) {
+        const potentialAssistantMessage = this.messages[i];
 
         if (potentialAssistantMessage.role === 'assistant' && Array.isArray(potentialAssistantMessage.content)) {
           const toolCallIndex = potentialAssistantMessage.content.findIndex((part) => part.type === 'tool-call' && part.toolCallId === toolCallIdToRemove);
 
           if (toolCallIndex !== -1) {
-            // Remove the specific tool-call part
             potentialAssistantMessage.content.splice(toolCallIndex, 1);
-            logger.debug(`Session: Removed tool-call part (ID: ${toolCallIdToRemove}) from assistant message at index ${i}.`);
+            logger.debug(`Task ${this.taskId}: Removed tool-call part (ID: ${toolCallIdToRemove}) from assistant message at index ${i}.`);
 
-            // Check if the assistant message is now empty or only contains empty text parts
             const isEmpty = potentialAssistantMessage.content.length === 0;
 
             if (isEmpty) {
-              this.contextMessages.splice(i, 1); // Remove the now empty assistant message
-              logger.debug(`Session: Removed empty assistant message at index ${i} after removing tool-call. Total messages: ${this.contextMessages.length}`);
+              this.messages.splice(i, 1);
+              logger.debug(
+                `Task ${this.taskId}: Removed empty assistant message at index ${i} after removing tool-call. Total messages: ${this.messages.length}`,
+              );
             }
-            // Found and processed the corresponding assistant message, stop searching
             break;
           }
         }
       }
     } else {
-      // If the last message is not a tool message, just remove it
-      this.contextMessages.pop();
-      logger.debug(`Session: Removed last non-tool message. Total messages: ${this.contextMessages.length}`);
+      this.messages.pop();
+      logger.debug(`Task ${this.taskId}: Removed last non-tool message. Total messages: ${this.messages.length}`);
     }
 
-    this.saveAsAutosaved();
+    this.autosave();
   }
 
   removeLastUserMessage(): string | null {
     let lastUserMessageContent: string | null = null;
 
-    while (this.contextMessages.length > 0) {
-      const lastMessage = this.contextMessages.pop();
+    while (this.messages.length > 0) {
+      const lastMessage = this.messages.pop();
       if (!lastMessage) {
-        // Should not happen, but safety check
         break;
       }
 
-      logger.debug(`Session: Removing message during user message search: ${lastMessage.role}`);
+      logger.debug(`Task ${this.taskId}: Removing message during user message search: ${lastMessage.role}`);
 
       if (lastMessage.role === MessageRole.User) {
         lastUserMessageContent = extractTextContent(lastMessage.content);
-        logger.debug(`Session: Found and removed last user message. Content: ${lastUserMessageContent}. Total messages: ${this.contextMessages.length}`);
-        break; // Found the user message, stop removing
+        logger.debug(`Task ${this.taskId}: Found and removed last user message. Content: ${lastUserMessageContent}`);
+        break;
       }
     }
 
     if (lastUserMessageContent !== null) {
-      // Save only if messages were removed or a user message was found
-      this.saveAsAutosaved();
+      this.autosave();
     }
 
     return lastUserMessageContent;
   }
 
-  toConnectorMessages(contextMessages: ContextMessage[] = this.contextMessages): { role: MessageRole; content: string }[] {
+  toConnectorMessages(contextMessages: ContextMessage[] = this.messages): { role: MessageRole; content: string }[] {
     let aiderPrompt = '';
     let subAgentsPrompt = '';
 
@@ -300,7 +288,6 @@ export class SessionManager {
       if (message.role === MessageRole.User || message.role === MessageRole.Assistant) {
         aiderPrompt = '';
 
-        // Check for aider run_prompt tool call in assistant messages to extract the original prompt
         if (message.role === MessageRole.Assistant && Array.isArray(message.content)) {
           for (const part of message.content) {
             if (part.type === 'tool-call') {
@@ -308,13 +295,11 @@ export class SessionManager {
               // @ts-expect-error part.input contains the prompt in this case
               if (serverName === AIDER_TOOL_GROUP_NAME && toolName === AIDER_TOOL_RUN_PROMPT && part.input && 'prompt' in part.input) {
                 aiderPrompt = part.input.prompt as string;
-                // Found the prompt, no need to check other parts of this message
                 break;
               }
               // @ts-expect-error part.input contains the prompt in this case
               if (serverName === SUBAGENTS_TOOL_GROUP_NAME && toolName === SUBAGENTS_TOOL_RUN_TASK && part.input && 'prompt' in part.input) {
                 subAgentsPrompt = part.input.prompt as string;
-                // Found the prompt, no need to check other parts of this message
                 break;
               }
             }
@@ -343,7 +328,6 @@ export class SessionManager {
             ];
 
             if (part.output?.type === 'text') {
-              // old format
               messages.push({
                 role: MessageRole.Assistant,
                 content: part.output.value,
@@ -378,8 +362,7 @@ export class SessionManager {
               },
             ];
 
-            // Extract the last assistant message from the result
-            if (Array.isArray(part.output.value) && part.output.value.length > 0) {
+            if (part.output.value && Array.isArray(part.output.value) && part.output.value.length > 0) {
               const lastMessage = part.output.value[part.output.value.length - 1];
               if (lastMessage && typeof lastMessage === 'object' && 'role' in lastMessage && lastMessage.role === MessageRole.Assistant) {
                 const content = extractTextContent(lastMessage.content);
@@ -408,38 +391,41 @@ export class SessionManager {
     }) as { role: MessageRole; content: string }[];
   }
 
-  async save(name: string) {
+  async save(): Promise<void> {
     try {
-      const sessionsDir = path.join(this.project.baseDir, '.aider-desk', 'sessions');
-      await fs.mkdir(sessionsDir, { recursive: true });
-      const sessionPath = path.join(sessionsDir, `${name}.json`);
+      await fs.mkdir(path.dirname(this.storagePath), { recursive: true });
 
-      const sessionData: PersistedSessionData = {
-        version: CURRENT_SESSION_VERSION,
-        contextMessages: this.contextMessages,
-        contextFiles: this.contextFiles,
+      const contextData: TaskContext = {
+        version: CURRENT_CONTEXT_VERSION,
+        taskId: this.taskId,
+        contextMessages: this.messages,
+        contextFiles: this.files,
       };
 
-      await fs.writeFile(sessionPath, JSON.stringify(sessionData, null, 2), 'utf8');
-
-      logger.info(`Session saved to ${sessionPath}`);
+      await fs.writeFile(this.storagePath, JSON.stringify(contextData, null, 2), 'utf8');
+      logger.info(`Task context saved to ${this.storagePath}`, { taskId: this.taskId });
     } catch (error) {
-      logger.error('Failed to save session:', { error });
+      logger.error('Failed to save task context:', { error, taskId: this.taskId });
       throw error;
     }
   }
 
-  private async migrateSession(sessionData: unknown): Promise<PersistedSessionData> {
-    let migratedData = sessionData as PersistedSessionData;
-    const sessionDataObj = sessionData as { version?: number };
-    let sessionVersion = sessionDataObj.version ?? 1; // Default to 1 if no version is found
+  private async migrateContext(contextData: unknown): Promise<TaskContext> {
+    let migratedContext = contextData as TaskContext;
+    let contextVersion = migratedContext.version ?? 1;
 
-    logger.debug(`Migrating session from version ${sessionVersion} to ${CURRENT_SESSION_VERSION}`);
+    if (contextVersion === CURRENT_CONTEXT_VERSION) {
+      return migratedContext;
+    }
+
+    logger.debug(`Migrating task context from version ${contextVersion} to ${CURRENT_CONTEXT_VERSION}`, {
+      taskId: this.taskId,
+    });
 
     // Sequential migration chain
-    if (sessionVersion === 1) {
-      migratedData = migrateSessionV1toV2(migratedData);
-      sessionVersion = 2;
+    if (contextVersion === 1) {
+      migratedContext = migrateContextV1toV2(this.taskId, migratedContext);
+      contextVersion = 2;
     }
     // Future migrations will be added here
     // if (sessionVersion === 2) {
@@ -447,19 +433,50 @@ export class SessionManager {
     //   sessionVersion = 3;
     // }
 
-    migratedData.version = CURRENT_SESSION_VERSION;
-    return migratedData;
+    migratedContext.version = CURRENT_CONTEXT_VERSION;
+    return migratedContext;
   }
 
-  async loadMessages(contextMessages: ContextMessage[]): Promise<void> {
-    // Clear all current messages
-    await this.project.clearContext(false, false);
+  async load(): Promise<void> {
+    try {
+      if (!(await fileExists(this.storagePath))) {
+        logger.debug('No existing task context found:', { taskId: this.taskId });
+        return;
+      }
 
-    this.contextMessages = contextMessages;
+      this.disableAutosave();
+
+      const content = await fs.readFile(this.storagePath, 'utf8');
+      const contextData = content ? JSON.parse(content) : null;
+
+      if (!contextData) {
+        logger.debug('Empty task context found:', { taskId: this.taskId });
+        return;
+      }
+
+      const migratedData = await this.migrateContext(contextData);
+
+      await this.loadMessages(migratedData.contextMessages || []);
+      await this.loadFiles(migratedData.contextFiles || []);
+
+      logger.info(`Task context loaded from ${this.storagePath}`, { taskId: this.taskId });
+    } catch (error) {
+      logger.error('Failed to load task context:', { error, taskId: this.taskId });
+      throw error;
+    } finally {
+      this.enableAutosave();
+    }
+  }
+
+  async loadMessages(messages: ContextMessage[]): Promise<void> {
+    // Clear all current messages
+    await this.task.clearContext(false, false);
+
+    this.messages = messages;
 
     // Add messages to the UI
-    for (let i = 0; i < this.contextMessages.length; i++) {
-      const message = this.contextMessages[i];
+    for (let i = 0; i < this.messages.length; i++) {
+      const message = this.messages[i];
       if (message.role === 'assistant') {
         if (Array.isArray(message.content)) {
           // Collect reasoning and text parts to combine them if both exist
@@ -487,7 +504,7 @@ export class SessionManager {
               finalContent = reasoningContent || textContent;
             }
 
-            this.project.processResponseMessage(
+            this.task.processResponseMessage(
               {
                 id: uuidv4(),
                 action: 'response',
@@ -510,21 +527,12 @@ export class SessionManager {
               }
 
               const [serverName, toolName] = extractServerNameToolName(toolCall.toolName);
-              this.project.addToolMessage(
-                toolCall.toolCallId,
-                serverName,
-                toolName,
-                toolCall.input,
-                undefined,
-                message.usageReport,
-                message.promptContext,
-                false,
-              );
+              this.task.addToolMessage(toolCall.toolCallId, serverName, toolName, toolCall.input, undefined, message.usageReport, message.promptContext, false);
             } else if (part.type === 'tool-result') {
               const toolResult = part;
               const [serverName, toolName] = extractServerNameToolName(toolResult.toolName);
               const promptContext = extractPromptContextFromToolResult(toolResult.output.value) ?? message.promptContext;
-              this.project.addToolMessage(
+              this.task.addToolMessage(
                 toolResult.toolCallId,
                 serverName,
                 toolName,
@@ -542,7 +550,7 @@ export class SessionManager {
             continue;
           }
 
-          this.project.processResponseMessage(
+          this.task.processResponseMessage(
             {
               id: uuidv4(),
               action: 'response',
@@ -556,13 +564,13 @@ export class SessionManager {
         }
       } else if (message.role === 'user') {
         const content = extractTextContent(message.content);
-        this.project.addUserMessage(content);
+        this.task.addUserMessage(content);
       } else if (message.role === 'tool') {
         for (const part of message.content) {
           if (part.type === 'tool-result') {
             const [serverName, toolName] = extractServerNameToolName(part.toolName);
             const promptContext = extractPromptContextFromToolResult(part.output.value);
-            this.project.addToolMessage(
+            this.task.addToolMessage(
               part.toolCallId,
               serverName,
               toolName,
@@ -575,10 +583,10 @@ export class SessionManager {
 
             if (serverName === AIDER_TOOL_GROUP_NAME && toolName === AIDER_TOOL_RUN_PROMPT) {
               // @ts-expect-error value is expected to have responses
-              const responses = part.output.value.responses;
+              const responses = part.output?.value.responses;
               if (Array.isArray(responses)) {
                 responses.forEach((response: ResponseCompletedData) => {
-                  this.project.sendResponseCompleted({
+                  this.task.sendResponseCompleted({
                     ...response,
                   });
                 });
@@ -618,7 +626,7 @@ export class SessionManager {
                           subFinalContent = subReasoningContent || subTextContent;
                         }
 
-                        this.project.processResponseMessage(
+                        this.task.processResponseMessage(
                           {
                             id: uuidv4(),
                             action: 'response',
@@ -635,7 +643,7 @@ export class SessionManager {
                       for (const subPart of subMessage.content) {
                         if (subPart.type === 'tool-call' && subPart.toolCallId) {
                           const [subServerName, subToolName] = extractServerNameToolName(subPart.toolName);
-                          this.project.addToolMessage(
+                          this.task.addToolMessage(
                             subPart.toolCallId,
                             subServerName,
                             subToolName,
@@ -649,7 +657,7 @@ export class SessionManager {
                       }
                     } else if (isTextContent(subMessage.content)) {
                       const content = extractTextContent(subMessage.content);
-                      this.project.processResponseMessage(
+                      this.task.processResponseMessage(
                         {
                           id: uuidv4(),
                           action: 'response',
@@ -666,7 +674,7 @@ export class SessionManager {
                       if (subPart.type === 'tool-result') {
                         const [subServerName, subToolName] = extractServerNameToolName(subPart.toolName);
                         const promptContext = extractPromptContextFromToolResult(subPart.output.value) ?? subMessage.promptContext;
-                        this.project.addToolMessage(
+                        this.task.addToolMessage(
                           subPart.toolCallId,
                           subServerName,
                           subToolName,
@@ -689,147 +697,53 @@ export class SessionManager {
 
     // send messages to Connectors (Aider)
     this.toConnectorMessages().forEach((message) => {
-      this.project.sendAddMessage(message.role, message.content, false);
+      this.task.sendAddMessage(message.role, message.content, false);
     });
   }
 
-  async loadFiles(contextFiles: ContextFile[]): Promise<void> {
+  async loadFiles(files: ContextFile[]): Promise<void> {
     // Drop all current files
-    for (let i = 0; i < this.contextFiles.length; i++) {
-      const contextFile = this.contextFiles[i];
-      this.project.sendDropFile(contextFile.path, contextFile.readOnly, i !== this.contextFiles.length - 1);
+    for (let i = 0; i < this.files.length; i++) {
+      const contextFile = this.files[i];
+      this.task.sendDropFile(contextFile.path, contextFile.readOnly, i !== this.files.length - 1);
     }
 
-    this.contextFiles = contextFiles;
-    for (let i = 0; i < this.contextFiles.length; i++) {
-      const contextFile = this.contextFiles[i];
-      this.project.sendAddFile(contextFile, i !== this.contextFiles.length - 1);
+    this.files = files;
+    for (let i = 0; i < this.files.length; i++) {
+      const contextFile = this.files[i];
+      this.task.sendAddFile(contextFile, i !== this.files.length - 1);
     }
   }
 
-  async load(name: string): Promise<void> {
+  async delete(): Promise<void> {
+    logger.info('Deleting task context:', { taskId: this.taskId });
     try {
-      const sessionData = await this.findSession(name);
-
-      if (!sessionData) {
-        logger.debug('No session found to load:', { name });
-        return;
+      if (await fileExists(this.storagePath)) {
+        await fs.unlink(this.storagePath);
+        logger.info(`Task context deleted: ${this.storagePath}`, { taskId: this.taskId });
       }
-
-      await this.loadMessages(sessionData.contextMessages || []);
-      await this.loadFiles(sessionData.contextFiles || []);
-
-      logger.info(`Session loaded from ${name}`);
     } catch (error) {
-      logger.error('Failed to load session:', { error });
+      logger.error('Failed to delete task context:', { error, taskId: this.taskId });
       throw error;
     }
   }
 
-  private debouncedSaveAsAutosaved = debounce(async () => {
-    logger.info('Saving session as autosaved', {
-      projectDir: this.project.baseDir,
-      messages: this.contextMessages.length,
-      files: this.contextFiles.length,
-    });
-    await this.save('.autosaved');
+  private debouncedAutosave = debounce(async () => {
+    if (this.autosaveEnabled) {
+      await this.save();
+    }
   }, 1000);
 
-  private saveAsAutosaved() {
+  private autosave() {
     if (this.autosaveEnabled) {
-      logger.debug('Saving autosaved session', {
-        projectDir: this.project.baseDir,
-        messages: this.contextMessages.length,
-        files: this.contextFiles.length,
-        enabled: this.autosaveEnabled,
-      });
-      void this.debouncedSaveAsAutosaved();
+      void this.debouncedAutosave();
     }
   }
 
-  async loadAutosaved(): Promise<void> {
-    try {
-      this.disableAutosave();
-      await this.load('.autosaved');
-    } catch (error) {
-      logger.error('Failed to load autosaved session:', { error });
-      throw error;
-    } finally {
-      this.enableAutosave();
-    }
-  }
-
-  async getAllSessions(): Promise<SessionData[]> {
-    try {
-      const sessionsDir = path.join(this.project.baseDir, '.aider-desk', 'sessions');
-      await fs.mkdir(sessionsDir, { recursive: true });
-      const files = await fs.readdir(sessionsDir);
-      const sessions: SessionData[] = [];
-
-      for (const file of files.filter((file) => file.endsWith('.json'))) {
-        const sessionName = file.replace('.json', '');
-
-        if (sessionName === AUTOSAVED_SESSION_NAME) {
-          continue;
-        }
-
-        try {
-          const sessionData = await this.findSession(sessionName);
-          if (sessionData) {
-            sessions.push({
-              name: sessionName,
-              messages: sessionData.contextMessages?.length || 0,
-              files: sessionData.contextFiles?.length || 0,
-            });
-          }
-        } catch (error) {
-          logger.error('Failed to read session file:', { file, error });
-        }
-      }
-
-      return sessions;
-    } catch (error) {
-      logger.error('Failed to list sessions:', { error });
-      return [];
-    }
-  }
-
-  async findSession(name: string): Promise<
-    | (SessionData & {
-        contextMessages?: ContextMessage[];
-        contextFiles?: ContextFile[];
-      })
-    | null
-  > {
-    try {
-      const sessionPath = path.join(this.project.baseDir, '.aider-desk', 'sessions', `${name}.json`);
-
-      if (!(await fileExists(sessionPath))) {
-        return null;
-      }
-
-      const content = await fs.readFile(sessionPath, 'utf8');
-      const sessionData = content ? JSON.parse(content) : null;
-
-      if (!sessionData) {
-        return null;
-      }
-
-      const migratedData = await this.migrateSession(sessionData);
-      return {
-        name,
-        ...migratedData,
-      };
-    } catch (error) {
-      logger.error('Failed to get session data:', { name, error });
-      return null;
-    }
-  }
-
-  async generateSessionMarkdown(): Promise<string | null> {
+  async generateContextMarkdown(): Promise<string | null> {
     let markdown = '';
 
-    for (const message of this.contextMessages) {
+    for (const message of this.messages) {
       markdown += `### ${message.role.charAt(0).toUpperCase() + message.role.slice(1)}\n\n`;
 
       if (message.role === 'user' || message.role === 'assistant') {
@@ -852,17 +766,5 @@ export class SessionManager {
     }
 
     return markdown;
-  }
-
-  async delete(name: string): Promise<void> {
-    logger.info('Deleting session:', { name });
-    try {
-      const sessionPath = path.join(this.project.baseDir, '.aider-desk', 'sessions', `${name}.json`);
-      await fs.unlink(sessionPath);
-      logger.info(`Session deleted: ${sessionPath}`);
-    } catch (error) {
-      logger.error('Failed to delete session:', { error });
-      throw error;
-    }
   }
 }

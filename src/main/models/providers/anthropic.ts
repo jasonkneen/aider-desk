@@ -7,7 +7,7 @@ import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AiderModelMapping, CacheControl, LlmProviderStrategy } from '@/models';
 import { LoadModelsResponse } from '@/models/types';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 
 export const loadAnthropicModels = async (
@@ -130,7 +130,7 @@ export const calculateAnthropicCost = (
 };
 
 export const getAnthropicUsageReport = (
-  project: Project,
+  task: Task,
   provider: ProviderProfile,
   model: Model,
   usage: LanguageModelUsage,
@@ -157,7 +157,7 @@ export const getAnthropicUsageReport = (
     cacheWriteTokens,
     cacheReadTokens,
     messageCost,
-    agentTotalCost: project.agentTotalCost + messageCost,
+    agentTotalCost: task.task.agentTotalCost + messageCost,
   };
 
   return usageReportData;

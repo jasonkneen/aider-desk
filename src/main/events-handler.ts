@@ -30,7 +30,7 @@ import {
 } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
 
-import { Agent, McpManager } from '@/agent';
+import { McpManager } from '@/agent';
 import { ModelManager } from '@/models';
 import { ProjectManager } from '@/project';
 import { CloudflareTunnelManager } from '@/server';
@@ -50,7 +50,6 @@ export class EventsHandler {
     private projectManager: ProjectManager,
     private store: Store,
     private mcpManager: McpManager,
-    private agent: Agent,
     private versionsManager: VersionsManager,
     private modelManager: ModelManager,
     private telemetryManager: TelemetryManager,
@@ -69,7 +68,6 @@ export class EventsHandler {
     this.store.saveSettings(newSettings);
 
     this.mcpManager.settingsChanged(oldSettings, newSettings);
-    this.agent.settingsChanged(oldSettings, newSettings);
     this.projectManager.settingsChanged(oldSettings, newSettings);
     this.telemetryManager.settingsChanged(oldSettings, newSettings);
 
@@ -203,50 +201,50 @@ export class EventsHandler {
   }
 
   interruptResponse(baseDir: string): void {
-    this.projectManager.getProject(baseDir).interruptResponse();
+    this.projectManager.getProject(baseDir).getDefaultTask().interruptResponse();
   }
 
   clearContext(baseDir: string, includeLastMessage = true): void {
-    this.projectManager.getProject(baseDir).clearContext(includeLastMessage);
+    this.projectManager.getProject(baseDir).getDefaultTask().clearContext(includeLastMessage);
   }
 
   async removeLastMessage(baseDir: string): Promise<void> {
-    void this.projectManager.getProject(baseDir).removeLastMessage();
+    void this.projectManager.getProject(baseDir).getDefaultTask().removeLastMessage();
   }
 
   async redoLastUserPrompt(baseDir: string, mode: Mode, updatedPrompt?: string): Promise<void> {
-    void this.projectManager.getProject(baseDir).redoLastUserPrompt(mode, updatedPrompt);
+    void this.projectManager.getProject(baseDir).getDefaultTask().redoLastUserPrompt(mode, updatedPrompt);
   }
 
   async compactConversation(baseDir: string, mode: Mode, customInstructions?: string): Promise<void> {
-    const project = this.projectManager.getProject(baseDir);
-    if (project) {
-      await project.compactConversation(mode, customInstructions);
+    const task = this.projectManager.getProject(baseDir).getDefaultTask();
+    if (task) {
+      await task.compactConversation(mode, customInstructions);
     }
   }
 
   async loadInputHistory(baseDir: string): Promise<string[]> {
-    return await this.projectManager.getProject(baseDir).loadInputHistory();
+    return await this.projectManager.getProject(baseDir).getDefaultTask().loadInputHistory();
   }
 
   async getAddableFiles(baseDir: string, searchRegex?: string): Promise<string[]> {
-    return this.projectManager.getProject(baseDir).getAddableFiles(searchRegex);
+    return this.projectManager.getProject(baseDir).getDefaultTask().getAddableFiles(searchRegex);
   }
 
   async addFile(baseDir: string, filePath: string, readOnly = false): Promise<void> {
-    void this.projectManager.getProject(baseDir).addFile({ path: filePath, readOnly });
+    void this.projectManager.getProject(baseDir).getDefaultTask().addFile({ path: filePath, readOnly });
   }
 
   dropFile(baseDir: string, filePath: string): void {
-    void this.projectManager.getProject(baseDir).dropFile(filePath);
+    void this.projectManager.getProject(baseDir).getDefaultTask().dropFile(filePath);
   }
 
   async pasteImage(baseDir: string): Promise<void> {
-    const project = this.projectManager.getProject(baseDir);
+    const task = this.projectManager.getProject(baseDir).getDefaultTask();
     try {
       const image = clipboard.readImage();
       if (image.isEmpty()) {
-        project.addLogMessage('info', 'No image found in clipboard.');
+        task.addLogMessage('info', 'No image found in clipboard.');
         return;
       }
 
@@ -274,28 +272,27 @@ export class EventsHandler {
 
       await fs.writeFile(absoluteImagePath, imageBuffer);
 
-      await project.addFile({ path: imagePath, readOnly: true });
+      await task.addFile({ path: imagePath, readOnly: true });
     } catch (error) {
       logger.error('Error pasting image:', error);
-      project.addLogMessage('error', `Failed to paste image: ${error instanceof Error ? error.message : String(error)}`);
+      task.addLogMessage('error', `Failed to paste image: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
   applyEdits(baseDir: string, edits: FileEdit[]): void {
-    this.projectManager.getProject(baseDir).applyEdits(edits);
+    this.projectManager.getProject(baseDir).getDefaultTask().applyEdits(edits);
   }
 
   async runPrompt(baseDir: string, prompt: string, mode?: Mode): Promise<ResponseCompletedData[]> {
-    return this.projectManager.getProject(baseDir).runPrompt(prompt, mode);
+    return this.projectManager.getProject(baseDir).getDefaultTask().runPrompt(prompt, mode);
   }
 
   answerQuestion(baseDir: string, answer: string): void {
-    this.projectManager.getProject(baseDir).answerQuestion(answer);
+    this.projectManager.getProject(baseDir).getDefaultTask().answerQuestion(answer);
   }
 
   runCommand(baseDir: string, command: string): void {
-    const project = this.projectManager.getProject(baseDir);
-    project.runCommand(command);
+    void this.projectManager.getProject(baseDir).getDefaultTask().runCommand(command);
   }
 
   async getCustomCommands(baseDir: string): Promise<CustomCommand[]> {
@@ -303,7 +300,7 @@ export class EventsHandler {
   }
 
   async runCustomCommand(baseDir: string, commandName: string, args: string[], mode: Mode): Promise<void> {
-    await this.projectManager.getProject(baseDir).runCustomCommand(commandName, args, mode);
+    await this.projectManager.getProject(baseDir).getDefaultTask().runCustomCommand(commandName, args, mode);
   }
 
   updateMainModel(baseDir: string, mainModel: string): void {
@@ -313,7 +310,7 @@ export class EventsHandler {
     projectSettings.weakModel = null;
 
     this.store.saveProjectSettings(baseDir, projectSettings);
-    this.projectManager.getProject(baseDir).updateModels(mainModel, projectSettings.weakModel, projectSettings.modelEditFormats[mainModel]);
+    this.projectManager.getProject(baseDir).getDefaultTask().updateModels(mainModel, projectSettings.weakModel, projectSettings.modelEditFormats[mainModel]);
   }
 
   updateWeakModel(baseDir: string, weakModel: string): void {
@@ -321,8 +318,8 @@ export class EventsHandler {
     projectSettings.weakModel = weakModel;
     this.store.saveProjectSettings(baseDir, projectSettings);
 
-    const project = this.projectManager.getProject(baseDir);
-    project.updateModels(projectSettings.mainModel, weakModel, projectSettings.modelEditFormats[projectSettings.mainModel]);
+    const task = this.projectManager.getProject(baseDir).getDefaultTask();
+    task.updateModels(projectSettings.mainModel, weakModel, projectSettings.modelEditFormats[projectSettings.mainModel]);
   }
 
   updateArchitectModel(baseDir: string, architectModel: string): void {
@@ -330,8 +327,8 @@ export class EventsHandler {
     projectSettings.architectModel = architectModel;
     this.store.saveProjectSettings(baseDir, projectSettings);
 
-    const project = this.projectManager.getProject(baseDir);
-    project.setArchitectModel(architectModel);
+    const task = this.projectManager.getProject(baseDir).getDefaultTask();
+    task.setArchitectModel(architectModel);
   }
 
   updateEditFormats(baseDir: string, updatedFormats: Record<string, EditFormat>): void {
@@ -344,6 +341,7 @@ export class EventsHandler {
     this.store.saveProjectSettings(baseDir, projectSettings);
     this.projectManager
       .getProject(baseDir)
+      .getDefaultTask()
       .updateModels(projectSettings.mainModel, projectSettings?.weakModel || null, projectSettings.modelEditFormats[projectSettings.mainModel]);
   }
 
@@ -401,7 +399,7 @@ export class EventsHandler {
 
   async scrapeWeb(baseDir: string, url: string, filePath?: string): Promise<void> {
     const content = await scrapeWeb(url);
-    const project = this.projectManager.getProject(baseDir);
+    const task = this.projectManager.getProject(baseDir).getDefaultTask();
 
     try {
       // Normalize URL for filename
@@ -433,52 +431,72 @@ export class EventsHandler {
           }
         } catch (error) {
           logger.error(`Error processing provided file path ${filePath}:`, error);
-          project.addLogMessage('error', `Failed to process provided file path ${filePath}:\n${error instanceof Error ? error.message : String(error)}`);
+          task.addLogMessage('error', `Failed to process provided file path ${filePath}:\n${error instanceof Error ? error.message : String(error)}`);
           return;
         }
       }
 
       await fs.writeFile(targetFilePath, `Scraped content of ${url}:\n\n${content}`);
-      await project.addFile({
+      await task.addFile({
         path: path.relative(baseDir, targetFilePath),
         readOnly: true,
       });
       if (filePath) {
-        await project.addToInputHistory(`/web ${url} ${filePath}`);
+        await task.addToInputHistory(`/web ${url} ${filePath}`);
       } else {
-        await project.addToInputHistory(`/web ${url}`);
+        await task.addToInputHistory(`/web ${url}`);
       }
-      project.addLogMessage('info', `Web content from ${url} saved to '${path.relative(baseDir, targetFilePath)}' and added to context.`);
+      task.addLogMessage('info', `Web content from ${url} saved to '${path.relative(baseDir, targetFilePath)}' and added to context.`);
     } catch (error) {
       logger.error(`Error processing scraped web content for ${url}:`, error);
-      project.addLogMessage('error', `Failed to save scraped content from ${url}:\n${error instanceof Error ? error.message : String(error)}`);
+      task.addLogMessage('error', `Failed to save scraped content from ${url}:\n${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
+  /**
+   * @deprecated
+   */
   async saveSession(baseDir: string, name: string): Promise<boolean> {
-    await this.projectManager.getProject(baseDir).saveSession(name);
+    void baseDir;
+    void name;
     return true;
   }
 
+  /**
+   * @deprecated
+   */
   async loadSessionMessages(baseDir: string, name: string): Promise<void> {
-    await this.projectManager.getProject(baseDir).loadSessionMessages(name);
+    void baseDir;
+    void name;
   }
 
+  /**
+   * @deprecated
+   */
   async loadSessionFiles(baseDir: string, name: string): Promise<void> {
-    await this.projectManager.getProject(baseDir).loadSessionFiles(name);
+    void baseDir;
+    void name;
   }
 
+  /**
+   * @deprecated
+   */
   async deleteSession(baseDir: string, name: string): Promise<boolean> {
-    await this.projectManager.getProject(baseDir).deleteSession(name);
+    void baseDir;
+    void name;
     return true;
   }
 
+  /**
+   * @deprecated
+   */
   async listSessions(baseDir: string): Promise<SessionData[]> {
-    return await this.projectManager.getProject(baseDir).listSessions();
+    void baseDir;
+    return [];
   }
 
-  async exportSessionToMarkdown(baseDir: string): Promise<void> {
-    const markdownContent = await this.projectManager.getProject(baseDir).generateSessionMarkdown();
+  async exportTaskToMarkdown(baseDir: string): Promise<void> {
+    const markdownContent = await this.projectManager.getProject(baseDir).getDefaultTask().generateContextMarkdown();
 
     if (markdownContent) {
       try {
@@ -618,27 +636,27 @@ export class EventsHandler {
   }
 
   async getTodos(baseDir: string): Promise<TodoItem[]> {
-    return await this.projectManager.getProject(baseDir).getTodos();
+    return await this.projectManager.getProject(baseDir).getDefaultTask().getTodos();
   }
 
   async addTodo(baseDir: string, name: string): Promise<TodoItem[]> {
-    return await this.projectManager.getProject(baseDir).addTodo(name);
+    return await this.projectManager.getProject(baseDir).getDefaultTask().addTodo(name);
   }
 
   async updateTodo(baseDir: string, name: string, updates: Partial<TodoItem>): Promise<TodoItem[]> {
-    return await this.projectManager.getProject(baseDir).updateTodo(name, updates);
+    return await this.projectManager.getProject(baseDir).getDefaultTask().updateTodo(name, updates);
   }
 
   async deleteTodo(baseDir: string, name: string): Promise<TodoItem[]> {
-    return await this.projectManager.getProject(baseDir).deleteTodo(name);
+    return await this.projectManager.getProject(baseDir).getDefaultTask().deleteTodo(name);
   }
 
   async clearAllTodos(baseDir: string): Promise<TodoItem[]> {
-    return await this.projectManager.getProject(baseDir).clearAllTodos();
+    return await this.projectManager.getProject(baseDir).getDefaultTask().clearAllTodos();
   }
 
   async initProjectRulesFile(baseDir: string): Promise<void> {
-    return await this.projectManager.getProject(baseDir).initProjectAgentsFile();
+    return await this.projectManager.getProject(baseDir).getDefaultTask().initProjectAgentsFile();
   }
 
   enableServer(username?: string, password?: string): SettingsData {

@@ -20,6 +20,8 @@ import {
   ProviderModelsData,
   ProvidersUpdatedData,
   SettingsData,
+  TaskData,
+  ClearProjectData,
 } from '@common/types';
 
 import logger from '@/logger';
@@ -45,8 +47,13 @@ export class EventManager {
     this.broadcastToEventConnectors('project-started', data);
   }
 
-  sendClearProject(baseDir: string, clearMessages: boolean, clearFiles: boolean): void {
-    const data = { baseDir, clearMessages, clearFiles };
+  sendClearTask(baseDir: string, taskId: string, clearMessages: boolean, clearFiles: boolean): void {
+    const data: ClearProjectData = {
+      baseDir,
+      taskId,
+      clearMessages,
+      clearSession: clearFiles,
+    };
     this.sendToMainWindow('clear-project', data);
     this.broadcastToEventConnectors('clear-project', data);
   }
@@ -199,6 +206,32 @@ export class EventManager {
   sendProviderModelsUpdated(data: ProviderModelsData): void {
     this.sendToMainWindow('provider-models-updated', data);
     this.broadcastToEventConnectors('provider-models-updated', data);
+  }
+
+  // Task lifecycle events
+  sendTaskCreated(task: TaskData): void {
+    this.sendToMainWindow('task-created', task);
+    this.broadcastToEventConnectors('task-created', task);
+  }
+
+  sendTaskActivated(task: TaskData): void {
+    this.sendToMainWindow('task-started', task);
+    this.broadcastToEventConnectors('task-started', task);
+  }
+
+  sendTaskStarted(task: TaskData): void {
+    this.sendToMainWindow('task-started', task);
+    this.broadcastToEventConnectors('task-started', task);
+  }
+
+  sendTaskCompleted(task: TaskData): void {
+    this.sendToMainWindow('task-completed', task);
+    this.broadcastToEventConnectors('task-completed', task);
+  }
+
+  sendTaskCancelled(task: TaskData): void {
+    this.sendToMainWindow('task-cancelled', task);
+    this.broadcastToEventConnectors('task-cancelled', task);
   }
 
   subscribe(socket: Socket, config: EventsConnectorConfig): void {

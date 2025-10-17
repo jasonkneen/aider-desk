@@ -13,10 +13,10 @@ import { AgentProfile, PromptContext, ToolApprovalState } from '@common/types';
 
 import { ApprovalManager } from './approval-manager';
 
-import { Project } from '@/project';
+import { Task } from '@/task';
 
-export const createTodoToolset = (project: Project, profile: AgentProfile, promptContext?: PromptContext): ToolSet => {
-  const approvalManager = new ApprovalManager(project, profile);
+export const createTodoToolset = (task: Task, profile: AgentProfile, promptContext?: PromptContext): ToolSet => {
+  const approvalManager = new ApprovalManager(task, profile);
 
   const setTodoItemsTool = tool({
     description: TODO_TOOL_DESCRIPTIONS[TODO_TOOL_SET_ITEMS],
@@ -32,7 +32,7 @@ export const createTodoToolset = (project: Project, profile: AgentProfile, promp
       initialUserPrompt: z.string().describe('The original user prompt that initiated the task.'),
     }),
     execute: async (args, { toolCallId }) => {
-      project.addToolMessage(toolCallId, TODO_TOOL_GROUP_NAME, TODO_TOOL_SET_ITEMS, args, undefined, undefined, promptContext);
+      task.addToolMessage(toolCallId, TODO_TOOL_GROUP_NAME, TODO_TOOL_SET_ITEMS, args, undefined, undefined, promptContext);
 
       const questionKey = `${TODO_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TODO_TOOL_SET_ITEMS}`;
       const questionText = 'Approve setting todo items? This will overwrite any existing todo list.';
@@ -46,7 +46,7 @@ Items: ${JSON.stringify(args.items)}`;
       }
 
       try {
-        await project.setTodos(args.items, args.initialUserPrompt);
+        await task.setTodos(args.items, args.initialUserPrompt);
         return 'Todo items set successfully.';
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -59,7 +59,7 @@ Items: ${JSON.stringify(args.items)}`;
     description: TODO_TOOL_DESCRIPTIONS[TODO_TOOL_GET_ITEMS],
     inputSchema: z.object({}),
     execute: async (_, { toolCallId }) => {
-      project.addToolMessage(toolCallId, TODO_TOOL_GROUP_NAME, TODO_TOOL_GET_ITEMS, {}, undefined, undefined, promptContext);
+      task.addToolMessage(toolCallId, TODO_TOOL_GROUP_NAME, TODO_TOOL_GET_ITEMS, {}, undefined, undefined, promptContext);
 
       const questionKey = `${TODO_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TODO_TOOL_GET_ITEMS}`;
       const questionText = 'Approve getting todo items?';
@@ -71,7 +71,7 @@ Items: ${JSON.stringify(args.items)}`;
       }
 
       try {
-        const data = await project.readTodoFile();
+        const data = await task.readTodoFile();
         if (!data) {
           return 'No todo items found.';
         }
@@ -90,7 +90,7 @@ Items: ${JSON.stringify(args.items)}`;
       completed: z.boolean().describe('The new completion status for the todo item.'),
     }),
     execute: async (args, { toolCallId }) => {
-      project.addToolMessage(toolCallId, TODO_TOOL_GROUP_NAME, TODO_TOOL_UPDATE_ITEM_COMPLETION, args, undefined, undefined, promptContext);
+      task.addToolMessage(toolCallId, TODO_TOOL_GROUP_NAME, TODO_TOOL_UPDATE_ITEM_COMPLETION, args, undefined, undefined, promptContext);
 
       const questionKey = `${TODO_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TODO_TOOL_UPDATE_ITEM_COMPLETION}`;
       const questionText = `Approve updating completion status for todo item "${args.name}" to ${args.completed}?`;
@@ -102,8 +102,8 @@ Items: ${JSON.stringify(args.items)}`;
       }
 
       try {
-        await project.updateTodo(args.name, { completed: args.completed });
-        const data = await project.readTodoFile();
+        await task.updateTodo(args.name, { completed: args.completed });
+        const data = await task.readTodoFile();
         if (!data) {
           return 'No todo items found.';
         }
@@ -119,7 +119,7 @@ Items: ${JSON.stringify(args.items)}`;
     description: TODO_TOOL_DESCRIPTIONS[TODO_TOOL_CLEAR_ITEMS],
     inputSchema: z.object({}),
     execute: async (_, { toolCallId }) => {
-      project.addToolMessage(toolCallId, TODO_TOOL_GROUP_NAME, TODO_TOOL_CLEAR_ITEMS, {}, undefined, undefined, promptContext);
+      task.addToolMessage(toolCallId, TODO_TOOL_GROUP_NAME, TODO_TOOL_CLEAR_ITEMS, {}, undefined, undefined, promptContext);
 
       const questionKey = `${TODO_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TODO_TOOL_CLEAR_ITEMS}`;
       const questionText = 'Approve clearing all todo items? This action cannot be undone.';
@@ -131,7 +131,7 @@ Items: ${JSON.stringify(args.items)}`;
       }
 
       try {
-        await project.setTodos([], '');
+        await task.setTodos([], '');
         return 'All todo items cleared successfully.';
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);

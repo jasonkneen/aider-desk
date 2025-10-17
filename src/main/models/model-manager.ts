@@ -27,7 +27,7 @@ import { AIDER_DESK_DATA_DIR, AIDER_DESK_CACHE_DIR } from '@/constants';
 import logger from '@/logger';
 import { Store } from '@/store';
 import { EventManager } from '@/events';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 import { AiderModelMapping, CacheControl, LlmProviderRegistry } from '@/models/types';
 
 const MODELS_META_URL = 'https://models.dev/api.json';
@@ -524,7 +524,7 @@ export class ModelManager {
     return strategy.createLlm(profile, modelObj, env);
   }
 
-  getUsageReport(project: Project, provider: ProviderProfile, model: string | Model, usage: LanguageModelUsage, providerMetadata?: unknown): UsageReportData {
+  getUsageReport(task: Task, provider: ProviderProfile, model: string | Model, usage: LanguageModelUsage, providerMetadata?: unknown): UsageReportData {
     const strategy = this.providerRegistry[provider.provider.name];
     if (!strategy) {
       throw new Error(`Unsupported LLM provider: ${provider.provider.name}`);
@@ -551,7 +551,7 @@ export class ModelManager {
       throw new Error(`Model not found: ${model}`);
     }
 
-    return strategy.getUsageReport(project, provider, modelObj, usage, providerMetadata);
+    return strategy.getUsageReport(task, provider, modelObj, usage, providerMetadata);
   }
 
   getCacheControl(profile: AgentProfile, llmProvider: LlmProvider): CacheControl {

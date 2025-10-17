@@ -51,6 +51,7 @@ export interface LogMessage {
 export interface InitMessage {
   action: 'init';
   baseDir: string;
+  taskId?: string;
   source?: string;
   contextFiles?: ContextFile[];
   listenTo?: MessageAction[];

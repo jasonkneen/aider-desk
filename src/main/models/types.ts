@@ -4,7 +4,7 @@ import { LlmProvider, LlmProviderName } from '@common/agent';
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 import type { LanguageModelUsage, ToolSet } from 'ai';
 
-import { Project } from '@/project';
+import { Task } from '@/task';
 
 export type CacheControl = SharedV2ProviderOptions | undefined;
 
@@ -38,7 +38,7 @@ export interface LlmProviderStrategy {
   /**
    * Generates usage reports with provider-specific metadata and calculates cost internally
    */
-  getUsageReport: (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage, providerMetadata?: unknown) => UsageReportData;
+  getUsageReport: (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage, providerMetadata?: unknown) => UsageReportData;
 
   // === Model Discovery and Configuration Functions ===
   /**

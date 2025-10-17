@@ -7,7 +7,7 @@ import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 
 const loadZaiPlanModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>, settings: SettingsData): Promise<LoadModelsResponse> => {
@@ -110,7 +110,7 @@ const calculateZaiPlanCost = (model: Model, sentTokens: number, receivedTokens: 
   return inputCost + outputCost + cacheCost;
 };
 
-const getZaiPlanUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
+const getZaiPlanUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
   const totalSentTokens = usage.inputTokens || 0;
   const receivedTokens = usage.outputTokens || 0;
   const cacheReadTokens = usage.cachedInputTokens || 0;
@@ -125,7 +125,7 @@ const getZaiPlanUsageReport = (project: Project, provider: ProviderProfile, mode
     receivedTokens,
     cacheReadTokens,
     messageCost,
-    agentTotalCost: project.agentTotalCost + messageCost,
+    agentTotalCost: task.task.agentTotalCost + messageCost,
   };
 };
 

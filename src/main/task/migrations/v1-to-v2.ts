@@ -1,8 +1,6 @@
-import { ContextMessage } from '@common/types';
+import { ContextMessage, TaskContext } from '@common/types';
 import { AIDER_TOOL_GROUP_NAME, AIDER_TOOL_RUN_PROMPT, SUBAGENTS_TOOL_GROUP_NAME, SUBAGENTS_TOOL_RUN_TASK } from '@common/tools';
 import { extractServerNameToolName } from '@common/utils';
-
-import { PersistedSessionData } from '../session-manager';
 
 import logger from '@/logger';
 
@@ -109,8 +107,9 @@ const migrateContextMessage = (message: ContextMessage): ContextMessage => {
   return message;
 };
 
-export const migrateSessionV1toV2 = (sessionData: PersistedSessionData): PersistedSessionData => {
-  logger.info('Migrating session messages from V1 (AI SDK v4) to V2 (AI SDK v5)');
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const migrateContextV1toV2 = (taskId: string, sessionData: any): TaskContext => {
+  logger.info('Migrating context from V1 (AI SDK v4) to V2 (AI SDK v5)');
 
   if (!sessionData.contextMessages) {
     return sessionData;
@@ -122,6 +121,7 @@ export const migrateSessionV1toV2 = (sessionData: PersistedSessionData): Persist
 
   return {
     ...sessionData,
+    taskId,
     contextMessages: migratedContextMessages,
-  };
+  } satisfies TaskContext;
 };

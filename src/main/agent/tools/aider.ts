@@ -19,23 +19,23 @@ import { ApprovalManager } from './approval-manager';
 
 import type { ToolSet } from 'ai';
 
-import { Project } from '@/project';
+import { Task } from '@/task';
 
-export const createAiderToolset = (project: Project, profile: AgentProfile, promptContext?: PromptContext): ToolSet => {
-  const approvalManager = new ApprovalManager(project, profile);
+export const createAiderToolset = (task: Task, profile: AgentProfile, promptContext?: PromptContext): ToolSet => {
+  const approvalManager = new ApprovalManager(task, profile);
 
   const getContextFilesTool = tool({
     description: AIDER_TOOL_DESCRIPTIONS[TOOL_GET_CONTEXT_FILES],
     inputSchema: z.object({
-      projectDir: z.string().describe("The project directory. Can be '.' for current project."),
+      taskDir: z.string().describe("The task directory. Can be '.' for current task."),
     }),
-    execute: async ({ projectDir }, { toolCallId }) => {
-      project.addToolMessage(
+    execute: async ({ taskDir }, { toolCallId }) => {
+      task.addToolMessage(
         toolCallId,
         TOOL_GROUP_NAME,
         TOOL_GET_CONTEXT_FILES,
         {
-          projectDir,
+          taskDir,
         },
         undefined,
         undefined,
@@ -51,7 +51,7 @@ export const createAiderToolset = (project: Project, profile: AgentProfile, prom
         return `Getting context files denied by user. Reason: ${userInput}`;
       }
 
-      const files = project.getContextFiles();
+      const files = task.getContextFiles();
       return JSON.stringify(files);
     },
   });
@@ -61,13 +61,11 @@ export const createAiderToolset = (project: Project, profile: AgentProfile, prom
     inputSchema: z.object({
       paths: z
         .array(z.string())
-        .describe(
-          'One or more file paths to add to context. Relative to project directory (e.g. "src/file.ts") or absolute (e.g. "/tmp/log.txt" for read-only).',
-        ),
+        .describe('One or more file paths to add to context. Relative to task directory (e.g. "src/file.ts") or absolute (e.g. "/tmp/log.txt" for read-only).'),
       readOnly: z.boolean().optional().describe('Whether the file(s) are read-only. Applies to all paths if true.'),
     }),
     execute: async ({ paths, readOnly = false }, { toolCallId }) => {
-      project.addToolMessage(
+      task.addToolMessage(
         toolCallId,
         TOOL_GROUP_NAME,
         TOOL_ADD_CONTEXT_FILES,
@@ -82,7 +80,7 @@ export const createAiderToolset = (project: Project, profile: AgentProfile, prom
 
       const results: string[] = [];
       for (const filePath of paths) {
-        const absolutePath = path.resolve(project.baseDir, filePath);
+        const absolutePath = path.resolve(task.project.baseDir, filePath);
         let fileExists = false;
         try {
           await fs.access(absolutePath);
@@ -101,19 +99,19 @@ export const createAiderToolset = (project: Project, profile: AgentProfile, prom
               const dir = path.dirname(absolutePath);
               await fs.mkdir(dir, { recursive: true });
               await fs.writeFile(absolutePath, '');
-              project.addLogMessage('info', `Created new file: ${filePath}`);
+              task.addLogMessage('info', `Created new file: ${filePath}`);
               fileExists = true;
 
               try {
-                await project.git.add(absolutePath);
+                await task.git.add(absolutePath);
               } catch (gitError) {
                 const gitErrorMessage = gitError instanceof Error ? gitError.message : String(gitError);
-                project.addLogMessage('warning', `Failed to add new file ${filePath} to git staging area: ${gitErrorMessage}`);
+                task.addLogMessage('warning', `Failed to add new file ${filePath} to git staging area: ${gitErrorMessage}`);
               }
               results.push(`Created and added file: ${filePath}`);
             } catch (error) {
               const errorMessage = error instanceof Error ? error.message : String(error);
-              project.addLogMessage('error', `Failed to create file '${filePath}': ${errorMessage}`);
+              task.addLogMessage('error', `Failed to create file '${filePath}': ${errorMessage}`);
               results.push(`Error: Failed to create file '${filePath}'. It was not added to the context.`);
             }
           } else {
@@ -133,7 +131,7 @@ export const createAiderToolset = (project: Project, profile: AgentProfile, prom
 
         if (fileExists) {
           // This condition is now met if the file initially existed or was just created
-          const added = await project.addFile({
+          const added = await task.addFile({
             path: filePath,
             readOnly,
           });
@@ -157,7 +155,7 @@ export const createAiderToolset = (project: Project, profile: AgentProfile, prom
       paths: z.array(z.string()).describe('One or more file paths to remove from context.'),
     }),
     execute: async ({ paths }, { toolCallId }) => {
-      project.addToolMessage(toolCallId, TOOL_GROUP_NAME, TOOL_DROP_CONTEXT_FILES, { paths }, undefined, undefined, promptContext);
+      task.addToolMessage(toolCallId, TOOL_GROUP_NAME, TOOL_DROP_CONTEXT_FILES, { paths }, undefined, undefined, promptContext);
 
       const results: string[] = [];
       for (const filePath of paths) {
@@ -171,7 +169,7 @@ export const createAiderToolset = (project: Project, profile: AgentProfile, prom
           continue;
         }
 
-        project.dropFile(filePath);
+        task.dropFile(filePath);
         results.push(`Dropped file: ${filePath}`);
       }
       return results.join('\n');
@@ -193,7 +191,7 @@ export const createAiderToolset = (project: Project, profile: AgentProfile, prom
         },
       };
 
-      project.addToolMessage(toolCallId, TOOL_GROUP_NAME, TOOL_RUN_PROMPT, { prompt }, undefined, undefined, aiderPromptContext);
+      task.addToolMessage(toolCallId, TOOL_GROUP_NAME, TOOL_RUN_PROMPT, { prompt }, undefined, undefined, aiderPromptContext);
 
       const questionKey = `${TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TOOL_RUN_PROMPT}`;
       const questionText = 'Approve prompt to run in Aider?';
@@ -210,12 +208,12 @@ export const createAiderToolset = (project: Project, profile: AgentProfile, prom
         };
       }
 
-      project.addToolMessage(toolCallId, TOOL_GROUP_NAME, TOOL_RUN_PROMPT, { prompt }, undefined, undefined, aiderPromptContext);
+      task.addToolMessage(toolCallId, TOOL_GROUP_NAME, TOOL_RUN_PROMPT, { prompt }, undefined, undefined, aiderPromptContext);
 
-      const responses = await project.sendPrompt(prompt, aiderPromptContext, 'code', []);
+      const responses = await task.sendPrompt(prompt, aiderPromptContext, 'code', []);
 
       // Notify that we are still processing after aider finishes
-      project.addLogMessage('loading');
+      task.addLogMessage('loading');
 
       const updatedFiles = responses.flatMap((response) => response.editedFiles || []).filter((value, index, self) => self.indexOf(value) === index);
       return {

@@ -6,7 +6,7 @@ import { SUBAGENTS_TOOL_GROUP_NAME, SUBAGENTS_TOOL_RUN_TASK, TOOL_GROUP_NAME_SEP
 import { DEFAULT_AGENT_PROFILE, isSubagentEnabled } from '@common/agent';
 import { extractServerNameToolName } from '@common/utils';
 
-import { Project } from '@/project';
+import { Task } from '@/task';
 import logger from '@/logger';
 
 const getSubagentId = (subagent: AgentProfile): string => {
@@ -15,7 +15,7 @@ const getSubagentId = (subagent: AgentProfile): string => {
 
 export const createSubagentsToolset = (
   settings: SettingsData,
-  project: Project,
+  task: Task,
   profile: AgentProfile,
   abortSignal?: AbortSignal,
   messages: ContextMessage[] = [],
@@ -173,7 +173,7 @@ export const createSubagentsToolset = (
       };
 
       try {
-        project.addToolMessage(
+        task.addToolMessage(
           toolCallId,
           SUBAGENTS_TOOL_GROUP_NAME,
           SUBAGENTS_TOOL_RUN_TASK,
@@ -196,7 +196,7 @@ export const createSubagentsToolset = (
 Make sure to reuse the previous conversation if possible.`
             : prompt;
 
-        const subagentResultMessages = await project.runSubagent(
+        const subagentResultMessages = await task.runSubagent(
           subagentProfile,
           effectivePrompt,
           subagentContextMessages,

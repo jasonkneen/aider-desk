@@ -8,7 +8,7 @@ import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider'
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 
 export const loadGeminiModels = async (
   profile: ProviderProfile,
@@ -128,7 +128,7 @@ export const calculateGeminiCost = (model: Model, sentTokens: number, receivedTo
 };
 
 export const getGeminiUsageReport = (
-  project: Project,
+  task: Task,
   provider: ProviderProfile,
   model: Model,
   usage: LanguageModelUsage,
@@ -153,7 +153,7 @@ export const getGeminiUsageReport = (
     receivedTokens,
     cacheReadTokens,
     messageCost,
-    agentTotalCost: project.agentTotalCost + messageCost,
+    agentTotalCost: task.task.agentTotalCost + messageCost,
   };
 
   return usageReportData;

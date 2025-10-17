@@ -9,7 +9,7 @@ import { AIDER_DESK_TITLE, AIDER_DESK_WEBSITE } from '@/constants';
 import { AiderModelMapping, LlmProviderStrategy, CacheControl, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 
 interface OpenRouterTopProvider {
   is_moderated: boolean;
@@ -189,7 +189,7 @@ export const calculateOpenRouterCost = (model: Model, sentTokens: number, receiv
 };
 
 export const getOpenRouterUsageReport = (
-  project: Project,
+  task: Task,
   provider: ProviderProfile,
   model: Model,
   usage: LanguageModelUsage,
@@ -214,7 +214,7 @@ export const getOpenRouterUsageReport = (
     receivedTokens,
     cacheReadTokens,
     messageCost,
-    agentTotalCost: project.agentTotalCost + messageCost,
+    agentTotalCost: task.task.agentTotalCost + messageCost,
   };
 
   return usageReportData;

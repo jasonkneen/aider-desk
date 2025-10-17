@@ -405,7 +405,7 @@ export class ProjectApi extends BaseApi {
         }
 
         const { projectDir } = parsed;
-        await this.eventsHandler.exportSessionToMarkdown(projectDir);
+        await this.eventsHandler.exportTaskToMarkdown(projectDir);
         res.status(200).json({ message: 'Session exported to markdown' });
       }),
     );

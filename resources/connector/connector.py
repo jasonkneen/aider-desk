@@ -637,8 +637,9 @@ def create_io(connector, coder, prompt_context=None):
   return io
 
 class Connector:
-  def __init__(self, base_dir, watch_files=False, server_url="http://localhost:24337", reasoning_effort=None, thinking_tokens=None, confirm_before_edit=False):
+  def __init__(self, base_dir, task_id, watch_files=False, server_url="http://localhost:24337", reasoning_effort=None, thinking_tokens=None, confirm_before_edit=False):
     self.base_dir = base_dir
+    self.task_id = task_id
     self.server_url = server_url
     self.reasoning_effort = reasoning_effort
     self.thinking_tokens = thinking_tokens
@@ -781,6 +782,7 @@ class Connector:
       "action": "init",
       "source": "aider",
       "baseDir": self.base_dir,
+      "taskId": self.task_id,
       "listenTo": [
         "prompt",
         "answer-question",
@@ -1281,6 +1283,7 @@ def main(argv=None):
     # Get environment variables
     server_url = os.getenv("CONNECTOR_SERVER_URL", "http://localhost:24337")
     base_dir = os.getenv("BASE_DIR", os.getcwd())
+    task_id = os.getenv("TASK_ID", "default")
     confirm_before_edit = os.getenv("CONNECTOR_CONFIRM_BEFORE_EDIT", "0") == "1"
 
     # Telemetry
@@ -1289,6 +1292,7 @@ def main(argv=None):
     # Create connector instance
     connector = Connector(
       base_dir,
+      task_id,
       watch_files=args.watch_files,
       server_url=server_url,
       reasoning_effort=args.reasoning_effort,
