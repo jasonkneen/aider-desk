@@ -397,7 +397,6 @@ export class ContextManager {
 
       const contextData: TaskContext = {
         version: CURRENT_CONTEXT_VERSION,
-        taskId: this.taskId,
         contextMessages: this.messages,
         contextFiles: this.files,
       };

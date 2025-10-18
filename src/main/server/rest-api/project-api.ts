@@ -126,28 +126,24 @@ const InitProjectRulesFileSchema = z.object({
   projectDir: z.string().min(1, 'Project directory is required'),
 });
 
-const SaveSessionSchema = z.object({
+const SaveTaskSchema = z.object({
   projectDir: z.string().min(1, 'Project directory is required'),
-  name: z.string().min(1, 'Session name is required'),
+  name: z.string().min(1, 'Task name is required'),
+  id: z.string().optional(),
 });
 
-const LoadSessionMessagesSchema = z.object({
+const LoadTaskSchema = z.object({
   projectDir: z.string().min(1, 'Project directory is required'),
-  name: z.string().min(1, 'Session name is required'),
+  id: z.string().min(1, 'Task id is required'),
 });
 
-const LoadSessionFilesSchema = z.object({
-  projectDir: z.string().min(1, 'Project directory is required'),
-  name: z.string().min(1, 'Session name is required'),
-});
-
-const ListSessionsSchema = z.object({
+const ListTasksSchema = z.object({
   projectDir: z.string().min(1, 'Project directory is required'),
 });
 
-const DeleteSessionSchema = z.object({
+const DeleteTaskSchema = z.object({
   projectDir: z.string().min(1, 'Project directory is required'),
-  name: z.string().min(1, 'Session name is required'),
+  id: z.string().min(1, 'Task id is required'),
 });
 
 const ExportSessionToMarkdownSchema = z.object({
@@ -320,84 +316,69 @@ export class ProjectApi extends BaseApi {
       }),
     );
 
-    // Save session
+    // Save task
     router.post(
-      '/project/session/save',
+      '/project/tasks',
       this.handleRequest(async (req, res) => {
-        const parsed = this.validateRequest(SaveSessionSchema, req.body, res);
+        const parsed = this.validateRequest(SaveTaskSchema, req.body, res);
         if (!parsed) {
           return;
         }
 
-        const { projectDir, name } = parsed;
-        await this.eventsHandler.saveSession(projectDir, name);
-        res.status(200).json({ message: 'Session saved' });
+        const { projectDir, name, id } = parsed;
+        const savedTask = await this.eventsHandler.saveTask(projectDir, name, id);
+        res.status(200).json(savedTask);
       }),
     );
 
-    // Load session messages
+    // Load task messages
     router.post(
-      '/project/session/load-messages',
+      '/project/tasks/load',
       this.handleRequest(async (req, res) => {
-        const parsed = this.validateRequest(LoadSessionMessagesSchema, req.body, res);
+        const parsed = this.validateRequest(LoadTaskSchema, req.body, res);
         if (!parsed) {
           return;
         }
 
-        const { projectDir, name } = parsed;
-        await this.eventsHandler.loadSessionMessages(projectDir, name);
-        res.status(200).json({ message: 'Session messages loaded' });
+        const { projectDir, id } = parsed;
+        await this.eventsHandler.loadTask(projectDir, id);
+        res.status(200).json({ message: 'Task loaded' });
       }),
     );
 
-    // Load session files
-    router.post(
-      '/project/session/load-files',
-      this.handleRequest(async (req, res) => {
-        const parsed = this.validateRequest(LoadSessionFilesSchema, req.body, res);
-        if (!parsed) {
-          return;
-        }
-
-        const { projectDir, name } = parsed;
-        await this.eventsHandler.loadSessionFiles(projectDir, name);
-        res.status(200).json({ message: 'Session files loaded' });
-      }),
-    );
-
-    // List sessions
+    // List tasks
     router.get(
-      '/project/sessions',
+      '/project/tasks',
       this.handleRequest(async (req, res) => {
-        const parsed = this.validateRequest(ListSessionsSchema, req.query, res);
+        const parsed = this.validateRequest(ListTasksSchema, req.query, res);
         if (!parsed) {
           return;
         }
 
         const { projectDir } = parsed;
-        const sessions = await this.eventsHandler.listSessions(projectDir);
-        res.status(200).json(sessions);
+        const tasks = await this.eventsHandler.getTasks(projectDir);
+        res.status(200).json(tasks);
       }),
     );
 
     // Delete session
     router.post(
-      '/project/session/delete',
+      '/project/tasks/delete',
       this.handleRequest(async (req, res) => {
-        const parsed = this.validateRequest(DeleteSessionSchema, req.body, res);
+        const parsed = this.validateRequest(DeleteTaskSchema, req.body, res);
         if (!parsed) {
           return;
         }
 
-        const { projectDir, name } = parsed;
-        await this.eventsHandler.deleteSession(projectDir, name);
-        res.status(200).json({ message: 'Session deleted' });
+        const { projectDir, id } = parsed;
+        await this.eventsHandler.deleteTask(projectDir, id);
+        res.status(200).json({ message: 'Task deleted' });
       }),
     );
 
     // Export session to markdown
     router.post(
-      '/project/session/export-markdown',
+      '/project/tasks/export-markdown',
       this.handleRequest(async (req, res) => {
         const parsed = this.validateRequest(ExportSessionToMarkdownSchema, req.body, res);
         if (!parsed) {

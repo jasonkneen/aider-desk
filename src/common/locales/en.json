@@ -702,10 +702,8 @@
   "sessions": {
     "title": "Sessions",
     "empty": "No saved sessions",
-    "loadMessages_one": "Load {{count}} message",
-    "loadMessages_other": "Load {{count}} messages",
-    "loadFiles_one": "Load {{count}} file",
-    "loadFiles_other": "Load {{count}} files",
+    "loadMessages": "Load messages",
+    "loadFiles": "Load files",
     "saveAsNew": "Save as new",
     "exportAsMarkdown": "Export as Markdown",
     "exportAsImage": "Export as Image",

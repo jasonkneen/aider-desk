@@ -50,7 +50,6 @@ export class CustomCommandManager {
 
   constructor(private readonly project: Project) {
     this.initializeCommands();
-    this.setupFileWatchers();
   }
 
   private initializeCommands(): void {
@@ -64,6 +63,10 @@ export class CustomCommandManager {
     this.loadCommandsFromDir(projectCommandsDir, this.commands);
 
     this.notifyCommandsUpdated();
+  }
+
+  public start() {
+    this.setupFileWatchers();
   }
 
   private setupFileWatchers(): void {

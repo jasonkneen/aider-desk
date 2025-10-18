@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-import { CustomCommand, FileEdit, InputHistoryData, SettingsData, ProjectStartMode } from '@common/types';
+import { CustomCommand, InputHistoryData, ProjectStartMode, SettingsData, TaskData } from '@common/types';
 import { fileExists } from '@common/utils';
 
 import { getAllFiles } from '@/utils/file-system';
@@ -9,13 +9,13 @@ import { McpManager } from '@/agent';
 import { Connector } from '@/connector';
 import { DataManager } from '@/data-manager';
 import logger from '@/logger';
-import { MessageAction } from '@/messages';
 import { Store } from '@/store';
 import { ModelManager } from '@/models';
 import { CustomCommandManager } from '@/custom-commands';
 import { TelemetryManager } from '@/telemetry';
 import { EventManager } from '@/events';
 import { Task } from '@/task';
+import { migrateSessionsToTasks } from '@/project/migrations';
 
 export class Project {
   private readonly customCommandManager: CustomCommandManager;
@@ -38,8 +38,33 @@ export class Project {
   }
 
   public async start(startupMode?: ProjectStartMode) {
+    // Migrate sessions to tasks before starting
+    await migrateSessionsToTasks(this);
+
     const settings = this.store.getSettings();
     const mode = startupMode ?? settings.startupMode;
+
+    if (!this.initialized) {
+      await this.loadTasks();
+      this.initialized = true;
+    }
+
+    this.customCommandManager.start();
+
+    await this.initAutosavedTask(mode);
+    await this.sendInputHistoryUpdatedEvent();
+
+    this.eventManager.sendProjectStarted(this.baseDir);
+  }
+
+  // TODO: temporary solution for backward compatibility
+  private async initAutosavedTask(mode?: ProjectStartMode) {
+    if (!this.tasks.has('autosaved')) {
+      await this.createTask('autosaved');
+    }
+
+    const task = this.tasks.get('autosaved')!;
+    await task.init();
 
     try {
       // Handle different startup modes
@@ -52,23 +77,12 @@ export class Project {
         case ProjectStartMode.Last:
           // Load the autosaved session
           logger.info('Loading autosaved session');
+          await task.loadContext();
           break;
       }
     } catch (error) {
       logger.error('Error loading session:', { error });
     }
-
-    if (this.initialized) {
-      return;
-    }
-
-    if (!this.getTask('default')) {
-      await this.createTask('default');
-    }
-
-    this.initialized = true;
-
-    this.eventManager.sendProjectStarted(this.baseDir);
   }
 
   private async createTask(taskId: string) {
@@ -84,18 +98,64 @@ export class Project {
       this.modelManager,
     );
     this.tasks.set(taskId, task);
-
-    await task.start();
-
     this.eventManager.sendTaskCreated(task.task);
   }
 
-  public getTask(taskId: string = 'default') {
+  public async saveTask(name: string, id?: string): Promise<TaskData> {
+    const savedTaskData = await this.getAutosavedTask().saveAs(name, id);
+
+    // If a new task was created (id was not autosaved), add it to the project's task map
+    if (savedTaskData.id !== 'autosaved' && !this.tasks.has(savedTaskData.id)) {
+      await this.createTask(savedTaskData.id);
+    }
+
+    return savedTaskData;
+  }
+
+  private async loadTasks() {
+    const tasksDir = path.join(this.baseDir, '.aider-desk', 'tasks');
+
+    try {
+      if (!(await fileExists(tasksDir))) {
+        logger.debug('Tasks directory does not exist, skipping loadTasks', {
+          baseDir: this.baseDir,
+          tasksDir,
+        });
+        return;
+      }
+
+      const taskFolders = await fs.readdir(tasksDir, { withFileTypes: true });
+      const taskDirs = taskFolders.filter((dirent) => dirent.isDirectory()).map((dirent) => dirent.name);
+
+      logger.info(`Loading ${taskDirs.length} tasks from directory`, {
+        baseDir: this.baseDir,
+        tasksDir,
+        taskIds: taskDirs,
+      });
+
+      for (const taskId of taskDirs) {
+        await this.createTask(taskId);
+      }
+
+      logger.info('Successfully loaded tasks', {
+        baseDir: this.baseDir,
+        loadedTasks: taskDirs.length,
+      });
+    } catch (error) {
+      logger.error('Failed to load tasks', {
+        baseDir: this.baseDir,
+        tasksDir,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  public getTask(taskId: string = 'autosaved') {
     return this.tasks.get(taskId) || null;
   }
 
-  public getDefaultTask() {
-    return this.getTask('default')!;
+  public getAutosavedTask() {
+    return this.getTask('autosaved')!;
   }
 
   public addConnector(connector: Connector) {
@@ -119,10 +179,6 @@ export class Project {
 
   public removeConnector(connector: Connector) {
     this.connectors = this.connectors.filter((c) => c !== connector);
-  }
-
-  private findMessageConnectors(action: MessageAction): Connector[] {
-    return this.connectors.filter((connector) => connector.listenTo.includes(action));
   }
 
   public async loadInputHistory(): Promise<string[]> {
@@ -216,11 +272,6 @@ export class Project {
     return files;
   }
 
-  public applyEdits(edits: FileEdit[]) {
-    logger.info('Applying edits:', { baseDir: this.baseDir, edits });
-    this.findMessageConnectors('apply-edits').forEach((connector) => connector.sendApplyEditsMessage(edits));
-  }
-
   public getCustomCommands() {
     return this.customCommandManager.getAllCommands();
   }
@@ -229,7 +280,68 @@ export class Project {
     this.eventManager.sendCustomCommandsUpdated(this.baseDir, commands);
   }
 
-  async close() {}
+  public async loadTask(taskId: string): Promise<void> {
+    const sourceContextPath = path.join(this.baseDir, '.aider-desk', 'tasks', taskId, 'context.json');
+    const targetContextPath = path.join(this.baseDir, '.aider-desk', 'tasks', 'autosaved', 'context.json');
+
+    try {
+      // Ensure the target directory exists
+      await fs.mkdir(path.dirname(targetContextPath), { recursive: true });
+
+      // Copy the context.json file
+      await fs.copyFile(sourceContextPath, targetContextPath);
+
+      // Load the context in the autosaved task
+      await this.getAutosavedTask().loadContext();
+    } catch (error) {
+      logger.error('Failed to load task:', {
+        baseDir: this.baseDir,
+        taskId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  public async deleteTask(taskId: string): Promise<void> {
+    const taskDir = path.join(this.baseDir, '.aider-desk', 'tasks', taskId);
+
+    try {
+      // Close the task if it's loaded
+      const task = this.tasks.get(taskId);
+      if (task) {
+        await task.close(taskId === 'autosaved');
+        this.tasks.delete(taskId);
+      }
+
+      // Delete the task directory
+      await fs.rm(taskDir, { recursive: true, force: true });
+
+      logger.info('Successfully deleted task', {
+        baseDir: this.baseDir,
+        taskId,
+      });
+    } catch (error) {
+      logger.error('Failed to delete task:', {
+        baseDir: this.baseDir,
+        taskId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
+  }
+
+  getTasks(): TaskData[] {
+    return Array.from(this.tasks.values())
+      .map((task) => task.task)
+      .filter((task) => task.id !== 'autosaved');
+  }
+
+  // TODO: should be on task level
+  async close() {
+    this.customCommandManager.dispose();
+    await this.getAutosavedTask().close();
+  }
 
   settingsChanged(oldSettings: SettingsData, newSettings: SettingsData) {
     this.tasks.forEach((task) => {

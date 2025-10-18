@@ -214,9 +214,9 @@ export class EventManager {
     this.broadcastToEventConnectors('task-created', task);
   }
 
-  sendTaskActivated(task: TaskData): void {
-    this.sendToMainWindow('task-started', task);
-    this.broadcastToEventConnectors('task-started', task);
+  sendTaskInitialized(task: TaskData): void {
+    this.sendToMainWindow('task-initialize', task);
+    this.broadcastToEventConnectors('task-initialized', task);
   }
 
   sendTaskStarted(task: TaskData): void {

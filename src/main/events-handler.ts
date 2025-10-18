@@ -12,21 +12,21 @@ import {
   McpServerConfig,
   McpTool,
   Mode,
-  ModelInfo,
   Model,
+  ModelInfo,
   OS,
   ProjectData,
   ProjectSettings,
+  ProjectStartMode,
+  ProviderModelsData,
   ProviderProfile,
   ResponseCompletedData,
-  SessionData,
   SettingsData,
-  ProjectStartMode,
+  TaskData,
   Theme,
   TodoItem,
   UsageDataRow,
   VersionsInfo,
-  ProviderModelsData,
 } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
 
@@ -201,46 +201,46 @@ export class EventsHandler {
   }
 
   interruptResponse(baseDir: string): void {
-    this.projectManager.getProject(baseDir).getDefaultTask().interruptResponse();
+    this.projectManager.getProject(baseDir).getAutosavedTask().interruptResponse();
   }
 
   clearContext(baseDir: string, includeLastMessage = true): void {
-    this.projectManager.getProject(baseDir).getDefaultTask().clearContext(includeLastMessage);
+    this.projectManager.getProject(baseDir).getAutosavedTask().clearContext(includeLastMessage);
   }
 
   async removeLastMessage(baseDir: string): Promise<void> {
-    void this.projectManager.getProject(baseDir).getDefaultTask().removeLastMessage();
+    void this.projectManager.getProject(baseDir).getAutosavedTask().removeLastMessage();
   }
 
   async redoLastUserPrompt(baseDir: string, mode: Mode, updatedPrompt?: string): Promise<void> {
-    void this.projectManager.getProject(baseDir).getDefaultTask().redoLastUserPrompt(mode, updatedPrompt);
+    void this.projectManager.getProject(baseDir).getAutosavedTask().redoLastUserPrompt(mode, updatedPrompt);
   }
 
   async compactConversation(baseDir: string, mode: Mode, customInstructions?: string): Promise<void> {
-    const task = this.projectManager.getProject(baseDir).getDefaultTask();
+    const task = this.projectManager.getProject(baseDir).getAutosavedTask();
     if (task) {
       await task.compactConversation(mode, customInstructions);
     }
   }
 
   async loadInputHistory(baseDir: string): Promise<string[]> {
-    return await this.projectManager.getProject(baseDir).getDefaultTask().loadInputHistory();
+    return await this.projectManager.getProject(baseDir).loadInputHistory();
   }
 
   async getAddableFiles(baseDir: string, searchRegex?: string): Promise<string[]> {
-    return this.projectManager.getProject(baseDir).getDefaultTask().getAddableFiles(searchRegex);
+    return this.projectManager.getProject(baseDir).getAutosavedTask().getAddableFiles(searchRegex);
   }
 
   async addFile(baseDir: string, filePath: string, readOnly = false): Promise<void> {
-    void this.projectManager.getProject(baseDir).getDefaultTask().addFile({ path: filePath, readOnly });
+    void this.projectManager.getProject(baseDir).getAutosavedTask().addFile({ path: filePath, readOnly });
   }
 
   dropFile(baseDir: string, filePath: string): void {
-    void this.projectManager.getProject(baseDir).getDefaultTask().dropFile(filePath);
+    void this.projectManager.getProject(baseDir).getAutosavedTask().dropFile(filePath);
   }
 
   async pasteImage(baseDir: string): Promise<void> {
-    const task = this.projectManager.getProject(baseDir).getDefaultTask();
+    const task = this.projectManager.getProject(baseDir).getAutosavedTask();
     try {
       const image = clipboard.readImage();
       if (image.isEmpty()) {
@@ -280,19 +280,19 @@ export class EventsHandler {
   }
 
   applyEdits(baseDir: string, edits: FileEdit[]): void {
-    this.projectManager.getProject(baseDir).getDefaultTask().applyEdits(edits);
+    this.projectManager.getProject(baseDir).getAutosavedTask().applyEdits(edits);
   }
 
   async runPrompt(baseDir: string, prompt: string, mode?: Mode): Promise<ResponseCompletedData[]> {
-    return this.projectManager.getProject(baseDir).getDefaultTask().runPrompt(prompt, mode);
+    return this.projectManager.getProject(baseDir).getAutosavedTask().runPrompt(prompt, mode);
   }
 
   answerQuestion(baseDir: string, answer: string): void {
-    this.projectManager.getProject(baseDir).getDefaultTask().answerQuestion(answer);
+    this.projectManager.getProject(baseDir).getAutosavedTask().answerQuestion(answer);
   }
 
   runCommand(baseDir: string, command: string): void {
-    void this.projectManager.getProject(baseDir).getDefaultTask().runCommand(command);
+    void this.projectManager.getProject(baseDir).getAutosavedTask().runCommand(command);
   }
 
   async getCustomCommands(baseDir: string): Promise<CustomCommand[]> {
@@ -300,7 +300,7 @@ export class EventsHandler {
   }
 
   async runCustomCommand(baseDir: string, commandName: string, args: string[], mode: Mode): Promise<void> {
-    await this.projectManager.getProject(baseDir).getDefaultTask().runCustomCommand(commandName, args, mode);
+    await this.projectManager.getProject(baseDir).getAutosavedTask().runCustomCommand(commandName, args, mode);
   }
 
   updateMainModel(baseDir: string, mainModel: string): void {
@@ -310,7 +310,7 @@ export class EventsHandler {
     projectSettings.weakModel = null;
 
     this.store.saveProjectSettings(baseDir, projectSettings);
-    this.projectManager.getProject(baseDir).getDefaultTask().updateModels(mainModel, projectSettings.weakModel, projectSettings.modelEditFormats[mainModel]);
+    this.projectManager.getProject(baseDir).getAutosavedTask().updateModels(mainModel, projectSettings.weakModel, projectSettings.modelEditFormats[mainModel]);
   }
 
   updateWeakModel(baseDir: string, weakModel: string): void {
@@ -318,7 +318,7 @@ export class EventsHandler {
     projectSettings.weakModel = weakModel;
     this.store.saveProjectSettings(baseDir, projectSettings);
 
-    const task = this.projectManager.getProject(baseDir).getDefaultTask();
+    const task = this.projectManager.getProject(baseDir).getAutosavedTask();
     task.updateModels(projectSettings.mainModel, weakModel, projectSettings.modelEditFormats[projectSettings.mainModel]);
   }
 
@@ -327,7 +327,7 @@ export class EventsHandler {
     projectSettings.architectModel = architectModel;
     this.store.saveProjectSettings(baseDir, projectSettings);
 
-    const task = this.projectManager.getProject(baseDir).getDefaultTask();
+    const task = this.projectManager.getProject(baseDir).getAutosavedTask();
     task.setArchitectModel(architectModel);
   }
 
@@ -341,7 +341,7 @@ export class EventsHandler {
     this.store.saveProjectSettings(baseDir, projectSettings);
     this.projectManager
       .getProject(baseDir)
-      .getDefaultTask()
+      .getAutosavedTask()
       .updateModels(projectSettings.mainModel, projectSettings?.weakModel || null, projectSettings.modelEditFormats[projectSettings.mainModel]);
   }
 
@@ -399,7 +399,8 @@ export class EventsHandler {
 
   async scrapeWeb(baseDir: string, url: string, filePath?: string): Promise<void> {
     const content = await scrapeWeb(url);
-    const task = this.projectManager.getProject(baseDir).getDefaultTask();
+    const project = this.projectManager.getProject(baseDir);
+    const task = project.getAutosavedTask();
 
     try {
       // Normalize URL for filename
@@ -442,9 +443,9 @@ export class EventsHandler {
         readOnly: true,
       });
       if (filePath) {
-        await task.addToInputHistory(`/web ${url} ${filePath}`);
+        await project.addToInputHistory(`/web ${url} ${filePath}`);
       } else {
-        await task.addToInputHistory(`/web ${url}`);
+        await project.addToInputHistory(`/web ${url}`);
       }
       task.addLogMessage('info', `Web content from ${url} saved to '${path.relative(baseDir, targetFilePath)}' and added to context.`);
     } catch (error) {
@@ -453,50 +454,24 @@ export class EventsHandler {
     }
   }
 
-  /**
-   * @deprecated
-   */
-  async saveSession(baseDir: string, name: string): Promise<boolean> {
-    void baseDir;
-    void name;
-    return true;
+  async saveTask(baseDir: string, name: string, id?: string): Promise<TaskData> {
+    return await this.projectManager.getProject(baseDir).saveTask(name, id);
   }
 
-  /**
-   * @deprecated
-   */
-  async loadSessionMessages(baseDir: string, name: string): Promise<void> {
-    void baseDir;
-    void name;
+  async loadTask(baseDir: string, id: string): Promise<void> {
+    await this.projectManager.getProject(baseDir).loadTask(id);
   }
 
-  /**
-   * @deprecated
-   */
-  async loadSessionFiles(baseDir: string, name: string): Promise<void> {
-    void baseDir;
-    void name;
+  async deleteTask(baseDir: string, id: string): Promise<void> {
+    await this.projectManager.getProject(baseDir).deleteTask(id);
   }
 
-  /**
-   * @deprecated
-   */
-  async deleteSession(baseDir: string, name: string): Promise<boolean> {
-    void baseDir;
-    void name;
-    return true;
-  }
-
-  /**
-   * @deprecated
-   */
-  async listSessions(baseDir: string): Promise<SessionData[]> {
-    void baseDir;
-    return [];
+  async getTasks(baseDir: string): Promise<TaskData[]> {
+    return this.projectManager.getProject(baseDir).getTasks();
   }
 
   async exportTaskToMarkdown(baseDir: string): Promise<void> {
-    const markdownContent = await this.projectManager.getProject(baseDir).getDefaultTask().generateContextMarkdown();
+    const markdownContent = await this.projectManager.getProject(baseDir).getAutosavedTask().generateContextMarkdown();
 
     if (markdownContent) {
       try {
@@ -636,27 +611,27 @@ export class EventsHandler {
   }
 
   async getTodos(baseDir: string): Promise<TodoItem[]> {
-    return await this.projectManager.getProject(baseDir).getDefaultTask().getTodos();
+    return await this.projectManager.getProject(baseDir).getAutosavedTask().getTodos();
   }
 
   async addTodo(baseDir: string, name: string): Promise<TodoItem[]> {
-    return await this.projectManager.getProject(baseDir).getDefaultTask().addTodo(name);
+    return await this.projectManager.getProject(baseDir).getAutosavedTask().addTodo(name);
   }
 
   async updateTodo(baseDir: string, name: string, updates: Partial<TodoItem>): Promise<TodoItem[]> {
-    return await this.projectManager.getProject(baseDir).getDefaultTask().updateTodo(name, updates);
+    return await this.projectManager.getProject(baseDir).getAutosavedTask().updateTodo(name, updates);
   }
 
   async deleteTodo(baseDir: string, name: string): Promise<TodoItem[]> {
-    return await this.projectManager.getProject(baseDir).getDefaultTask().deleteTodo(name);
+    return await this.projectManager.getProject(baseDir).getAutosavedTask().deleteTodo(name);
   }
 
   async clearAllTodos(baseDir: string): Promise<TodoItem[]> {
-    return await this.projectManager.getProject(baseDir).getDefaultTask().clearAllTodos();
+    return await this.projectManager.getProject(baseDir).getAutosavedTask().clearAllTodos();
   }
 
   async initProjectRulesFile(baseDir: string): Promise<void> {
-    return await this.projectManager.getProject(baseDir).getDefaultTask().initProjectAgentsFile();
+    return await this.projectManager.getProject(baseDir).getAutosavedTask().initProjectAgentsFile();
   }
 
   enableServer(username?: string, password?: string): SettingsData {

@@ -158,24 +158,20 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     await eventsHandler.scrapeWeb(baseDir, url, filePath);
   });
 
-  ipcMain.handle('save-session', async (_, baseDir: string, name: string) => {
-    return await eventsHandler.saveSession(baseDir, name);
+  ipcMain.handle('save-task', async (_, baseDir: string, name: string, id?: string) => {
+    return await eventsHandler.saveTask(baseDir, name, id);
   });
 
-  ipcMain.handle('load-session-messages', async (_, baseDir: string, name: string) => {
-    return await eventsHandler.loadSessionMessages(baseDir, name);
+  ipcMain.handle('load-task', async (_, baseDir: string, name: string) => {
+    return await eventsHandler.loadTask(baseDir, name);
   });
 
-  ipcMain.handle('load-session-files', async (_, baseDir: string, name: string) => {
-    return await eventsHandler.loadSessionFiles(baseDir, name);
+  ipcMain.handle('delete-task', async (_, baseDir: string, name: string) => {
+    return await eventsHandler.deleteTask(baseDir, name);
   });
 
-  ipcMain.handle('delete-session', async (_, baseDir: string, name: string) => {
-    return await eventsHandler.deleteSession(baseDir, name);
-  });
-
-  ipcMain.handle('list-sessions', async (_, baseDir: string) => {
-    return await eventsHandler.listSessions(baseDir);
+  ipcMain.handle('get-tasks', async (_, baseDir: string) => {
+    return await eventsHandler.getTasks(baseDir);
   });
 
   ipcMain.handle('load-mcp-server-tools', async (_, serverName: string, config?: McpServerConfig) => {

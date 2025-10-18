@@ -1,6 +1,7 @@
 import {
   AutocompletionData,
   ClearProjectData,
+  CloudflareTunnelStatus,
   CommandOutputData,
   ContextFilesUpdatedData,
   CustomCommand,
@@ -13,19 +14,22 @@ import {
   McpServerConfig,
   McpTool,
   Mode,
-  ModelInfo,
   Model,
+  ModelInfo,
   ModelsData,
   OS,
   ProjectData,
   ProjectSettings,
   ProjectStartedData,
+  ProjectStartMode,
+  ProviderModelsData,
+  ProviderProfile,
+  ProvidersUpdatedData,
   QuestionData,
   ResponseChunkData,
   ResponseCompletedData,
-  SessionData,
   SettingsData,
-  ProjectStartMode,
+  TaskData,
   TerminalData,
   TerminalExitData,
   TodoItem,
@@ -34,10 +38,6 @@ import {
   UsageDataRow,
   UserMessageData,
   VersionsInfo,
-  CloudflareTunnelStatus,
-  ProviderProfile,
-  ProviderModelsData,
-  ProvidersUpdatedData,
 } from '@common/types';
 import { ApplicationAPI } from '@common/api';
 import axios, { type AxiosInstance } from 'axios';
@@ -82,7 +82,9 @@ class UnsupportedError extends Error {
 
 export class BrowserApi implements ApplicationAPI {
   private readonly socket: Socket;
-  private readonly listeners: { [K in keyof EventDataMap]: Map<string, ListenerEntry<EventDataMap[K]>> };
+  private readonly listeners: {
+    [K in keyof EventDataMap]: Map<string, ListenerEntry<EventDataMap[K]>>;
+  };
   private readonly apiClient: AxiosInstance;
   private appOS: OS | null = null;
 
@@ -230,7 +232,11 @@ export class BrowserApi implements ApplicationAPI {
     this.post('/run-prompt', { projectDir: baseDir, prompt, mode });
   }
   redoLastUserPrompt(baseDir: string, mode: Mode, updatedPrompt?: string): void {
-    this.post('/project/redo-prompt', { projectDir: baseDir, mode, updatedPrompt });
+    this.post('/project/redo-prompt', {
+      projectDir: baseDir,
+      mode,
+      updatedPrompt,
+    });
   }
   answerQuestion(baseDir: string, answer: string): void {
     this.post('/project/answer-question', { projectDir: baseDir, answer });
@@ -265,31 +271,53 @@ export class BrowserApi implements ApplicationAPI {
     return this.post('/project/update-order', { projectDirs: baseDirs });
   }
   updateMainModel(baseDir: string, model: string): void {
-    this.post('/project/settings/main-model', { projectDir: baseDir, mainModel: model });
+    this.post('/project/settings/main-model', {
+      projectDir: baseDir,
+      mainModel: model,
+    });
   }
   updateWeakModel(baseDir: string, model: string): void {
-    this.post('/project/settings/weak-model', { projectDir: baseDir, weakModel: model });
+    this.post('/project/settings/weak-model', {
+      projectDir: baseDir,
+      weakModel: model,
+    });
   }
   updateArchitectModel(baseDir: string, model: string): void {
-    this.post('/project/settings/architect-model', { projectDir: baseDir, architectModel: model });
+    this.post('/project/settings/architect-model', {
+      projectDir: baseDir,
+      architectModel: model,
+    });
   }
   updateEditFormats(baseDir: string, editFormats: Record<string, EditFormat>): void {
-    this.post('/project/settings/edit-formats', { projectDir: baseDir, editFormats });
+    this.post('/project/settings/edit-formats', {
+      projectDir: baseDir,
+      editFormats,
+    });
   }
   getProjectSettings(baseDir: string): Promise<ProjectSettings> {
     return this.get('/project/settings', { projectDir: baseDir });
   }
   patchProjectSettings(baseDir: string, settings: Partial<ProjectSettings>): Promise<ProjectSettings> {
-    return this.patch('/project/settings', { projectDir: baseDir, ...settings });
+    return this.patch('/project/settings', {
+      projectDir: baseDir,
+      ...settings,
+    });
   }
   getFilePathSuggestions(currentPath: string, directoriesOnly?: boolean): Promise<string[]> {
-    return this.post('/project/file-suggestions', { currentPath, directoriesOnly });
+    return this.post('/project/file-suggestions', {
+      currentPath,
+      directoriesOnly,
+    });
   }
   getAddableFiles(baseDir: string): Promise<string[]> {
     return this.post('/get-addable-files', { projectDir: baseDir });
   }
   addFile(baseDir: string, filePath: string, readOnly?: boolean): void {
-    this.post('/add-context-file', { projectDir: baseDir, path: filePath, readOnly });
+    this.post('/add-context-file', {
+      projectDir: baseDir,
+      path: filePath,
+      readOnly,
+    });
   }
   async isValidPath(baseDir: string, path: string): Promise<boolean> {
     return this.post<{ projectDir: string; path: string }, { isValid: boolean }>('/project/validate-path', { projectDir: baseDir, path }).then(
@@ -309,7 +337,11 @@ export class BrowserApi implements ApplicationAPI {
     this.post('/project/paste-image', { projectDir: baseDir });
   }
   scrapeWeb(baseDir: string, url: string, filePath?: string): Promise<string> {
-    return this.post('/project/scrape-web', { projectDir: baseDir, url, filePath });
+    return this.post('/project/scrape-web', {
+      projectDir: baseDir,
+      url,
+      filePath,
+    });
   }
   initProjectRulesFile(baseDir: string): Promise<void> {
     return this.post('/project/init-rules', { projectDir: baseDir });
@@ -321,7 +353,11 @@ export class BrowserApi implements ApplicationAPI {
     return this.post('/project/todo/add', { projectDir: baseDir, name });
   }
   updateTodo(baseDir: string, name: string, updates: Partial<TodoItem>): Promise<TodoItem[]> {
-    return this.patch('/project/todo/update', { projectDir: baseDir, name, updates });
+    return this.patch('/project/todo/update', {
+      projectDir: baseDir,
+      name,
+      updates,
+    });
   }
   deleteTodo(baseDir: string, name: string): Promise<TodoItem[]> {
     return this.post('/project/todo/delete', { projectDir: baseDir, name });
@@ -335,23 +371,25 @@ export class BrowserApi implements ApplicationAPI {
   reloadMcpServers(mcpServers: Record<string, McpServerConfig>, force = false): Promise<void> {
     return this.post('/mcp/reload', { mcpServers, force });
   }
-  saveSession(baseDir: string, name: string): Promise<boolean> {
-    return this.post('/project/session/save', { projectDir: baseDir, name });
+  saveTask(baseDir: string, name: string, id?: string): Promise<boolean> {
+    return this.post('/project/tasks', { projectDir: baseDir, name, id });
   }
-  deleteSession(baseDir: string, name: string): Promise<boolean> {
-    return this.post('/project/session/delete', { projectDir: baseDir, name });
+  deleteTask(baseDir: string, id: string): Promise<boolean> {
+    return this.post('/project/tasks/delete', { projectDir: baseDir, id });
   }
-  loadSessionMessages(baseDir: string, name: string): Promise<void> {
-    return this.post('/project/session/load-messages', { projectDir: baseDir, name });
+  loadTask(baseDir: string, id: string): Promise<void> {
+    return this.post('/project/tasks/load-messages', {
+      projectDir: baseDir,
+      id,
+    });
   }
-  loadSessionFiles(baseDir: string, name: string): Promise<void> {
-    return this.post('/project/session/load-files', { projectDir: baseDir, name });
+  getTasks(baseDir: string): Promise<TaskData[]> {
+    return this.get('/project/tasks', { projectDir: baseDir });
   }
-  listSessions(baseDir: string): Promise<SessionData[]> {
-    return this.get('/project/sessions', { projectDir: baseDir });
-  }
-  exportSessionToMarkdown(baseDir: string): Promise<void> {
-    return this.post('/project/session/export-markdown', { projectDir: baseDir });
+  exportTaskToMarkdown(baseDir: string): Promise<void> {
+    return this.post('/project/tasks/export-markdown', {
+      projectDir: baseDir,
+    });
   }
   getRecentProjects(): Promise<string[]> {
     return this.get('/settings/recent-projects');
@@ -375,7 +413,11 @@ export class BrowserApi implements ApplicationAPI {
     this.post('/project/remove-last-message', { projectDir: baseDir });
   }
   compactConversation(baseDir: string, mode: Mode, customInstructions?: string): void {
-    this.post('/project/compact-conversation', { projectDir: baseDir, mode, customInstructions });
+    this.post('/project/compact-conversation', {
+      projectDir: baseDir,
+      mode,
+      customInstructions,
+    });
   }
   setZoomLevel(level: number): Promise<void> {
     void level;
@@ -504,7 +546,12 @@ export class BrowserApi implements ApplicationAPI {
     return this.get('/project/custom-commands', { projectDir: baseDir });
   }
   runCustomCommand(baseDir: string, commandName: string, args: string[], mode: Mode): Promise<void> {
-    return this.post('/project/custom-commands', { projectDir: baseDir, commandName, args, mode });
+    return this.post('/project/custom-commands', {
+      projectDir: baseDir,
+      commandName,
+      args,
+      mode,
+    });
   }
   isTerminalSupported(): boolean {
     return false;

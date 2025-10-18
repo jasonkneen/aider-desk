@@ -1,43 +1,43 @@
 import {
   AutocompletionData,
+  ClearProjectData,
+  CloudflareTunnelStatus,
+  CommandOutputData,
   ContextFilesUpdatedData,
+  CustomCommand,
   CustomCommandsUpdatedData,
+  EditFormat,
+  EnvironmentVariable,
+  FileEdit,
   InputHistoryData,
   LogData,
+  McpServerConfig,
+  McpTool,
+  Mode,
+  Model,
+  ModelInfo,
   ModelsData,
+  OS,
   ProjectData,
   ProjectSettings,
+  ProjectStartedData,
+  ProjectStartMode,
+  ProviderModelsData,
+  ProviderProfile,
+  ProvidersUpdatedData,
   QuestionData,
   ResponseChunkData,
   ResponseCompletedData,
-  SessionData,
   SettingsData,
+  TaskData,
   TerminalData,
   TerminalExitData,
-  TokensInfoData,
-  UserMessageData,
-  McpServerConfig,
-  McpTool,
-  ToolData,
-  CommandOutputData,
-  Mode,
-  VersionsInfo,
-  EditFormat,
-  OS,
-  ModelInfo,
-  Model,
   TodoItem,
+  TokensInfoData,
+  ToolData,
   UsageDataRow,
-  EnvironmentVariable,
-  CustomCommand,
-  ProjectStartMode,
-  FileEdit,
-  ClearProjectData,
-  ProjectStartedData,
-  CloudflareTunnelStatus,
-  ProviderProfile,
-  ProviderModelsData,
-  ProvidersUpdatedData,
+  UserMessageData,
+  VersionsInfo,
 } from '@common/types';
 
 export interface ApplicationAPI {
@@ -93,12 +93,11 @@ export interface ApplicationAPI {
   loadMcpServerTools: (serverName: string, config?: McpServerConfig) => Promise<McpTool[] | null>;
   reloadMcpServers: (mcpServers: Record<string, McpServerConfig>, force?: boolean) => Promise<void>;
 
-  saveSession: (baseDir: string, name: string) => Promise<boolean>;
-  deleteSession: (baseDir: string, name: string) => Promise<boolean>;
-  loadSessionMessages: (baseDir: string, name: string) => Promise<void>;
-  loadSessionFiles: (baseDir: string, name: string) => Promise<void>;
-  listSessions: (baseDir: string) => Promise<SessionData[]>;
-  exportSessionToMarkdown: (baseDir: string) => Promise<void>;
+  saveTask: (baseDir: string, name: string, id?: string) => Promise<boolean>;
+  deleteTask: (baseDir: string, name: string) => Promise<boolean>;
+  loadTask: (baseDir: string, id: string) => Promise<void>;
+  getTasks: (baseDir: string) => Promise<TaskData[]>;
+  exportTaskToMarkdown: (baseDir: string) => Promise<void>;
   getRecentProjects: () => Promise<string[]>;
   addRecentProject: (baseDir: string) => Promise<void>;
   removeRecentProject: (baseDir: string) => Promise<void>;

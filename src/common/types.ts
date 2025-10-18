@@ -108,6 +108,7 @@ export interface AutocompletionData {
 }
 
 export interface SessionData {
+  id: string;
   name: string;
   messages?: number;
   files?: number;
@@ -528,15 +529,23 @@ export interface ModelInfo {
 
 export interface TaskContext {
   version: number;
-  taskId: string;
   contextMessages: ContextMessage[];
   contextFiles: ContextFile[];
+}
+
+export interface TaskSettings {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  startedAt?: string;
+  completedAt?: string;
 }
 
 export interface TaskData {
   id: string;
   baseDir: string;
-  title: string;
+  name: string;
   aiderTotalCost: number;
   agentTotalCost: number;
   createdAt: string;

@@ -1,5 +1,5 @@
-import { EditFormat, Mode, Model, ModelsData, RawModelInfo, SessionData } from '@common/types';
-import React, { ReactNode, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { EditFormat, Mode, Model, ModelsData, RawModelInfo, TaskData } from '@common/types';
+import React, { ReactNode, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { BsCodeSlash, BsFilter, BsLayoutSidebar } from 'react-icons/bs';
 import { CgTerminal } from 'react-icons/cg';
 import { GoProjectRoadmap } from 'react-icons/go';
@@ -61,7 +61,7 @@ export const ProjectBar = React.forwardRef<ProjectTopBarRef, Props>(
     const agentModelSelectorRef = useRef<ModelSelectorRef>(null);
     const mainModelSelectorRef = useRef<ModelSelectorRef>(null);
     const architectModelSelectorRef = useRef<ModelSelectorRef>(null);
-    const [sessions, setSessions] = useState<SessionData[]>([]);
+    const [tasks, setTasks] = useState<TaskData[]>([]);
 
     const activeAgentProfile = useMemo(() => {
       return settings?.agentProfiles.find((profile) => profile.id === projectSettings?.agentProfileId);
@@ -85,13 +85,25 @@ export const ProjectBar = React.forwardRef<ProjectTopBarRef, Props>(
 
     useClickOutside(sessionPopupRef, hideSessionPopup);
 
-    const toggleSessionPopupVisible = useCallback(() => {
+    const loadTasks = useCallback(async () => {
+      try {
+        const tasks = await api.getTasks(baseDir);
+        setTasks(tasks);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load tasks:', error);
+        setTasks([]);
+      }
+    }, [baseDir, api]);
+
+    const toggleSessionPopupVisible = useCallback(async () => {
       if (sessionPopupVisible) {
         hideSessionPopup();
       } else {
+        await loadTasks();
         showSessionPopup();
       }
-    }, [sessionPopupVisible, hideSessionPopup, showSessionPopup]);
+    }, [sessionPopupVisible, hideSessionPopup, loadTasks, showSessionPopup]);
 
     const renderModelInfo = useCallback(
       (modelName: string, info: RawModelInfo | undefined): ReactNode => {
@@ -197,22 +209,11 @@ export const ProjectBar = React.forwardRef<ProjectTopBarRef, Props>(
       [api, baseDir, modelsData, onModelsChange, updatePreferredModels],
     );
 
-    const loadSessions = useCallback(async () => {
-      try {
-        const sessionsList = await api.listSessions(baseDir);
-        setSessions(sessionsList);
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to load sessions:', error);
-        setSessions([]);
-      }
-    }, [baseDir, api]);
-
-    const saveSession = useCallback(
-      async (name: string) => {
+    const saveTask = useCallback(
+      async (name: string, id?: string) => {
         try {
-          await api.saveSession(baseDir, name);
-          await loadSessions();
+          await api.saveTask(baseDir, name, id);
+          await loadTasks();
           hideSessionPopup();
           showSuccessNotification(t('sessions.sessionSaved'));
         } catch (error) {
@@ -220,13 +221,13 @@ export const ProjectBar = React.forwardRef<ProjectTopBarRef, Props>(
           console.error('Failed to save session:', error);
         }
       },
-      [api, baseDir, hideSessionPopup, loadSessions, t],
+      [api, baseDir, hideSessionPopup, loadTasks, t],
     );
 
-    const loadSessionMessages = useCallback(
-      async (name: string) => {
+    const loadTaskMessages = useCallback(
+      async (id: string) => {
         try {
-          await api.loadSessionMessages(baseDir, name);
+          await api.loadTask(baseDir, id);
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error('Failed to load session messages:', error);
@@ -235,45 +236,27 @@ export const ProjectBar = React.forwardRef<ProjectTopBarRef, Props>(
       [api, baseDir],
     );
 
-    const loadSessionFiles = useCallback(
-      async (name: string) => {
+    const deleteTask = useCallback(
+      async (id: string) => {
         try {
-          await api.loadSessionFiles(baseDir, name);
-        } catch (error) {
-          // eslint-disable-next-line no-console
-          console.error('Failed to load session files:', error);
-        }
-      },
-      [api, baseDir],
-    );
-
-    const deleteSession = useCallback(
-      async (name: string) => {
-        try {
-          await api.deleteSession(baseDir, name);
-          await loadSessions();
+          await api.deleteTask(baseDir, id);
+          await loadTasks();
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error('Failed to delete session:', error);
         }
       },
-      [api, baseDir, loadSessions],
+      [api, baseDir, loadTasks],
     );
 
     const exportSessionToMarkdown = useCallback(async () => {
       try {
-        await api.exportSessionToMarkdown(baseDir);
+        await api.exportTaskToMarkdown(baseDir);
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Failed to export session:', error);
       }
     }, [api, baseDir]);
-
-    useEffect(() => {
-      if (sessionPopupVisible) {
-        void loadSessions();
-      }
-    }, [sessionPopupVisible, loadSessions]);
 
     const handleRemovePreferredModel = (model: string) => {
       if (!settings) {
@@ -422,11 +405,10 @@ export const ProjectBar = React.forwardRef<ProjectTopBarRef, Props>(
               />
               {sessionPopupVisible && (
                 <SessionsPopup
-                  sessions={sessions}
-                  onLoadSessionMessages={loadSessionMessages}
-                  onLoadSessionFiles={loadSessionFiles}
-                  onSaveSession={saveSession}
-                  onDeleteSession={deleteSession}
+                  sessions={tasks}
+                  onLoadSessionMessages={loadTaskMessages}
+                  onSaveSession={saveTask}
+                  onDeleteSession={deleteTask}
                   onExportSessionToMarkdown={exportSessionToMarkdown}
                   onExportSessionToImage={onExportSessionToImage}
                 />
