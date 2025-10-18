@@ -81,7 +81,9 @@ const App = () => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    setIsVisible(true);
+    setTimeout(() => {
+      setIsVisible(true);
+    }, 100);
   }, []);
 
   return (

@@ -60,6 +60,7 @@ export const TodoWindow = ({ todos, onToggleTodo, onAddTodo, onUpdateTodo, onDel
   // Auto-collapse when all todo items are completed
   useEffect(() => {
     if (totalCount > 0 && completedCount === totalCount) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsExpanded(false);
     }
   }, [completedCount, totalCount]);

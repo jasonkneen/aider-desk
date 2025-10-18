@@ -14,12 +14,6 @@ export const LoadingMessageBlock = ({ message }: Props) => {
     'rounded-md p-3 mb-2 max-w-full break-words whitespace-pre-wrap text-xs bg-bg-secondary border border-border-dark-light text-text-primary';
 
   useEffect(() => {
-    // Reset animation when message content changes
-    setDisplayedText('');
-    setCurrentIndex(0);
-  }, [message.content]);
-
-  useEffect(() => {
     const typingTimer = setTimeout(() => {
       if (currentIndex >= message.content.length) {
         // When we reach the end, wait a bit longer before restarting

@@ -239,6 +239,15 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
       }
     }, [historyLimit, allHistoryItems.length]);
 
+    const setTextWithDispatch = (newText: string) => {
+      const view = editorRef.current?.view;
+      view?.dispatch({
+        changes: { from: 0, to: view.state.doc.toString().length, insert: newText },
+        annotations: [External.of(true)],
+      });
+      setText(newText);
+    };
+
     useImperativeHandle(ref, () => ({
       focus: () => {
         editorRef.current?.view?.focus();
@@ -273,15 +282,6 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
         }, 0);
       },
     }));
-
-    const setTextWithDispatch = (newText: string) => {
-      const view = editorRef.current?.view;
-      view?.dispatch({
-        changes: { from: 0, to: view.state.doc.toString().length, insert: newText },
-        annotations: [External.of(true)],
-      });
-      setText(newText);
-    };
 
     const prepareForNextPrompt = useCallback(() => {
       setTextWithDispatch('');

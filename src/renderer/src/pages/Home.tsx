@@ -19,6 +19,8 @@ import { showInfoNotification } from '@/utils/notifications';
 import { useApi } from '@/context/ApiContext';
 import { ModelLibrary } from '@/components/ModelLibrary';
 
+let hasShownUpdateNotification = false;
+
 export const Home = () => {
   const { t } = useTranslation();
   const { versions } = useVersions();
@@ -32,7 +34,6 @@ export const Home = () => {
   const [releaseNotesContent, setReleaseNotesContent] = useState<string | null>(null);
   const [isUsageDashboardVisible, setIsUsageDashboardVisible] = useState(false);
   const [isModelLibraryVisible, setIsModelLibraryVisible] = useState(false);
-  const [hasShownUpdateNotification, setHasShownUpdateNotification] = useState(false);
 
   const activeProject = openProjects.find((project) => project.active) || openProjects[0];
 
@@ -55,9 +56,9 @@ export const Home = () => {
   useEffect(() => {
     if (versions?.aiderDeskNewVersionReady && !hasShownUpdateNotification) {
       showInfoNotification(t('settings.about.newAiderDeskVersionReady'));
-      setHasShownUpdateNotification(true);
+      hasShownUpdateNotification = true;
     }
-  }, [versions, t, hasShownUpdateNotification, api]);
+  }, [versions, t]);
 
   useEffect(() => {
     const loadProjects = async () => {

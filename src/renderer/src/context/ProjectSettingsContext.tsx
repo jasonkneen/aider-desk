@@ -34,6 +34,17 @@ export const ProjectSettingsProvider = ({ baseDir, children }: ProjectSettingsPr
     }
   };
 
+  if (projectSettings && settings) {
+    // check if active agent profile still exists in settings
+    const activeProfile = settings.agentProfiles.find((profile) => profile.id === projectSettings.agentProfileId);
+
+    if (!activeProfile) {
+      void saveProjectSettings({
+        agentProfileId: DEFAULT_AGENT_PROFILE.id,
+      });
+    }
+  }
+
   useEffect(() => {
     const loadSettings = async () => {
       try {
@@ -46,20 +57,6 @@ export const ProjectSettingsProvider = ({ baseDir, children }: ProjectSettingsPr
     };
     void loadSettings();
   }, [baseDir, api]);
-  // check if active agent profile still exists in settings
-
-  useEffect(() => {
-    if (projectSettings && settings) {
-      const activeProfile = settings.agentProfiles.find((profile) => profile.id === projectSettings.agentProfileId);
-
-      if (!activeProfile) {
-        void saveProjectSettings({
-          agentProfileId: DEFAULT_AGENT_PROFILE.id,
-        });
-      }
-    }
-    // eslint-disable-next-line
-  }, [settings]);
 
   return <ProjectSettingsContext.Provider value={{ projectSettings, saveProjectSettings }}>{children}</ProjectSettingsContext.Provider>;
 };

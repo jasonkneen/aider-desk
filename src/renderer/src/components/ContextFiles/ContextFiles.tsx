@@ -263,7 +263,7 @@ export const ContextFiles = ({ baseDir, allFiles, showFileDialog, tokensInfo }: 
       }
       return `${fileTokenInfo.tokens || 0} ${t('usageDashboard.charts.tokens')}, $${(fileTokenInfo.cost || 0).toFixed(5)}`;
     },
-    [tokensInfo?.files, t],
+    [tokensInfo, t],
   );
 
   return (

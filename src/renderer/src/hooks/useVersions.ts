@@ -28,6 +28,7 @@ export const useVersions = () => {
   const checkForUpdates = useCallback(async () => loadVersions(true), [loadVersions]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void loadVersions();
 
     const removeListener = api.addVersionsInfoUpdatedListener((data) => {

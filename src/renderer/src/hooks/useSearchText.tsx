@@ -96,7 +96,7 @@ export const useSearchText = (inElement: HTMLElement | null, className?: string)
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [showSearchInput, foundElementsRef.current.size, navigateToNextFound, resetSearch, navigateToPreviousFound]);
+  }, [showSearchInput, navigateToNextFound, resetSearch, navigateToPreviousFound]);
 
   useLayoutEffect(() => {
     if (inElement) {
@@ -124,6 +124,7 @@ export const useSearchText = (inElement: HTMLElement | null, className?: string)
         });
       } else {
         foundElementsRef.current.clear();
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setCurrentElementIndex(-1);
       }
     }

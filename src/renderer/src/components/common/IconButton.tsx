@@ -1,4 +1,4 @@
-import { MouseEvent, ReactNode, useRef } from 'react';
+import { MouseEvent, ReactNode, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { twMerge } from 'tailwind-merge';
 
@@ -14,7 +14,7 @@ type Props = {
 };
 
 export const IconButton = ({ icon, onClick, tooltip, className, tooltipId, disabled }: Props) => {
-  const tooltipIdRef = useRef<string>(tooltipId || `icon-button-tooltip-${uuidv4()}`);
+  const [dataTooltipId] = useState(tooltipId || `icon-button-tooltip-${uuidv4()}`);
 
   const combinedClassName = twMerge(
     'text-text-muted',
@@ -29,21 +29,17 @@ export const IconButton = ({ icon, onClick, tooltip, className, tooltipId, disab
     onClick?.();
   };
 
-  const renderButton = () => (
-    <div
-      onClick={disabled || !onClick ? undefined : handleClick}
-      data-tooltip-id={tooltip ? tooltipIdRef.current : undefined}
-      data-tooltip-content={typeof tooltip === 'string' && tooltipId ? tooltip : undefined}
-      className={combinedClassName}
-    >
-      {icon}
-    </div>
-  );
-
   return (
     <>
-      {renderButton()}
-      {tooltip && !tooltipId && <StyledTooltip id={tooltipIdRef.current} content={tooltip} />}
+      <div
+        onClick={disabled || !onClick ? undefined : handleClick}
+        data-tooltip-id={tooltip ? dataTooltipId : undefined}
+        data-tooltip-content={typeof tooltip === 'string' && tooltipId ? tooltip : undefined}
+        className={combinedClassName}
+      >
+        {icon}
+      </div>
+      {tooltip && !tooltipId && <StyledTooltip id={dataTooltipId} content={tooltip} />}
     </>
   );
 };

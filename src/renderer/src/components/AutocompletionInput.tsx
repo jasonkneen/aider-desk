@@ -160,6 +160,7 @@ export const AutocompletionInput = ({
         }}
       />
       {rightElement && <div className="absolute right-2 top-1/2 -translate-y-1/2">{rightElement}</div>}
+      {/* eslint-disable-next-line react-hooks/refs */}
       {renderSuggestions()}
     </div>
   );

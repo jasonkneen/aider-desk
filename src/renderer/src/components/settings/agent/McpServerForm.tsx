@@ -73,7 +73,6 @@ type Props = {
 
 export const McpServerForm = ({ onSave, onCancel, servers }: Props) => {
   const { t } = useTranslation();
-  const tooltipId = useMemo(() => `mcp-config-hint-${Math.random().toString(36).substring(7)}`, []);
   const [configJSON, setConfigJSON] = useState(() => {
     if (servers && servers.length > 0) {
       // If multiple servers, merge them into a single object
@@ -147,8 +146,8 @@ export const McpServerForm = ({ onSave, onCancel, servers }: Props) => {
         </div>
         {!servers && (
           <div className="mr-1">
-            <MdInfoOutline className="h-5 w-5 text-text-secondary hover:text-text-primary cursor-pointer" data-tooltip-id={tooltipId} />
-            <StyledTooltip id={tooltipId} content={t('mcpServer.configHint')} />
+            <MdInfoOutline className="h-5 w-5 text-text-secondary hover:text-text-primary cursor-pointer" data-tooltip-id="mcp-server-config-hint" />
+            <StyledTooltip id="mcp-server-config-hint" content={t('mcpServer.configHint')} />
           </div>
         )}
       </div>

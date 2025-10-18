@@ -61,7 +61,7 @@ export const MessageBlock = ({ baseDir, message, allFiles, renderMarkdown, compa
   const { t } = useTranslation();
 
   if (isLoadingMessage(message)) {
-    return <LoadingMessageBlock message={message} />;
+    return <LoadingMessageBlock key={message.content} message={message} />;
   }
 
   if (isLogMessage(message)) {

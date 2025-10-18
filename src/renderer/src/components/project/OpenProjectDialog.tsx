@@ -23,8 +23,8 @@ export const OpenProjectDialog = ({ onClose, onAddProject, openProjects }: Props
   const [isValidPath, setIsValidPath] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [recentProjects, setRecentProjects] = useState<string[]>([]);
-  const [isProjectAlreadyOpen, setIsProjectAlreadyOpen] = useState(false);
   const api = useApi();
+  const isProjectAlreadyOpen = openProjects.some((project) => project.baseDir === projectPath);
 
   useEffect(() => {
     const loadRecentProjects = async () => {
@@ -50,8 +50,6 @@ export const OpenProjectDialog = ({ onClose, onAddProject, openProjects }: Props
       const isValid = await api.isProjectPath(projectPath);
       setIsValidPath(isValid);
     };
-
-    setIsProjectAlreadyOpen(openProjects.some((project) => project.baseDir === projectPath));
 
     void updateSuggestions();
   }, [projectPath, showSuggestions, openProjects, api]);
@@ -95,7 +93,6 @@ export const OpenProjectDialog = ({ onClose, onAddProject, openProjects }: Props
         onChange={(value, isFromSuggestion) => {
           setShowSuggestions(!isFromSuggestion);
           setProjectPath(value);
-          setIsProjectAlreadyOpen(false);
         }}
         placeholder={t('dialogs.projectPathPlaceholder')}
         autoFocus
