@@ -21,7 +21,7 @@ import {
   ResponseCompletedData,
   SessionData,
   SettingsData,
-  StartupMode,
+  ProjectStartMode,
   Theme,
   TodoItem,
   UsageDataRow,
@@ -123,7 +123,7 @@ export class EventsHandler {
     this.store.addRecentProject(baseDir);
   }
 
-  async restartProject(baseDir: string, startupMode?: StartupMode): Promise<void> {
+  async restartProject(baseDir: string, startupMode?: ProjectStartMode): Promise<void> {
     await this.projectManager.restartProject(baseDir, startupMode);
   }
 

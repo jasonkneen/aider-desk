@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { StartupMode, ProjectSettingsSchema } from '@common/types';
+import { ProjectStartMode, ProjectSettingsSchema } from '@common/types';
 
 import { BaseApi } from './base-api';
 
@@ -510,7 +510,7 @@ export class ProjectApi extends BaseApi {
         }
 
         const { projectDir, startupMode } = parsed;
-        await this.eventsHandler.restartProject(projectDir, startupMode as StartupMode);
+        await this.eventsHandler.restartProject(projectDir, startupMode as ProjectStartMode);
         res.status(200).json({ message: 'Project restarted' });
       }),
     );

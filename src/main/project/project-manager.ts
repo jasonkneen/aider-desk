@@ -1,5 +1,5 @@
 import { normalizeBaseDir } from '@common/utils';
-import { SettingsData, StartupMode } from '@common/types';
+import { SettingsData, ProjectStartMode } from '@common/types';
 
 import { TelemetryManager } from '@/telemetry';
 import { McpManager } from '@/agent';
@@ -43,7 +43,7 @@ export class ProjectManager {
     return project;
   }
 
-  public startProject(baseDir: string, startupMode?: StartupMode) {
+  public startProject(baseDir: string, startupMode?: ProjectStartMode) {
     logger.info('Starting project', { baseDir });
     const project = this.getProject(baseDir);
 
@@ -61,7 +61,7 @@ export class ProjectManager {
     await project.close();
   }
 
-  public async restartProject(baseDir: string, startupMode?: StartupMode): Promise<void> {
+  public async restartProject(baseDir: string, startupMode?: ProjectStartMode): Promise<void> {
     logger.info('Restarting project', { baseDir });
     await this.closeProject(baseDir);
     this.startProject(baseDir, startupMode);

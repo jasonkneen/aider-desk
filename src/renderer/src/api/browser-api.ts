@@ -25,7 +25,7 @@ import {
   ResponseCompletedData,
   SessionData,
   SettingsData,
-  StartupMode,
+  ProjectStartMode,
   TerminalData,
   TerminalExitData,
   TodoItem,
@@ -223,7 +223,7 @@ export class BrowserApi implements ApplicationAPI {
   stopProject(baseDir: string): void {
     this.post('/project/stop', { projectDir: baseDir });
   }
-  restartProject(baseDir: string, startupMode?: StartupMode): void {
+  restartProject(baseDir: string, startupMode?: ProjectStartMode): void {
     this.post('/project/restart', { projectDir: baseDir, startupMode });
   }
   runPrompt(baseDir: string, prompt: string, mode?: Mode): void {

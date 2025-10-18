@@ -23,7 +23,7 @@ import {
   ResponseChunkData,
   ResponseCompletedData,
   SettingsData,
-  StartupMode,
+  ProjectStartMode,
   TaskData,
   TodoItem,
   TokensInfoData,
@@ -100,19 +100,19 @@ export class Task {
     this.aiderManager = new AiderManager(this, this.store, this.modelManager, this.eventManager, () => this.connectors);
   }
 
-  public async start(startupMode?: StartupMode) {
+  public async start(startupMode?: ProjectStartMode) {
     const settings = this.store.getSettings();
     const mode = startupMode ?? settings.startupMode;
 
     try {
       // Handle different startup modes
       switch (mode) {
-        case StartupMode.Empty:
+        case ProjectStartMode.Empty:
           // Don't load any session, start fresh
           logger.info('Starting with empty session');
           break;
 
-        case StartupMode.Last:
+        case ProjectStartMode.Last:
           // Load the autosaved session
           logger.info('Loading autosaved session');
           await this.contextManager.load();

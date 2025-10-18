@@ -1,4 +1,4 @@
-import { SettingsData, StartupMode } from '@common/types';
+import { SettingsData, ProjectStartMode } from '@common/types';
 import { useEffect, useMemo, useState } from 'react';
 import { isEqual } from 'lodash';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +25,7 @@ export const SettingsDialog = ({ onClose, initialTab = 0, initialAgentProfileId,
 
   useEffect(() => {
     if (originalSettings) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalSettings(originalSettings);
     }
   }, [originalSettings]);
@@ -80,7 +81,7 @@ export const SettingsDialog = ({ onClose, initialTab = 0, initialAgentProfileId,
       ) {
         const openProjects = await api.getOpenProjects();
         openProjects.forEach((project) => {
-          api.restartProject(project.baseDir, StartupMode.Last);
+          api.restartProject(project.baseDir, ProjectStartMode.Last);
         });
       }
       onClose();

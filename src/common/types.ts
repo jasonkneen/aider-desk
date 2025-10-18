@@ -240,9 +240,10 @@ export enum ToolApprovalState {
   Ask = 'ask',
 }
 
-export enum StartupMode {
+export enum ProjectStartMode {
   Empty = 'empty',
   Last = 'last',
+  Remote = 'remote',
 }
 
 export enum SuggestionMode {
@@ -348,7 +349,7 @@ export type Font = (typeof FONTS)[number];
 export interface SettingsData {
   onboardingFinished?: boolean;
   language: string;
-  startupMode?: StartupMode;
+  startupMode?: ProjectStartMode;
   zoomLevel?: number;
   notificationsEnabled?: boolean;
   theme?: Theme;

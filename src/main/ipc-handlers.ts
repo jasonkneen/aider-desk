@@ -1,4 +1,4 @@
-import { EditFormat, FileEdit, ProviderProfile, McpServerConfig, Mode, Model, ProjectSettings, SettingsData, StartupMode, TodoItem } from '@common/types';
+import { EditFormat, FileEdit, ProviderProfile, McpServerConfig, Mode, Model, ProjectSettings, SettingsData, ProjectStartMode, TodoItem } from '@common/types';
 import { ipcMain } from 'electron';
 
 import { EventsHandler } from './events-handler';
@@ -38,7 +38,7 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     await eventsHandler.stopProject(baseDir);
   });
 
-  ipcMain.on('restart-project', async (_, baseDir: string, startupMode?: StartupMode) => {
+  ipcMain.on('restart-project', async (_, baseDir: string, startupMode?: ProjectStartMode) => {
     await eventsHandler.restartProject(baseDir, startupMode);
   });
 

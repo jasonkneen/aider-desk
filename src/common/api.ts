@@ -30,7 +30,7 @@ import {
   UsageDataRow,
   EnvironmentVariable,
   CustomCommand,
-  StartupMode,
+  ProjectStartMode,
   FileEdit,
   ClearProjectData,
   ProjectStartedData,
@@ -53,7 +53,7 @@ export interface ApplicationAPI {
   getCloudflareTunnelStatus: () => Promise<CloudflareTunnelStatus>;
   startProject: (baseDir: string) => void;
   stopProject: (baseDir: string) => void;
-  restartProject: (baseDir: string, startupMode?: StartupMode) => void;
+  restartProject: (baseDir: string, startupMode?: ProjectStartMode) => void;
   runPrompt: (baseDir: string, prompt: string, mode?: Mode) => void;
   redoLastUserPrompt: (baseDir: string, mode: Mode, updatedPrompt?: string) => void;
   answerQuestion: (baseDir: string, answer: string) => void;

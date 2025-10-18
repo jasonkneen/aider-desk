@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { AgentProfile, ProviderProfile, ProjectData, ProjectSettings, SettingsData, StartupMode, SuggestionMode, WindowState, Model } from '@common/types';
+import { AgentProfile, ProviderProfile, ProjectData, ProjectSettings, SettingsData, ProjectStartMode, SuggestionMode, WindowState, Model } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
 import { DEFAULT_AGENT_PROFILE, DEFAULT_AGENT_PROFILES, DEFAULT_PROVIDER_MODEL } from '@common/agent';
 
@@ -24,7 +24,7 @@ import { migrateSettingsV14toV15 } from '@/store/migrations/v14-to-v15';
 
 export const DEFAULT_SETTINGS: SettingsData = {
   language: 'en',
-  startupMode: StartupMode.Empty,
+  startupMode: ProjectStartMode.Empty,
   zoomLevel: 1,
   notificationsEnabled: false,
   theme: 'dark',

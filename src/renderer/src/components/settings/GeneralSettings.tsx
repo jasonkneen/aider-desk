@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Font, FONTS, SettingsData, StartupMode, SuggestionMode, Theme, THEMES } from '@common/types';
+import { Font, FONTS, SettingsData, ProjectStartMode, SuggestionMode, Theme, THEMES } from '@common/types';
 
 import { Checkbox } from '../common/Checkbox';
 import { RadioButton } from '../common/RadioButton';
@@ -60,7 +60,7 @@ export const GeneralSettings = ({ settings, setSettings, onLanguageChange, onZoo
     value: theme,
   })).sort((a, b) => a.label.localeCompare(b.label));
 
-  const handleStartupModeChange = (mode: StartupMode) => {
+  const handleStartupModeChange = (mode: ProjectStartMode) => {
     setSettings({
       ...settings,
       startupMode: mode,
@@ -68,7 +68,7 @@ export const GeneralSettings = ({ settings, setSettings, onLanguageChange, onZoo
   };
 
   const handleStartupModeClick = (value: string) => {
-    handleStartupModeChange(value as StartupMode);
+    handleStartupModeChange(value as ProjectStartMode);
   };
 
   const handleZoomChange = (value: string) => {
@@ -166,8 +166,8 @@ export const GeneralSettings = ({ settings, setSettings, onLanguageChange, onZoo
           <RadioButton
             id="startup-empty"
             name="startup-mode"
-            value={StartupMode.Empty}
-            checked={settings.startupMode === StartupMode.Empty}
+            value={ProjectStartMode.Empty}
+            checked={settings.startupMode === ProjectStartMode.Empty}
             onChange={handleStartupModeClick}
             label={t('settings.startup.emptySession')}
           />
@@ -175,8 +175,8 @@ export const GeneralSettings = ({ settings, setSettings, onLanguageChange, onZoo
           <RadioButton
             id="startup-last"
             name="startup-mode"
-            value={StartupMode.Last}
-            checked={settings.startupMode === StartupMode.Last}
+            value={ProjectStartMode.Last}
+            checked={settings.startupMode === ProjectStartMode.Last}
             onChange={handleStartupModeClick}
             label={t('settings.startup.lastSession')}
           />

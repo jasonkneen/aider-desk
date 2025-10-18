@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-import { CustomCommand, FileEdit, InputHistoryData, SettingsData, StartupMode } from '@common/types';
+import { CustomCommand, FileEdit, InputHistoryData, SettingsData, ProjectStartMode } from '@common/types';
 import { fileExists } from '@common/utils';
 
 import { getAllFiles } from '@/utils/file-system';
@@ -21,6 +21,7 @@ export class Project {
   private readonly customCommandManager: CustomCommandManager;
   private readonly tasks = new Map<string, Task>();
 
+  private initialized = false;
   private connectors: Connector[] = [];
   private inputHistoryFile = '.aider.input.history';
 
@@ -36,19 +37,19 @@ export class Project {
     this.customCommandManager = new CustomCommandManager(this);
   }
 
-  public async start(startupMode?: StartupMode) {
+  public async start(startupMode?: ProjectStartMode) {
     const settings = this.store.getSettings();
     const mode = startupMode ?? settings.startupMode;
 
     try {
       // Handle different startup modes
       switch (mode) {
-        case StartupMode.Empty:
+        case ProjectStartMode.Empty:
           // Don't load any session, start fresh
           logger.info('Starting with empty session');
           break;
 
-        case StartupMode.Last:
+        case ProjectStartMode.Last:
           // Load the autosaved session
           logger.info('Loading autosaved session');
           break;
@@ -57,9 +58,15 @@ export class Project {
       logger.error('Error loading session:', { error });
     }
 
+    if (this.initialized) {
+      return;
+    }
+
     if (!this.getTask('default')) {
       await this.createTask('default');
     }
+
+    this.initialized = true;
 
     this.eventManager.sendProjectStarted(this.baseDir);
   }
