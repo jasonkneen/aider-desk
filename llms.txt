@@ -137,11 +137,6 @@ src/
       cloudflare-tunnel-manager.ts
       index.ts
       server-controller.ts
-    session/
-      migrations/
-        v1-to-v2.ts
-      index.ts
-      session-manager.ts
     store/
       migrations/
         v0-to-v1.ts
@@ -161,9 +156,13 @@ src/
         v9-to-v10.ts
       index.ts
       store.ts
-    tasks/
+    task/
+      migrations/
+        v1-to-v2.ts
+      aider-manager.ts
+      context-manager.ts
       index.ts
-      task-manager.ts
+      task.ts
     telemetry/
       index.ts
       langfuse.ts
@@ -753,7 +752,7 @@ io = ConnectorInputOutput(
 ⋮----
 class Connector
 ⋮----
-def __init__(self, base_dir, watch_files=False, server_url="http://localhost:24337", reasoning_effort=None, thinking_tokens=None, confirm_before_edit=False)
+def __init__(self, base_dir, task_id, watch_files=False, server_url="http://localhost:24337", reasoning_effort=None, thinking_tokens=None, confirm_before_edit=False)
 ⋮----
 # Create initial coder for setup and non-prompt operations
 ⋮----
@@ -1037,6 +1036,7 @@ args, _ = parser.parse_known_args(argv) # Use parse_known_args to ignore unknown
 # Get environment variables
 server_url = os.getenv("CONNECTOR_SERVER_URL", "http://localhost:24337")
 base_dir = os.getenv("BASE_DIR", os.getcwd())
+task_id = os.getenv("TASK_ID", "default")
 confirm_before_edit = os.getenv("CONNECTOR_CONFIRM_BEFORE_EDIT", "0") == "1"
 ⋮----
 # Telemetry
@@ -4046,6 +4046,7 @@ export interface ProjectStartedData {
 ⋮----
 export interface ClearProjectData {
   baseDir: string;
+  taskId: string;
   clearMessages: boolean;
   clearSession: boolean;
 }
@@ -4145,10 +4146,23 @@ export interface ModelInfo {
   cacheReadInputTokenCost?: number;
 }
 ⋮----
-export interface Task {
+export interface TaskContext {
+  version: number;
+  taskId: string;
+  contextMessages: ContextMessage[];
+  contextFiles: ContextFile[];
+}
+⋮----
+export interface TaskData {
   id: string;
+  baseDir: string;
   title: string;
-  completed: boolean;
+  aiderTotalCost: number;
+  agentTotalCost: number;
+  createdAt: string;
+  updatedAt: string;
+  startedAt?: string;
+  completedAt?: string;
 }
 ⋮----
 export interface TodoItem {
@@ -4343,9 +4357,9 @@ import { ApprovalManager } from './approval-manager';
 ⋮----
 import type { ToolSet } from 'ai';
 ⋮----
-import { Project } from '@/project';
+import { Task } from '@/task';
 ⋮----
-export const createAiderToolset = (project: Project, profile: AgentProfile, promptContext?: PromptContext): ToolSet =>
+export const createAiderToolset = (task: Task, profile: AgentProfile, promptContext?: PromptContext): ToolSet =>
 ⋮----
 // This condition is now met if the file initially existed or was just created
 ⋮----
@@ -4362,7 +4376,7 @@ File: src/main/agent/tools/approval-manager.ts
 ================
 import { AgentProfile, QuestionData, ToolApprovalState } from '@common/types';
 ⋮----
-import { Project } from '@/project';
+import { Task } from '@/task';
 ⋮----
 export class ApprovalManager
 ⋮----
@@ -4426,6 +4440,7 @@ import {
   POWER_TOOL_SEMANTIC_SEARCH as TOOL_SEMANTIC_SEARCH,
   TOOL_GROUP_NAME_SEPARATOR,
 } from '@common/tools';
+// @ts-expect-error istextorbinary is not typed properly
 import { isBinary } from 'istextorbinary';
 import { isURL } from '@common/utils';
 import { search } from '@probelabs/probe';
@@ -4433,11 +4448,11 @@ import { search } from '@probelabs/probe';
 import { ApprovalManager } from './approval-manager';
 ⋮----
 import { PROBE_BINARY_PATH } from '@/constants';
-import { Project } from '@/project';
+import { Task } from '@/task';
 import logger from '@/logger';
 import { filterIgnoredFiles, scrapeWeb } from '@/utils';
 ⋮----
-export const createPowerToolset = (project: Project, profile: AgentProfile, promptContext?: PromptContext): ToolSet =>
+export const createPowerToolset = (task: Task, profile: AgentProfile, promptContext?: PromptContext): ToolSet =>
 ⋮----
 // Sanitize escape characters from searchTerm and replacementText
 const sanitize = (str: string) =>
@@ -4460,7 +4475,7 @@ absolute: false, // Keep paths relative to cwd for easier processing
 ⋮----
 // Convert to absolute paths for filtering, then back to relative
 ⋮----
-// Ensure paths are relative to project.baseDir
+// Ensure paths are relative to task.project.baseDir
 ⋮----
 // Filter out ignored files in batch
 ⋮----
@@ -4470,7 +4485,7 @@ const searchRegex = new RegExp(searchTerm, caseSensitive ? undefined : 'i'); // 
 ⋮----
 // Check if it's a dependency path (format: language:rest)
 ⋮----
-// If path is relative (including "." and "./"), resolve it relative to project.baseDir
+// If path is relative (including "." and "./"), resolve it relative to task.project.baseDir
 ⋮----
 // @ts-expect-error probe is not typed properly
 ⋮----
@@ -4487,15 +4502,15 @@ import { SUBAGENTS_TOOL_GROUP_NAME, SUBAGENTS_TOOL_RUN_TASK, TOOL_GROUP_NAME_SEP
 import { DEFAULT_AGENT_PROFILE, isSubagentEnabled } from '@common/agent';
 import { extractServerNameToolName } from '@common/utils';
 ⋮----
-import { Project } from '@/project';
+import { Task } from '@/task';
 import logger from '@/logger';
 ⋮----
 const getSubagentId = (subagent: AgentProfile): string =>
 ⋮----
 export const createSubagentsToolset = (
   settings: SettingsData,
-  project: Project,
-  profile: AgentProfile,
+  task: Task,
+  mainAgentProfile: AgentProfile,
   abortSignal?: AbortSignal,
   messages: ContextMessage[] = [],
   resultMessages: ContextMessage[] = [],
@@ -4544,9 +4559,9 @@ import { AgentProfile, PromptContext, ToolApprovalState } from '@common/types';
 ⋮----
 import { ApprovalManager } from './approval-manager';
 ⋮----
-import { Project } from '@/project';
+import { Task } from '@/task';
 ⋮----
-export const createTodoToolset = (project: Project, profile: AgentProfile, promptContext?: PromptContext): ToolSet =>
+export const createTodoToolset = (task: Task, profile: AgentProfile, promptContext?: PromptContext): ToolSet =>
 
 ================
 File: src/main/agent/agent.ts
@@ -4588,9 +4603,9 @@ import {
 } from 'ai';
 import { delay, extractServerNameToolName } from '@common/utils';
 import { LlmProvider, LlmProviderName } from '@common/agent';
-// @ts-expect-error gpt-tokenizer is not typed
 import { countTokens } from 'gpt-tokenizer/model/gpt-4o';
 import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.js';
+// @ts-expect-error istextorbinary is not typed properly
 import { isBinary } from 'istextorbinary';
 import { fileTypeFromBuffer } from 'file-type';
 import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
@@ -4606,7 +4621,7 @@ import { ANSWER_RESPONSE_START_TAG, extractPromptContextFromToolResult, THINKING
 import { extractReasoningMiddleware } from './middlewares/extract-reasoning-middleware';
 ⋮----
 import { AIDER_DESK_PROJECT_RULES_DIR } from '@/constants';
-import { Project } from '@/project';
+import { Task } from '@/task';
 import { Store } from '@/store';
 import logger from '@/logger';
 import { parseAiderEnv } from '@/utils';
@@ -4624,7 +4639,7 @@ private invalidateAiderEnv()
 ⋮----
 settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
 ⋮----
-private async getFilesContentForPrompt(files: ContextFile[], project: Project): Promise<
+private async getFilesContentForPrompt(files: ContextFile[], task: Task): Promise<
 ⋮----
 // If binary, try to detect if it's an image using image-type and return base64
 ⋮----
@@ -4638,7 +4653,7 @@ private async getFilesContentForPrompt(files: ContextFile[], project: Project): 
 ⋮----
 // Add to textFileContents array
 ⋮----
-private async getContextFilesMessages(project: Project, profile: AgentProfile, contextFiles: ContextFile[]): Promise<ModelMessage[]>
+private async getContextFilesMessages(task: Task, profile: AgentProfile, contextFiles: ContextFile[]): Promise<ModelMessage[]>
 ⋮----
 // Filter out rule files as they are already included in the system prompt
 ⋮----
@@ -4653,7 +4668,7 @@ private async getContextFilesMessages(project: Project, profile: AgentProfile, c
 private async getWorkingFilesMessages(contextFiles: ContextFile[]): Promise<ModelMessage[]>
 ⋮----
 private async getAvailableTools(
-    project: Project,
+    task: Task,
     profile: AgentProfile,
     llmProvider: LlmProvider,
     messages?: ContextMessage[],
@@ -4681,7 +4696,7 @@ return; // Do not add the tool if it's never approved
 private convertMpcToolToAiSdkTool(
     providerName: LlmProviderName,
     serverName: string,
-    project: Project,
+    task: Task,
     profile: AgentProfile,
     mcpClient: McpSdkClient,
     toolDef: McpTool,
@@ -4715,12 +4730,12 @@ private fixInputSchema(provider: LlmProviderName, inputSchema: McpToolInputSchem
 // gemini requires at least one property in the schema
 ⋮----
 async runAgent(
-    project: Project,
+    task: Task,
     profile: AgentProfile,
     prompt: string,
     promptContext?: PromptContext,
-    contextMessages: ContextMessage[] = project.getContextMessages(),
-    contextFiles: ContextFile[] = project.getContextFiles(),
+    contextMessages: ContextMessage[] = task.getContextMessages(),
+    contextFiles: ContextFile[] = task.getContextFiles(),
     systemPrompt?: string,
     abortSignal?: AbortSignal,
 ): Promise<ContextMessage[]>
@@ -4729,7 +4744,7 @@ async runAgent(
 ⋮----
 // add user message
 ⋮----
-// reinitialize MCP clients for the current project and wait for them to be ready
+// reinitialize MCP clients for the current task and wait for them to be ready
 ⋮----
 // repairToolCall function that attempts to repair tool calls
 const repairToolCall = async (
@@ -4761,7 +4776,7 @@ error: error.message, // Pass the validation error message
 ⋮----
 // Always send a final "finished" message, regardless of whether there was text or tools
 ⋮----
-private async getLlmEnv(project: Project)
+private async getLlmEnv(task: Task)
 ⋮----
 // File does not exist or other read error, ignore
 ⋮----
@@ -4769,12 +4784,7 @@ private async getLlmEnv(project: Project)
 ⋮----
 private getAiderEnv(): Record<string, string>
 ⋮----
-private async prepareMessages(
-    project: Project,
-    profile: AgentProfile,
-    contextMessages: ModelMessage[],
-    contextFiles: ContextFile[],
-): Promise<ModelMessage[]>
+private async prepareMessages(task: Task, profile: AgentProfile, contextMessages: ModelMessage[], contextFiles: ContextFile[]): Promise<ModelMessage[]>
 ⋮----
 // Add repo map if enabled
 ⋮----
@@ -4782,7 +4792,7 @@ private async prepareMessages(
 ⋮----
 // Add message history
 ⋮----
-async estimateTokens(project: Project, profile: AgentProfile): Promise<number>
+async estimateTokens(task: Task, profile: AgentProfile): Promise<number>
 ⋮----
 // Format tools for the prompt
 ⋮----
@@ -4798,7 +4808,7 @@ interrupt(baseDir: string)
 private processStep<TOOLS extends ToolSet>(
     currentResponseId: string,
     { reasoningText, text, toolCalls, toolResults, finishReason, usage, providerMetadata, response }: StepResult<TOOLS>,
-    project: Project,
+    task: Task,
     profile: AgentProfile,
     provider: ProviderProfile,
     promptContext?: PromptContext,
@@ -4832,8 +4842,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { McpServerConfig, McpTool, SettingsData } from '@common/types';
 import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
-import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp';
-import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 ⋮----
 import logger from '@/logger';
 ⋮----
@@ -5359,6 +5369,8 @@ import {
   ProviderModelsData,
   ProvidersUpdatedData,
   SettingsData,
+  TaskData,
+  ClearProjectData,
 } from '@common/types';
 ⋮----
 import logger from '@/logger';
@@ -5379,7 +5391,7 @@ constructor(private readonly mainWindow: BrowserWindow | null)
 // Project lifecycle events
 sendProjectStarted(baseDir: string): void
 ⋮----
-sendClearProject(baseDir: string, clearMessages: boolean, clearFiles: boolean): void
+sendClearTask(baseDir: string, taskId: string, clearMessages: boolean, clearFiles: boolean): void
 ⋮----
 // File management events
 sendFileAdded(baseDir: string, file: ContextFile): void
@@ -5438,6 +5450,17 @@ sendProvidersUpdated(providers: ProviderProfile[]): void
 ⋮----
 sendProviderModelsUpdated(data: ProviderModelsData): void
 ⋮----
+// Task lifecycle events
+sendTaskCreated(task: TaskData): void
+⋮----
+sendTaskActivated(task: TaskData): void
+⋮----
+sendTaskStarted(task: TaskData): void
+⋮----
+sendTaskCompleted(task: TaskData): void
+⋮----
+sendTaskCancelled(task: TaskData): void
+⋮----
 subscribe(socket: Socket, config: EventsConnectorConfig): void
 ⋮----
 unsubscribe(socket: Socket): void
@@ -5469,7 +5492,7 @@ import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, CacheControl, LlmProviderStrategy } from '@/models';
 import { LoadModelsResponse } from '@/models/types';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 ⋮----
 export const loadAnthropicModels = async (
@@ -5502,7 +5525,7 @@ export const calculateAnthropicCost = (
 ): number =>
 ⋮----
 export const getAnthropicUsageReport = (
-  project: Project,
+  task: Task,
   provider: ProviderProfile,
   model: Model,
   usage: LanguageModelUsage,
@@ -5538,7 +5561,7 @@ import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 ⋮----
 const extractResourceNameFromEndpoint = (endpoint: string): string =>
 ⋮----
@@ -5561,7 +5584,7 @@ type AzureMetadata = {
 export const calculateAzureCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
 export const getAzureUsageReport = (
-  project: Project,
+  task: Task,
   provider: ProviderProfile,
   model: Model,
   usage: LanguageModelUsage,
@@ -5595,7 +5618,7 @@ import type { LanguageModelV2 } from '@ai-sdk/provider';
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 import { LoadModelsResponse } from '@/models/types';
 ⋮----
 export const loadBedrockModels = async (
@@ -5634,7 +5657,7 @@ export const createBedrockLlm = (profile: ProviderProfile, model: Model, env: Re
 // === Cost and Usage Functions ===
 export const calculateBedrockCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
-export const getBedrockUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
+export const getBedrockUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
 // Calculate cost internally (no caching for Bedrock)
 ⋮----
@@ -5658,7 +5681,7 @@ import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils/environment';
 import { LoadModelsResponse } from '@/models/types';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 ⋮----
 interface CerebrasModel {
   id: string;
@@ -5684,7 +5707,7 @@ export const createCerebrasLlm = (profile: ProviderProfile, model: Model, env: R
 // === Cost and Usage Functions ===
 export const calculateCerebrasCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
-export const getCerebrasUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
+export const getCerebrasUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
 // Calculate cost internally (no caching for Cerebras)
 ⋮----
@@ -5707,7 +5730,7 @@ import type { LanguageModelV2 } from '@ai-sdk/provider';
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 ⋮----
 export const loadDeepseekModels = async (
   profile: ProviderProfile,
@@ -5725,7 +5748,7 @@ export const createDeepseekLlm = (profile: ProviderProfile, model: Model, env: R
 // === Cost and Usage Functions ===
 export const calculateDeepseekCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
-export const getDeepseekUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
+export const getDeepseekUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
 // Calculate cost internally (no caching for DeepSeek)
 ⋮----
@@ -5748,7 +5771,7 @@ import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider'
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 ⋮----
 export const loadGeminiModels = async (
   profile: ProviderProfile,
@@ -5773,7 +5796,7 @@ type GoogleMetadata = {
 export const calculateGeminiCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
 export const getGeminiUsageReport = (
-  project: Project,
+  task: Task,
   provider: ProviderProfile,
   model: Model,
   usage: LanguageModelUsage,
@@ -5814,7 +5837,7 @@ import type { LanguageModelV2 } from '@ai-sdk/provider';
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 ⋮----
 interface GroqModel {
   id: string;
@@ -5838,7 +5861,7 @@ export const createGroqLlm = (profile: ProviderProfile, model: Model, env: Recor
 // === Cost and Usage Functions ===
 export const calculateGroqCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
-export const getGroqUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
+export const getGroqUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
 // Calculate cost internally (no caching for Groq)
 ⋮----
@@ -5861,7 +5884,7 @@ import type { LanguageModelV2 } from '@ai-sdk/provider';
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 ⋮----
 export const loadLmStudioModels = async (
   profile: ProviderProfile,
@@ -5883,7 +5906,7 @@ export const createLmStudioLlm = (profile: ProviderProfile, model: Model, env: R
 // === Cost and Usage Functions ===
 export const calculateLmStudioCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
-export const getLmStudioUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
+export const getLmStudioUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
 // Calculate cost internally (no caching for LM Studio)
 ⋮----
@@ -5907,7 +5930,7 @@ import type { LanguageModelV2 } from '@ai-sdk/provider';
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 ⋮----
 export const loadOllamaModels = async (
   profile: ProviderProfile,
@@ -5931,7 +5954,7 @@ let normalized = baseUrl.replace(/\/+$/, ''); // Remove all trailing slashes
 // === Cost and Usage Functions ===
 export const calculateOllamaCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
-export const getOllamaUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
+export const getOllamaUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
 // Calculate cost internally (no caching for Ollama)
 ⋮----
@@ -5953,7 +5976,7 @@ import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 ⋮----
 export const loadOpenaiCompatibleModels = async (
@@ -5976,7 +5999,7 @@ export const createOpenAiCompatibleLlm = (profile: ProviderProfile, model: Model
 // === Cost and Usage Functions ===
 export const calculateOpenAiCompatibleCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
-export const getOpenAiCompatibleUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
+export const getOpenAiCompatibleUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
 // Calculate cost internally (no caching for OpenAI Compatible)
 ⋮----
@@ -5998,7 +6021,7 @@ import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider'
 ⋮----
 import logger from '@/logger';
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 ⋮----
 export const loadOpenAiModels = async (
@@ -6026,7 +6049,7 @@ type OpenAiMetadata = {
 export const calculateOpenAiCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
 export const getOpenAiUsageReport = (
-  project: Project,
+  task: Task,
   provider: ProviderProfile,
   model: Model,
   usage: LanguageModelUsage,
@@ -6073,7 +6096,7 @@ import { AIDER_DESK_TITLE, AIDER_DESK_WEBSITE } from '@/constants';
 import { AiderModelMapping, LlmProviderStrategy, CacheControl, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 ⋮----
 interface OpenRouterTopProvider {
   is_moderated: boolean;
@@ -6138,7 +6161,7 @@ export const calculateOpenRouterCost = (model: Model, sentTokens: number, receiv
 // OpenRouter provides cost directly from provider metadata, but we'll calculate it as fallback
 ⋮----
 export const getOpenRouterUsageReport = (
-  project: Project,
+  task: Task,
   provider: ProviderProfile,
   model: Model,
   usage: LanguageModelUsage,
@@ -6176,7 +6199,7 @@ import { AIDER_DESK_TITLE, AIDER_DESK_WEBSITE } from '@/constants';
 import { AiderModelMapping, LlmProviderStrategy, CacheControl, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 ⋮----
 interface RequestyModel {
   id: string;
@@ -6224,7 +6247,7 @@ export const calculateRequestyCost = (
 ): number =>
 ⋮----
 export const getRequestyUsageReport = (
-  project: Project,
+  task: Task,
   provider: ProviderProfile,
   model: Model,
   usage: LanguageModelUsage,
@@ -6263,7 +6286,7 @@ import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider'
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 ⋮----
 export const loadVertexAIModels = async (
   profile: ProviderProfile,
@@ -6301,7 +6324,7 @@ export const calculateVertexAiCost = (model: Model, sentTokens: number, received
 // Use model overrides if available, otherwise use base model info
 ⋮----
 export const getVertexAiUsageReport = (
-  project: Project,
+  task: Task,
   provider: ProviderProfile,
   model: Model,
   usage: LanguageModelUsage,
@@ -6338,7 +6361,7 @@ import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 ⋮----
 const loadZaiPlanModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>, settings: SettingsData): Promise<LoadModelsResponse> =>
@@ -6364,7 +6387,7 @@ const calculateZaiPlanCost = (model: Model, sentTokens: number, receivedTokens: 
 ⋮----
 // Use model overrides if available, otherwise use base model info
 ⋮----
-const getZaiPlanUsageReport = (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
+const getZaiPlanUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
 // Calculate cost internally (no caching for ZAI Plan)
 ⋮----
@@ -6411,7 +6434,7 @@ import { AIDER_DESK_DATA_DIR, AIDER_DESK_CACHE_DIR } from '@/constants';
 import logger from '@/logger';
 import { Store } from '@/store';
 import { EventManager } from '@/events';
-import { Project } from '@/project/project';
+import { Task } from '@/task/task';
 import { AiderModelMapping, CacheControl, LlmProviderRegistry } from '@/models/types';
 ⋮----
 type ModelsMetaResponse = Record<
@@ -6518,7 +6541,7 @@ createLlm(profile: ProviderProfile, model: string | Model, env: Record<string, s
 ⋮----
 // Fallback to creating a minimal Model object if not found
 ⋮----
-getUsageReport(project: Project, provider: ProviderProfile, model: string | Model, usage: LanguageModelUsage, providerMetadata?: unknown): UsageReportData
+getUsageReport(task: Task, provider: ProviderProfile, model: string | Model, usage: LanguageModelUsage, providerMetadata?: unknown): UsageReportData
 ⋮----
 // Resolve Model object
 ⋮----
@@ -6555,7 +6578,7 @@ import { LlmProvider, LlmProviderName } from '@common/agent';
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 import type { LanguageModelUsage, ToolSet } from 'ai';
 ⋮----
-import { Project } from '@/project';
+import { Task } from '@/task';
 ⋮----
 export type CacheControl = SharedV2ProviderOptions | undefined;
 ⋮----
@@ -6589,7 +6612,7 @@ export interface LlmProviderStrategy {
   /**
    * Generates usage reports with provider-specific metadata and calculates cost internally
    */
-  getUsageReport: (project: Project, provider: ProviderProfile, model: Model, usage: LanguageModelUsage, providerMetadata?: unknown) => UsageReportData;
+  getUsageReport: (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage, providerMetadata?: unknown) => UsageReportData;
 
   // === Model Discovery and Configuration Functions ===
   /**
@@ -6673,7 +6696,7 @@ import { normalizeBaseDir } from '@common/utils';
 import { SettingsData, StartupMode } from '@common/types';
 ⋮----
 import { TelemetryManager } from '@/telemetry';
-import { Agent } from '@/agent';
+import { McpManager } from '@/agent';
 import { DataManager } from '@/data-manager';
 import logger from '@/logger';
 import { Project } from '@/project';
@@ -6706,75 +6729,31 @@ public getCustomCommands(baseDir: string)
 ================
 File: src/main/project/project.ts
 ================
-import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
-import { createHash } from 'crypto';
-import { unlinkSync } from 'fs';
 import fs from 'fs/promises';
 import path from 'path';
 ⋮----
-import { simpleGit } from 'simple-git';
-import { Notification } from 'electron';
-import YAML from 'yaml';
-import {
-  AgentProfile,
-  ContextAssistantMessage,
-  ContextFile,
-  ContextMessage,
-  CustomCommand,
-  EditFormat,
-  FileEdit,
-  InputHistoryData,
-  LogData,
-  LogLevel,
-  MessageRole,
-  Mode,
-  ModelsData,
-  ProjectSettings,
-  PromptContext,
-  QuestionData,
-  ResponseChunkData,
-  ResponseCompletedData,
-  SessionData,
-  SettingsData,
-  StartupMode,
-  Task,
-  TodoItem,
-  TokensInfoData,
-  ToolData,
-  UsageReportData,
-  UserMessageData,
-} from '@common/types';
-import { extractTextContent, fileExists, getActiveAgentProfile, parseUsageReport } from '@common/utils';
-import { COMPACT_CONVERSATION_AGENT_PROFILE, INIT_PROJECT_AGENTS_PROFILE } from '@common/agent';
-import treeKill from 'tree-kill';
-import { v4 as uuidv4 } from 'uuid';
-import debounce from 'lodash/debounce';
-⋮----
-import type { SimpleGit } from 'simple-git';
+import { CustomCommand, FileEdit, InputHistoryData, SettingsData, StartupMode } from '@common/types';
+import { fileExists } from '@common/utils';
 ⋮----
 import { getAllFiles } from '@/utils/file-system';
-import { getCompactConversationPrompt, getInitProjectPrompt, getSystemPrompt } from '@/agent/prompts';
-import { AIDER_DESK_CONNECTOR_DIR, AIDER_DESK_PROJECT_RULES_DIR, AIDER_DESK_TODOS_FILE, PID_FILES_DIR, PYTHON_COMMAND, SERVER_PORT } from '@/constants';
-import { TaskManager } from '@/tasks';
-import { SessionManager } from '@/session';
-import { Agent } from '@/agent';
+import { McpManager } from '@/agent';
 import { Connector } from '@/connector';
 import { DataManager } from '@/data-manager';
 import logger from '@/logger';
-import { MessageAction, ResponseMessage } from '@/messages';
+import { MessageAction } from '@/messages';
 import { Store } from '@/store';
-import { DEFAULT_MAIN_MODEL, ModelManager } from '@/models';
-import { CustomCommandManager, ShellCommandError } from '@/custom-commands';
+import { ModelManager } from '@/models';
+import { CustomCommandManager } from '@/custom-commands';
 import { TelemetryManager } from '@/telemetry';
 import { EventManager } from '@/events';
-import { getEnvironmentVariablesForAider } from '@/utils';
+import { Task } from '@/task';
 ⋮----
 export class Project
 ⋮----
 constructor(
     public readonly baseDir: string,
     private readonly store: Store,
-    private readonly agent: Agent,
+    private readonly mcpManager: McpManager,
     private readonly telemetryManager: TelemetryManager,
     private readonly dataManager: DataManager,
     private readonly eventManager: EventManager,
@@ -6789,150 +6768,19 @@ public async start(startupMode?: StartupMode)
 ⋮----
 // Load the autosaved session
 ⋮----
-public addConnector(connector: Connector)
+private async createTask(taskId: string)
 ⋮----
-// Set aiderStarting to false when a connector with source==='aider' is added
+public getTask(taskId: string = 'default')
+⋮----
+public getDefaultTask()
+⋮----
+public addConnector(connector: Connector)
 ⋮----
 // Set input history file if provided by the connector
 ⋮----
 public removeConnector(connector: Connector)
 ⋮----
-private normalizeFilePath(filePath: string): string
-⋮----
-private getAiderProcessPidFilePath(): string
-⋮----
-private async writeAiderProcessPidFile(): Promise<void>
-⋮----
-private removeAiderProcessPidFile()
-⋮----
-private async checkAndCleanupPidFile(): Promise<void>
-⋮----
-private async startAider(): Promise<void>
-⋮----
-// Set aiderStarting to true when starting aider
-⋮----
-i++; // Skip the model value
-⋮----
-// Spawn without shell to have direct process control
-⋮----
-// Send stderr errors as log messages while aider is starting
-⋮----
-public isStarted()
-⋮----
-public async close()
-⋮----
-public async saveSession(name: string): Promise<void>
-⋮----
-public async loadSessionMessages(name: string)
-⋮----
-public async loadSessionFiles(name: string)
-⋮----
-public async deleteSession(name: string): Promise<void>
-⋮----
-public async listSessions(): Promise<SessionData[]>
-⋮----
-private async killAider(): Promise<void>
-⋮----
 private findMessageConnectors(action: MessageAction): Connector[]
-⋮----
-private async waitForCurrentPromptToFinish()
-⋮----
-public async runPrompt(prompt: string, mode?: Mode): Promise<ResponseCompletedData[]>
-⋮----
-// Generate promptContext for this run
-⋮----
-private createAiderStartPromise(): Promise<void>
-⋮----
-public async runPromptInAider(prompt: string, promptContext: PromptContext, mode?: Mode): Promise<ResponseCompletedData[]>
-⋮----
-// add messages to session
-⋮----
-// Create enhanced assistant message with full metadata
-⋮----
-public async runPromptInAgent(
-    profile: AgentProfile,
-    prompt: string,
-    promptContext: PromptContext = { id: uuidv4() },
-    contextMessages?: ContextMessage[],
-    contextFiles?: ContextFile[],
-    systemPrompt?: string,
-): Promise<ResponseCompletedData[]>
-⋮----
-// send messages to connectors
-⋮----
-public async runSubagent(
-    profile: AgentProfile,
-    prompt: string,
-    contextMessages: ContextMessage[],
-    contextFiles: ContextFile[],
-    systemPrompt?: string,
-    abortSignal?: AbortSignal,
-    promptContext?: PromptContext,
-): Promise<ContextMessage[]>
-⋮----
-public sendPrompt(
-    prompt: string,
-    promptContext: PromptContext = { id: uuidv4() },
-    mode?: Mode,
-    messages?: { role: MessageRole; content: string }[],
-    files?: ContextFile[],
-): Promise<ResponseCompletedData[]>
-⋮----
-// Wait for prompt to finish and return collected responses
-⋮----
-private getArchitectModel(): string | null
-⋮----
-public promptFinished(promptId?: string)
-⋮----
-// Notify waiting prompts with collected responses
-⋮----
-public processResponseMessage(message: ResponseMessage, saveToDb = true)
-⋮----
-// Collect the completed response
-⋮----
-// Sort by sequence number when adding
-⋮----
-sendResponseCompleted(data: ResponseCompletedData)
-⋮----
-private notifyIfEnabled(title: string, text: string)
-⋮----
-private getQuestionKey(question: QuestionData): string
-⋮----
-public answerQuestion(answer: string, userInput?: string): boolean
-⋮----
-// If user input 'd' (don't ask again) or 'a' (always), store the determined answer.
-⋮----
-public async addFile(contextFile: ContextFile)
-⋮----
-// Send add file message for each added file
-⋮----
-public sendAddFile(contextFile: ContextFile, noUpdate?: boolean)
-⋮----
-public dropFile(filePath: string)
-⋮----
-// Send drop file message for each dropped file
-⋮----
-public sendDropFile(filePath: string, readOnly?: boolean, noUpdate?: boolean): void
-⋮----
-private sendContextFilesUpdated()
-⋮----
-public async runCommand(command: string, addToHistory = true)
-⋮----
-// Get the Git root directory to handle monorepo scenarios
-⋮----
-// Get the current HEAD commit hash before undoing
-⋮----
-// Get all files from the last commit
-⋮----
-// For each file, check if it exists at HEAD~1 before attempting checkout
-⋮----
-// Check if file exists at HEAD~1
-⋮----
-// If it exists, checkout the previous version
-⋮----
-// Reset --soft HEAD~1
-⋮----
-public updateContextFiles(contextFiles: ContextFile[])
 ⋮----
 public async loadInputHistory(): Promise<string[]>
 ⋮----
@@ -6940,185 +6788,19 @@ public async addToInputHistory(message: string)
 ⋮----
 private async sendInputHistoryUpdatedEvent()
 ⋮----
-public async askQuestion(questionData: QuestionData, awaitAnswer = true): Promise<[string, string | undefined]>
-⋮----
-// Wait if another question is already pending
-⋮----
-// group questions have a default set of answers
-⋮----
-// At this point, this.currentQuestion should be null due to the loop above,
-// or it was null initially.
-⋮----
-// Auto-answer based on stored preference
-⋮----
-// Store the resolve function for the promise
-⋮----
 public async updateAutocompletionData(words: string[], models: string[])
-⋮----
-public updateAiderModels(modelsData: ModelsData)
-⋮----
-const getWeakModelProvider = () =>
-⋮----
-// use the provider prefix from the main model when Aider's provider prefix is different
-⋮----
-public updateModels(mainModel: string, weakModel: string | null, editFormat: EditFormat = 'diff')
-⋮----
-private sendSetModels(mainModel: string, weakModel: string | null, editFormat: EditFormat = 'diff', environmentVariables?: Record<string, string>)
-⋮----
-public setArchitectModel(architectModel: string)
 ⋮----
 public async getAddableFiles(searchRegex?: string): Promise<string[]>
 ⋮----
-public getContextFiles(): ContextFile[]
-⋮----
-public getRepoMap(): string
-⋮----
-public setRepoMap(repoMap: string): void
-⋮----
-public updateRepoMapFromConnector(repoMap: string): void
-⋮----
-public openCommandOutput(command: string)
-⋮----
-private addCommandOutput(command: string, output: string)
-⋮----
-// Append output to the commandOutputs map
-⋮----
-public closeCommandOutput(addToContext = true)
-⋮----
-// Add the command output to the session manager as an assistant message, prepending the command
-⋮----
-public addLogMessage(level: LogLevel, message?: string, finished = false, promptContext?: PromptContext)
-⋮----
-public getContextMessages()
-⋮----
-public async addContextMessage(role: MessageRole, content: string, usageReport?: UsageReportData)
-⋮----
-public sendAddMessage(role: MessageRole = MessageRole.User, content: string, acknowledge = true)
-⋮----
-public async clearContext(addToHistory = false, updateContextInfo = true)
-⋮----
-public interruptResponse()
-⋮----
 public applyEdits(edits: FileEdit[])
-⋮----
-public addToolMessage(
-    id: string,
-    serverName: string,
-    toolName: string,
-    args?: unknown,
-    response?: string,
-    usageReport?: UsageReportData,
-    promptContext?: PromptContext,
-    saveToDb = true,
-)
-⋮----
-// Update total costs when adding the tool message
-⋮----
-private updateTotalCosts(usageReport: UsageReportData)
-⋮----
-public addUserMessage(content: string, mode?: Mode, promptContext?: PromptContext)
-⋮----
-public async removeLastMessage()
-⋮----
-public async redoLastUserPrompt(mode: Mode, updatedPrompt?: string)
-⋮----
-await this.reloadConnectorMessages(); // This sends 'clear-project' which truncates UI messages
-⋮----
-// No need to await runPrompt here, let it run in the background
-⋮----
-private async reloadConnectorMessages()
-⋮----
-public async compactConversation(mode: Mode, customInstructions?: string)
-⋮----
-const extractSummary = (content: string): string =>
-⋮----
-// Agent mode logic
-⋮----
-// Clear existing context and add the summary
-⋮----
-// add messages to session
-⋮----
-public async generateSessionMarkdown(): Promise<string | null>
-⋮----
-updateTokensInfo(data: Partial<TokensInfoData>)
-⋮----
-async updateContextInfo(checkContextFilesIncluded = false, checkRepoMapIncluded = false)
-⋮----
-private sendRequestContextInfo()
-⋮----
-async updateAgentEstimatedTokens(checkContextFilesIncluded = false, checkRepoMapIncluded = false)
-⋮----
-settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
-⋮----
-// Check for changes in agent config properties that affect token count
-⋮----
-// Check for changes in environment variables or LLM providers
-⋮----
-private sendUpdateEnvVars(environmentVariables: Record<string, unknown>)
-⋮----
-async updateTask(taskId: string, updates:
-⋮----
-async prepareTasks(titles: string[]): Promise<Task[]>
-⋮----
-async listTasks(completed?: boolean): Promise<Task[]>
-⋮----
-private getTodoFilePath(): string
-⋮----
-public async readTodoFile(): Promise<
-⋮----
-public async writeTodoFile(data:
-⋮----
-public async getTodos(): Promise<TodoItem[]>
-⋮----
-public async setTodos(items: TodoItem[], initialUserPrompt = ''): Promise<void>
-⋮----
-public async addTodo(name: string): Promise<TodoItem[]>
-⋮----
-public async updateTodo(name: string, updates: Partial<TodoItem>): Promise<TodoItem[]>
-⋮----
-public async deleteTodo(name: string): Promise<TodoItem[]>
-⋮----
-public async clearAllTodos(): Promise<TodoItem[]>
-⋮----
-async initProjectAgentsFile(): Promise<void>
-⋮----
-// clear context before execution
-⋮----
-// Get the active agent profile
-⋮----
-// Run the agent with the modified profile
-⋮----
-// Check if the AGENTS.md file was created
-⋮----
-// Ask the user if they want to add this file to .aider.conf.yml
-⋮----
-private async addProjectAgentsToAiderConfig(): Promise<void>
-⋮----
-// Read existing config if it exists
-⋮----
-// Ensure read section exists and is an array
-⋮----
-// Add PROJECT.md to read section if not already present
-⋮----
-// Write the updated config
 ⋮----
 public getCustomCommands()
 ⋮----
 public sendCustomCommandsUpdated(commands: CustomCommand[])
 ⋮----
-public async runCustomCommand(commandName: string, args: string[], mode: Mode = 'agent'): Promise<void>
+async close()
 ⋮----
-// Handle shell command execution errors
-⋮----
-// Re-throw other errors
-⋮----
-// Agent mode logic
-⋮----
-// Override profile's autoApprove if command specifies it
-⋮----
-// All other modes (code, ask, architect)
-⋮----
-// Clear loading message after execution completes (success or failure)
+settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
 
 ================
 File: src/main/server/rest-api/base-api.ts
@@ -7559,249 +7241,6 @@ async startServer()
 async stopServer()
 
 ================
-File: src/main/session/migrations/v1-to-v2.ts
-================
-import { ContextMessage } from '@common/types';
-import { AIDER_TOOL_GROUP_NAME, AIDER_TOOL_RUN_PROMPT, SUBAGENTS_TOOL_GROUP_NAME, SUBAGENTS_TOOL_RUN_TASK } from '@common/tools';
-import { extractServerNameToolName } from '@common/utils';
-⋮----
-import { PersistedSessionData } from '../session-manager';
-⋮----
-import logger from '@/logger';
-⋮----
-/**
- * Migrates a single ContextMessage from V1 (AI SDK v4) to V2 (AI SDK v5) format.
- * This function is reusable and can handle recursive migration for subagent messages.
- */
-const migrateContextMessage = (message: ContextMessage): ContextMessage =>
-⋮----
-// If content is already an array, it might be V1 format that needs migration or already V2 format
-⋮----
-// Check if this is V1 format by looking for 'args' or 'result' properties
-⋮----
-// Migrate V1 format to V2
-⋮----
-// V1 tool-call: change 'args' to 'input'
-⋮----
-args: undefined, // Remove old property
-⋮----
-// V1 tool-result: change 'result' to 'output' with proper typing
-⋮----
-// Check if this is a subagent tool result with messages that need migration
-⋮----
-// @ts-expect-error value is expected to have messages
-⋮----
-// Recursively migrate each message in the subagent result
-⋮----
-// @ts-expect-error value is expected to have responses
-⋮----
-// Recursively migrate each response message
-⋮----
-result: undefined, // Remove old property
-⋮----
-// Leave other parts (text, reasoning, etc.) unchanged
-⋮----
-// Return the message as is if it doesn't match migration conditions
-⋮----
-export const migrateSessionV1toV2 = (sessionData: PersistedSessionData): PersistedSessionData =>
-
-================
-File: src/main/session/index.ts
-================
-
-
-================
-File: src/main/session/session-manager.ts
-================
-import path from 'path';
-import { promises as fs } from 'fs';
-⋮----
-import { v4 as uuidv4 } from 'uuid';
-import debounce from 'lodash/debounce';
-import { ContextFile, ContextMessage, MessageRole, ResponseCompletedData, SessionData, UsageReportData } from '@common/types';
-import { extractServerNameToolName, extractTextContent, fileExists, isMessageEmpty, isTextContent } from '@common/utils';
-import { AIDER_TOOL_GROUP_NAME, AIDER_TOOL_RUN_PROMPT, SUBAGENTS_TOOL_GROUP_NAME, SUBAGENTS_TOOL_RUN_TASK } from '@common/tools';
-⋮----
-import { migrateSessionV1toV2 } from './migrations/v1-to-v2';
-⋮----
-import { extractPromptContextFromToolResult, THINKING_RESPONSE_STAR_TAG, ANSWER_RESPONSE_START_TAG } from '@/agent/utils';
-import logger from '@/logger';
-import { Project } from '@/project';
-import { isDirectory, isFileIgnored } from '@/utils';
-⋮----
-export interface PersistedSessionData {
-  version: number;
-  contextMessages: ContextMessage[];
-  contextFiles: ContextFile[];
-}
-⋮----
-export class SessionManager
-⋮----
-constructor(
-    private readonly project: Project,
-    initialMessages: ContextMessage[] = [],
-    initialFiles: ContextFile[] = [],
-)
-⋮----
-public enableAutosave()
-⋮----
-public disableAutosave()
-⋮----
-addContextMessage(role: MessageRole, content: string, usageReport?: UsageReportData): void;
-addContextMessage(message: ContextMessage): void;
-addContextMessage(roleOrMessage: MessageRole | ContextMessage, content?: string, usageReport?: UsageReportData)
-⋮----
-// No content provided, do not add the message
-⋮----
-// Skip adding empty assistant messages
-⋮----
-private async isFileIgnored(contextFile: ContextFile): Promise<boolean>
-⋮----
-// not checking gitignore for read-only files
-⋮----
-async addContextFile(contextFile: ContextFile): Promise<ContextFile[]>
-⋮----
-// For directories, recursively add all files and subdirectories
-⋮----
-// Recursively add files and directories
-⋮----
-// For files, check if ignored and add if not
-⋮----
-dropContextFile(filePath: string): ContextFile[]
-⋮----
-// Filter out files that match the path or are within the directory path
-⋮----
-// Check if file matches exactly or is within the directory path
-⋮----
-f.path === filePath || // Exact match
-contextFileAbsolutePath === absolutePath || // Absolute path matches
-!path.relative(absolutePath, contextFileAbsolutePath).startsWith('..'); // File is within the directory
-⋮----
-return false; // Remove from contextFiles
-⋮----
-return true; // Keep in contextFiles
-⋮----
-setContextFiles(contextFiles: ContextFile[], save = true)
-⋮----
-getContextFiles(): ContextFile[]
-⋮----
-setContextMessages(contextMessages: ContextMessage[], save = true)
-⋮----
-getContextMessages(): ContextMessage[]
-⋮----
-clearMessages(save = true)
-⋮----
-removeLastMessage(): void
-⋮----
-}; // Remove the tool message
-⋮----
-// Iterate backward to find the corresponding assistant message
-⋮----
-// Remove the specific tool-call part
-⋮----
-// Check if the assistant message is now empty or only contains empty text parts
-⋮----
-this.contextMessages.splice(i, 1); // Remove the now empty assistant message
-⋮----
-// Found and processed the corresponding assistant message, stop searching
-⋮----
-// If the last message is not a tool message, just remove it
-⋮----
-removeLastUserMessage(): string | null
-⋮----
-// Should not happen, but safety check
-⋮----
-break; // Found the user message, stop removing
-⋮----
-// Save only if messages were removed or a user message was found
-⋮----
-toConnectorMessages(contextMessages: ContextMessage[] = this.contextMessages):
-⋮----
-// Check for aider run_prompt tool call in assistant messages to extract the original prompt
-⋮----
-// @ts-expect-error part.input contains the prompt in this case
-⋮----
-// Found the prompt, no need to check other parts of this message
-⋮----
-// @ts-expect-error part.input contains the prompt in this case
-⋮----
-// Found the prompt, no need to check other parts of this message
-⋮----
-// old format
-⋮----
-// @ts-expect-error part.output.responses is expected to be in the output
-⋮----
-// Extract the last assistant message from the result
-⋮----
-async save(name: string)
-⋮----
-private async migrateSession(sessionData: unknown): Promise<PersistedSessionData>
-⋮----
-let sessionVersion = sessionDataObj.version ?? 1; // Default to 1 if no version is found
-⋮----
-// Sequential migration chain
-⋮----
-// Future migrations will be added here
-// if (sessionVersion === 2) {
-//   migratedData = migrateSessionV2toV3(migratedData);
-//   sessionVersion = 3;
-// }
-⋮----
-async loadMessages(contextMessages: ContextMessage[]): Promise<void>
-⋮----
-// Clear all current messages
-⋮----
-// Add messages to the UI
-⋮----
-// Collect reasoning and text parts to combine them if both exist
-⋮----
-// Process combined reasoning and text content
-⋮----
-// Process tool-call parts
-⋮----
-// Ensure toolCall.toolCallId exists before proceeding
-⋮----
-// @ts-expect-error value is expected to have responses
-⋮----
-// Handle agent tool results - process all messages from subagent
-⋮----
-// @ts-expect-error value is expected to have messages
-⋮----
-// Collect reasoning and text parts to combine them if both exist
-⋮----
-// Process combined reasoning and text content
-⋮----
-// Process tool-call parts
-⋮----
-// send messages to Connectors (Aider)
-⋮----
-async loadFiles(contextFiles: ContextFile[]): Promise<void>
-⋮----
-// Drop all current files
-⋮----
-async load(name: string): Promise<void>
-⋮----
-private saveAsAutosaved()
-⋮----
-async loadAutosaved(): Promise<void>
-⋮----
-async getAllSessions(): Promise<SessionData[]>
-⋮----
-async findSession(name: string): Promise<
-    | (SessionData & {
-        contextMessages?: ContextMessage[];
-        contextFiles?: ContextFile[];
-      })
-    | null
-  > {
-    try {
-const sessionPath = path.join(this.project.baseDir, '.aider-desk', 'sessions', `$
-⋮----
-async generateSessionMarkdown(): Promise<string | null>
-⋮----
-async delete(name: string): Promise<void>
-
-================
 File: src/main/store/migrations/v0-to-v1.ts
 ================
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -8077,25 +7516,628 @@ getProviders(): ProviderProfile[]
 setProviders(providers: ProviderProfile[]): void
 
 ================
-File: src/main/tasks/index.ts
+File: src/main/task/migrations/v1-to-v2.ts
 ================
+import { ContextMessage, TaskContext } from '@common/types';
+import { AIDER_TOOL_GROUP_NAME, AIDER_TOOL_RUN_PROMPT, SUBAGENTS_TOOL_GROUP_NAME, SUBAGENTS_TOOL_RUN_TASK } from '@common/tools';
+import { extractServerNameToolName } from '@common/utils';
+⋮----
+import logger from '@/logger';
+⋮----
+/**
+ * Migrates a single ContextMessage from V1 (AI SDK v4) to V2 (AI SDK v5) format.
+ * This function is reusable and can handle recursive migration for subagent messages.
+ */
+const migrateContextMessage = (message: ContextMessage): ContextMessage =>
+⋮----
+// If content is already an array, it might be V1 format that needs migration or already V2 format
+⋮----
+// Check if this is V1 format by looking for 'args' or 'result' properties
+⋮----
+// Migrate V1 format to V2
+⋮----
+// V1 tool-call: change 'args' to 'input'
+⋮----
+args: undefined, // Remove old property
+⋮----
+// V1 tool-result: change 'result' to 'output' with proper typing
+⋮----
+// Check if this is a subagent tool result with messages that need migration
+⋮----
+// @ts-expect-error value is expected to have messages
+⋮----
+// Recursively migrate each message in the subagent result
+⋮----
+// @ts-expect-error value is expected to have responses
+⋮----
+// Recursively migrate each response message
+⋮----
+result: undefined, // Remove old property
+⋮----
+// Leave other parts (text, reasoning, etc.) unchanged
+⋮----
+// Return the message as is if it doesn't match migration conditions
+⋮----
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const migrateContextV1toV2 = (taskId: string, sessionData: any): TaskContext =>
 
+================
+File: src/main/task/aider-manager.ts
+================
+import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
+import { createHash } from 'crypto';
+import { unlinkSync } from 'fs';
+import fs from 'fs/promises';
+import path from 'path';
+⋮----
+import { EditFormat, ModelsData, ProjectSettings, TokensInfoData } from '@common/types';
+import { fileExists } from '@common/utils';
+import treeKill from 'tree-kill';
+⋮----
+import { AIDER_DESK_CONNECTOR_DIR, AIDER_DESK_PROJECT_RULES_DIR, PID_FILES_DIR, PYTHON_COMMAND, SERVER_PORT } from '@/constants';
+import { Connector } from '@/connector';
+import logger from '@/logger';
+import { Store } from '@/store';
+import { DEFAULT_MAIN_MODEL, ModelManager } from '@/models';
+import { EventManager } from '@/events';
+import { getEnvironmentVariablesForAider } from '@/utils';
+import { Task } from '@/task/task';
+⋮----
+export class AiderManager
+⋮----
+constructor(
+    private readonly task: Task,
+    private readonly store: Store,
+    private readonly modelManager: ModelManager,
+    private readonly eventManager: EventManager,
+    private readonly getConnectors: () => Connector[],
+)
+⋮----
+public async start(): Promise<void>
+⋮----
+// Set aiderStarting to true when starting aider
+⋮----
+i++; // Skip the model value
+⋮----
+// Spawn without shell to have direct process control
+⋮----
+public async kill(): Promise<void>
+⋮----
+public isStarted(): boolean
+⋮----
+private createAiderStartPromise(): Promise<void>
+⋮----
+public async waitForStart(): Promise<void>
+⋮----
+private getAiderProcessPidFilePath(): string
+⋮----
+private async writeAiderProcessPidFile(): Promise<void>
+⋮----
+private removeAiderProcessPidFile()
+⋮----
+private async checkAndCleanupPidFile(): Promise<void>
+⋮----
+public handleConnectorAdded(connector: Connector): void
+⋮----
+// Set aiderStarting to false when a connector with source==='aider' is added
+⋮----
+public updateAiderModels(modelsData: ModelsData): void
+⋮----
+const getWeakModelProvider = () =>
+⋮----
+// use the provider prefix from the main model when Aider's provider prefix is different
+⋮----
+public updateModels(mainModel: string, weakModel: string | null, editFormat: EditFormat = 'diff'): void
+⋮----
+private sendSetModels(mainModel: string, weakModel: string | null, editFormat: EditFormat = 'diff', environmentVariables?: Record<string, string>): void
+⋮----
+public setArchitectModel(architectModel: string): void
+⋮----
+public getArchitectModel(): string | null
+⋮----
+public getAiderModelsData(): ModelsData | null
+⋮----
+public getAiderTokensInfo(): TokensInfoData
+⋮----
+public updateTokensInfo(data: Partial<TokensInfoData>): void
+⋮----
+public getRepoMap(): string
+⋮----
+public setRepoMap(repoMap: string): void
+⋮----
+public updateRepoMapFromConnector(repoMap: string): void
+⋮----
+public openCommandOutput(command: string): void
+⋮----
+private addCommandOutput(command: string, output: string): void
+⋮----
+// Append output to the commandOutputs map
+⋮----
+public closeCommandOutput(addToContext = true):
+⋮----
+public sendUpdateEnvVars(environmentVariables: Record<string, unknown>): void
 
 ================
-File: src/main/tasks/task-manager.ts
+File: src/main/task/context-manager.ts
 ================
+import path from 'path';
+import { promises as fs } from 'fs';
+⋮----
 import { v4 as uuidv4 } from 'uuid';
-import { Task } from '@common/types';
+import debounce from 'lodash/debounce';
+import { ContextFile, ContextMessage, MessageRole, ResponseCompletedData, TaskContext, UsageReportData } from '@common/types';
+import { extractServerNameToolName, extractTextContent, fileExists, isMessageEmpty, isTextContent } from '@common/utils';
+import { AIDER_TOOL_GROUP_NAME, AIDER_TOOL_RUN_PROMPT, SUBAGENTS_TOOL_GROUP_NAME, SUBAGENTS_TOOL_RUN_TASK } from '@common/tools';
 ⋮----
-export class TaskManager
+import logger from '@/logger';
+import { Task } from '@/task';
+import { isDirectory, isFileIgnored } from '@/utils';
+import { ANSWER_RESPONSE_START_TAG, extractPromptContextFromToolResult, THINKING_RESPONSE_STAR_TAG } from '@/agent/utils';
+import { migrateContextV1toV2 } from '@/task/migrations/v1-to-v2';
 ⋮----
-async prepareTasks(titles: string[]): Promise<Task[]>
+export class ContextManager
 ⋮----
-async getTasks(): Promise<Task[]>
+constructor(
+    private readonly task: Task,
+    private readonly taskId: string,
+    initialMessages: ContextMessage[] = [],
+    initialFiles: ContextFile[] = [],
+)
 ⋮----
-async updateTask(taskId: string, updates:
+// Task-specific storage path - single context per task
 ⋮----
-// No need to re-set task in map as it's a reference type and modified in place.
+public enableAutosave()
+⋮----
+public disableAutosave()
+⋮----
+addContextMessage(role: MessageRole, content: string, usageReport?: UsageReportData): void;
+addContextMessage(message: ContextMessage): void;
+addContextMessage(roleOrMessage: MessageRole | ContextMessage, content?: string, usageReport?: UsageReportData)
+⋮----
+private async isFileIgnored(contextFile: ContextFile): Promise<boolean>
+⋮----
+async addContextFile(contextFile: ContextFile): Promise<ContextFile[]>
+⋮----
+dropContextFile(filePath: string): ContextFile[]
+⋮----
+setContextFiles(contextFiles: ContextFile[], save = true)
+⋮----
+getContextFiles(): ContextFile[]
+⋮----
+setContextMessages(contextMessages: ContextMessage[], save = true)
+⋮----
+getContextMessages(): ContextMessage[]
+⋮----
+clearMessages(save = true)
+⋮----
+removeLastMessage(): void
+⋮----
+removeLastUserMessage(): string | null
+⋮----
+toConnectorMessages(contextMessages: ContextMessage[] = this.messages):
+⋮----
+// @ts-expect-error part.input contains the prompt in this case
+⋮----
+// @ts-expect-error part.input contains the prompt in this case
+⋮----
+// @ts-expect-error part.output.responses is expected to be in the output
+⋮----
+async save(): Promise<void>
+⋮----
+private async migrateContext(contextData: unknown): Promise<TaskContext>
+⋮----
+// Sequential migration chain
+⋮----
+// Future migrations will be added here
+// if (sessionVersion === 2) {
+//   migratedData = migrateSessionV2toV3(migratedData);
+//   sessionVersion = 3;
+// }
+⋮----
+async load(): Promise<void>
+⋮----
+async loadMessages(messages: ContextMessage[]): Promise<void>
+⋮----
+// Clear all current messages
+⋮----
+// Add messages to the UI
+⋮----
+// Collect reasoning and text parts to combine them if both exist
+⋮----
+// Process combined reasoning and text content
+⋮----
+// Process tool-call parts
+⋮----
+// Ensure toolCall.toolCallId exists before proceeding
+⋮----
+// @ts-expect-error value is expected to have responses
+⋮----
+// Handle agent tool results - process all messages from subagent
+⋮----
+// @ts-expect-error value is expected to have messages
+⋮----
+// Collect reasoning and text parts to combine them if both exist
+⋮----
+// Process combined reasoning and text content
+⋮----
+// Process tool-call parts
+⋮----
+// send messages to Connectors (Aider)
+⋮----
+async loadFiles(files: ContextFile[]): Promise<void>
+⋮----
+// Drop all current files
+⋮----
+async delete(): Promise<void>
+⋮----
+private autosave()
+⋮----
+async generateContextMarkdown(): Promise<string | null>
+
+================
+File: src/main/task/index.ts
+================
+
+
+================
+File: src/main/task/task.ts
+================
+import fs from 'fs/promises';
+import path from 'path';
+⋮----
+import { simpleGit } from 'simple-git';
+import { Notification } from 'electron';
+import YAML from 'yaml';
+import {
+  AgentProfile,
+  ContextAssistantMessage,
+  ContextFile,
+  ContextMessage,
+  CustomCommand,
+  EditFormat,
+  FileEdit,
+  InputHistoryData,
+  LogData,
+  LogLevel,
+  MessageRole,
+  Mode,
+  ModelsData,
+  PromptContext,
+  QuestionData,
+  ResponseChunkData,
+  ResponseCompletedData,
+  SettingsData,
+  StartupMode,
+  TaskData,
+  TodoItem,
+  TokensInfoData,
+  ToolData,
+  UsageReportData,
+  UserMessageData,
+} from '@common/types';
+import { extractTextContent, fileExists, getActiveAgentProfile, parseUsageReport } from '@common/utils';
+import { COMPACT_CONVERSATION_AGENT_PROFILE, INIT_PROJECT_AGENTS_PROFILE } from '@common/agent';
+import { v4 as uuidv4 } from 'uuid';
+import debounce from 'lodash/debounce';
+⋮----
+import type { SimpleGit } from 'simple-git';
+⋮----
+import { getAllFiles } from '@/utils/file-system';
+import { getCompactConversationPrompt, getInitProjectPrompt, getSystemPrompt } from '@/agent/prompts';
+import { AIDER_DESK_TODOS_FILE } from '@/constants';
+import { Agent, McpManager } from '@/agent';
+import { Connector } from '@/connector';
+import { DataManager } from '@/data-manager';
+import logger from '@/logger';
+import { MessageAction, ResponseMessage } from '@/messages';
+import { Store } from '@/store';
+import { ModelManager } from '@/models';
+import { CustomCommandManager, ShellCommandError } from '@/custom-commands';
+import { TelemetryManager } from '@/telemetry';
+import { EventManager } from '@/events';
+import { getEnvironmentVariablesForAider } from '@/utils';
+import { ContextManager } from '@/task/context-manager';
+import { Project } from '@/project';
+import { AiderManager } from '@/task/aider-manager';
+⋮----
+export class Task
+⋮----
+constructor(
+    public readonly project: Project,
+    private readonly taskId: string,
+    private readonly store: Store,
+    private readonly mcpManager: McpManager,
+    private readonly customCommandManager: CustomCommandManager,
+    private readonly telemetryManager: TelemetryManager,
+    private readonly dataManager: DataManager,
+    private readonly eventManager: EventManager,
+    private readonly modelManager: ModelManager,
+)
+⋮----
+public async start(startupMode?: StartupMode)
+⋮----
+// Handle different startup modes
+⋮----
+// Don't load any session, start fresh
+⋮----
+// Load the autosaved session
+⋮----
+public addConnector(connector: Connector)
+⋮----
+// Handle connector addition in AiderManager
+⋮----
+public removeConnector(connector: Connector)
+⋮----
+private normalizeFilePath(filePath: string): string
+⋮----
+public isStarted()
+⋮----
+public async close()
+⋮----
+private findMessageConnectors(action: MessageAction): Connector[]
+⋮----
+private async waitForCurrentPromptToFinish()
+⋮----
+public async runPrompt(prompt: string, mode?: Mode): Promise<ResponseCompletedData[]>
+⋮----
+// Generate promptContext for this run
+⋮----
+public async runPromptInAider(prompt: string, promptContext: PromptContext, mode?: Mode): Promise<ResponseCompletedData[]>
+⋮----
+// add messages to session
+⋮----
+// Create enhanced assistant message with full metadata
+⋮----
+public async runPromptInAgent(
+    profile: AgentProfile,
+    prompt: string,
+    promptContext: PromptContext = { id: uuidv4() },
+    contextMessages?: ContextMessage[],
+    contextFiles?: ContextFile[],
+    systemPrompt?: string,
+): Promise<ResponseCompletedData[]>
+⋮----
+// send messages to connectors
+⋮----
+public async runSubagent(
+    profile: AgentProfile,
+    prompt: string,
+    contextMessages: ContextMessage[],
+    contextFiles: ContextFile[],
+    systemPrompt?: string,
+    abortSignal?: AbortSignal,
+    promptContext?: PromptContext,
+): Promise<ContextMessage[]>
+⋮----
+public sendPrompt(
+    prompt: string,
+    promptContext: PromptContext = { id: uuidv4() },
+    mode?: Mode,
+    messages?: { role: MessageRole; content: string }[],
+    files?: ContextFile[],
+): Promise<ResponseCompletedData[]>
+⋮----
+// Wait for prompt to finish and return collected responses
+⋮----
+public promptFinished(promptId?: string)
+⋮----
+// Notify waiting prompts with collected responses
+⋮----
+public processResponseMessage(message: ResponseMessage, saveToDb = true)
+⋮----
+// Collect the completed response
+⋮----
+// Sort by sequence number when adding
+⋮----
+sendResponseCompleted(data: ResponseCompletedData)
+⋮----
+private notifyIfEnabled(title: string, text: string)
+⋮----
+private getQuestionKey(question: QuestionData): string
+⋮----
+public answerQuestion(answer: string, userInput?: string): boolean
+⋮----
+// If user input 'd' (don't ask again) or 'a' (always), store the determined answer.
+⋮----
+public async addFile(contextFile: ContextFile)
+⋮----
+// Send add file message for each added file
+⋮----
+public sendAddFile(contextFile: ContextFile, noUpdate?: boolean)
+⋮----
+public dropFile(filePath: string)
+⋮----
+// Send drop file message for each dropped file
+⋮----
+public sendDropFile(filePath: string, readOnly?: boolean, noUpdate?: boolean): void
+⋮----
+private sendContextFilesUpdated()
+⋮----
+public async runCommand(command: string, addToHistory = true)
+⋮----
+// Get the Git root directory to handle monorepo scenarios
+⋮----
+// Get the current HEAD commit hash before undoing
+⋮----
+// Get all files from the last commit
+⋮----
+// For each file, check if it exists at HEAD~1 before attempting checkout
+⋮----
+// Check if file exists at HEAD~1
+⋮----
+// If it exists, checkout the previous version
+⋮----
+// Reset --soft HEAD~1
+⋮----
+public updateContextFiles(contextFiles: ContextFile[])
+⋮----
+public async loadInputHistory(): Promise<string[]>
+⋮----
+public async addToInputHistory(message: string)
+⋮----
+private async sendInputHistoryUpdatedEvent()
+⋮----
+public async askQuestion(questionData: QuestionData, awaitAnswer = true): Promise<[string, string | undefined]>
+⋮----
+// Wait if another question is already pending
+⋮----
+// group questions have a default set of answers
+⋮----
+// At this point, this.currentQuestion should be null due to the loop above,
+// or it was null initially.
+⋮----
+// Auto-answer based on stored preference
+⋮----
+// Store the resolve function for the promise
+⋮----
+public async updateAutocompletionData(words: string[], models: string[])
+⋮----
+public updateAiderModels(modelsData: ModelsData)
+⋮----
+public updateModels(mainModel: string, weakModel: string | null, editFormat: EditFormat = 'diff')
+⋮----
+public setArchitectModel(architectModel: string)
+⋮----
+public async getAddableFiles(searchRegex?: string): Promise<string[]>
+⋮----
+public getContextFiles(): ContextFile[]
+⋮----
+public getRepoMap(): string
+⋮----
+public setRepoMap(repoMap: string): void
+⋮----
+public updateRepoMapFromConnector(repoMap: string): void
+⋮----
+public openCommandOutput(command: string)
+⋮----
+public closeCommandOutput(addToContext = true)
+⋮----
+public addLogMessage(level: LogLevel, message?: string, finished = false, promptContext?: PromptContext)
+⋮----
+public getContextMessages()
+⋮----
+public async addContextMessage(role: MessageRole, content: string, usageReport?: UsageReportData)
+⋮----
+public sendAddMessage(role: MessageRole = MessageRole.User, content: string, acknowledge = true)
+⋮----
+public async clearContext(addToHistory = false, updateContextInfo = true)
+⋮----
+public interruptResponse()
+⋮----
+public applyEdits(edits: FileEdit[])
+⋮----
+public addToolMessage(
+    id: string,
+    serverName: string,
+    toolName: string,
+    args?: unknown,
+    response?: string,
+    usageReport?: UsageReportData,
+    promptContext?: PromptContext,
+    saveToDb = true,
+)
+⋮----
+// Update total costs when adding the tool message
+⋮----
+private updateTotalCosts(usageReport: UsageReportData)
+⋮----
+public addUserMessage(content: string, mode?: Mode, promptContext?: PromptContext)
+⋮----
+public async removeLastMessage()
+⋮----
+public async redoLastUserPrompt(mode: Mode, updatedPrompt?: string)
+⋮----
+await this.reloadConnectorMessages(); // This sends 'clear-project' which truncates UI messages
+⋮----
+// No need to await runPrompt here, let it run in the background
+⋮----
+private async reloadConnectorMessages()
+⋮----
+public async compactConversation(mode: Mode, customInstructions?: string)
+⋮----
+const extractSummary = (content: string): string =>
+⋮----
+// Agent mode logic
+⋮----
+// Clear existing context and add the summary
+⋮----
+// add messages to session
+⋮----
+public async generateContextMarkdown(): Promise<string | null>
+⋮----
+updateTokensInfo(data: Partial<TokensInfoData>)
+⋮----
+async updateContextInfo(checkContextFilesIncluded = false, checkRepoMapIncluded = false)
+⋮----
+private sendRequestContextInfo()
+⋮----
+async updateAgentEstimatedTokens(checkContextFilesIncluded = false, checkRepoMapIncluded = false)
+⋮----
+settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
+⋮----
+// Check for changes in agent config properties that affect token count
+⋮----
+// Check for changes in environment variables or LLM providers
+⋮----
+private sendUpdateEnvVars(environmentVariables: Record<string, unknown>)
+⋮----
+private getTodoFilePath(): string
+⋮----
+public async readTodoFile(): Promise<
+⋮----
+public async writeTodoFile(data:
+⋮----
+public async getTodos(): Promise<TodoItem[]>
+⋮----
+public async setTodos(items: TodoItem[], initialUserPrompt = ''): Promise<void>
+⋮----
+public async addTodo(name: string): Promise<TodoItem[]>
+⋮----
+public async updateTodo(name: string, updates: Partial<TodoItem>): Promise<TodoItem[]>
+⋮----
+public async deleteTodo(name: string): Promise<TodoItem[]>
+⋮----
+public async clearAllTodos(): Promise<TodoItem[]>
+⋮----
+async initProjectAgentsFile(): Promise<void>
+⋮----
+// clear context before execution
+⋮----
+// Get the active agent profile
+⋮----
+// Run the agent with the modified profile
+⋮----
+// Check if the AGENTS.md file was created
+⋮----
+// Ask the user if they want to add this file to .aider.conf.yml
+⋮----
+private async addProjectAgentsToAiderConfig(): Promise<void>
+⋮----
+// Read existing config if it exists
+⋮----
+// Ensure read section exists and is an array
+⋮----
+// Add PROJECT.md to read section if not already present
+⋮----
+// Write the updated config
+⋮----
+public getCustomCommands()
+⋮----
+public sendCustomCommandsUpdated(commands: CustomCommand[])
+⋮----
+public async runCustomCommand(commandName: string, args: string[], mode: Mode = 'agent'): Promise<void>
+⋮----
+// Handle shell command execution errors
+⋮----
+// Re-throw other errors
+⋮----
+// Agent mode logic
+⋮----
+// Override profile's autoApprove if command specifies it
+⋮----
+// All other modes (code, ask, architect)
+⋮----
+// Clear loading message after execution completes (success or failure)
 
 ================
 File: src/main/telemetry/index.ts
@@ -8520,7 +8562,7 @@ import {
 } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
 ⋮----
-import { Agent, McpManager } from '@/agent';
+import { McpManager } from '@/agent';
 import { ModelManager } from '@/models';
 import { ProjectManager } from '@/project';
 import { CloudflareTunnelManager } from '@/server';
@@ -8648,17 +8690,32 @@ async scrapeWeb(baseDir: string, url: string, filePath?: string): Promise<void>
 ⋮----
 // Check if path looks like a directory (ends with separator)
 ⋮----
+/**
+   * @deprecated
+   */
 async saveSession(baseDir: string, name: string): Promise<boolean>
 ⋮----
+/**
+   * @deprecated
+   */
 async loadSessionMessages(baseDir: string, name: string): Promise<void>
 ⋮----
+/**
+   * @deprecated
+   */
 async loadSessionFiles(baseDir: string, name: string): Promise<void>
 ⋮----
+/**
+   * @deprecated
+   */
 async deleteSession(baseDir: string, name: string): Promise<boolean>
 ⋮----
+/**
+   * @deprecated
+   */
 async listSessions(baseDir: string): Promise<SessionData[]>
 ⋮----
-async exportSessionToMarkdown(baseDir: string): Promise<void>
+async exportTaskToMarkdown(baseDir: string): Promise<void>
 ⋮----
 setZoomLevel(zoomLevel: number): void
 ⋮----
@@ -8732,7 +8789,7 @@ import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
 import icon from '../../resources/icon.png?asset';
 ⋮----
 import { ProgressWindow } from '@/progress-window';
-import { Agent, McpManager } from '@/agent';
+import { McpManager } from '@/agent';
 import { CloudflareTunnelManager, ServerController } from '@/server';
 import { ConnectorManager } from '@/connector';
 import { setupIpcHandlers } from '@/ipc-handlers';
@@ -8773,8 +8830,6 @@ const initManagers = async (
 // Initialize model manager
 ⋮----
 // Initialize data manager
-⋮----
-// Initialize agent
 ⋮----
 // Initialize project manager
 ⋮----
@@ -8902,6 +8957,7 @@ export interface LogMessage {
 export interface InitMessage {
   action: 'init';
   baseDir: string;
+  taskId?: string;
   source?: string;
   contextFiles?: ContextFile[];
   listenTo?: MessageAction[];
@@ -9191,7 +9247,7 @@ File: src/mcp-server/aider-desk-mcp-server.ts
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import axios from 'axios';
-import { z } from 'zod';
+import { z } from 'zod/v3';
 ⋮----
 // Get project directory from command line arguments or use default
 ⋮----
@@ -10195,7 +10251,9 @@ type Props = {
 ================
 File: src/renderer/src/components/common/Table.tsx
 ================
-import { ReactNode } from 'react';
+import React, { ReactNode, useState } from 'react';
+import { MdArrowUpward, MdArrowDownward } from 'react-icons/md';
+import { useTranslation } from 'react-i18next';
 ⋮----
 export type Column<T> = {
   accessor?: keyof T;
@@ -10205,6 +10263,7 @@ export type Column<T> = {
   cellClassName?: string;
   align?: 'left' | 'center' | 'right';
   maxWidth?: string | number;
+  sort?: (a: T, b: T) => number;
 };
 ⋮----
 export type FooterColumn = {
@@ -10213,11 +10272,20 @@ export type FooterColumn = {
   className?: string;
 };
 ⋮----
+type SortState = {
+  columnKey: string;
+  direction: 'asc' | 'desc' | null;
+};
+⋮----
 type Props<T> = {
   data: T[];
   columns: Column<T>[];
   footerColumns?: FooterColumn[];
 };
+⋮----
+const handleSort = (column: Column<T>) =>
+⋮----
+onClick=
 
 ================
 File: src/renderer/src/components/common/TextArea.tsx
@@ -10247,11 +10315,12 @@ type Props = InputHTMLAttributes<HTMLInputElement> & {
 ================
 File: src/renderer/src/components/common/VirtualTable.tsx
 ================
-import { ReactNode, useMemo } from 'react';
+import { ReactNode, useMemo, useState } from 'react';
 ⋮----
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from '@tanstack/react-table';
+import { flexRender, getCoreRowModel, useReactTable, type ColumnDef, type SortingState } from '@tanstack/react-table';
 import { twMerge } from 'tailwind-merge';
+import { MdArrowUpward, MdArrowDownward } from 'react-icons/md';
 ⋮----
 import { Column, FooterColumn } from './Table';
 ⋮----
@@ -10265,6 +10334,8 @@ type Props<T> = {
   getRowClassName?: (row: T, index: number) => string | undefined;
 };
 ⋮----
+// Apply manual sorting to data
+⋮----
 // Convert Column<T> to ColumnDef<T> for @tanstack/react-table
 ⋮----
 // Create table instance
@@ -10275,7 +10346,11 @@ type Props<T> = {
 ⋮----
 {/* Header - Outside virtualized area */}
 ⋮----
+
+⋮----
 {/* Virtualized body */}
+⋮----
+className=
 ⋮----
 {/* Footer - Outside virtualized area */}
 
@@ -17239,7 +17314,7 @@ File: package.json
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck:mcp": "tsc --noEmit -p tsconfig.mcp-server.json --composite false",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web && npm run typecheck:mcp",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "dev:no-hmr": "NO_HMR=true electron-vite dev",
@@ -17371,10 +17446,10 @@ File: package.json
     "zod": "^4.1.11"
   },
   "devDependencies": {
-    "@electron-toolkit/tsconfig": "^1.0.1",
+    "@electron-toolkit/tsconfig": "^2.0.0",
     "@electron/notarize": "^3.0.2",
     "@eslint/js": "^9.33.0",
-    "@modelcontextprotocol/sdk": "^1.15.1",
+    "@modelcontextprotocol/sdk": "^1.20.0",
     "@tailwindcss/typography": "^0.5.16",
     "@types/better-sqlite3": "^7.6.13",
     "@types/lodash": "^4.17.17",
@@ -17389,12 +17464,12 @@ File: package.json
     "@types/textarea-caret": "^3.0.3",
     "@types/tmp": "^0.2.6",
     "@types/yaml-front-matter": "^4.1.3",
-    "@vitejs/plugin-react": "^4.3.1",
+    "@vitejs/plugin-react": "^5.0.4",
     "adm-zip": "^0.5.16",
     "autoprefixer": "^10.4.20",
     "electron": "^37.6.0",
     "electron-builder": "^26.0.12",
-    "electron-vite": "^4.0.0",
+    "electron-vite": "^4.0.1",
     "esbuild": "^0.25.9",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^9.1.0",
@@ -17402,7 +17477,7 @@ File: package.json
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-prettier": "^5.2.1",
     "eslint-plugin-react": "^7.37.2",
-    "eslint-plugin-react-hooks": "^6.0.0",
+    "eslint-plugin-react-hooks": "^7.0.0",
     "globals": "^15.9.0",
     "husky": "^9.1.7",
     "lint-staged": "^15.4.1",
@@ -17414,10 +17489,10 @@ File: package.json
     "tailwind-scrollbar": "^3.1.0",
     "tailwindcss": "^3.4.14",
     "tar": "^7.4.3",
-    "typescript": "^5.5.2",
-    "typescript-eslint": "^8.21.0",
-    "vite": "^5.4.19",
-    "vite-tsconfig-paths": "^5.1.0"
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.1",
+    "vite": "^7.1.10",
+    "vite-tsconfig-paths": "^5.1.4"
   },
   "lint-staged": {
     "*.{ts,tsx}": "eslint --fix"
