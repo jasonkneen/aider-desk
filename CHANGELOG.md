@@ -8,6 +8,7 @@
 - added sorting to tables in Model Library and Usage dashboard
 - auto approve setting from main agent is passed to subagents
 - added support for custom commands to be organized inside subfolders
+- added drag and drop option to change position of Agent profiles
 
 ## [0.35.0]
 
