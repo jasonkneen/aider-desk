@@ -1,4 +1,4 @@
-import fs from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
 import { homedir } from 'os';
 import { exec } from 'child_process';
@@ -6,6 +6,7 @@ import { promisify } from 'util';
 
 import { watch, FSWatcher } from 'chokidar';
 import { loadFront } from 'yaml-front-matter';
+import debounce from 'lodash/debounce';
 
 import type { CustomCommand } from '@common/types';
 
@@ -48,46 +49,49 @@ export class CustomCommandManager {
   private commands: Map<string, CustomCommand> = new Map();
   private watchers: FSWatcher[] = [];
 
-  constructor(private readonly project: Project) {
-    this.initializeCommands();
+  constructor(private readonly project: Project) {}
+
+  public async start(): Promise<void> {
+    await this.initializeCommands();
+    await this.setupFileWatchers();
   }
 
-  private initializeCommands(): void {
+  private async initializeCommands(): Promise<void> {
     this.commands.clear();
 
     const globalCommandsDir = path.join(homedir(), AIDER_DESK_COMMANDS_DIR);
-    this.loadCommandsFromDir(globalCommandsDir, this.commands);
+    await this.loadCommandsFromDir(globalCommandsDir, this.commands);
 
     // Load project-specific commands (these will overwrite global ones with same name)
     const projectCommandsDir = path.join(this.project.baseDir, AIDER_DESK_COMMANDS_DIR);
-    this.loadCommandsFromDir(projectCommandsDir, this.commands);
+    await this.loadCommandsFromDir(projectCommandsDir, this.commands);
 
     this.notifyCommandsUpdated();
   }
 
-  public start() {
-    this.setupFileWatchers();
-  }
-
-  private setupFileWatchers(): void {
+  private async setupFileWatchers(): Promise<void> {
     // Clean up existing watchers
     this.watchers.forEach((watcher) => watcher.close());
     this.watchers = [];
 
     // Watch global commands directory
     const globalCommandsDir = path.join(homedir(), AIDER_DESK_COMMANDS_DIR);
-    this.setupWatcherForDirectory(globalCommandsDir);
+    await this.setupWatcherForDirectory(globalCommandsDir);
 
     // Watch project-specific commands directory
     const projectCommandsDir = path.join(this.project.baseDir, AIDER_DESK_COMMANDS_DIR);
-    this.setupWatcherForDirectory(projectCommandsDir);
+    await this.setupWatcherForDirectory(projectCommandsDir);
   }
 
-  private setupWatcherForDirectory(commandsDir: string): void {
+  private async setupWatcherForDirectory(commandsDir: string): Promise<void> {
     // Create directory if it doesn't exist
-    if (!fs.existsSync(commandsDir)) {
+    const dirExists = await fs
+      .access(commandsDir)
+      .then(() => true)
+      .catch(() => false);
+    if (!dirExists) {
       try {
-        fs.mkdirSync(commandsDir, { recursive: true });
+        await fs.mkdir(commandsDir, { recursive: true });
       } catch (err) {
         logger.error(`Failed to create commands directory ${commandsDir}: ${err}`);
         return;
@@ -101,14 +105,14 @@ export class CustomCommandManager {
     });
 
     watcher
-      .on('add', () => {
-        this.reloadCommands();
+      .on('add', async () => {
+        await this.debounceReloadCommands();
       })
-      .on('change', () => {
-        this.reloadCommands();
+      .on('change', async () => {
+        await this.debounceReloadCommands();
       })
-      .on('unlink', () => {
-        this.reloadCommands();
+      .on('unlink', async () => {
+        await this.debounceReloadCommands();
       })
       .on('error', (error) => {
         logger.error(`Watcher error for ${commandsDir}: ${error}`);
@@ -117,38 +121,55 @@ export class CustomCommandManager {
     this.watchers.push(watcher);
   }
 
-  private reloadCommands(): void {
+  private debounceReloadCommands = debounce(async () => {
+    await this.reloadCommands();
+  }, 1000);
+
+  private async reloadCommands(): Promise<void> {
     logger.info('Reloading commands...');
-    this.initializeCommands();
+    await this.initializeCommands();
   }
 
   private notifyCommandsUpdated(): void {
     this.project.sendCustomCommandsUpdated(Array.from(this.commands.values()));
   }
 
-  private loadCommandsFromDir(commandsDir: string, commands: Map<string, CustomCommand>) {
-    if (!fs.existsSync(commandsDir)) {
+  private async loadCommandsFromDir(commandsDir: string, commands: Map<string, CustomCommand>): Promise<void> {
+    const dirExists = await fs
+      .access(commandsDir)
+      .then(() => true)
+      .catch(() => false);
+    if (!dirExists) {
       return;
     }
 
     try {
-      const files = fs.readdirSync(commandsDir).filter((f) => f.endsWith('.md'));
-      for (const file of files) {
-        this.loadCommandFile(path.join(commandsDir, file), commands);
-      }
+      await this.loadCommandsRecursively(commandsDir, commands, commandsDir);
     } catch (err) {
       logger.error(`Failed to read commands directory ${commandsDir}: ${err}`);
     }
   }
 
-  private loadCommandFile(filePath: string, commands: Map<string, CustomCommand>) {
+  private async loadCommandsRecursively(dir: string, commands: Map<string, CustomCommand>, baseDir: string, prefix = ''): Promise<void> {
+    const entries = await fs.readdir(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await this.loadCommandsRecursively(fullPath, commands, baseDir, `${prefix}${entry.name}:`);
+      } else if (entry.isFile() && entry.name.endsWith('.md')) {
+        const name = `${prefix}${path.basename(entry.name, '.md')}`;
+        await this.loadCommandFile(fullPath, name, commands);
+      }
+    }
+  }
+
+  private async loadCommandFile(filePath: string, name: string, commands: Map<string, CustomCommand>): Promise<void> {
     try {
-      const content = fs.readFileSync(filePath, 'utf-8');
+      const content = await fs.readFile(filePath, 'utf-8');
       const parsed = loadFront(content);
       if (!parsed.description) {
         logger.warn(`Command file ${filePath} is missing a description`);
       }
-      const name = path.basename(filePath, '.md');
       const args = Array.isArray(parsed.arguments) ? parsed.arguments : [];
       const template = parsed.__content?.trim() || '';
       const includeContext = typeof parsed.includeContext === 'boolean' ? parsed.includeContext : true;
@@ -255,7 +276,7 @@ export class CustomCommandManager {
     }
 
     try {
-      logger.debug('Executing shell command:', { command: commandPortion });
+      logger.info('Executing shell command from custom command:', { command: commandPortion });
 
       const { stdout } = await execAsync(commandPortion, {
         cwd: this.project.baseDir,

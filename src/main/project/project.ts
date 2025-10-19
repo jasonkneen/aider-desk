@@ -49,7 +49,7 @@ export class Project {
       this.initialized = true;
     }
 
-    this.customCommandManager.start();
+    await this.customCommandManager.start();
 
     await this.initAutosavedTask(mode);
     await this.sendInputHistoryUpdatedEvent();

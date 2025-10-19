@@ -7,6 +7,7 @@
 - fixed issue with incorrect tool definition for AiderDesk MCP server
 - added sorting to tables in Model Library and Usage dashboard
 - auto approve setting from main agent is passed to subagents
+- added support for custom commands to be organized inside subfolders
 
 ## [0.35.0]
 
