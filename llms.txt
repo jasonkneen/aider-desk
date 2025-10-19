@@ -118,6 +118,7 @@ src/
       types.ts
     project/
       index.ts
+      migrations.ts
       project-manager.ts
       project.ts
     server/
@@ -1984,10 +1985,8 @@ File: src/common/locales/en.json
   "sessions": {
     "title": "Sessions",
     "empty": "No saved sessions",
-    "loadMessages_one": "Load {{count}} message",
-    "loadMessages_other": "Load {{count}} messages",
-    "loadFiles_one": "Load {{count}} file",
-    "loadFiles_other": "Load {{count}} files",
+    "loadMessages": "Load messages",
+    "loadFiles": "Load files",
     "saveAsNew": "Save as new",
     "exportAsMarkdown": "Export as Markdown",
     "exportAsImage": "Export as Image",
@@ -2953,10 +2952,8 @@ File: src/common/locales/zh.json
   "sessions": {
     "title": "会话",
     "empty": "无保存的会话",
-    "loadMessages_one": "加载{{count}}条消息",
-    "loadMessages_other": "加载{{count}}条消息",
-    "loadFiles_one": "加载{{count}}个文件",
-    "loadFiles_other": "加载{{count}}个文件",
+    "loadMessages": "加载条消息",
+    "loadFiles": "加载个文件",
     "saveAsNew": "另存为新",
     "exportAsMarkdown": "导出为Markdown",
     "exportAsImage": "导出为图片",
@@ -3488,44 +3485,44 @@ File: src/common/api.ts
 ================
 import {
   AutocompletionData,
+  ClearProjectData,
+  CloudflareTunnelStatus,
+  CommandOutputData,
   ContextFilesUpdatedData,
+  CustomCommand,
   CustomCommandsUpdatedData,
+  EditFormat,
+  EnvironmentVariable,
+  FileEdit,
   InputHistoryData,
   LogData,
+  McpServerConfig,
+  McpTool,
+  Mode,
+  Model,
+  ModelInfo,
   ModelsData,
+  OS,
   ProjectData,
   ProjectSettings,
+  ProjectStartedData,
+  ProjectStartMode,
+  ProviderModelsData,
+  ProviderProfile,
+  ProvidersUpdatedData,
   QuestionData,
   ResponseChunkData,
   ResponseCompletedData,
-  SessionData,
   SettingsData,
+  TaskData,
   TerminalData,
   TerminalExitData,
-  TokensInfoData,
-  UserMessageData,
-  McpServerConfig,
-  McpTool,
-  ToolData,
-  CommandOutputData,
-  Mode,
-  VersionsInfo,
-  EditFormat,
-  OS,
-  ModelInfo,
-  Model,
   TodoItem,
+  TokensInfoData,
+  ToolData,
   UsageDataRow,
-  EnvironmentVariable,
-  CustomCommand,
-  StartupMode,
-  FileEdit,
-  ClearProjectData,
-  ProjectStartedData,
-  CloudflareTunnelStatus,
-  ProviderProfile,
-  ProviderModelsData,
-  ProvidersUpdatedData,
+  UserMessageData,
+  VersionsInfo,
 } from '@common/types';
 ⋮----
 export interface ApplicationAPI {
@@ -3541,7 +3538,7 @@ export interface ApplicationAPI {
   getCloudflareTunnelStatus: () => Promise<CloudflareTunnelStatus>;
   startProject: (baseDir: string) => void;
   stopProject: (baseDir: string) => void;
-  restartProject: (baseDir: string, startupMode?: StartupMode) => void;
+  restartProject: (baseDir: string, startupMode?: ProjectStartMode) => void;
   runPrompt: (baseDir: string, prompt: string, mode?: Mode) => void;
   redoLastUserPrompt: (baseDir: string, mode: Mode, updatedPrompt?: string) => void;
   answerQuestion: (baseDir: string, answer: string) => void;
@@ -3581,12 +3578,11 @@ export interface ApplicationAPI {
   loadMcpServerTools: (serverName: string, config?: McpServerConfig) => Promise<McpTool[] | null>;
   reloadMcpServers: (mcpServers: Record<string, McpServerConfig>, force?: boolean) => Promise<void>;
 
-  saveSession: (baseDir: string, name: string) => Promise<boolean>;
-  deleteSession: (baseDir: string, name: string) => Promise<boolean>;
-  loadSessionMessages: (baseDir: string, name: string) => Promise<void>;
-  loadSessionFiles: (baseDir: string, name: string) => Promise<void>;
-  listSessions: (baseDir: string) => Promise<SessionData[]>;
-  exportSessionToMarkdown: (baseDir: string) => Promise<void>;
+  saveTask: (baseDir: string, name: string, id?: string) => Promise<boolean>;
+  deleteTask: (baseDir: string, name: string) => Promise<boolean>;
+  loadTask: (baseDir: string, id: string) => Promise<void>;
+  getTasks: (baseDir: string) => Promise<TaskData[]>;
+  exportTaskToMarkdown: (baseDir: string) => Promise<void>;
   getRecentProjects: () => Promise<string[]>;
   addRecentProject: (baseDir: string) => Promise<void>;
   removeRecentProject: (baseDir: string) => Promise<void>;
@@ -3771,6 +3767,7 @@ export interface AutocompletionData {
 }
 ⋮----
 export interface SessionData {
+  id: string;
   name: string;
   messages?: number;
   files?: number;
@@ -3892,9 +3889,10 @@ export enum ToolApprovalState {
   Ask = 'ask',
 }
 ⋮----
-export enum StartupMode {
+export enum ProjectStartMode {
   Empty = 'empty',
   Last = 'last',
+  Remote = 'remote',
 }
 ⋮----
 export enum SuggestionMode {
@@ -3969,7 +3967,7 @@ export type Font = (typeof FONTS)[number];
 export interface SettingsData {
   onboardingFinished?: boolean;
   language: string;
-  startupMode?: StartupMode;
+  startupMode?: ProjectStartMode;
   zoomLevel?: number;
   notificationsEnabled?: boolean;
   theme?: Theme;
@@ -4148,15 +4146,23 @@ export interface ModelInfo {
 ⋮----
 export interface TaskContext {
   version: number;
-  taskId: string;
   contextMessages: ContextMessage[];
   contextFiles: ContextFile[];
+}
+⋮----
+export interface TaskSettings {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  startedAt?: string;
+  completedAt?: string;
 }
 ⋮----
 export interface TaskData {
   id: string;
   baseDir: string;
-  title: string;
+  name: string;
   aiderTotalCost: number;
   agentTotalCost: number;
   createdAt: string;
@@ -5226,6 +5232,8 @@ private initializeCommands(): void
 ⋮----
 // Load project-specific commands (these will overwrite global ones with same name)
 ⋮----
+public start()
+⋮----
 private setupFileWatchers(): void
 ⋮----
 // Clean up existing watchers
@@ -5453,7 +5461,7 @@ sendProviderModelsUpdated(data: ProviderModelsData): void
 // Task lifecycle events
 sendTaskCreated(task: TaskData): void
 ⋮----
-sendTaskActivated(task: TaskData): void
+sendTaskInitialized(task: TaskData): void
 ⋮----
 sendTaskStarted(task: TaskData): void
 ⋮----
@@ -6690,10 +6698,72 @@ File: src/main/project/index.ts
 
 
 ================
+File: src/main/project/migrations.ts
+================
+import fs from 'fs/promises';
+import path from 'path';
+⋮----
+import { v4 as uuidv4 } from 'uuid';
+import { ContextFile, ContextMessage, TaskContext, TaskSettings } from '@common/types';
+import { fileExists } from '@common/utils';
+⋮----
+import { AIDER_DESK_DIR } from '@/constants';
+import logger from '@/logger';
+import { Project } from '@/project';
+⋮----
+interface SessionData {
+  version: number;
+  contextMessages: ContextMessage[];
+  contextFiles: ContextFile[];
+}
+⋮----
+/**
+ * Migrates legacy sessions to the new task system.
+ *
+ * This function:
+ * 1. Checks if sessions directory exists
+ * 2. Reads all session JSON files
+ * 3. Creates tasks for each session
+ * 4. Deletes the sessions directory after successful migration
+ */
+export const migrateSessionsToTasks = async (project: Project): Promise<void> =>
+⋮----
+// Check if sessions directory exists
+⋮----
+// Ensure tasks directory exists
+⋮----
+// Read all files in sessions directory
+⋮----
+// Process each session file
+⋮----
+// Delete the entire sessions directory after successful migration
+⋮----
+/**
+ * Migrates a single session file to a task.
+ */
+const migrateSessionFile = async (project: Project, sessionsDirPath: string, tasksDirPath: string, sessionFile: string): Promise<void> =>
+⋮----
+// Read session data
+⋮----
+// Determine taskId and task folder name
+⋮----
+// Create task directory
+⋮----
+// Extract name from session file (without .json extension)
+⋮----
+// Write settings.json file
+⋮----
+// Create TaskContext by merging session data with required properties
+⋮----
+// Merge any other properties from session data, but don't override required ones
+⋮----
+// Write context.json file
+
+================
 File: src/main/project/project-manager.ts
 ================
 import { normalizeBaseDir } from '@common/utils';
-import { SettingsData, StartupMode } from '@common/types';
+import { SettingsData, ProjectStartMode } from '@common/types';
 ⋮----
 import { TelemetryManager } from '@/telemetry';
 import { McpManager } from '@/agent';
@@ -6714,11 +6784,11 @@ private createProject(baseDir: string)
 ⋮----
 public getProject(baseDir: string)
 ⋮----
-public startProject(baseDir: string, startupMode?: StartupMode)
+public startProject(baseDir: string, startupMode?: ProjectStartMode)
 ⋮----
 public async closeProject(baseDir: string)
 ⋮----
-public async restartProject(baseDir: string, startupMode?: StartupMode): Promise<void>
+public async restartProject(baseDir: string, startupMode?: ProjectStartMode): Promise<void>
 ⋮----
 public async close(): Promise<void>
 ⋮----
@@ -6732,7 +6802,7 @@ File: src/main/project/project.ts
 import fs from 'fs/promises';
 import path from 'path';
 ⋮----
-import { CustomCommand, FileEdit, InputHistoryData, SettingsData, StartupMode } from '@common/types';
+import { CustomCommand, InputHistoryData, ProjectStartMode, SettingsData, TaskData } from '@common/types';
 import { fileExists } from '@common/utils';
 ⋮----
 import { getAllFiles } from '@/utils/file-system';
@@ -6740,13 +6810,13 @@ import { McpManager } from '@/agent';
 import { Connector } from '@/connector';
 import { DataManager } from '@/data-manager';
 import logger from '@/logger';
-import { MessageAction } from '@/messages';
 import { Store } from '@/store';
 import { ModelManager } from '@/models';
 import { CustomCommandManager } from '@/custom-commands';
 import { TelemetryManager } from '@/telemetry';
 import { EventManager } from '@/events';
 import { Task } from '@/task';
+import { migrateSessionsToTasks } from '@/project/migrations';
 ⋮----
 export class Project
 ⋮----
@@ -6760,7 +6830,12 @@ constructor(
     private readonly modelManager: ModelManager,
 )
 ⋮----
-public async start(startupMode?: StartupMode)
+public async start(startupMode?: ProjectStartMode)
+⋮----
+// Migrate sessions to tasks before starting
+⋮----
+// TODO: temporary solution for backward compatibility
+private async initAutosavedTask(mode?: ProjectStartMode)
 ⋮----
 // Handle different startup modes
 ⋮----
@@ -6770,17 +6845,21 @@ public async start(startupMode?: StartupMode)
 ⋮----
 private async createTask(taskId: string)
 ⋮----
-public getTask(taskId: string = 'default')
+public async saveTask(name: string, id?: string): Promise<TaskData>
 ⋮----
-public getDefaultTask()
+// If a new task was created (id was not autosaved), add it to the project's task map
+⋮----
+private async loadTasks()
+⋮----
+public getTask(taskId: string = 'autosaved')
+⋮----
+public getAutosavedTask()
 ⋮----
 public addConnector(connector: Connector)
 ⋮----
 // Set input history file if provided by the connector
 ⋮----
 public removeConnector(connector: Connector)
-⋮----
-private findMessageConnectors(action: MessageAction): Connector[]
 ⋮----
 public async loadInputHistory(): Promise<string[]>
 ⋮----
@@ -6792,12 +6871,27 @@ public async updateAutocompletionData(words: string[], models: string[])
 ⋮----
 public async getAddableFiles(searchRegex?: string): Promise<string[]>
 ⋮----
-public applyEdits(edits: FileEdit[])
-⋮----
 public getCustomCommands()
 ⋮----
 public sendCustomCommandsUpdated(commands: CustomCommand[])
 ⋮----
+public async loadTask(taskId: string): Promise<void>
+⋮----
+// Ensure the target directory exists
+⋮----
+// Copy the context.json file
+⋮----
+// Load the context in the autosaved task
+⋮----
+public async deleteTask(taskId: string): Promise<void>
+⋮----
+// Close the task if it's loaded
+⋮----
+// Delete the task directory
+⋮----
+getTasks(): TaskData[]
+⋮----
+// TODO: should be on task level
 async close()
 ⋮----
 settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
@@ -6915,7 +7009,7 @@ File: src/main/server/rest-api/project-api.ts
 ================
 import { Router } from 'express';
 import { z } from 'zod';
-import { StartupMode, ProjectSettingsSchema } from '@common/types';
+import { ProjectStartMode, ProjectSettingsSchema } from '@common/types';
 ⋮----
 import { BaseApi } from './base-api';
 ⋮----
@@ -6947,13 +7041,11 @@ registerRoutes(router: Router): void
 ⋮----
 // Init project rules file
 ⋮----
-// Save session
+// Save task
 ⋮----
-// Load session messages
+// Load task messages
 ⋮----
-// Load session files
-⋮----
-// List sessions
+// List tasks
 ⋮----
 // Delete session
 ⋮----
@@ -7398,7 +7490,7 @@ File: src/main/store/index.ts
 File: src/main/store/store.ts
 ================
 import { v4 as uuidv4 } from 'uuid';
-import { AgentProfile, ProviderProfile, ProjectData, ProjectSettings, SettingsData, StartupMode, SuggestionMode, WindowState, Model } from '@common/types';
+import { AgentProfile, ProviderProfile, ProjectData, ProjectSettings, SettingsData, ProjectStartMode, SuggestionMode, WindowState, Model } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
 import { DEFAULT_AGENT_PROFILE, DEFAULT_AGENT_PROFILES, DEFAULT_PROVIDER_MODEL } from '@common/agent';
 ⋮----
@@ -7793,10 +7885,8 @@ import {
   ContextAssistantMessage,
   ContextFile,
   ContextMessage,
-  CustomCommand,
   EditFormat,
   FileEdit,
-  InputHistoryData,
   LogData,
   LogLevel,
   MessageRole,
@@ -7807,8 +7897,8 @@ import {
   ResponseChunkData,
   ResponseCompletedData,
   SettingsData,
-  StartupMode,
   TaskData,
+  TaskSettings,
   TodoItem,
   TokensInfoData,
   ToolData,
@@ -7854,13 +7944,23 @@ constructor(
     private readonly modelManager: ModelManager,
 )
 ⋮----
-public async start(startupMode?: StartupMode)
+private async loadTaskSettings()
 ⋮----
-// Handle different startup modes
+public async init()
 ⋮----
-// Don't load any session, start fresh
+public async loadContext()
 ⋮----
-// Load the autosaved session
+public async saveAs(name: string, newTaskId?: string): Promise<TaskData>
+⋮----
+// Ensure target directory exists
+⋮----
+// Copy context.json
+⋮----
+// If the source context.json doesn't exist, create an empty one in the new task dir
+⋮----
+// Create or update settings.json
+⋮----
+// Update the current task's properties if it's being saved to itself
 ⋮----
 public addConnector(connector: Connector)
 ⋮----
@@ -7872,7 +7972,7 @@ private normalizeFilePath(filePath: string): string
 ⋮----
 public isStarted()
 ⋮----
-public async close()
+public async close(clearContext = false)
 ⋮----
 private findMessageConnectors(action: MessageAction): Connector[]
 ⋮----
@@ -7970,12 +8070,6 @@ public async runCommand(command: string, addToHistory = true)
 // Reset --soft HEAD~1
 ⋮----
 public updateContextFiles(contextFiles: ContextFile[])
-⋮----
-public async loadInputHistory(): Promise<string[]>
-⋮----
-public async addToInputHistory(message: string)
-⋮----
-private async sendInputHistoryUpdatedEvent()
 ⋮----
 public async askQuestion(questionData: QuestionData, awaitAnswer = true): Promise<[string, string | undefined]>
 ⋮----
@@ -8120,10 +8214,6 @@ private async addProjectAgentsToAiderConfig(): Promise<void>
 // Add PROJECT.md to read section if not already present
 ⋮----
 // Write the updated config
-⋮----
-public getCustomCommands()
-⋮----
-public sendCustomCommandsUpdated(commands: CustomCommand[])
 ⋮----
 public async runCustomCommand(commandName: string, args: string[], mode: Mode = 'agent'): Promise<void>
 ⋮----
@@ -8544,21 +8634,21 @@ import {
   McpServerConfig,
   McpTool,
   Mode,
-  ModelInfo,
   Model,
+  ModelInfo,
   OS,
   ProjectData,
   ProjectSettings,
+  ProjectStartMode,
+  ProviderModelsData,
   ProviderProfile,
   ResponseCompletedData,
-  SessionData,
   SettingsData,
-  StartupMode,
+  TaskData,
   Theme,
   TodoItem,
   UsageDataRow,
   VersionsInfo,
-  ProviderModelsData,
 } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
 ⋮----
@@ -8602,7 +8692,7 @@ startProject(baseDir: string): void
 ⋮----
 async stopProject(baseDir: string): Promise<void>
 ⋮----
-async restartProject(baseDir: string, startupMode?: StartupMode): Promise<void>
+async restartProject(baseDir: string, startupMode?: ProjectStartMode): Promise<void>
 ⋮----
 getOpenProjects(): ProjectData[]
 ⋮----
@@ -8690,30 +8780,13 @@ async scrapeWeb(baseDir: string, url: string, filePath?: string): Promise<void>
 ⋮----
 // Check if path looks like a directory (ends with separator)
 ⋮----
-/**
-   * @deprecated
-   */
-async saveSession(baseDir: string, name: string): Promise<boolean>
+async saveTask(baseDir: string, name: string, id?: string): Promise<TaskData>
 ⋮----
-/**
-   * @deprecated
-   */
-async loadSessionMessages(baseDir: string, name: string): Promise<void>
+async loadTask(baseDir: string, id: string): Promise<void>
 ⋮----
-/**
-   * @deprecated
-   */
-async loadSessionFiles(baseDir: string, name: string): Promise<void>
+async deleteTask(baseDir: string, id: string): Promise<void>
 ⋮----
-/**
-   * @deprecated
-   */
-async deleteSession(baseDir: string, name: string): Promise<boolean>
-⋮----
-/**
-   * @deprecated
-   */
-async listSessions(baseDir: string): Promise<SessionData[]>
+async getTasks(baseDir: string): Promise<TaskData[]>
 ⋮----
 async exportTaskToMarkdown(baseDir: string): Promise<void>
 ⋮----
@@ -8876,7 +8949,7 @@ updateProgress = () =>
 ================
 File: src/main/ipc-handlers.ts
 ================
-import { EditFormat, FileEdit, ProviderProfile, McpServerConfig, Mode, Model, ProjectSettings, SettingsData, StartupMode, TodoItem } from '@common/types';
+import { EditFormat, FileEdit, ProviderProfile, McpServerConfig, Mode, Model, ProjectSettings, SettingsData, ProjectStartMode, TodoItem } from '@common/types';
 import { ipcMain } from 'electron';
 ⋮----
 import { EventsHandler } from './events-handler';
@@ -9329,6 +9402,7 @@ File: src/renderer/src/api/browser-api.ts
 import {
   AutocompletionData,
   ClearProjectData,
+  CloudflareTunnelStatus,
   CommandOutputData,
   ContextFilesUpdatedData,
   CustomCommand,
@@ -9341,19 +9415,22 @@ import {
   McpServerConfig,
   McpTool,
   Mode,
-  ModelInfo,
   Model,
+  ModelInfo,
   ModelsData,
   OS,
   ProjectData,
   ProjectSettings,
   ProjectStartedData,
+  ProjectStartMode,
+  ProviderModelsData,
+  ProviderProfile,
+  ProvidersUpdatedData,
   QuestionData,
   ResponseChunkData,
   ResponseCompletedData,
-  SessionData,
   SettingsData,
-  StartupMode,
+  TaskData,
   TerminalData,
   TerminalExitData,
   TodoItem,
@@ -9362,10 +9439,6 @@ import {
   UsageDataRow,
   UserMessageData,
   VersionsInfo,
-  CloudflareTunnelStatus,
-  ProviderProfile,
-  ProviderModelsData,
-  ProvidersUpdatedData,
 } from '@common/types';
 import { ApplicationAPI } from '@common/api';
 import axios, { type AxiosInstance } from 'axios';
@@ -9433,7 +9506,7 @@ loadSettings(): Promise<SettingsData>
 saveSettings(settings: SettingsData): Promise<SettingsData>
 startProject(baseDir: string): void
 stopProject(baseDir: string): void
-restartProject(baseDir: string, startupMode?: StartupMode): void
+restartProject(baseDir: string, startupMode?: ProjectStartMode): void
 runPrompt(baseDir: string, prompt: string, mode?: Mode): void
 redoLastUserPrompt(baseDir: string, mode: Mode, updatedPrompt?: string): void
 answerQuestion(baseDir: string, answer: string): void
@@ -9469,12 +9542,11 @@ deleteTodo(baseDir: string, name: string): Promise<TodoItem[]>
 clearAllTodos(baseDir: string): Promise<TodoItem[]>
 loadMcpServerTools(serverName: string, config?: McpServerConfig): Promise<McpTool[] | null>
 reloadMcpServers(mcpServers: Record<string, McpServerConfig>, force = false): Promise<void>
-saveSession(baseDir: string, name: string): Promise<boolean>
-deleteSession(baseDir: string, name: string): Promise<boolean>
-loadSessionMessages(baseDir: string, name: string): Promise<void>
-loadSessionFiles(baseDir: string, name: string): Promise<void>
-listSessions(baseDir: string): Promise<SessionData[]>
-exportSessionToMarkdown(baseDir: string): Promise<void>
+saveTask(baseDir: string, name: string, id?: string): Promise<boolean>
+deleteTask(baseDir: string, id: string): Promise<boolean>
+loadTask(baseDir: string, id: string): Promise<void>
+getTasks(baseDir: string): Promise<TaskData[]>
+exportTaskToMarkdown(baseDir: string): Promise<void>
 getRecentProjects(): Promise<string[]>
 addRecentProject(baseDir: string): Promise<void>
 removeRecentProject(baseDir: string): Promise<void>
@@ -10026,7 +10098,7 @@ type Props = {
 ================
 File: src/renderer/src/components/common/IconButton.tsx
 ================
-import { MouseEvent, ReactNode, useRef } from 'react';
+import { MouseEvent, ReactNode, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { twMerge } from 'tailwind-merge';
 ⋮----
@@ -10042,7 +10114,6 @@ type Props = {
 };
 ⋮----
 const handleClick = (e: MouseEvent<HTMLDivElement>) =>
-⋮----
 
 ================
 File: src/renderer/src/components/common/InfoIcon.tsx
@@ -10759,8 +10830,6 @@ type Props = {
 ⋮----
 export const LoadingMessageBlock = (
 ⋮----
-// Reset animation when message content changes
-⋮----
 // When we reach the end, wait a bit longer before restarting
 ⋮----
 }, 3000); // 1 second pause before restarting
@@ -10889,8 +10958,6 @@ type Props = {
   redo?: () => void;
   edit?: (content: string) => void;
 };
-⋮----
-export const MessageBlock = (
 
 ================
 File: src/renderer/src/components/message/Messages.tsx
@@ -12548,6 +12615,8 @@ type Props = {
   allowDirectories?: boolean;
 };
 ⋮----
+// eslint-disable-next-line react-hooks/set-state-in-effect
+⋮----
 const checkValidPath = async () =>
 ⋮----
 const updateSuggestions = async () =>
@@ -12672,8 +12741,8 @@ confirmButtonText=
 ================
 File: src/renderer/src/components/project/ProjectBar.tsx
 ================
-import { EditFormat, Mode, Model, ModelsData, RawModelInfo, SessionData } from '@common/types';
-import React, { ReactNode, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { EditFormat, Mode, Model, ModelsData, RawModelInfo, TaskData } from '@common/types';
+import React, { ReactNode, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { BsCodeSlash, BsFilter, BsLayoutSidebar } from 'react-icons/bs';
 import { CgTerminal } from 'react-icons/cg';
 import { GoProjectRoadmap } from 'react-icons/go';
@@ -12713,11 +12782,9 @@ type Props = {
   onToggleSidebar: () => void;
 };
 ⋮----
+// eslint-disable-next-line no-console
+⋮----
 // optimistic update
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-// eslint-disable-next-line no-console
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
@@ -13133,6 +13200,8 @@ const handleKeyPress = (e: React.KeyboardEvent) =>
 ⋮----
 // Auto-collapse when all todo items are completed
 ⋮----
+// eslint-disable-next-line react-hooks/set-state-in-effect
+⋮----
 {/* Header */}
 ⋮----
 tooltip=
@@ -13334,11 +13403,11 @@ const completionSource = async (context: CompletionContext): Promise<CompletionR
 ⋮----
 // Add custom commands to the list
 ⋮----
+const setTextWithDispatch = (newText: string) =>
+⋮----
 // Ensure cursor is at the end after setting text
 ⋮----
 // Ensure cursor is at the end after appending text
-⋮----
-const setTextWithDispatch = (newText: string) =>
 ⋮----
 url = commandArgs; // Only URL provided
 ⋮----
@@ -13635,8 +13704,6 @@ const handleAddServer = () =>
 // Accept both { mcpServers: {...} } and just { ... }
 ⋮----
 const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) =>
-⋮----
-<StyledTooltip id=
 
 ================
 File: src/renderer/src/components/settings/agent/McpServerItem.tsx
@@ -13772,7 +13839,7 @@ https://aider.chat/docs/config/dotenv.html
 File: src/renderer/src/components/settings/GeneralSettings.tsx
 ================
 import { useTranslation } from 'react-i18next';
-import { Font, FONTS, SettingsData, StartupMode, SuggestionMode, Theme, THEMES } from '@common/types';
+import { Font, FONTS, SettingsData, ProjectStartMode, SuggestionMode, Theme, THEMES } from '@common/types';
 ⋮----
 import { Checkbox } from '../common/Checkbox';
 import { RadioButton } from '../common/RadioButton';
@@ -13793,7 +13860,7 @@ type Props = {
   onFontSizeChange: (fontSize: number) => void;
 };
 ⋮----
-const handleStartupModeChange = (mode: StartupMode) =>
+const handleStartupModeChange = (mode: ProjectStartMode) =>
 ⋮----
 const handleStartupModeClick = (value: string) =>
 ⋮----
@@ -13912,7 +13979,7 @@ label=
 ================
 File: src/renderer/src/components/settings/SettingsDialog.tsx
 ================
-import { SettingsData, StartupMode } from '@common/types';
+import { SettingsData, ProjectStartMode } from '@common/types';
 import { useEffect, useMemo, useState } from 'react';
 import { isEqual } from 'lodash';
 import { useTranslation } from 'react-i18next';
@@ -13929,6 +13996,8 @@ type Props = {
   initialAgentProfileId?: string;
   initialAgentProvider?: LlmProviderName;
 };
+⋮----
+// eslint-disable-next-line react-hooks/set-state-in-effect
 ⋮----
 const handleCancel = () =>
 ⋮----
@@ -14384,9 +14453,7 @@ className=
 ⋮----
 onChange=
 ⋮----
-placeholder={placeholder ? t(placeholder) : undefined}
-        autoFocus={autoFocus}
-onPaste=
+{/* eslint-disable-next-line react-hooks/refs */}
 
 ================
 File: src/renderer/src/components/CostInfo.tsx
@@ -14487,22 +14554,21 @@ const handleSave = () =>
 ================
 File: src/renderer/src/components/SessionsPopup.tsx
 ================
-import { SessionData } from '@common/types';
 import { KeyboardEvent, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { IoDocumentTextOutline, IoListOutline, IoTrashOutline, IoAddOutline, IoSaveOutline, IoClose } from 'react-icons/io5';
+import { IoAddOutline, IoClose, IoListOutline, IoSaveOutline, IoTrashOutline } from 'react-icons/io5';
 import { LuImageDown } from 'react-icons/lu';
 import { RiChatDownloadLine } from 'react-icons/ri';
+import { TaskData } from '@common/types';
 ⋮----
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 ⋮----
 type Props = {
-  sessions: SessionData[];
-  onLoadSessionMessages: (name: string) => void;
-  onLoadSessionFiles: (name: string) => void;
-  onSaveSession: (name: string) => void;
-  onDeleteSession: (name: string) => void;
+  sessions: TaskData[];
+  onLoadSessionMessages: (id: string) => void;
+  onSaveSession: (name: string, id?: string) => void;
+  onDeleteSession: (id: string) => void;
   onExportSessionToMarkdown: () => void;
   onExportSessionToImage: () => void;
 };
@@ -14629,13 +14695,11 @@ setProjectSettings(updatedSettings); // Ensure state is in sync with backend
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
+// check if active agent profile still exists in settings
+⋮----
 const loadSettings = async () =>
 ⋮----
 // eslint-disable-next-line no-console
-⋮----
-// check if active agent profile still exists in settings
-⋮----
-// eslint-disable-next-line
 ⋮----
 export const useProjectSettings = () =>
 
@@ -14889,6 +14953,8 @@ setCurrentElementIndex(-1); // Reset index
 ⋮----
 navigateToElement(0); // Navigate to the first result
 ⋮----
+// eslint-disable-next-line react-hooks/set-state-in-effect
+⋮----
 // eslint-disable-next-line
 ⋮----
 placeholder=
@@ -14908,6 +14974,8 @@ export const useVersions = () =>
 // eslint-disable-next-line no-console
 ⋮----
 // Optionally set versions to indicate an error or keep them null
+⋮----
+// eslint-disable-next-line react-hooks/set-state-in-effect
 
 ================
 File: src/renderer/src/i18n/index.ts
