@@ -1,5 +1,9 @@
 # Changelog
 
+## [UNRELEASED]
+
+- improved API key handling from environment variables in Agent mode
+
 ## [0.36.0]
 
 - added checkbox for showing/hiding Hidden models in Model Library
