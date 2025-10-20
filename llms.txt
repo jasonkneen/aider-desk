@@ -341,6 +341,7 @@ src/
             McpServerForm.tsx
             McpServerItem.tsx
             McpToolItem.tsx
+            SortableAgentProfileItem.tsx
           AboutSettings.tsx
           AiderSettings.tsx
           GeneralSettings.tsx
@@ -5190,7 +5191,7 @@ File: src/main/connector/index.ts
 ================
 File: src/main/custom-commands/custom-command-manager.ts
 ================
-import fs from 'fs';
+import fs from 'fs/promises';
 import path from 'path';
 import { homedir } from 'os';
 import { exec } from 'child_process';
@@ -5198,6 +5199,7 @@ import { promisify } from 'util';
 ⋮----
 import { watch, FSWatcher } from 'chokidar';
 import { loadFront } from 'yaml-front-matter';
+import debounce from 'lodash/debounce';
 ⋮----
 import type { CustomCommand } from '@common/types';
 ⋮----
@@ -5228,13 +5230,13 @@ export class CustomCommandManager
 ⋮----
 constructor(private readonly project: Project)
 ⋮----
-private initializeCommands(): void
+public async start(): Promise<void>
+⋮----
+private async initializeCommands(): Promise<void>
 ⋮----
 // Load project-specific commands (these will overwrite global ones with same name)
 ⋮----
-public start()
-⋮----
-private setupFileWatchers(): void
+private async setupFileWatchers(): Promise<void>
 ⋮----
 // Clean up existing watchers
 ⋮----
@@ -5242,17 +5244,19 @@ private setupFileWatchers(): void
 ⋮----
 // Watch project-specific commands directory
 ⋮----
-private setupWatcherForDirectory(commandsDir: string): void
+private async setupWatcherForDirectory(commandsDir: string): Promise<void>
 ⋮----
 // Create directory if it doesn't exist
 ⋮----
-private reloadCommands(): void
+private async reloadCommands(): Promise<void>
 ⋮----
 private notifyCommandsUpdated(): void
 ⋮----
-private loadCommandsFromDir(commandsDir: string, commands: Map<string, CustomCommand>)
+private async loadCommandsFromDir(commandsDir: string, commands: Map<string, CustomCommand>): Promise<void>
 ⋮----
-private loadCommandFile(filePath: string, commands: Map<string, CustomCommand>)
+private async loadCommandsRecursively(dir: string, commands: Map<string, CustomCommand>, baseDir: string, prefix = ''): Promise<void>
+⋮----
+private async loadCommandFile(filePath: string, name: string, commands: Map<string, CustomCommand>): Promise<void>
 ⋮----
 // Optionally: send error to chat window via IPC or callback
 ⋮----
@@ -13455,21 +13459,13 @@ onClose=
 File: src/renderer/src/components/settings/agent/AgentProfileItem.tsx
 ================
 import { AgentProfile } from '@common/types';
-import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
-⋮----
-import { StyledTooltip } from '@/components/common/StyledTooltip';
 ⋮----
 type Props = {
   profile: AgentProfile;
   isSelected: boolean;
   onClick: (id: string) => void;
-  isDefault: boolean;
 };
-⋮----
-const handleClick = () =>
-⋮----
-<StyledTooltip id=
 
 ================
 File: src/renderer/src/components/settings/agent/AgentRules.tsx
@@ -13489,13 +13485,15 @@ type AgentRulesProps = {
 File: src/renderer/src/components/settings/agent/AgentSettings.tsx
 ================
 import { AgentProfile, ContextMemoryMode, GenericTool, InvocationMode, McpServerConfig, SettingsData, ToolApprovalState } from '@common/types';
-import React, { ReactNode, useRef, useState } from 'react';
+import React, { ReactNode, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { FaPencilAlt, FaPlus, FaSyncAlt } from 'react-icons/fa';
 import { DEFAULT_AGENT_PROFILE } from '@common/agent';
 import { BiTrash } from 'react-icons/bi';
 import { clsx } from 'clsx';
 import Sketch from '@uiw/react-color-sketch';
+import { DndContext, type DragEndEvent, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import {
   AIDER_TOOL_ADD_CONTEXT_FILES,
   AIDER_TOOL_DESCRIPTIONS,
@@ -13527,8 +13525,8 @@ import { FaArrowRightFromBracket } from 'react-icons/fa6';
 import { McpServer, McpServerForm } from './McpServerForm';
 import { McpServerItem } from './McpServerItem';
 import { GenericToolGroupItem } from './GenericToolGroupItem';
-import { AgentProfileItem } from './AgentProfileItem';
 import { AgentRules } from './AgentRules';
+import { SortableAgentProfileItem } from './SortableAgentProfileItem';
 ⋮----
 import { AgentModelSelector } from '@/components/AgentModelSelector';
 import { Button } from '@/components/common/Button';
@@ -13549,6 +13547,10 @@ type Props = {
   setSettings: (settings: SettingsData) => void;
   initialProfileId?: string;
 };
+⋮----
+const handleDragEnd = (event: DragEndEvent) =>
+⋮----
+// useMemo for project IDs to prevent SortableContext from re-rendering unnecessarily
 ⋮----
 const getSubagentSummary = (profile: AgentProfile) =>
 ⋮----
@@ -13605,8 +13607,6 @@ const renderSectionAccordion = (title: ReactNode, children: ReactNode, open?: bo
   );
 ⋮----
 {/* Left sidebar with profiles and providers */}
-⋮----
-setSelectedProfileId(id);
 ⋮----
 {/* Center content area for profile settings */}
 ⋮----
@@ -13761,6 +13761,23 @@ type Props = {
 const handleApprovalChange = (value: string) =>
 ⋮----
 {/* Conditionally render the approval select only if onApprovalChange is provided */}
+
+================
+File: src/renderer/src/components/settings/agent/SortableAgentProfileItem.tsx
+================
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { AgentProfile } from '@common/types';
+⋮----
+import { AgentProfileItem } from './AgentProfileItem';
+⋮----
+type SortableAgentProfileItemProps = {
+  profile: AgentProfile;
+  isSelected: boolean;
+  onClick: (id: string) => void;
+};
+⋮----
+export const SortableAgentProfileItem = (
 
 ================
 File: src/renderer/src/components/settings/AboutSettings.tsx
