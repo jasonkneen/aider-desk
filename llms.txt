@@ -4575,9 +4575,7 @@ File: src/main/agent/agent.ts
 ================
 import fs from 'fs/promises';
 import path from 'path';
-import { homedir } from 'os';
 ⋮----
-import dotenv from 'dotenv';
 import { v4 as uuidv4 } from 'uuid';
 import {
   AgentProfile,
@@ -4588,7 +4586,6 @@ import {
   McpToolInputSchema,
   PromptContext,
   ProviderProfile,
-  SettingsData,
   ToolApprovalState,
   UsageReportData,
 } from '@common/types';
@@ -4631,7 +4628,6 @@ import { AIDER_DESK_PROJECT_RULES_DIR } from '@/constants';
 import { Task } from '@/task';
 import { Store } from '@/store';
 import logger from '@/logger';
-import { parseAiderEnv } from '@/utils';
 import { optimizeMessages } from '@/agent/optimizer';
 import { ModelManager } from '@/models/model-manager';
 import { TelemetryManager } from '@/telemetry/telemetry-manager';
@@ -4641,10 +4637,6 @@ import { createSubagentsToolset } from '@/agent/tools/subagents';
 export class Agent
 ⋮----
 constructor(
-⋮----
-private invalidateAiderEnv()
-⋮----
-settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
 ⋮----
 private async getFilesContentForPrompt(files: ContextFile[], task: Task): Promise<
 ⋮----
@@ -4782,14 +4774,6 @@ error: error.message, // Pass the validation error message
 // Clean up abort controller only if we created it
 ⋮----
 // Always send a final "finished" message, regardless of whether there was text or tools
-⋮----
-private async getLlmEnv(task: Task)
-⋮----
-// File does not exist or other read error, ignore
-⋮----
-// File does not exist or other read error, ignore
-⋮----
-private getAiderEnv(): Record<string, string>
 ⋮----
 private async prepareMessages(task: Task, profile: AgentProfile, contextMessages: ModelMessage[], contextFiles: ContextFile[]): Promise<ModelMessage[]>
 ⋮----
@@ -5502,6 +5486,7 @@ import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from
 import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
+import logger from '@/logger';
 import { AiderModelMapping, CacheControl, LlmProviderStrategy } from '@/models';
 import { LoadModelsResponse } from '@/models/types';
 import { Task } from '@/task/task';
@@ -5518,7 +5503,7 @@ export const hasAnthropicEnvVars = (settings: SettingsData): boolean =>
 export const getAnthropicAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
 // === LLM Creation Functions ===
-export const createAnthropicLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
+export const createAnthropicLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 type AnthropicMetadata = {
   anthropic: {
@@ -5571,6 +5556,7 @@ import { AZURE_DEFAULT_API_VERSION, AzureProvider } from '@common/agent';
 import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
+import logger from '@/logger';
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Task } from '@/task/task';
@@ -5584,7 +5570,7 @@ export const hasAzureEnvVars = (settings: SettingsData): boolean =>
 export const getAzureAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
 // === LLM Creation Functions ===
-export const createAzureLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
+export const createAzureLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 type AzureMetadata = {
   openai: {
@@ -5656,15 +5642,7 @@ export const hasBedrockEnvVars = (settings: SettingsData): boolean =>
 export const getBedrockAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
 // === LLM Creation Functions ===
-export const createBedrockLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
-⋮----
-// Check if we have explicit keys or if AWS_PROFILE is set in the main process env
-⋮----
-// AI SDK Bedrock provider handles credentials via environment variables or default chain.
-// We pass credentials explicitly only if they were found in config or env.
-// Otherwise, we let the SDK handle the default credential chain (which includes AWS_PROFILE from process.env).
-⋮----
-// Let the SDK handle the default chain if explicit keys aren't provided
+export const createBedrockLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 // === Cost and Usage Functions ===
 export const calculateBedrockCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
@@ -5714,7 +5692,7 @@ export const hasCerebrasEnvVars = (settings: SettingsData): boolean =>
 export const getCerebrasAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
 // === LLM Creation Functions ===
-export const createCerebrasLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
+export const createCerebrasLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 // === Cost and Usage Functions ===
 export const calculateCerebrasCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
@@ -5755,7 +5733,7 @@ export const hasDeepseekEnvVars = (settings: SettingsData): boolean =>
 export const getDeepseekAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
 // === LLM Creation Functions ===
-export const createDeepseekLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
+export const createDeepseekLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 // === Cost and Usage Functions ===
 export const calculateDeepseekCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
@@ -5796,7 +5774,7 @@ export const hasGeminiEnvVars = (settings: SettingsData): boolean =>
 export const getGeminiAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
 // === LLM Creation Functions ===
-export const createGeminiLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
+export const createGeminiLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 type GoogleMetadata = {
   google: {
@@ -5868,7 +5846,7 @@ export const hasGroqEnvVars = (settings: SettingsData): boolean =>
 export const getGroqAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
 // === LLM Creation Functions ===
-export const createGroqLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
+export const createGroqLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 // === Cost and Usage Functions ===
 export const calculateGroqCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
@@ -5913,7 +5891,7 @@ export const hasLmStudioEnvVars = (settings: SettingsData): boolean =>
 export const getLmStudioAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
 // === LLM Creation Functions ===
-export const createLmStudioLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
+export const createLmStudioLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 // === Cost and Usage Functions ===
 export const calculateLmStudioCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
@@ -5959,7 +5937,7 @@ export const hasOllamaEnvVars = (settings: SettingsData): boolean =>
 export const getOllamaAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
 // === LLM Creation Functions ===
-export const createOllamaLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
+export const createOllamaLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 let normalized = baseUrl.replace(/\/+$/, ''); // Remove all trailing slashes
 ⋮----
@@ -6004,7 +5982,7 @@ export const getOpenAiCompatibleAiderMapping = (provider: ProviderProfile, model
 // Use openai prefix for OpenAI-compatible providers
 ⋮----
 // === LLM Creation Functions ===
-export const createOpenAiCompatibleLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
+export const createOpenAiCompatibleLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 // Use createOpenAICompatible to get a provider instance, then get the model
 ⋮----
@@ -6049,7 +6027,7 @@ export const getOpenAiAiderMapping = (provider: ProviderProfile, modelId: string
 // clear any custom base URL
 ⋮----
 // === LLM Creation Functions ===
-export const createOpenAiLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
+export const createOpenAiLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 type OpenAiMetadata = {
   openai: {
@@ -6148,7 +6126,7 @@ export const hasOpenRouterEnvVars = (settings: SettingsData): boolean =>
 export const getOpenRouterAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
 // === LLM Creation Functions ===
-export const createOpenRouterLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
+export const createOpenRouterLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 type OpenRouterMetadata = {
   openrouter: {
@@ -6247,7 +6225,7 @@ export const getRequestyAiderMapping = (provider: ProviderProfile, modelId: stri
 // Requesty doesn't have direct Aider support, so we use OpenAI-compatible endpoint
 ⋮----
 // === LLM Creation Functions ===
-export const createRequestyLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
+export const createRequestyLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 // === Cost and Usage Functions ===
 export const calculateRequestyCost = (
@@ -6320,7 +6298,7 @@ export const getVertexAiAiderMapping = (provider: ProviderProfile, modelId: stri
 // Aider uses vertex_ai prefix instead of vertex-ai
 ⋮----
 // === LLM Creation Functions ===
-export const createVertexAiLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
+export const createVertexAiLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 // using custom base URL to fix the 'global' location
 ⋮----
@@ -6389,7 +6367,7 @@ const getZaiPlanAiderMapping = (provider: ProviderProfile, modelId: string): Aid
 // Use zai-plan prefix for ZAI providers
 ⋮----
 // === LLM Creation Functions ===
-const createZaiPlanLlm = (profile: ProviderProfile, model: Model, env: Record<string, string | undefined> =
+const createZaiPlanLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 // Use createOpenAICompatible to get a provider instance, then get the model
 // ZAI uses specific base URL for chat completions
@@ -6421,7 +6399,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 ⋮----
 import { AVAILABLE_PROVIDERS, getDefaultProviderParams, LlmProvider, LlmProviderName } from '@common/agent';
-import { AgentProfile, Model, ModelInfo, ModelOverrides, ProviderModelsData, ProviderProfile, UsageReportData } from '@common/types';
+import { AgentProfile, Model, ModelInfo, SettingsData, ModelOverrides, ProviderModelsData, ProviderProfile, UsageReportData } from '@common/types';
 ⋮----
 import { anthropicProviderStrategy } from './providers/anthropic';
 import { azureProviderStrategy } from './providers/azure';
@@ -6439,8 +6417,8 @@ import { requestyProviderStrategy } from './providers/requesty';
 import { vertexAiProviderStrategy } from './providers/vertex-ai';
 import { zaiPlanProviderStrategy } from './providers/zai-plan';
 ⋮----
-import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
-import type { LanguageModelUsage, ToolSet } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
+import type { LanguageModelUsage, ToolSet, JSONValue } from 'ai';
 ⋮----
 import { AIDER_DESK_DATA_DIR, AIDER_DESK_CACHE_DIR } from '@/constants';
 import logger from '@/logger';
@@ -6547,7 +6525,7 @@ private getProviderAiderMapping(provider: ProviderProfile, modelId: string): Aid
 ⋮----
 getModel(providerId: string, modelId: string): Model | undefined
 ⋮----
-createLlm(profile: ProviderProfile, model: string | Model, env: Record<string, string | undefined> =
+createLlm(profile: ProviderProfile, model: string | Model, settings: SettingsData, projectDir: string): LanguageModelV2
 ⋮----
 // Resolve Model object if string is provided
 ⋮----
@@ -6561,13 +6539,11 @@ getUsageReport(task: Task, provider: ProviderProfile, model: string | Model, usa
 ⋮----
 getCacheControl(profile: AgentProfile, llmProvider: LlmProvider): CacheControl
 ⋮----
-getProviderOptions(providerId: string, modelId: string): SharedV2ProviderOptions | undefined
+getProviderOptions(llmProvider: LlmProvider, modelId: string): Record<string, Record<string, JSONValue>> | undefined
 ⋮----
 // Find the provider profile for this LLM provider
 ⋮----
-// Resolve Model object
-⋮----
-// Fallback to minimal Model object if not found
+// Look up the actual Model object from providerModels
 ⋮----
 /**
    * Returns provider-specific tools for the given provider and model
@@ -6618,8 +6594,9 @@ export interface LlmProviderStrategy {
   // === LLM Creation and Usage Functions ===
   /**
    * Creates a LanguageModel instance for the given provider and model
+   * Each provider is responsible for loading its own credentials using getEffectiveEnvironmentVariable
    */
-  createLlm: (profile: ProviderProfile, model: Model, env: Record<string, string | undefined>) => LanguageModelV2;
+  createLlm: (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string) => LanguageModelV2;
 
   /**
    * Generates usage reports with provider-specific metadata and calculates cost internally
@@ -6662,6 +6639,7 @@ export interface LlmProviderStrategy {
 // === LLM Creation and Usage Functions ===
 /**
    * Creates a LanguageModel instance for the given provider and model
+   * Each provider is responsible for loading its own credentials using getEffectiveEnvironmentVariable
    */
 ⋮----
 /**
@@ -8375,6 +8353,13 @@ const readEnvFile = (filePath: string): Record<string, string> | null =>
 ⋮----
 const readPropertyFromConfFile = (filePath: string, property: string): string | undefined =>
 ⋮----
+const readApiKeyFromConfFile = (filePath: string, envVarName: string): string | undefined =>
+⋮----
+// Map environment variable names to provider names used in api-key property
+// GOOGLE_API_KEY maps to 'gemini' in the api-key property
+⋮----
+// Normalize apiKeyValue to array for unified processing
+⋮----
 export const getEffectiveEnvironmentVariable = (key: string, settings?: SettingsData, projectDir?: string): EnvironmentVariable | undefined =>
 ⋮----
 // 1. From settings.aider.environmentVariables
@@ -8385,17 +8370,21 @@ export const getEffectiveEnvironmentVariable = (key: string, settings?: Settings
 ⋮----
 // 4. from $projectDir/.env
 ⋮----
-// 5. from kebab-case property in $projectDir/.aider.conf.yml
+// 5. from api-key property in $projectDir/.aider.conf.yml
+⋮----
+// 6. from kebab-case property in $projectDir/.aider.conf.yml
 ⋮----
 // Home dir related checks
 ⋮----
-// 6. from `env-file` in $HOME/.aider.conf.yml
+// 7. from `env-file` in $HOME/.aider.conf.yml
 ⋮----
-// 7. from $HOME/.env
+// 8. from $HOME/.env
 ⋮----
-// 8. from kebab-case property in $HOME/.aider.conf.yml
+// 9. from api-key property in $HOME/.aider.conf.yml
 ⋮----
-// 9. From process.env
+// 10. from kebab-case property in $HOME/.aider.conf.yml
+⋮----
+// 11. From process.env
 ⋮----
 // Not found
 ⋮----
@@ -17384,7 +17373,7 @@ File: package.json
 ================
 {
   "name": "aider-desk",
-  "version": "0.36.0-dev",
+  "version": "0.37.0-dev",
   "description": "Aider desktop application wrapper",
   "main": "./out/main/index.js",
   "author": "Hotovo",
