@@ -158,6 +158,10 @@ export class Project {
     return this.getTask('autosaved')!;
   }
 
+  public getProjectSettings() {
+    return this.store.getProjectSettings(this.baseDir);
+  }
+
   public addConnector(connector: Connector) {
     logger.info('Adding connector for base directory:', {
       baseDir: this.baseDir,

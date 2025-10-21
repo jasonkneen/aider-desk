@@ -1034,15 +1034,23 @@ export class Task {
     });
   }
 
-  public async compactConversation(mode: Mode, customInstructions?: string) {
-    const userMessage = this.contextManager.getContextMessages()[0];
+  public async compactConversation(
+    mode: Mode,
+    customInstructions?: string,
+    profile: AgentProfile | null = getActiveAgentProfile(this.store.getSettings(), this.store.getProjectSettings(this.project.baseDir)),
+    contextMessages: ContextMessage[] = this.contextManager.getContextMessages(),
+    promptContext?: PromptContext,
+    abortSignal?: AbortSignal,
+    logMessage = 'Compacting conversation...',
+  ) {
+    const userMessage = contextMessages[0];
 
     if (!userMessage) {
       this.addLogMessage('warning', 'No conversation to compact.');
       return;
     }
 
-    this.addLogMessage('loading', 'Compacting conversation...');
+    this.addLogMessage('loading', logMessage);
 
     const extractSummary = (content: string): string => {
       const lines = content.split('\n');
@@ -1056,8 +1064,6 @@ export class Task {
 
     if (mode === 'agent') {
       // Agent mode logic
-      const profile = getActiveAgentProfile(this.store.getSettings(), this.store.getProjectSettings(this.project.baseDir));
-
       if (!profile) {
         throw new Error('No active Agent profile found');
       }
@@ -1067,7 +1073,16 @@ export class Task {
         provider: profile.provider,
         model: profile.model,
       };
-      const agentMessages = await this.agent.runAgent(this, compactConversationAgentProfile, getCompactConversationPrompt(customInstructions));
+      const agentMessages = await this.agent.runAgent(
+        this,
+        compactConversationAgentProfile,
+        getCompactConversationPrompt(customInstructions),
+        promptContext,
+        contextMessages,
+        [],
+        undefined,
+        abortSignal,
+      );
 
       if (agentMessages.length > 0) {
         // Clear existing context and add the summary
@@ -1075,9 +1090,6 @@ export class Task {
         summaryMessage.content = extractSummary(extractTextContent(summaryMessage.content));
 
         this.contextManager.setContextMessages([userMessage, summaryMessage]);
-        this.contextManager.toConnectorMessages([userMessage, summaryMessage]).forEach((message) => {
-          this.sendAddMessage(message.role, message.content, false);
-        });
 
         await this.contextManager.loadMessages(this.contextManager.getContextMessages());
       }

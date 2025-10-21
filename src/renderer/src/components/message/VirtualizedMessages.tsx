@@ -99,7 +99,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
     useLayoutEffect(() => {
       if (!scrollingPaused && processedMessages.length > 0) {
         // Scroll to the last item when new messages arrive
-        virtualizer.scrollToOffset(virtualizer.getTotalSize());
+        virtualizer.scrollToOffset(virtualizer.getTotalSize() + 100);
       }
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [processedMessages]);

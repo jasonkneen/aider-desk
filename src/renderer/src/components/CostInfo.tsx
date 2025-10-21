@@ -1,11 +1,11 @@
-import { TokensInfoData, Mode } from '@common/types';
-import { useState } from 'react';
+import { Mode, ProjectSettings, TokensInfoData } from '@common/types';
+import { ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { IoClose, IoChevronDown, IoChevronUp } from 'react-icons/io5';
+import { IoChevronDown, IoChevronUp, IoClose } from 'react-icons/io5';
 import { MdOutlineRefresh } from 'react-icons/md';
 
 import { StyledTooltip } from '@/components/common/StyledTooltip';
-import { formatHumanReadable } from '@/utils/string-utils';
+import { TokenUsageBar } from '@/components/TokenUsageBar';
 
 type Props = {
   tokensInfo?: TokensInfoData | null;
@@ -15,15 +15,27 @@ type Props = {
   restartProject?: () => void;
   maxInputTokens?: number;
   mode: Mode;
+  projectSettings: ProjectSettings;
+  saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
 };
 
-export const CostInfo = ({ tokensInfo, aiderTotalCost, clearMessages, refreshRepoMap, restartProject, maxInputTokens = 0, mode }: Props) => {
+export const CostInfo = ({
+  tokensInfo,
+  aiderTotalCost,
+  clearMessages,
+  refreshRepoMap,
+  restartProject,
+  maxInputTokens = 0,
+  mode,
+  projectSettings,
+  saveProjectSettings,
+}: Props) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [refreshingAnimation, setRefreshingAnimation] = useState(false);
   const REFRESH_ANIMATION_DURATION = 2000;
 
-  const renderLabelValue = (label: string, value: string, t: (key: string) => string) => (
+  const renderLabelValue = (label: string, value: ReactNode) => (
     <div className="flex justify-between h-[20px]">
       <span>{t(label)}: </span>
       <span>{value}</span>
@@ -34,14 +46,7 @@ export const CostInfo = ({ tokensInfo, aiderTotalCost, clearMessages, refreshRep
   const filesTotalCost = tokensInfo?.files ? Object.values(tokensInfo.files).reduce((sum, file) => sum + file.cost, 0) : 0;
   const repoMapTokens = tokensInfo?.repoMap?.tokens ?? 0;
   const repoMapCost = tokensInfo?.repoMap?.cost ?? 0;
-  const chatHistoryTokens = tokensInfo?.chatHistory?.tokens ?? 0;
-  const systemMessagesTokens = tokensInfo?.systemMessages?.tokens ?? 0;
-  const agentTokens = tokensInfo?.agent?.tokens ?? 0;
   const agentTotalCost = tokensInfo?.agent?.cost ?? 0;
-
-  const totalTokens = mode === 'agent' ? agentTokens : chatHistoryTokens + filesTotalTokens + repoMapTokens + systemMessagesTokens;
-  const tokensEstimated = mode === 'agent' ? tokensInfo?.agent?.tokensEstimated : false;
-  const progressPercentage = maxInputTokens > 0 ? Math.min((totalTokens / maxInputTokens) * 100, 100) : 0;
 
   return (
     <div className={`border-t border-border-dark-light p-2 pb-1 ${isExpanded ? 'pt-4' : 'pt-3'} relative group`}>
@@ -54,10 +59,10 @@ export const CostInfo = ({ tokensInfo, aiderTotalCost, clearMessages, refreshRep
         </button>
       </div>
       <div className="text-2xs text-text-muted-light">
-        <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-24 mb-2' : 'max-h-0'}`}>
-          {renderLabelValue('costInfo.files', `${filesTotalTokens} tokens, $${filesTotalCost.toFixed(5)}`, t)}
+        <div className={`overflow-hidden transition-all duration-300 ${isExpanded ? 'max-h-48 mb-2' : 'max-h-0'}`}>
+          {renderLabelValue('costInfo.files', `${filesTotalTokens} tokens, $${filesTotalCost.toFixed(5)}`)}
           <div className="flex items-center h-[20px]">
-            <div className="flex-1">{renderLabelValue('costInfo.repoMap', `${repoMapTokens} tokens, $${repoMapCost.toFixed(5)}`, t)}</div>
+            <div className="flex-1">{renderLabelValue('costInfo.repoMap', `${repoMapTokens} tokens, $${repoMapCost.toFixed(5)}`)}</div>
             {refreshRepoMap && (
               <div className="ml-0 max-w-0 group-hover:max-w-xs opacity-0 group-hover:opacity-100 group-hover:px-1 group-hover:ml-1 transition-all duration-300 overflow-hidden">
                 <button
@@ -80,7 +85,7 @@ export const CostInfo = ({ tokensInfo, aiderTotalCost, clearMessages, refreshRep
           {tokensInfo?.chatHistory && (
             <div className="flex items-center h-[20px]">
               <div className="flex-1">
-                {renderLabelValue('costInfo.messages', `${tokensInfo.chatHistory.tokens} tokens, $${tokensInfo.chatHistory.cost.toFixed(5)}`, t)}
+                {renderLabelValue('costInfo.messages', `${tokensInfo.chatHistory.tokens} tokens, $${tokensInfo.chatHistory.cost.toFixed(5)}`)}
               </div>
               <div className="ml-0 max-w-0 group-hover:max-w-xs opacity-0 group-hover:opacity-100 group-hover:px-1 group-hover:ml-1 transition-all duration-300 overflow-hidden">
                 <button
@@ -96,10 +101,10 @@ export const CostInfo = ({ tokensInfo, aiderTotalCost, clearMessages, refreshRep
             </div>
           )}
         </div>
-        {renderLabelValue('costInfo.aider', `$${aiderTotalCost.toFixed(5)}`, t)}
-        {renderLabelValue('costInfo.agent', `$${agentTotalCost.toFixed(5)}`, t)}
+        {renderLabelValue('costInfo.aider', `$${aiderTotalCost.toFixed(5)}`)}
+        {renderLabelValue('costInfo.agent', `$${agentTotalCost.toFixed(5)}`)}
         <div className="flex items-center h-[20px] mt-1">
-          <div className="flex-1">{renderLabelValue('costInfo.total', `$${(aiderTotalCost + agentTotalCost).toFixed(5)}`, t)}</div>
+          <div className="flex-1">{renderLabelValue('costInfo.total', `$${(aiderTotalCost + agentTotalCost).toFixed(5)}`)}</div>
           <div className="ml-0 max-w-0 group-hover:max-w-xs opacity-0 group-hover:opacity-100 group-hover:px-1 group-hover:ml-1 transition-all duration-300 overflow-hidden">
             {restartProject && (
               <button
@@ -115,20 +120,13 @@ export const CostInfo = ({ tokensInfo, aiderTotalCost, clearMessages, refreshRep
           </div>
         </div>
 
-        <div className="mt-[3px] flex items-center gap-2">
-          <div className="h-1 bg-bg-secondary-light rounded-sm overflow-hidden mb-1 flex-1">
-            <div className="h-full bg-accent-light rounded-full" style={{ width: `${progressPercentage}%` }}></div>
-          </div>
-          <div className="text-text-muted-light text-2xs">
-            {tokensEstimated && <span className="font-semibold font-mono mr-0.5">~</span>}
-            {maxInputTokens > 0
-              ? t('costInfo.tokenUsage', {
-                  usedTokens: formatHumanReadable(t, totalTokens),
-                  maxTokens: formatHumanReadable(t, maxInputTokens),
-                })
-              : formatHumanReadable(t, totalTokens)}
-          </div>
-        </div>
+        <TokenUsageBar
+          tokensInfo={tokensInfo}
+          maxInputTokens={maxInputTokens}
+          mode={mode}
+          projectSettings={projectSettings}
+          saveProjectSettings={saveProjectSettings}
+        />
       </div>
     </div>
   );

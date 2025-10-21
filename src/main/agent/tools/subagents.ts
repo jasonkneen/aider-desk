@@ -18,8 +18,8 @@ export const createSubagentsToolset = (
   task: Task,
   mainAgentProfile: AgentProfile,
   abortSignal?: AbortSignal,
-  messages: ContextMessage[] = [],
-  resultMessages: ContextMessage[] = [],
+  contextMessages: ContextMessage[] = [],
+  currentMessages: ContextMessage[] = [],
 ): ToolSet => {
   const enabledSubagents = settings.agentProfiles.filter((agentProfile) => isSubagentEnabled(agentProfile, mainAgentProfile.id));
 
@@ -95,8 +95,8 @@ export const createSubagentsToolset = (
       const getSubagentContextMessages = (contextMemory: ContextMemoryMode) => {
         const subagentContextMessages: ContextMessage[] = [];
 
-        const findResultMessagesForToolCallId = (toolCallId: string) => {
-          return [...messages, ...resultMessages].reduce<ContextMessage[]>((acc, message) => {
+        const findMessagesForToolCallId = (toolCallId: string) => {
+          return [...contextMessages, ...currentMessages].reduce<ContextMessage[]>((acc, message) => {
             if (message.role !== 'tool') {
               return acc;
             }
@@ -118,10 +118,10 @@ export const createSubagentsToolset = (
         };
 
         logger.info('Subagent context messages:', {
-          messages: messages.length,
-          resultMessages: resultMessages.length,
+          messages: contextMessages.length,
+          currentMessages: currentMessages.length,
         });
-        [...messages, ...resultMessages]
+        [...contextMessages, ...currentMessages]
           .filter((message) => message.role === 'assistant')
           .forEach((message) => {
             if (!Array.isArray(message.content)) {
@@ -139,12 +139,12 @@ export const createSubagentsToolset = (
                 });
                 // @ts-expect-error subagentId is expected to be in the input
                 if (serverName === SUBAGENTS_TOOL_GROUP_NAME && toolName === SUBAGENTS_TOOL_RUN_TASK && part.input?.subagentId === subagentId) {
-                  const resultMessages = findResultMessagesForToolCallId(part.toolCallId);
+                  const toolMessages = findMessagesForToolCallId(part.toolCallId);
 
-                  logger.info('Subagent context messages: tool-call: resultMessages', {
-                    count: resultMessages.length,
+                  logger.info('Subagent context messages:', {
+                    count: toolMessages.length,
                   });
-                  if (resultMessages.length > 0) {
+                  if (toolMessages.length > 0) {
                     subagentContextMessages.push({
                       id: message.id,
                       role: 'user',
@@ -154,10 +154,10 @@ export const createSubagentsToolset = (
 
                     switch (contextMemory) {
                       case ContextMemoryMode.FullContext:
-                        subagentContextMessages.push(...resultMessages);
+                        subagentContextMessages.push(...toolMessages);
                         break;
                       case ContextMemoryMode.LastMessage:
-                        subagentContextMessages.push(resultMessages[resultMessages.length - 1]);
+                        subagentContextMessages.push(toolMessages[toolMessages.length - 1]);
                         break;
                     }
                   }

@@ -1,6 +1,7 @@
 import { FaInfoCircle } from 'react-icons/fa';
 import { ReactNode } from 'react';
 import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 import { IconButton } from './IconButton';
 
@@ -11,7 +12,7 @@ type Props = {
   size?: 'sm' | 'md' | 'lg';
 };
 
-export const InfoIcon = ({ tooltip, tooltipId, className, size = 'md' }: Props) => {
+export const InfoIcon = ({ tooltip, tooltipId, className = '', size = 'md' }: Props) => {
   return (
     <IconButton
       icon={
@@ -25,7 +26,7 @@ export const InfoIcon = ({ tooltip, tooltipId, className, size = 'md' }: Props) 
       }
       tooltip={tooltip}
       tooltipId={tooltipId}
-      className={`ml-2 text-text-muted ${className || ''}`}
+      className={twMerge('ml-2 text-text-muted', className)}
       onClick={() => {}}
     />
   );

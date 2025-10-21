@@ -967,6 +967,8 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
                   readOnly: false,
                 })
               }
+              projectSettings={projectSettings}
+              saveProjectSettings={saveProjectSettings}
             />
           </div>
         </ResizableBox>
@@ -997,6 +999,8 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
           restartProject={restartProject}
           mode={projectSettings.currentMode}
           setAddFileDialogOptions={setAddFileDialogOptions}
+          projectSettings={projectSettings}
+          saveProjectSettings={saveProjectSettings}
         />
       )}
     </div>

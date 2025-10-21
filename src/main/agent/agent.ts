@@ -662,6 +662,7 @@ export class Agent {
       while (true) {
         logger.info(`Starting iteration ${iterationCount}`);
         iterationCount++;
+
         if (iterationCount > profile.maxIterations) {
           logger.warn(`Max iterations (${profile.maxIterations}) reached. Stopping agent.`);
           task.addLogMessage(
@@ -678,6 +679,18 @@ export class Agent {
         let finishReason: null | FinishReason = null;
         let responseMessages: ContextMessage[] = [];
         let currentTextResponse = '';
+
+        await this.compactMessagesIfNeeded(
+          task,
+          profile,
+          userRequestMessage,
+          contextMessages,
+          contextFiles,
+          messages,
+          resultMessages,
+          promptContext,
+          effectiveAbortSignal,
+        );
 
         const result = streamText({
           providerOptions,
@@ -1010,7 +1023,7 @@ export class Agent {
         messages.push({
           ...message,
           // @ts-expect-error the id is there
-          id: message.id,
+          id: message.id || currentResponseId,
           usageReport: toolResults?.length ? undefined : usageReport,
           promptContext,
         });
@@ -1018,7 +1031,7 @@ export class Agent {
         messages.push({
           ...message,
           // @ts-expect-error the id is there
-          id: message.id,
+          id: message.id || uuidv4(),
           usageReport,
           promptContext,
         });
@@ -1026,5 +1039,47 @@ export class Agent {
     });
 
     return messages;
+  }
+
+  private async compactMessagesIfNeeded(
+    task: Task,
+    profile: AgentProfile,
+    userRequestMessage: ContextUserMessage,
+    contextMessages: ContextMessage[],
+    contextFiles: ContextFile[],
+    messages: ModelMessage[],
+    resultMessages: ContextMessage[],
+    promptContext?: PromptContext,
+    abortSignal?: AbortSignal,
+  ) {
+    const { contextCompactingThreshold = 0 } = task.project.getProjectSettings();
+    const usageReport = resultMessages[resultMessages.length - 1]?.usageReport;
+    const maxTokens = this.modelManager.getModel(profile.provider, profile.model)?.maxInputTokens;
+
+    if (contextCompactingThreshold === 0 || !usageReport || !maxTokens) {
+      return;
+    }
+
+    // Check for context compacting
+    const totalTokens = usageReport.sentTokens + usageReport.receivedTokens;
+    if (maxTokens && totalTokens > (maxTokens * contextCompactingThreshold) / 100) {
+      logger.info(`Token usage ${totalTokens} exceeds threshold of ${contextCompactingThreshold}%. Compacting conversation.`);
+      task.addLogMessage('info', 'Token usage exceeds threshold. Compacting conversation...', false, promptContext);
+
+      await task.compactConversation('agent', undefined, profile, [...contextMessages, ...resultMessages], promptContext, abortSignal);
+
+      // reload messages after compacting
+      messages.length = 0;
+      resultMessages.length = 0;
+
+      messages.push(...(await this.prepareMessages(task, profile, task.getContextMessages(), contextFiles)));
+      resultMessages.push({
+        id: uuidv4(),
+        role: 'user',
+        content: `Based on your compacted summary of our previous conversation, please continue our work with my request:\n\n${userRequestMessage.content}`,
+        promptContext,
+      });
+      messages.push(...resultMessages);
+    }
   }
 }

@@ -1,5 +1,5 @@
 import { ProjectSettings } from '@common/types';
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useOptimistic, startTransition } from 'react';
 import { DEFAULT_AGENT_PROFILE } from '@common/agent';
 
 import { useSettings } from '@/context/SettingsContext';
@@ -20,18 +20,21 @@ type ProjectSettingsProviderProps = {
 export const ProjectSettingsProvider = ({ baseDir, children }: ProjectSettingsProviderProps) => {
   const { settings } = useSettings();
   const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
+  const [optimisticProjectSettings, setOptimisticProjectSettings] = useOptimistic(projectSettings);
   const api = useApi();
 
   const saveProjectSettings = async (updated: Partial<ProjectSettings>) => {
-    try {
-      // Optimistically update the state
-      setProjectSettings((prev) => (prev ? { ...prev, ...updated } : null));
-      const updatedSettings = await api.patchProjectSettings(baseDir, updated);
-      setProjectSettings(updatedSettings); // Ensure state is in sync with backend
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error(`Failed to save project settings for ${baseDir}:`, error);
-    }
+    startTransition(async () => {
+      try {
+        // Optimistically update the state
+        setOptimisticProjectSettings((prev) => (prev ? { ...prev, ...updated } : null));
+        const updatedSettings = await api.patchProjectSettings(baseDir, updated);
+        setProjectSettings(updatedSettings); // Ensure state is in sync with backend
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error(`Failed to save project settings for ${baseDir}:`, error);
+      }
+    });
   };
 
   if (projectSettings && settings) {
@@ -58,7 +61,9 @@ export const ProjectSettingsProvider = ({ baseDir, children }: ProjectSettingsPr
     void loadSettings();
   }, [baseDir, api]);
 
-  return <ProjectSettingsContext.Provider value={{ projectSettings, saveProjectSettings }}>{children}</ProjectSettingsContext.Provider>;
+  return (
+    <ProjectSettingsContext.Provider value={{ projectSettings: optimisticProjectSettings, saveProjectSettings }}>{children}</ProjectSettingsContext.Provider>
+  );
 };
 
 export const useProjectSettings = () => {
