@@ -367,6 +367,7 @@ src/
         SessionDialog.tsx
         SessionsPopup.tsx
         TelemetryInfoDialog.tsx
+        TokenUsageBar.tsx
       context/
         ApiContext.tsx
         ContextMenuContext.tsx
@@ -1981,7 +1982,11 @@ File: src/common/locales/en.json
     "aider": "Aider",
     "total": "Total",
     "restartSession": "Restart session",
-    "tokenUsage": "{{usedTokens}} of {{maxTokens}}"
+    "tokenUsage": "{{usedTokens}} of {{maxTokens}}",
+    "contextCompactingThreshold": "Auto-compact threshold",
+    "contextCompactingThresholdOff": "Off",
+    "contextCompactingThresholdTooltip": "When token usage exceeds this threshold, the conversation will be automatically compacted to save space.",
+    "thresholdTokens": "Threshold tokens"
   },
   "sessions": {
     "title": "Sessions",
@@ -2948,7 +2953,11 @@ File: src/common/locales/zh.json
     "aider": "Aider",
     "total": "全部的",
     "restartSession": "重启会话",
-    "tokenUsage": "{{usedTokens}} / {{maxTokens}}"
+    "tokenUsage": "{{usedTokens}} / {{maxTokens}}",
+    "contextCompactingThreshold": "自动压缩上下文阈值",
+    "contextCompactingThresholdOff": "关闭",
+    "contextCompactingThresholdTooltip": "当令牌使用量超过此阈值时，对话将自动压缩以节省空间。",
+    "thresholdTokens": "阈值令牌数"
   },
   "sessions": {
     "title": "会话",
@@ -4519,8 +4528,8 @@ export const createSubagentsToolset = (
   task: Task,
   mainAgentProfile: AgentProfile,
   abortSignal?: AbortSignal,
-  messages: ContextMessage[] = [],
-  resultMessages: ContextMessage[] = [],
+  contextMessages: ContextMessage[] = [],
+  currentMessages: ContextMessage[] = [],
 ): ToolSet =>
 ⋮----
 const generateSubagentsRunTaskDescription = (): string =>
@@ -4534,7 +4543,7 @@ useSubagents: false, // Disable nested subagents
 ⋮----
 const getSubagentContextMessages = (contextMemory: ContextMemoryMode) =>
 ⋮----
-const findResultMessagesForToolCallId = (toolCallId: string) =>
+const findMessagesForToolCallId = (toolCallId: string) =>
 ⋮----
 // @ts-expect-error part.output.value is expected to be in the output
 ⋮----
@@ -4820,6 +4829,22 @@ text: text?.substring(0, 100), // Log truncated text
 // @ts-expect-error the id is there
 ⋮----
 // @ts-expect-error the id is there
+⋮----
+private async compactMessagesIfNeeded(
+    task: Task,
+    profile: AgentProfile,
+    userRequestMessage: ContextUserMessage,
+    contextMessages: ContextMessage[],
+    contextFiles: ContextFile[],
+    messages: ModelMessage[],
+    resultMessages: ContextMessage[],
+    promptContext?: PromptContext,
+    abortSignal?: AbortSignal,
+)
+⋮----
+// Check for context compacting
+⋮----
+// reload messages after compacting
 
 ================
 File: src/main/agent/index.ts
@@ -6837,6 +6862,8 @@ public getTask(taskId: string = 'autosaved')
 ⋮----
 public getAutosavedTask()
 ⋮----
+public getProjectSettings()
+⋮----
 public addConnector(connector: Connector)
 ⋮----
 // Set input history file if provided by the connector
@@ -8129,7 +8156,15 @@ await this.reloadConnectorMessages(); // This sends 'clear-project' which trunca
 ⋮----
 private async reloadConnectorMessages()
 ⋮----
-public async compactConversation(mode: Mode, customInstructions?: string)
+public async compactConversation(
+    mode: Mode,
+    customInstructions?: string,
+    profile: AgentProfile | null = getActiveAgentProfile(this.store.getSettings(), this.store.getProjectSettings(this.project.baseDir)),
+    contextMessages: ContextMessage[] = this.contextManager.getContextMessages(),
+    promptContext?: PromptContext,
+    abortSignal?: AbortSignal,
+    logMessage = 'Compacting conversation...',
+)
 ⋮----
 const extractSummary = (content: string): string =>
 ⋮----
@@ -10114,6 +10149,7 @@ File: src/renderer/src/components/common/InfoIcon.tsx
 import { FaInfoCircle } from 'react-icons/fa';
 import { ReactNode } from 'react';
 import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 ⋮----
 import { IconButton } from './IconButton';
 ⋮----
@@ -10287,6 +10323,8 @@ File: src/renderer/src/components/common/Slider.tsx
 ================
 import { ChangeEvent, CSSProperties, ReactNode } from 'react';
 ⋮----
+type SliderSize = 'md' | 'sm';
+⋮----
 type Props = {
   label?: ReactNode;
   min: number;
@@ -10296,6 +10334,7 @@ type Props = {
   onChange: (value: number) => void;
   className?: string;
   showValue?: boolean;
+  size?: SliderSize;
 };
 ⋮----
 const handleChange = (e: ChangeEvent<HTMLInputElement>) =>
@@ -12645,7 +12684,7 @@ File: src/renderer/src/components/project/MobileSidebar.tsx
 import React from 'react';
 import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
-import { Mode, TokensInfoData } from '@common/types';
+import { Mode, TokensInfoData, ProjectSettings } from '@common/types';
 import { FiChevronDown } from 'react-icons/fi';
 ⋮----
 import { SidebarContent } from '@/components/project/SidebarContent';
@@ -12667,6 +12706,8 @@ type Props = {
   restartProject: () => void;
   mode: Mode;
   setAddFileDialogOptions: React.Dispatch<React.SetStateAction<AddFileDialogOptions | null>>;
+  projectSettings: ProjectSettings;
+  saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
 };
 ⋮----
 export const MobileSidebar = ({
@@ -12682,6 +12723,8 @@ export const MobileSidebar = ({
   restartProject,
   mode,
   setAddFileDialogOptions,
+  projectSettings,
+  saveProjectSettings,
 }: Props) =>
 
 ================
@@ -13089,7 +13132,7 @@ const handleCopyTerminalOutput = (output: string) =>
 ================
 File: src/renderer/src/components/project/SidebarContent.tsx
 ================
-import { TokensInfoData, Mode } from '@common/types';
+import { TokensInfoData, Mode, ProjectSettings } from '@common/types';
 ⋮----
 import { ContextFiles } from '@/components/ContextFiles';
 import { CostInfo } from '@/components/CostInfo';
@@ -13105,6 +13148,8 @@ type Props = {
   restartProject: () => void;
   mode: Mode;
   showFileDialog: () => void;
+  projectSettings: ProjectSettings;
+  saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
 };
 ⋮----
 export const SidebarContent = ({
@@ -13118,6 +13163,8 @@ export const SidebarContent = ({
   restartProject,
   mode,
   showFileDialog,
+  projectSettings,
+  saveProjectSettings,
 }: Props) =>
 
 ================
@@ -14464,14 +14511,14 @@ onChange=
 ================
 File: src/renderer/src/components/CostInfo.tsx
 ================
-import { TokensInfoData, Mode } from '@common/types';
-import { useState } from 'react';
+import { Mode, ProjectSettings, TokensInfoData } from '@common/types';
+import { ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { IoClose, IoChevronDown, IoChevronUp } from 'react-icons/io5';
+import { IoChevronDown, IoChevronUp, IoClose } from 'react-icons/io5';
 import { MdOutlineRefresh } from 'react-icons/md';
 ⋮----
 import { StyledTooltip } from '@/components/common/StyledTooltip';
-import { formatHumanReadable } from '@/utils/string-utils';
+import { TokenUsageBar } from '@/components/TokenUsageBar';
 ⋮----
 type Props = {
   tokensInfo?: TokensInfoData | null;
@@ -14481,6 +14528,8 @@ type Props = {
   restartProject?: () => void;
   maxInputTokens?: number;
   mode: Mode;
+  projectSettings: ProjectSettings;
+  saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
 };
 ⋮----
 const filesTotalTokens = tokensInfo?.files ? Object.values(tokensInfo.files).reduce((sum, file)
@@ -14612,6 +14661,26 @@ title=
 ⋮----
 
 ================
+File: src/renderer/src/components/TokenUsageBar.tsx
+================
+import { Mode, ProjectSettings, TokensInfoData } from '@common/types';
+import { useCallback, useEffect, useRef, useState, MouseEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import debounce from 'lodash/debounce';
+import { clsx } from 'clsx';
+⋮----
+import { formatHumanReadable } from '@/utils/string-utils';
+⋮----
+type Props = {
+  tokensInfo?: TokensInfoData | null;
+  maxInputTokens?: number;
+  mode: Mode;
+  projectSettings: ProjectSettings;
+  saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
+};
+⋮----
+
+================
 File: src/renderer/src/context/ApiContext.tsx
 ================
 import { createContext, useMemo, ReactNode, useContext } from 'react';
@@ -14675,7 +14744,7 @@ const handleContextMenu = (params: Electron.ContextMenuParams) =>
 File: src/renderer/src/context/ProjectSettingsContext.tsx
 ================
 import { ProjectSettings } from '@common/types';
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useOptimistic, startTransition } from 'react';
 import { DEFAULT_AGENT_PROFILE } from '@common/agent';
 ⋮----
 import { useSettings } from '@/context/SettingsContext';
@@ -17433,7 +17502,7 @@ File: package.json
     "@probelabs/probe": "0.6.0-rc128",
     "@reactuses/core": "^6.0.6",
     "@replit/codemirror-vim": "^6.3.0",
-    "@requesty/ai-sdk": "^1.0.1",
+    "@requesty/ai-sdk": "^2.0.2",
     "@smithy/eventstream-codec": "^2.0.0",
     "@smithy/protocol-http": "^3.3.0",
     "@smithy/signature-v4": "^2.0.0",
