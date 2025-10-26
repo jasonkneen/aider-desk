@@ -273,6 +273,29 @@ export const TaskSidebar = ({
             </motion.div>
           )}
         </AnimatePresence>
+
+        <AnimatePresence>
+          {isCollapsed && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.2 }}
+              className="h-full flex items-start justify-center py-1"
+            >
+              {createNewTask && (
+                <button
+                  data-tooltip-id="task-sidebar-tooltip"
+                  data-tooltip-content={t('taskSidebar.createTask')}
+                  className="p-2 rounded-md hover:bg-bg-tertiary transition-colors"
+                  onClick={handleCreateTask}
+                >
+                  <HiPlus className="w-5 h-5 text-text-primary" />
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );
