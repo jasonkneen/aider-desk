@@ -6,6 +6,7 @@
 - added support for auto-compact of the conversation when token usage exceeds a configurable threshold
 - added task sidebar with task management
 - fixed weak model prefix not being set correctly when different from the main model
+- added possibility to lock the weak model
 
 ## [0.36.0]
 

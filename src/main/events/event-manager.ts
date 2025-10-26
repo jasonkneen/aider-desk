@@ -22,6 +22,7 @@ import {
   SettingsData,
   TaskData,
   ClearTaskData,
+  ProjectSettings,
 } from '@common/types';
 
 import logger from '@/logger';
@@ -218,6 +219,12 @@ export class EventManager {
   sendProviderModelsUpdated(data: ProviderModelsData): void {
     this.sendToMainWindow('provider-models-updated', data);
     this.broadcastToEventConnectors('provider-models-updated', data);
+  }
+
+  sendProjectSettingsUpdated(baseDir: string, settings: ProjectSettings): void {
+    const data = { baseDir, settings };
+    this.sendToMainWindow('project-settings-updated', data);
+    this.broadcastToEventConnectors('project-settings-updated', data);
   }
 
   // Task lifecycle events

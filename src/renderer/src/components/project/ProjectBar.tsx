@@ -4,6 +4,7 @@ import { BsCodeSlash, BsFilter, BsLayoutSidebar } from 'react-icons/bs';
 import { CgTerminal } from 'react-icons/cg';
 import { GoProjectRoadmap } from 'react-icons/go';
 import { IoMdClose } from 'react-icons/io';
+import { VscLock, VscUnlock } from 'react-icons/vsc';
 import { RiRobot2Line } from 'react-icons/ri';
 import { useTranslation } from 'react-i18next';
 import { getProviderModelId } from '@common/agent';
@@ -38,17 +39,17 @@ type Props = {
 export const ProjectBar = React.forwardRef<ProjectTopBarRef, Props>(({ baseDir, modelsData, mode, onModelsChange, runCommand, onToggleSidebar }, ref) => {
   const { t } = useTranslation();
   const { settings, saveSettings } = useSettings();
-  const { projectSettings } = useProjectSettings();
+  const { projectSettings, saveProjectSettings } = useProjectSettings();
   const { models, providers } = useModelProviders();
   const api = useApi();
   const { isMobile } = useResponsive();
 
   const aiderModels = useMemo(() => {
     const aiderModels: Model[] = [...models];
-    aiderModels.sort((a, b) => {
-      const aId = getProviderModelId(a);
-      const bId = getProviderModelId(b);
-      return aId.localeCompare(bId);
+    aiderModels.sort((model, otherModel) => {
+      const modelId = getProviderModelId(model);
+      const otherModelId = getProviderModelId(otherModel);
+      return modelId.localeCompare(otherModelId);
     });
 
     return aiderModels;
@@ -161,8 +162,21 @@ export const ProjectBar = React.forwardRef<ProjectTopBarRef, Props>(({ baseDir, 
         });
       }
     },
-    [baseDir, modelsData, onModelsChange, updatePreferredModels, api],
+    [api, baseDir, updatePreferredModels, modelsData, onModelsChange],
   );
+
+  const toggleWeakModelLock = useCallback(() => {
+    if (!projectSettings) {
+      return;
+    }
+
+    const updatedSettings = {
+      ...projectSettings,
+      weakModelLocked: !projectSettings.weakModelLocked,
+    };
+
+    void saveProjectSettings(updatedSettings);
+  }, [projectSettings, saveProjectSettings]);
 
   const updateArchitectModel = useCallback(
     (architectModel: Model) => {
@@ -220,6 +234,13 @@ export const ProjectBar = React.forwardRef<ProjectTopBarRef, Props>(({ baseDir, 
             removePreferredModel={handleRemovePreferredModel}
             providers={providers}
           />
+          {projectSettings?.weakModel && (
+            <IconButton
+              icon={projectSettings?.weakModelLocked ? <VscLock className="w-4 h-4" /> : <VscUnlock className="w-4 h-4" />}
+              onClick={toggleWeakModelLock}
+              tooltip={projectSettings?.weakModelLocked ? t('modelSelector.weakModelUnlock') : t('modelSelector.weakModelLock')}
+            />
+          )}
         </div>
         {modelsData?.editFormat && (
           <>

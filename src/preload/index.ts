@@ -10,6 +10,7 @@ import {
   McpServerConfig,
   ModelsData,
   OS,
+  ProjectSettings,
   ProjectStartedData,
   ProviderModelsData,
   ProvidersUpdatedData,
@@ -348,6 +349,19 @@ const api: ApplicationAPI = {
     ipcRenderer.on('providers-updated', listener);
     return () => {
       ipcRenderer.removeListener('providers-updated', listener);
+    };
+  },
+
+  addProjectSettingsUpdatedListener: (baseDir, callback) => {
+    const listener = (_: Electron.IpcRendererEvent, data: { baseDir: string; settings: ProjectSettings }) => {
+      if (!compareBaseDirs(data.baseDir, baseDir)) {
+        return;
+      }
+      callback(data);
+    };
+    ipcRenderer.on('project-settings-updated', listener);
+    return () => {
+      ipcRenderer.removeListener('project-settings-updated', listener);
     };
   },
 

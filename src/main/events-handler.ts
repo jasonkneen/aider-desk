@@ -300,16 +300,24 @@ export class EventsHandler {
     const projectSettings = this.store.getProjectSettings(baseDir);
 
     projectSettings.mainModel = mainModel;
-    projectSettings.weakModel = null;
 
-    this.store.saveProjectSettings(baseDir, projectSettings);
-    this.projectManager.getProject(baseDir).forEachTask((task) => task.updateModels(mainModel, null, projectSettings.modelEditFormats[mainModel]));
+    // Only clear weak model if not locked
+    if (!projectSettings.weakModelLocked) {
+      projectSettings.weakModel = null;
+    }
+
+    const updatedSettings = this.store.saveProjectSettings(baseDir, projectSettings);
+    this.eventManager.sendProjectSettingsUpdated(baseDir, updatedSettings);
+    this.projectManager
+      .getProject(baseDir)
+      .forEachTask((task) => task.updateModels(mainModel, projectSettings.weakModel || null, projectSettings.modelEditFormats[mainModel]));
   }
 
   updateWeakModel(baseDir: string, weakModel: string): void {
     const projectSettings = this.store.getProjectSettings(baseDir);
     projectSettings.weakModel = weakModel;
-    this.store.saveProjectSettings(baseDir, projectSettings);
+    const updatedSettings = this.store.saveProjectSettings(baseDir, projectSettings);
+    this.eventManager.sendProjectSettingsUpdated(baseDir, updatedSettings);
 
     this.projectManager
       .getProject(baseDir)
@@ -319,7 +327,8 @@ export class EventsHandler {
   updateArchitectModel(baseDir: string, architectModel: string): void {
     const projectSettings = this.store.getProjectSettings(baseDir);
     projectSettings.architectModel = architectModel;
-    this.store.saveProjectSettings(baseDir, projectSettings);
+    const updatedSettings = this.store.saveProjectSettings(baseDir, projectSettings);
+    this.eventManager.sendProjectSettingsUpdated(baseDir, updatedSettings);
 
     this.projectManager.getProject(baseDir).forEachTask((task) => task.setArchitectModel(architectModel));
   }
@@ -331,7 +340,8 @@ export class EventsHandler {
       ...projectSettings.modelEditFormats,
       ...updatedFormats,
     };
-    this.store.saveProjectSettings(baseDir, projectSettings);
+    const updatedSettings = this.store.saveProjectSettings(baseDir, projectSettings);
+    this.eventManager.sendProjectSettingsUpdated(baseDir, updatedSettings);
     this.projectManager
       .getProject(baseDir)
       .forEachTask((task) =>

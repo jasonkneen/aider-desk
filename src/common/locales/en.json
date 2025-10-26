@@ -635,7 +635,9 @@
     "removePreferred": "Remove from preferred models",
     "invalidModelSelection": "Invalid format of the model. Expected format is 'provider/model', e.g. 'openai/gpt-4'.",
     "providerNotSupported": "Provider '{{provider}}' is not supported. Supported providers are: {{providers}}.",
-    "selectModel": "Select model..."
+    "selectModel": "Select model...",
+    "weakModelLock": "Lock weak model",
+    "weakModelUnlock": "Unlock weak model"
   },
   "modelInfo": {
     "noInfo": "No model information available.",

@@ -589,7 +589,9 @@
     "searchPlaceholder": "搜索模型...",
     "searchPlaceholderOrCustom": "搜索模型或输入自定义名称...",
     "removePreferred": "从首选模型中移除",
-    "selectModel": "选择模型..."
+    "selectModel": "选择模型...",
+    "weakModelLock": "锁定弱模型",
+    "weakModelUnlock": "解锁弱模型"
   },
   "modelInfo": {
     "noInfo": "无模型信息可用。",

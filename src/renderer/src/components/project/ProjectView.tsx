@@ -145,9 +145,7 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
       removeTaskCompletedListener();
       removeTaskCancelledListener();
       removeTaskDeletedListener();
-
       removeInputHistoryListener();
-      api.stopProject(project.baseDir);
     };
   }, [api, createNewTask, project.baseDir, handleStartupMode]);
 

@@ -61,6 +61,12 @@ export const ProjectSettingsProvider = ({ baseDir, children }: ProjectSettingsPr
     void loadSettings();
   }, [baseDir, api]);
 
+  useEffect(() => {
+    return api.addProjectSettingsUpdatedListener(baseDir, (data) => {
+      setProjectSettings(data.settings);
+    });
+  }, [baseDir, api]);
+
   return (
     <ProjectSettingsContext.Provider value={{ projectSettings: optimisticProjectSettings, saveProjectSettings }}>{children}</ProjectSettingsContext.Provider>
   );

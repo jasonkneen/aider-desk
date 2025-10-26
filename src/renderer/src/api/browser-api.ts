@@ -64,6 +64,7 @@ type EventDataMap = {
   'project-started': ProjectStartedData;
   'provider-models-updated': ProviderModelsData;
   'providers-updated': ProvidersUpdatedData;
+  'project-settings-updated': { baseDir: string; settings: ProjectSettings };
   'task-created': TaskData;
   'task-initialized': TaskData;
   'task-updated': TaskData;
@@ -123,6 +124,7 @@ export class BrowserApi implements ApplicationAPI {
       'project-started': new Map(),
       'provider-models-updated': new Map(),
       'providers-updated': new Map(),
+      'project-settings-updated': new Map(),
       'task-created': new Map(),
       'task-initialized': new Map(),
       'task-started': new Map(),
@@ -570,6 +572,10 @@ export class BrowserApi implements ApplicationAPI {
 
   addProvidersUpdatedListener(callback: (data: ProvidersUpdatedData) => void): () => void {
     return this.addListener('providers-updated', callback);
+  }
+
+  addProjectSettingsUpdatedListener(baseDir: string, callback: (data: { baseDir: string; settings: ProjectSettings }) => void): () => void {
+    return this.addListener('project-settings-updated', callback, baseDir);
   }
 
   // Task lifecycle event listeners
