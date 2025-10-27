@@ -1,11 +1,12 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { clsx } from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { LocalizedString, UsageReportData } from '@common/types';
 
 import { MessageBlock } from './MessageBlock';
 import { MessageBar } from './MessageBar';
+import { areMessagesEqual } from './utils';
 
 import { Accordion } from '@/components/common/Accordion';
 import { GroupMessage, Message, ResponseMessage, ToolMessage, isResponseMessage, isToolMessage, isUserMessage } from '@/types/message';
@@ -20,7 +21,7 @@ type Props = {
   edit?: (content: string) => void;
 };
 
-export const GroupMessageBlock = ({ baseDir, message, allFiles, renderMarkdown, remove, redo, edit }: Props) => {
+const GroupMessageBlockComponent = ({ baseDir, message, allFiles, renderMarkdown, remove, redo, edit }: Props) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -151,3 +152,49 @@ export const GroupMessageBlock = ({ baseDir, message, allFiles, renderMarkdown, 
     </div>
   );
 };
+
+const arePropsEqual = (prevProps: Props, nextProps: Props): boolean => {
+  if (
+    prevProps.baseDir !== nextProps.baseDir ||
+    prevProps.allFiles.length !== nextProps.allFiles.length ||
+    prevProps.renderMarkdown !== nextProps.renderMarkdown ||
+    (prevProps.remove !== nextProps.remove && (prevProps.remove === undefined) !== (nextProps.remove === undefined)) ||
+    (prevProps.redo !== nextProps.redo && (prevProps.redo === undefined) !== (nextProps.redo === undefined)) ||
+    (prevProps.edit !== nextProps.edit && (prevProps.edit === undefined) !== (nextProps.edit === undefined))
+  ) {
+    return false;
+  }
+
+  const prevMessage = prevProps.message;
+  const nextMessage = nextProps.message;
+
+  // Check basic message properties
+  if (prevMessage.id !== nextMessage.id || prevMessage.content !== nextMessage.content) {
+    return false;
+  }
+
+  // Check group properties
+  if (
+    prevMessage.group.id !== nextMessage.group.id ||
+    prevMessage.group.name !== nextMessage.group.name ||
+    prevMessage.group.finished !== nextMessage.group.finished ||
+    prevMessage.group.color !== nextMessage.group.color
+  ) {
+    return false;
+  }
+
+  // Check children arrays
+  if (prevMessage.children.length !== nextMessage.children.length) {
+    return false;
+  }
+
+  for (let i = 0; i < prevMessage.children.length; i++) {
+    if (!areMessagesEqual(prevMessage.children[i], nextMessage.children[i])) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+export const GroupMessageBlock = memo(GroupMessageBlockComponent, arePropsEqual);

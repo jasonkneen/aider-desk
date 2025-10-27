@@ -1,6 +1,6 @@
 import { TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { KeyboardEvent, MouseEvent, useState } from 'react';
+import { KeyboardEvent, MouseEvent, useState, memo } from 'react';
 import { HiOutlinePencil, HiOutlineTrash, HiPlus } from 'react-icons/hi';
 import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { CgSpinner } from 'react-icons/cg';
@@ -29,7 +29,7 @@ type Props = {
   deleteTask?: (baseDir: string, taskId: string) => Promise<boolean>;
 };
 
-export const TaskSidebar = ({
+const TaskSidebarComponent = ({
   baseDir,
   loading,
   tasks,
@@ -300,3 +300,52 @@ export const TaskSidebar = ({
     </motion.div>
   );
 };
+
+// Custom comparison function for React.memo
+const arePropsEqual = (prevProps: Props, nextProps: Props): boolean => {
+  // Compare primitive props
+  if (
+    prevProps.baseDir !== nextProps.baseDir ||
+    prevProps.loading !== nextProps.loading ||
+    prevProps.activeTaskId !== nextProps.activeTaskId ||
+    prevProps.isCollapsed !== nextProps.isCollapsed ||
+    prevProps.className !== nextProps.className
+  ) {
+    return false;
+  }
+
+  // Compare function props
+  if (
+    prevProps.onTaskSelect !== nextProps.onTaskSelect ||
+    prevProps.onToggleCollapse !== nextProps.onTaskSelect ||
+    prevProps.createNewTask !== nextProps.createNewTask ||
+    prevProps.updateTask !== nextProps.updateTask ||
+    prevProps.deleteTask !== nextProps.deleteTask
+  ) {
+    return false;
+  }
+
+  // Compare tasks array - shallow check first, then deep check for task properties
+  if (prevProps.tasks.length !== nextProps.tasks.length) {
+    return false;
+  }
+
+  // Check if tasks have changed in meaningful ways
+  for (let i = 0; i < prevProps.tasks.length; i++) {
+    const prevTask = prevProps.tasks[i];
+    const nextTask = nextProps.tasks[i];
+
+    if (prevTask.id !== nextTask.id) {
+      return false;
+    }
+
+    // Only check properties that affect rendering
+    if (prevTask.name !== nextTask.name || prevTask.updatedAt !== nextTask.updatedAt || prevTask.createdAt !== nextTask.createdAt) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+export const TaskSidebar = memo(TaskSidebarComponent, arePropsEqual);

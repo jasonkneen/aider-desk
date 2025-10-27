@@ -8,7 +8,7 @@ import { ThinkingAnswerBlock } from './ThinkingAnswerBlock';
 
 import { CodeBlock } from '@/components/common/CodeBlock';
 import { CodeInline } from '@/components/common/CodeInline';
-import { GroupMessage, Message } from '@/types/message';
+import { GroupMessage, isResponseMessage, isToolMessage, Message, ToolMessage } from '@/types/message';
 
 const ALL_FENCES = [
   ['````', '````'],
@@ -433,6 +433,33 @@ export const parseToolContent = (rawContent: string): ToolContentResult => {
   }
 
   return result;
+};
+
+export const areMessagesEqual = (prevMessage: Message, nextMessage: Message): boolean => {
+  // Check basic message properties
+  if (prevMessage.id !== nextMessage.id || prevMessage.content !== nextMessage.content) {
+    return false;
+  }
+
+  // Check usageReport for ResponseMessage and ToolMessage
+  if ((isResponseMessage(prevMessage) || isToolMessage(prevMessage)) && (isResponseMessage(nextMessage) || isToolMessage(nextMessage))) {
+    const prevHasUsageReport = !!prevMessage.usageReport;
+    const nextHasUsageReport = !!nextMessage.usageReport;
+    if (prevHasUsageReport !== nextHasUsageReport) {
+      return false;
+    }
+  }
+
+  // Check args for ToolMessage
+  if (isToolMessage(prevMessage) && isToolMessage(nextMessage)) {
+    const prevToolMessage = prevMessage as ToolMessage;
+    const nextToolMessage = nextMessage as ToolMessage;
+    if (JSON.stringify(prevToolMessage.args) !== JSON.stringify(nextToolMessage.args)) {
+      return false;
+    }
+  }
+
+  return true;
 };
 
 export const groupMessagesByPromptContext = (messages: Message[]): Message[] => {

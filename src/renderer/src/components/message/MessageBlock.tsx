@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   HELPERS_TOOL_GROUP_NAME,
@@ -32,6 +33,7 @@ import { BashToolMessage } from './BashToolMessage';
 import { FetchToolMessage } from './FetchToolMessage';
 import { SemanticSearchToolMessage } from './SemanticSearchToolMessage';
 import { SubagentToolMessage } from './SubagentToolMessage';
+import { areMessagesEqual } from './utils';
 
 import {
   isCommandOutputMessage,
@@ -57,7 +59,7 @@ type Props = {
   edit?: (content: string) => void;
 };
 
-export const MessageBlock = ({ baseDir, message, allFiles, renderMarkdown, compact = false, remove, redo, edit }: Props) => {
+const MessageBlockComponent = ({ baseDir, message, allFiles, renderMarkdown, compact = false, remove, redo, edit }: Props) => {
   const { t } = useTranslation();
 
   if (isLoadingMessage(message)) {
@@ -159,3 +161,21 @@ export const MessageBlock = ({ baseDir, message, allFiles, renderMarkdown, compa
 
   return null;
 };
+
+const arePropsEqual = (prevProps: Props, nextProps: Props): boolean => {
+  if (
+    prevProps.baseDir !== nextProps.baseDir ||
+    prevProps.allFiles.length !== nextProps.allFiles.length ||
+    prevProps.renderMarkdown !== nextProps.renderMarkdown ||
+    prevProps.compact !== nextProps.compact ||
+    (prevProps.remove !== nextProps.remove && (prevProps.remove === undefined) !== (nextProps.remove === undefined)) ||
+    (prevProps.redo !== nextProps.redo && (prevProps.redo === undefined) !== (nextProps.redo === undefined)) ||
+    (prevProps.edit !== nextProps.edit && (prevProps.edit === undefined) !== (nextProps.edit === undefined))
+  ) {
+    return false;
+  }
+
+  return areMessagesEqual(prevProps.message, nextProps.message);
+};
+
+export const MessageBlock = memo(MessageBlockComponent, arePropsEqual);

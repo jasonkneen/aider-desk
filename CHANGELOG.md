@@ -1,5 +1,9 @@
 # Changelog
 
+## [UNRELEASED]
+
+- performance improvements related to rendered messages
+
 ## [0.37.1]
 
 - fixed issue with no responses when using Requesty provider

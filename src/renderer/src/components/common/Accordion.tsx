@@ -46,12 +46,12 @@ export const Accordion = ({
 
   useEffect(() => {
     if (isOpen && scrollToVisibleWhenExpanded && contentRef.current) {
-      setTimeout(() => {
+      requestIdleCallback(() => {
         contentRef.current?.scrollIntoView({
           behavior: 'smooth',
           block: 'nearest',
         });
-      }, 100);
+      });
     }
   }, [isOpen, scrollToVisibleWhenExpanded]);
 

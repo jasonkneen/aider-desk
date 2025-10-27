@@ -101,106 +101,112 @@ export const TaskProvider: React.FC<{
     });
   }, []);
 
-  const loadTask = async (taskId: string) => {
-    try {
-      const contextData = await api.loadTask(baseDir, taskId);
+  const loadTask = useCallback(
+    async (taskId: string) => {
+      try {
+        const contextData = await api.loadTask(baseDir, taskId);
 
-      const messages: Message[] = contextData.messages.reduce((messages, message) => {
-        if (message.type === 'response-completed') {
-          if (message.reflectedMessage) {
-            const reflected: ReflectedMessage = {
-              id: uuidv4(),
-              type: 'reflected-message',
-              content: message.reflectedMessage,
-              responseMessageId: message.messageId,
+        const messages: Message[] = contextData.messages.reduce((messages, message) => {
+          if (message.type === 'response-completed') {
+            if (message.reflectedMessage) {
+              const reflected: ReflectedMessage = {
+                id: uuidv4(),
+                type: 'reflected-message',
+                content: message.reflectedMessage,
+                responseMessageId: message.messageId,
+                promptContext: message.promptContext,
+              };
+              messages.push(reflected);
+            }
+
+            const responseMessage: ResponseMessage = {
+              id: message.messageId,
+              type: 'response',
+              content: message.content,
+              processing: false,
+              usageReport: message.usageReport,
               promptContext: message.promptContext,
             };
-            messages.push(reflected);
+            messages.push(responseMessage);
+          } else if (message.type === 'user') {
+            const userMessage: UserMessage = {
+              id: message.id,
+              type: 'user',
+              content: message.content,
+              promptContext: message.promptContext,
+            };
+            messages.push(userMessage);
+          } else if (message.type === 'tool') {
+            if (message.serverName === TODO_TOOL_GROUP_NAME) {
+              return messages;
+            }
+
+            const toolMessage: ToolMessage = {
+              type: 'tool',
+              id: message.id,
+              serverName: message.serverName,
+              toolName: message.toolName,
+              args: (message.args as Record<string, unknown> | undefined) || {},
+              content: message.response || '',
+              promptContext: message.promptContext,
+              usageReport: message.usageReport,
+            };
+            messages.push(toolMessage);
           }
 
-          const responseMessage: ResponseMessage = {
-            id: message.messageId,
-            type: 'response',
-            content: message.content,
-            processing: false,
-            usageReport: message.usageReport,
-            promptContext: message.promptContext,
-          };
-          messages.push(responseMessage);
-        } else if (message.type === 'user') {
-          const userMessage: UserMessage = {
-            id: message.id,
-            type: 'user',
-            content: message.content,
-            promptContext: message.promptContext,
-          };
-          messages.push(userMessage);
-        } else if (message.type === 'tool') {
-          if (message.serverName === TODO_TOOL_GROUP_NAME) {
-            return messages;
-          }
+          return messages;
+        }, [] as Message[]);
 
-          const toolMessage: ToolMessage = {
-            type: 'tool',
-            id: message.id,
-            serverName: message.serverName,
-            toolName: message.toolName,
-            args: (message.args as Record<string, unknown> | undefined) || {},
-            content: message.response || '',
-            promptContext: message.promptContext,
-            usageReport: message.usageReport,
-          };
-          messages.push(toolMessage);
-        }
-
-        return messages;
-      }, [] as Message[]);
-
-      setTaskStateMap((prev) => {
-        const newMap = new Map(prev);
-        newMap.set(taskId, {
-          ...EMPTY_TASK_STATE,
-          loading: false,
-          loaded: true,
-          messages,
-          contextFiles: contextData.files,
-          todoItems: contextData.todoItems || [],
+        setTaskStateMap((prev) => {
+          const newMap = new Map(prev);
+          newMap.set(taskId, {
+            ...EMPTY_TASK_STATE,
+            loading: false,
+            loaded: true,
+            messages,
+            contextFiles: contextData.files,
+            todoItems: contextData.todoItems || [],
+          });
+          return newMap;
         });
-        return newMap;
-      });
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to load task:', error);
-    }
-  };
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load task:', error);
+      }
+    },
+    [api, baseDir],
+  );
 
-  const getTaskState = (taskId: string, loadIfNotLoaded = true): TaskState | null => {
-    const taskState = taskStateMap.get(taskId);
-    if (!taskState) {
-      return null;
-    }
+  const getTaskState = useCallback(
+    (taskId: string, loadIfNotLoaded = true): TaskState | null => {
+      const taskState = taskStateMap.get(taskId);
+      if (!taskState) {
+        return null;
+      }
 
-    if (!taskState.loaded && !taskState.loading && loadIfNotLoaded) {
-      void loadTask(taskId);
-      updateTaskState(taskId, { loading: true });
+      if (!taskState.loaded && !taskState.loading && loadIfNotLoaded) {
+        void loadTask(taskId);
+        updateTaskState(taskId, { loading: true });
 
-      return {
-        ...taskState,
-        loading: true,
-      };
-    }
+        return {
+          ...taskState,
+          loading: true,
+        };
+      }
 
-    return taskState;
-  };
+      return taskState;
+    },
+    [taskStateMap, loadTask, updateTaskState],
+  );
 
-  const setMessages = (taskId: string, updateMessages: (prevState: Message[]) => Message[]) => {
+  const setMessages = useCallback((taskId: string, updateMessages: (prevState: Message[]) => Message[]) => {
     setTaskStateMap((prev) => {
       const newMap = new Map(prev);
       const current = newMap.get(taskId) || EMPTY_TASK_STATE;
       newMap.set(taskId, { ...current, messages: updateMessages(current.messages) });
       return newMap;
     });
-  };
+  }, []);
 
   const clearSession = useCallback(
     (taskId: string, messagesOnly: boolean) => {
@@ -231,14 +237,14 @@ export const TaskProvider: React.FC<{
     [api, baseDir, clearSession],
   );
 
-  const setTodoItems = (taskId: string, updateTodoItems: (prev: TodoItem[]) => TodoItem[]) => {
+  const setTodoItems = useCallback((taskId: string, updateTodoItems: (prev: TodoItem[]) => TodoItem[]) => {
     setTaskStateMap((prev) => {
       const newMap = new Map(prev);
       const current = newMap.get(taskId) || EMPTY_TASK_STATE;
       newMap.set(taskId, { ...current, todoItems: updateTodoItems(current.todoItems) });
       return newMap;
     });
-  };
+  }, []);
 
   const setQuestion = useCallback(
     (taskId: string, question: QuestionData | null) => {
@@ -270,7 +276,7 @@ export const TaskProvider: React.FC<{
         question: null,
       });
     },
-    [t, updateTaskState],
+    [setMessages, t, updateTaskState],
   );
 
   useEffect(() => {
@@ -705,7 +711,7 @@ export const TaskProvider: React.FC<{
     return () => {
       unsubscribes.forEach((unsubscribe) => unsubscribe());
     };
-  }, [baseDir, tasks, api, updateTaskState, t, clearSession, setQuestion]);
+  }, [baseDir, tasks, api, updateTaskState, t, clearSession, setQuestion, setTodoItems, setMessages]);
 
   return (
     <TaskContext.Provider
