@@ -322,6 +322,8 @@ src/
           ProjectTabs.tsx
           ProjectView.tsx
           SidebarContent.tsx
+          TaskSidebar.tsx
+          TaskView.tsx
           TodoListItem.tsx
           TodoWindow.tsx
         PromptField/
@@ -364,17 +366,15 @@ src/
         AutocompletionInput.tsx
         CostInfo.tsx
         ModelSelector.tsx
-        SessionDialog.tsx
-        SessionsPopup.tsx
         TelemetryInfoDialog.tsx
         TokenUsageBar.tsx
-      context/
+      contexts/
         ApiContext.tsx
         ContextMenuContext.tsx
+        ModelProviderContext.tsx
         ProjectSettingsContext.tsx
         SettingsContext.tsx
-      contexts/
-        ModelProviderContext.tsx
+        TaskContext.tsx
       fonts/
         Enriqueta.ttf
         FunnelDisplay.ttf
@@ -1304,6 +1304,8 @@ File: src/common/locales/en.json
     "loading": "Loading...",
     "startingUp": "Starting up...",
     "loadingProjectSettings": "Loading project settings...",
+    "loadingTask": "Loading task...",
+    "loadingMessages": "Loading messages...",
     "error": "Error",
     "success": "Success",
     "warning": "Warning",
@@ -1604,8 +1606,7 @@ File: src/common/locales/en.json
     "azure": "Azure"
   },
   "select": {
-    "placeholder": "Select an option",
-    "loadingSessions": "Loading sessions..."
+    "placeholder": "Select an option"
   },
   "settings": {
     "title": "Settings",
@@ -1620,9 +1621,8 @@ File: src/common/locales/en.json
     "gui": "Appearance",
     "startup": {
       "title": "Start Up",
-      "emptySession": "Start with empty session",
-      "lastSession": "Load last session",
-      "specificSession": "Load specific session"
+      "emptyTask": "Start with empty task",
+      "lastTask": "Load last task"
     },
     "language": "Language",
     "notifications": {
@@ -1921,7 +1921,9 @@ File: src/common/locales/en.json
     "removePreferred": "Remove from preferred models",
     "invalidModelSelection": "Invalid format of the model. Expected format is 'provider/model', e.g. 'openai/gpt-4'.",
     "providerNotSupported": "Provider '{{provider}}' is not supported. Supported providers are: {{providers}}.",
-    "selectModel": "Select model..."
+    "selectModel": "Select model...",
+    "weakModelLock": "Lock weak model",
+    "weakModelUnlock": "Unlock weak model"
   },
   "modelInfo": {
     "noInfo": "No model information available.",
@@ -1987,22 +1989,6 @@ File: src/common/locales/en.json
     "contextCompactingThresholdOff": "Off",
     "contextCompactingThresholdTooltip": "When token usage exceeds this threshold, the conversation will be automatically compacted to save space.",
     "thresholdTokens": "Threshold tokens"
-  },
-  "sessions": {
-    "title": "Sessions",
-    "empty": "No saved sessions",
-    "loadMessages": "Load messages",
-    "loadFiles": "Load files",
-    "saveAsNew": "Save as new",
-    "exportAsMarkdown": "Export as Markdown",
-    "exportAsImage": "Export as Image",
-    "deleteTitle": "Delete Session",
-    "deleteConfirm": "Are you sure you want to delete the session \"{{name}}\"?",
-    "deleteWarning": "This action cannot be undone.",
-    "save": "Save session",
-    "add": "Add new session",
-    "newSessionPlaceholder": "Enter session name",
-    "sessionSaved": "Session saved."
   },
   "commandOutput": {
     "command": "Command"
@@ -2274,6 +2260,15 @@ File: src/common/locales/en.json
     "close": "Close",
     "closeOtherTabs": "Close other tabs",
     "closeAllTabs": "Close all tabs"
+  },
+  "taskSidebar": {
+    "title": "Tasks",
+    "noTasks": "No tasks available",
+    "deleteTask": "Delete task",
+    "deleteConfirm": "Are you sure you want to delete this task?",
+    "createTask": "Create new task",
+    "editTask": "Edit task",
+    "taskNamePlaceholder": "Enter task name..."
   }
 }
 
@@ -2301,6 +2296,8 @@ File: src/common/locales/zh.json
     "loading": "加载中...",
     "startingUp": "正在启动...",
     "loadingProjectSettings": "正在加载项目设置...",
+    "loadingTask": "正在加载任务...",
+    "loadingMessages": "正在加载消息...",
     "error": "错误",
     "success": "成功",
     "warning": "警告",
@@ -2614,9 +2611,8 @@ File: src/common/locales/zh.json
     "gui": "GUI",
     "startup": {
       "title": "启动",
-      "emptySession": "以空会话启动",
-      "lastSession": "加载上次会话",
-      "specificSession": "加载特定会话"
+      "emptyTask": "启动时创建新任务",
+      "lastTask": "加载上次任务"
     },
     "language": "语言",
     "notifications": {
@@ -2871,7 +2867,9 @@ File: src/common/locales/zh.json
     "searchPlaceholder": "搜索模型...",
     "searchPlaceholderOrCustom": "搜索模型或输入自定义名称...",
     "removePreferred": "从首选模型中移除",
-    "selectModel": "选择模型..."
+    "selectModel": "选择模型...",
+    "weakModelLock": "锁定弱模型",
+    "weakModelUnlock": "解锁弱模型"
   },
   "modelInfo": {
     "noInfo": "无模型信息可用。",
@@ -2958,21 +2956,6 @@ File: src/common/locales/zh.json
     "contextCompactingThresholdOff": "关闭",
     "contextCompactingThresholdTooltip": "当令牌使用量超过此阈值时，对话将自动压缩以节省空间。",
     "thresholdTokens": "阈值令牌数"
-  },
-  "sessions": {
-    "title": "会话",
-    "empty": "无保存的会话",
-    "loadMessages": "加载条消息",
-    "loadFiles": "加载个文件",
-    "saveAsNew": "另存为新",
-    "exportAsMarkdown": "导出为Markdown",
-    "exportAsImage": "导出为图片",
-    "deleteTitle": "删除会话",
-    "deleteConfirm": "确定要删除会话\"{{name}}\"?",
-    "deleteWarning": "此操作无法撤销。",
-    "save": "保存会话",
-    "add": "添加新会话",
-    "newSessionPlaceholder": "输入会话名称"
   },
   "commandOutput": {
     "command": "命令"
@@ -3277,6 +3260,15 @@ File: src/common/locales/zh.json
     "close": "关闭",
     "closeOtherTabs": "关闭其他标签页",
     "closeAllTabs": "关闭所有标签页"
+  },
+  "taskSidebar": {
+    "title": "任务",
+    "noTasks": "没有可用的任务",
+    "deleteTask": "删除任务",
+    "deleteConfirm": "您确定要删除这个任务吗？",
+    "createTask": "创建新任务",
+    "editTask": "编辑任务",
+    "taskNamePlaceholder": "输入任务名称..."
   }
 }
 
@@ -3495,7 +3487,7 @@ File: src/common/api.ts
 ================
 import {
   AutocompletionData,
-  ClearProjectData,
+  ClearTaskData,
   CloudflareTunnelStatus,
   CommandOutputData,
   ContextFilesUpdatedData,
@@ -3516,7 +3508,6 @@ import {
   ProjectData,
   ProjectSettings,
   ProjectStartedData,
-  ProjectStartMode,
   ProviderModelsData,
   ProviderProfile,
   ProvidersUpdatedData,
@@ -3524,6 +3515,7 @@ import {
   ResponseChunkData,
   ResponseCompletedData,
   SettingsData,
+  TaskContextData,
   TaskData,
   TerminalData,
   TerminalExitData,
@@ -3546,12 +3538,13 @@ export interface ApplicationAPI {
   startCloudflareTunnel: () => Promise<boolean>;
   stopCloudflareTunnel: () => Promise<void>;
   getCloudflareTunnelStatus: () => Promise<CloudflareTunnelStatus>;
-  startProject: (baseDir: string) => void;
+  startProject: (baseDir: string) => Promise<void>;
   stopProject: (baseDir: string) => void;
-  restartProject: (baseDir: string, startupMode?: ProjectStartMode) => void;
-  runPrompt: (baseDir: string, prompt: string, mode?: Mode) => void;
-  redoLastUserPrompt: (baseDir: string, mode: Mode, updatedPrompt?: string) => void;
-  answerQuestion: (baseDir: string, answer: string) => void;
+  restartProject: (baseDir: string) => void;
+  restartTask: (baseDir: string, taskId: string) => void;
+  runPrompt: (baseDir: string, taskId: string, prompt: string, mode?: Mode) => void;
+  redoLastUserPrompt: (baseDir: string, taskId: string, mode: Mode, updatedPrompt?: string) => void;
+  answerQuestion: (baseDir: string, taskId: string, answer: string) => void;
   loadInputHistory: (baseDir: string) => Promise<string[]>;
   isOpenDialogSupported: () => boolean;
   showOpenDialog: (options: Electron.OpenDialogSyncOptions) => Promise<Electron.OpenDialogReturnValue>;
@@ -3568,39 +3561,40 @@ export interface ApplicationAPI {
   getProjectSettings: (baseDir: string) => Promise<ProjectSettings>;
   patchProjectSettings: (baseDir: string, settings: Partial<ProjectSettings>) => Promise<ProjectSettings>;
   getFilePathSuggestions: (currentPath: string, directoriesOnly?: boolean) => Promise<string[]>;
-  getAddableFiles: (baseDir: string) => Promise<string[]>;
-  addFile: (baseDir: string, filePath: string, readOnly?: boolean) => void;
+  getAddableFiles: (baseDir: string, taskId: string) => Promise<string[]>;
+  addFile: (baseDir: string, taskId: string, filePath: string, readOnly?: boolean) => void;
   isValidPath: (baseDir: string, path: string) => Promise<boolean>;
   isProjectPath: (path: string) => Promise<boolean>;
-  dropFile: (baseDir: string, path: string) => void;
-  runCommand: (baseDir: string, command: string) => void;
-  pasteImage: (baseDir: string) => void;
-  scrapeWeb: (baseDir: string, url: string, filePath?: string) => Promise<string>;
-  initProjectRulesFile: (baseDir: string) => Promise<void>;
+  dropFile: (baseDir: string, taskId: string, path: string) => void;
+  runCommand: (baseDir: string, taskId: string, command: string) => void;
+  pasteImage: (baseDir: string, taskId: string) => void;
+  scrapeWeb: (baseDir: string, taskId: string, url: string, filePath?: string) => Promise<void>;
+  initProjectRulesFile: (baseDir: string, taskId: string) => Promise<void>;
 
   // Todo operations
-  getTodos: (baseDir: string) => Promise<TodoItem[]>;
-  addTodo: (baseDir: string, name: string) => Promise<TodoItem[]>;
-  updateTodo: (baseDir: string, name: string, updates: Partial<TodoItem>) => Promise<TodoItem[]>;
-  deleteTodo: (baseDir: string, name: string) => Promise<TodoItem[]>;
-  clearAllTodos: (baseDir: string) => Promise<TodoItem[]>;
+  getTodos: (baseDir: string, taskId: string) => Promise<TodoItem[]>;
+  addTodo: (baseDir: string, taskId: string, name: string) => Promise<TodoItem[]>;
+  updateTodo: (baseDir: string, taskId: string, name: string, updates: Partial<TodoItem>) => Promise<TodoItem[]>;
+  deleteTodo: (baseDir: string, taskId: string, name: string) => Promise<TodoItem[]>;
+  clearAllTodos: (baseDir: string, taskId: string) => Promise<TodoItem[]>;
 
   loadMcpServerTools: (serverName: string, config?: McpServerConfig) => Promise<McpTool[] | null>;
   reloadMcpServers: (mcpServers: Record<string, McpServerConfig>, force?: boolean) => Promise<void>;
 
-  saveTask: (baseDir: string, name: string, id?: string) => Promise<boolean>;
-  deleteTask: (baseDir: string, name: string) => Promise<boolean>;
-  loadTask: (baseDir: string, id: string) => Promise<void>;
+  createNewTask: (baseDir: string) => Promise<TaskData>;
+  updateTask: (baseDir: string, id: string, updates: Partial<TaskData>) => Promise<boolean>;
+  deleteTask: (baseDir: string, id: string) => Promise<boolean>;
   getTasks: (baseDir: string) => Promise<TaskData[]>;
-  exportTaskToMarkdown: (baseDir: string) => Promise<void>;
+  loadTask: (baseDir: string, taskId: string) => Promise<TaskContextData>;
+  exportTaskToMarkdown: (baseDir: string, taskId: string) => Promise<void>;
   getRecentProjects: () => Promise<string[]>;
   addRecentProject: (baseDir: string) => Promise<void>;
   removeRecentProject: (baseDir: string) => Promise<void>;
-  interruptResponse: (baseDir: string) => void;
-  applyEdits: (baseDir: string, edits: FileEdit[]) => void;
-  clearContext: (baseDir: string) => void;
-  removeLastMessage: (baseDir: string) => void;
-  compactConversation: (baseDir: string, mode: Mode, customInstructions?: string) => void;
+  interruptResponse: (baseDir: string, taskId: string) => void;
+  applyEdits: (baseDir: string, taskId: string, edits: FileEdit[]) => void;
+  clearContext: (baseDir: string, taskId: string) => void;
+  removeLastMessage: (baseDir: string, taskId: string) => void;
+  compactConversation: (baseDir: string, taskId: string, mode: Mode, customInstructions?: string) => void;
   setZoomLevel: (level: number) => Promise<void>;
 
   getVersions: (forceRefresh?: boolean) => Promise<VersionsInfo | null>;
@@ -3619,43 +3613,55 @@ export interface ApplicationAPI {
   deleteModel: (providerId: string, modelId: string) => Promise<ProviderModelsData>;
 
   addSettingsUpdatedListener: (callback: (data: SettingsData) => void) => () => void;
-  addResponseChunkListener: (baseDir: string, callback: (data: ResponseChunkData) => void) => () => void;
-  addResponseCompletedListener: (baseDir: string, callback: (data: ResponseCompletedData) => void) => () => void;
-  addLogListener: (baseDir: string, callback: (data: LogData) => void) => () => void;
-  addContextFilesUpdatedListener: (baseDir: string, callback: (data: ContextFilesUpdatedData) => void) => () => void;
+  addResponseChunkListener: (baseDir: string, taskId: string, callback: (data: ResponseChunkData) => void) => () => void;
+  addResponseCompletedListener: (baseDir: string, taskId: string, callback: (data: ResponseCompletedData) => void) => () => void;
+  addLogListener: (baseDir: string, taskId: string, callback: (data: LogData) => void) => () => void;
+  addContextFilesUpdatedListener: (baseDir: string, taskId: string, callback: (data: ContextFilesUpdatedData) => void) => () => void;
   addCustomCommandsUpdatedListener: (baseDir: string, callback: (data: CustomCommandsUpdatedData) => void) => () => void;
-  addUpdateAutocompletionListener: (baseDir: string, callback: (data: AutocompletionData) => void) => () => void;
-  addAskQuestionListener: (baseDir: string, callback: (data: QuestionData) => void) => () => void;
-  addUpdateAiderModelsListener: (baseDir: string, callback: (data: ModelsData) => void) => () => void;
-  addCommandOutputListener: (baseDir: string, callback: (data: CommandOutputData) => void) => () => void;
-  addTokensInfoListener: (baseDir: string, callback: (data: TokensInfoData) => void) => () => void;
-  addToolListener: (baseDir: string, callback: (data: ToolData) => void) => () => void;
-  addUserMessageListener: (baseDir: string, callback: (data: UserMessageData) => void) => () => void;
+  addUpdateAutocompletionListener: (baseDir: string, taskId: string, callback: (data: AutocompletionData) => void) => () => void;
+  addAskQuestionListener: (baseDir: string, taskId: string, callback: (data: QuestionData) => void) => () => void;
+  addUpdateAiderModelsListener: (baseDir: string, taskId: string, callback: (data: ModelsData) => void) => () => void;
+  addCommandOutputListener: (baseDir: string, taskId: string, callback: (data: CommandOutputData) => void) => () => void;
+  addTokensInfoListener: (baseDir: string, taskId: string, callback: (data: TokensInfoData) => void) => () => void;
+  addToolListener: (baseDir: string, taskId: string, callback: (data: ToolData) => void) => () => void;
+  addUserMessageListener: (baseDir: string, taskId: string, callback: (data: UserMessageData) => void) => () => void;
   addInputHistoryUpdatedListener: (baseDir: string, callback: (data: InputHistoryData) => void) => () => void;
-  addClearProjectListener: (baseDir: string, callback: (data: ClearProjectData) => void) => () => void;
+  addClearTaskListener: (baseDir: string, taskId: string, callback: (data: ClearTaskData) => void) => () => void;
   addProjectStartedListener: (baseDir: string, callback: (data: ProjectStartedData) => void) => () => void;
   addVersionsInfoUpdatedListener: (callback: (data: VersionsInfo) => void) => () => void;
   addProviderModelsUpdatedListener: (callback: (data: ProviderModelsData) => void) => () => void;
   addProvidersUpdatedListener: (callback: (data: ProvidersUpdatedData) => void) => () => void;
+  addProjectSettingsUpdatedListener: (baseDir: string, callback: (data: { baseDir: string; settings: ProjectSettings }) => void) => () => void;
   addTerminalDataListener: (baseDir: string, callback: (data: TerminalData) => void) => () => void;
   addTerminalExitListener: (baseDir: string, callback: (data: TerminalExitData) => void) => () => void;
   addContextMenuListener: (callback: (params: Electron.ContextMenuParams) => void) => () => void;
   addOpenSettingsListener: (callback: (tabIndex: number) => void) => () => void;
 
+  // Task lifecycle event listeners
+  addTaskCreatedListener: (baseDir: string, callback: (data: TaskData) => void) => () => void;
+  addTaskInitializedListener: (baseDir: string, callback: (data: TaskData) => void) => () => void;
+  addTaskUpdatedListener: (baseDir: string, callback: (data: TaskData) => void) => () => void;
+  addTaskStartedListener: (baseDir: string, callback: (data: TaskData) => void) => () => void;
+  addTaskCompletedListener: (baseDir: string, callback: (data: TaskData) => void) => () => void;
+  addTaskCancelledListener: (baseDir: string, callback: (data: TaskData) => void) => () => void;
+  addTaskDeletedListener: (baseDir: string, callback: (data: TaskData) => void) => () => void;
+
   getCustomCommands: (baseDir: string) => Promise<CustomCommand[]>;
-  runCustomCommand: (baseDir: string, commandName: string, args: string[], mode: Mode) => Promise<void>;
+  runCustomCommand: (baseDir: string, taskId: string, commandName: string, args: string[], mode: Mode) => Promise<void>;
 
   // Terminal operations
   isTerminalSupported: () => boolean;
-  createTerminal: (baseDir: string, cols?: number, rows?: number) => Promise<string>;
+  createTerminal: (baseDir: string, taskId: string, cols?: number, rows?: number) => Promise<string>;
   writeToTerminal: (terminalId: string, data: string) => Promise<boolean>;
   resizeTerminal: (terminalId: string, cols: number, rows: number) => Promise<boolean>;
   closeTerminal: (terminalId: string) => Promise<boolean>;
-  getTerminalForProject: (baseDir: string) => Promise<string | null>;
-  getAllTerminalsForProject: (baseDir: string) => Promise<Array<{ id: string; baseDir: string; cols: number; rows: number }>>;
+  getTerminalForTask: (taskId: string) => Promise<string | null>;
+  getAllTerminalsForTask: (taskId: string) => Promise<Array<{ id: string; taskId: string; cols: number; rows: number }>>;
 }
 ⋮----
 // Todo operations
+⋮----
+// Task lifecycle event listeners
 ⋮----
 // Terminal operations
 
@@ -3713,14 +3719,17 @@ export enum ContextMemoryMode {
 export interface ResponseChunkData {
   messageId: string;
   baseDir: string;
+  taskId: string;
   chunk: string;
   reflectedMessage?: string;
   promptContext?: PromptContext;
 }
 ⋮----
 export interface ResponseCompletedData {
+  type: 'response-completed';
   messageId: string;
   baseDir: string;
+  taskId: string;
   content: string;
   reflectedMessage?: string;
   editedFiles?: string[];
@@ -3734,6 +3743,7 @@ export interface ResponseCompletedData {
 ⋮----
 export interface CommandOutputData {
   baseDir: string;
+  taskId: string;
   command: string;
   output: string;
 }
@@ -3742,6 +3752,7 @@ export type LogLevel = 'info' | 'warning' | 'error' | 'loading';
 ⋮----
 export interface LogData {
   baseDir: string;
+  taskId: string;
   level: LogLevel;
   message?: string;
   finished?: boolean;
@@ -3749,7 +3760,9 @@ export interface LogData {
 }
 ⋮----
 export interface ToolData {
+  type: 'tool';
   baseDir: string;
+  taskId: string;
   id: string;
   serverName: string;
   toolName: string;
@@ -3761,16 +3774,19 @@ export interface ToolData {
 ⋮----
 export interface ContextFilesUpdatedData {
   baseDir: string;
+  taskId: string;
   files: ContextFile[];
 }
 ⋮----
 export interface CustomCommandsUpdatedData {
   baseDir: string;
+  taskId: string;
   commands: CustomCommand[];
 }
 ⋮----
 export interface AutocompletionData {
   baseDir: string;
+  taskId: string;
   words: string[];
   allFiles: string[];
   models: string[];
@@ -3790,6 +3806,7 @@ export interface Answer {
 ⋮----
 export interface QuestionData {
   baseDir: string;
+  taskId: string;
   text: string;
   subject?: string;
   isGroupQuestion?: boolean;
@@ -3883,6 +3900,7 @@ export interface RawModelInfo {
 ⋮----
 export interface ModelsData {
   baseDir: string;
+  taskId: string;
   mainModel: string;
   weakModel?: string | null;
   architectModel?: string | null;
@@ -4052,7 +4070,7 @@ export interface ProjectStartedData {
   baseDir: string;
 }
 ⋮----
-export interface ClearProjectData {
+export interface ClearTaskData {
   baseDir: string;
   taskId: string;
   clearMessages: boolean;
@@ -4078,6 +4096,7 @@ export interface TokensCost {
 ⋮----
 export interface TokensInfoData {
   baseDir: string;
+  taskId: string;
   chatHistory: TokensCost;
   files: Record<string, TokensCost>;
   repoMap: TokensCost;
@@ -4087,13 +4106,16 @@ export interface TokensInfoData {
 ⋮----
 export interface InputHistoryData {
   baseDir: string;
-  messages: string[];
+  taskId: string;
+  inputHistory: string[];
 }
 ⋮----
 export interface UserMessageData {
+  type: 'user';
+  id: string;
   baseDir: string;
+  taskId: string;
   content: string;
-  mode?: Mode;
   promptContext?: PromptContext;
 }
 ⋮----
@@ -4155,31 +4177,17 @@ export interface ModelInfo {
 }
 ⋮----
 export interface TaskContext {
-  version: number;
+  version?: number;
   contextMessages: ContextMessage[];
   contextFiles: ContextFile[];
 }
 ⋮----
-export interface TaskSettings {
-  id: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-  startedAt?: string;
-  completedAt?: string;
+export interface TaskContextData {
+  messages: (ResponseCompletedData | UserMessageData | ToolData)[];
+  files: ContextFile[];
 }
 ⋮----
-export interface TaskData {
-  id: string;
-  baseDir: string;
-  name: string;
-  aiderTotalCost: number;
-  agentTotalCost: number;
-  createdAt: string;
-  updatedAt: string;
-  startedAt?: string;
-  completedAt?: string;
-}
+export type TaskData = z.infer<typeof TaskDataSchema>;
 ⋮----
 export interface TodoItem {
   name: string;
@@ -4241,12 +4249,14 @@ export interface CustomCommand {
 export interface TerminalData {
   terminalId: string;
   baseDir: string;
+  taskId: string;
   data: string;
 }
 ⋮----
 export interface TerminalExitData {
   terminalId: string;
   baseDir: string;
+  taskId: string;
   exitCode: number;
   signal?: number;
 }
@@ -4803,7 +4813,7 @@ inputSchema: tool.inputSchema ? tool.inputSchema : '', // Get Zod schema descrip
 role: msg.role === 'tool' ? 'user' : msg.role, // Map 'tool' role to user message as gpt-tokenizer does not support tool messages
 content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content), // Handle potential non-string content if necessary
 ⋮----
-interrupt(baseDir: string)
+interrupt()
 ⋮----
 private processStep<TOOLS extends ToolSet>(
     currentResponseId: string,
@@ -5136,6 +5146,8 @@ pingTimeout: 600_000, // 10 minutes
 maxHttpBufferSize: 1e8, // Increase payload size to 100 MB
 ⋮----
 public async close()
+⋮----
+// Handle the case where taskId is not available, e.g., log an error or apply to all tasks
 
 ================
 File: src/main/connector/connector.ts
@@ -5391,7 +5403,8 @@ import {
   ProvidersUpdatedData,
   SettingsData,
   TaskData,
-  ClearProjectData,
+  ClearTaskData,
+  ProjectSettings,
 } from '@common/types';
 ⋮----
 import logger from '@/logger';
@@ -5415,9 +5428,9 @@ sendProjectStarted(baseDir: string): void
 sendClearTask(baseDir: string, taskId: string, clearMessages: boolean, clearFiles: boolean): void
 ⋮----
 // File management events
-sendFileAdded(baseDir: string, file: ContextFile): void
+sendFileAdded(baseDir: string, taskId: string, file: ContextFile): void
 ⋮----
-sendContextFilesUpdated(baseDir: string, files: ContextFile[]): void
+sendContextFilesUpdated(baseDir: string, taskId: string, files: ContextFile[]): void
 ⋮----
 // Response events
 sendResponseChunk(data: ResponseChunkData): void
@@ -5428,13 +5441,13 @@ sendResponseCompleted(data: ResponseCompletedData): void
 sendAskQuestion(questionData: QuestionData): void
 ⋮----
 // Autocompletion events
-sendUpdateAutocompletion(baseDir: string, words: string[], allFiles: string[], models: string[]): void
+sendUpdateAutocompletion(baseDir: string, taskId: string, words: string[], allFiles: string[], models: string[]): void
 ⋮----
 // Aider models events
-sendUpdateAiderModels(modelsData: ModelsData): void
+sendUpdateAiderModels(_baseDir: string, _taskId: string, modelsData: ModelsData): void
 ⋮----
 // Command events
-sendCommandOutput(baseDir: string, command: string, output: string): void
+sendCommandOutput(baseDir: string, taskId: string, command: string, output: string): void
 ⋮----
 // Log events
 sendLog(data: LogData): void
@@ -5449,12 +5462,12 @@ sendUserMessage(data: UserMessageData): void
 sendUpdateTokensInfo(tokensInfo: TokensInfoData): void
 ⋮----
 // Input history events
-sendInputHistoryUpdated(inputHistoryData: InputHistoryData): void
+sendInputHistoryUpdated(baseDir: string, taskId: string, inputHistory: string[]): void
 ⋮----
 // Custom commands events
-sendCustomCommandsUpdated(baseDir: string, commands: CustomCommand[]): void
+sendCustomCommandsUpdated(baseDir: string, taskId: string, commands: CustomCommand[]): void
 ⋮----
-sendCustomCommandError(baseDir: string, error: string): void
+sendCustomCommandError(baseDir: string, taskId: string, error: string): void
 ⋮----
 // Terminal events
 sendTerminalData(data: TerminalData): void
@@ -5471,16 +5484,22 @@ sendProvidersUpdated(providers: ProviderProfile[]): void
 ⋮----
 sendProviderModelsUpdated(data: ProviderModelsData): void
 ⋮----
+sendProjectSettingsUpdated(baseDir: string, settings: ProjectSettings): void
+⋮----
 // Task lifecycle events
 sendTaskCreated(task: TaskData): void
 ⋮----
 sendTaskInitialized(task: TaskData): void
+⋮----
+sendTaskUpdated(task: TaskData): void
 ⋮----
 sendTaskStarted(task: TaskData): void
 ⋮----
 sendTaskCompleted(task: TaskData): void
 ⋮----
 sendTaskCancelled(task: TaskData): void
+⋮----
+sendTaskDeleted(task: TaskData): void
 ⋮----
 subscribe(socket: Socket, config: EventsConnectorConfig): void
 ⋮----
@@ -6711,10 +6730,10 @@ import fs from 'fs/promises';
 import path from 'path';
 ⋮----
 import { v4 as uuidv4 } from 'uuid';
-import { ContextFile, ContextMessage, TaskContext, TaskSettings } from '@common/types';
+import { ContextFile, ContextMessage, TaskContext, TaskData } from '@common/types';
 import { fileExists } from '@common/utils';
 ⋮----
-import { AIDER_DESK_DIR } from '@/constants';
+import { AIDER_DESK_DIR, AIDER_DESK_TASKS_DIR } from '@/constants';
 import logger from '@/logger';
 import { Project } from '@/project';
 ⋮----
@@ -6725,6 +6744,8 @@ interface SessionData {
 }
 ⋮----
 /**
+ * @deprecated this will be removed in 0.40.0
+ *
  * Migrates legacy sessions to the new task system.
  *
  * This function:
@@ -6791,11 +6812,11 @@ private createProject(baseDir: string)
 ⋮----
 public getProject(baseDir: string)
 ⋮----
-public startProject(baseDir: string, startupMode?: ProjectStartMode)
+public async startProject(baseDir: string, startupMode?: ProjectStartMode)
 ⋮----
 public async closeProject(baseDir: string)
 ⋮----
-public async restartProject(baseDir: string, startupMode?: ProjectStartMode): Promise<void>
+public async restartProject(baseDir: string): Promise<void>
 ⋮----
 public async close(): Promise<void>
 ⋮----
@@ -6809,8 +6830,9 @@ File: src/main/project/project.ts
 import fs from 'fs/promises';
 import path from 'path';
 ⋮----
-import { CustomCommand, InputHistoryData, ProjectStartMode, SettingsData, TaskData } from '@common/types';
+import { CustomCommand, ProjectStartMode, SettingsData, TaskData } from '@common/types';
 import { fileExists } from '@common/utils';
+import { v4 as uuidv4 } from 'uuid';
 ⋮----
 import { getAllFiles } from '@/utils/file-system';
 import { McpManager } from '@/agent';
@@ -6837,30 +6859,19 @@ constructor(
     private readonly modelManager: ModelManager,
 )
 ⋮----
-public async start(startupMode?: ProjectStartMode)
+// initialize global task
 ⋮----
-// Migrate sessions to tasks before starting
+public async start(_startupMode?: ProjectStartMode)
 ⋮----
-// TODO: temporary solution for backward compatibility
-private async initAutosavedTask(mode?: ProjectStartMode)
+public async createNewTask()
 ⋮----
-// Handle different startup modes
-⋮----
-// Don't load any session, start fresh
-⋮----
-// Load the autosaved session
-⋮----
-private async createTask(taskId: string)
-⋮----
-public async saveTask(name: string, id?: string): Promise<TaskData>
-⋮----
-// If a new task was created (id was not autosaved), add it to the project's task map
+private prepareTask(taskId: string = uuidv4())
 ⋮----
 private async loadTasks()
 ⋮----
-public getTask(taskId: string = 'autosaved')
+// Migrate sessions to tasks before starting
 ⋮----
-public getAutosavedTask()
+public getTask(taskId: string = INTERNAL_TASK_ID)
 ⋮----
 public getProjectSettings()
 ⋮----
@@ -6876,21 +6887,13 @@ public async addToInputHistory(message: string)
 ⋮----
 private async sendInputHistoryUpdatedEvent()
 ⋮----
-public async updateAutocompletionData(words: string[], models: string[])
+public async updateAutocompletionData(taskId: string, words: string[], models: string[])
 ⋮----
 public async getAddableFiles(searchRegex?: string): Promise<string[]>
 ⋮----
 public getCustomCommands()
 ⋮----
-public sendCustomCommandsUpdated(commands: CustomCommand[])
-⋮----
-public async loadTask(taskId: string): Promise<void>
-⋮----
-// Ensure the target directory exists
-⋮----
-// Copy the context.json file
-⋮----
-// Load the context in the autosaved task
+public sendCustomCommandsUpdated(taskId: string, commands: CustomCommand[])
 ⋮----
 public async deleteTask(taskId: string): Promise<void>
 ⋮----
@@ -6898,9 +6901,10 @@ public async deleteTask(taskId: string): Promise<void>
 ⋮----
 // Delete the task directory
 ⋮----
-getTasks(): TaskData[]
+async getTasks(): Promise<TaskData[]>
 ⋮----
-// TODO: should be on task level
+forEachTask(callback: (task: Task) => void)
+⋮----
 async close()
 ⋮----
 settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
@@ -7018,7 +7022,7 @@ File: src/main/server/rest-api/project-api.ts
 ================
 import { Router } from 'express';
 import { z } from 'zod';
-import { ProjectStartMode, ProjectSettingsSchema } from '@common/types';
+import { ProjectSettingsSchema, TaskDataSchema } from '@common/types';
 ⋮----
 import { BaseApi } from './base-api';
 ⋮----
@@ -7050,6 +7054,8 @@ registerRoutes(router: Router): void
 ⋮----
 // Init project rules file
 ⋮----
+// Create new task
+⋮----
 // Save task
 ⋮----
 // Load task messages
@@ -7057,6 +7063,10 @@ registerRoutes(router: Router): void
 // List tasks
 ⋮----
 // Delete session
+⋮----
+// Restart task
+⋮----
+// Load task data
 ⋮----
 // Export session to markdown
 ⋮----
@@ -7728,6 +7738,8 @@ const getWeakModelProvider = () =>
 ⋮----
 // use the provider prefix from the main model when Aider's provider prefix is different
 ⋮----
+sendUpdateAiderModels()
+⋮----
 public updateModels(mainModel: string, weakModel: string | null, editFormat: EditFormat = 'diff'): void
 ⋮----
 private sendSetModels(mainModel: string, weakModel: string | null, editFormat: EditFormat = 'diff', environmentVariables?: Record<string, string>): void
@@ -7766,7 +7778,7 @@ import { promises as fs } from 'fs';
 ⋮----
 import { v4 as uuidv4 } from 'uuid';
 import debounce from 'lodash/debounce';
-import { ContextFile, ContextMessage, MessageRole, ResponseCompletedData, TaskContext, UsageReportData } from '@common/types';
+import { ContextFile, ContextMessage, MessageRole, ResponseCompletedData, TaskContext, ToolData, UsageReportData, UserMessageData } from '@common/types';
 import { extractServerNameToolName, extractTextContent, fileExists, isMessageEmpty, isTextContent } from '@common/utils';
 import { AIDER_TOOL_GROUP_NAME, AIDER_TOOL_RUN_PROMPT, SUBAGENTS_TOOL_GROUP_NAME, SUBAGENTS_TOOL_RUN_TASK } from '@common/tools';
 ⋮----
@@ -7775,6 +7787,7 @@ import { Task } from '@/task';
 import { isDirectory, isFileIgnored } from '@/utils';
 import { ANSWER_RESPONSE_START_TAG, extractPromptContextFromToolResult, THINKING_RESPONSE_STAR_TAG } from '@/agent/utils';
 import { migrateContextV1toV2 } from '@/task/migrations/v1-to-v2';
+import { AIDER_DESK_TASKS_DIR } from '@/constants';
 ⋮----
 export class ContextManager
 ⋮----
@@ -7825,6 +7838,10 @@ toConnectorMessages(contextMessages: ContextMessage[] = this.messages):
 ⋮----
 async save(): Promise<void>
 ⋮----
+private async cleanupContext(): Promise<void>
+⋮----
+// Filter out files that no longer exist
+⋮----
 private async migrateContext(contextData: unknown): Promise<TaskContext>
 ⋮----
 // Sequential migration chain
@@ -7841,7 +7858,21 @@ async loadMessages(messages: ContextMessage[]): Promise<void>
 ⋮----
 // Clear all current messages
 ⋮----
-// Add messages to the UI
+// Get the messages data and send them to the UI
+⋮----
+// UserMessageData
+⋮----
+// ResponseCompletedData
+⋮----
+// ToolData
+⋮----
+// send messages to Connectors (Aider)
+⋮----
+async delete(): Promise<void>
+⋮----
+private autosave()
+⋮----
+public getContextMessagesData(contextMessages: ContextMessage[] = this.messages): (UserMessageData | ResponseCompletedData | ToolData)[]
 ⋮----
 // Collect reasoning and text parts to combine them if both exist
 ⋮----
@@ -7850,6 +7881,8 @@ async loadMessages(messages: ContextMessage[]): Promise<void>
 // Process tool-call parts
 ⋮----
 // Ensure toolCall.toolCallId exists before proceeding
+⋮----
+// Handle aider tool responses - create ResponseCompletedData for each response
 ⋮----
 // @ts-expect-error value is expected to have responses
 ⋮----
@@ -7862,16 +7895,6 @@ async loadMessages(messages: ContextMessage[]): Promise<void>
 // Process combined reasoning and text content
 ⋮----
 // Process tool-call parts
-⋮----
-// send messages to Connectors (Aider)
-⋮----
-async loadFiles(files: ContextFile[]): Promise<void>
-⋮----
-// Drop all current files
-⋮----
-async delete(): Promise<void>
-⋮----
-private autosave()
 ⋮----
 async generateContextMarkdown(): Promise<string | null>
 
@@ -7906,8 +7929,8 @@ import {
   ResponseChunkData,
   ResponseCompletedData,
   SettingsData,
+  TaskContextData,
   TaskData,
-  TaskSettings,
   TodoItem,
   TokensInfoData,
   ToolData,
@@ -7923,7 +7946,7 @@ import type { SimpleGit } from 'simple-git';
 ⋮----
 import { getAllFiles } from '@/utils/file-system';
 import { getCompactConversationPrompt, getInitProjectPrompt, getSystemPrompt } from '@/agent/prompts';
-import { AIDER_DESK_TODOS_FILE } from '@/constants';
+import { AIDER_DESK_TASKS_DIR, AIDER_DESK_TODOS_FILE } from '@/constants';
 import { Agent, McpManager } from '@/agent';
 import { Connector } from '@/connector';
 import { DataManager } from '@/data-manager';
@@ -7943,7 +7966,7 @@ export class Task
 ⋮----
 constructor(
     public readonly project: Project,
-    private readonly taskId: string,
+    public readonly taskId: string,
     private readonly store: Store,
     private readonly mcpManager: McpManager,
     private readonly customCommandManager: CustomCommandManager,
@@ -7953,23 +7976,15 @@ constructor(
     private readonly modelManager: ModelManager,
 )
 ⋮----
-private async loadTaskSettings()
+private async loadTaskData()
+⋮----
+public async saveTask(updates?: Partial<TaskData>)
 ⋮----
 public async init()
 ⋮----
-public async loadContext()
+public async load(): Promise<TaskContextData>
 ⋮----
-public async saveAs(name: string, newTaskId?: string): Promise<TaskData>
-⋮----
-// Ensure target directory exists
-⋮----
-// Copy context.json
-⋮----
-// If the source context.json doesn't exist, create an empty one in the new task dir
-⋮----
-// Create or update settings.json
-⋮----
-// Update the current task's properties if it's being saved to itself
+private async loadContext()
 ⋮----
 public addConnector(connector: Connector)
 ⋮----
@@ -7979,9 +7994,9 @@ public removeConnector(connector: Connector)
 ⋮----
 private normalizeFilePath(filePath: string): string
 ⋮----
-public isStarted()
-⋮----
 public async close(clearContext = false)
+⋮----
+private async cleanUpEmptyTask()
 ⋮----
 private findMessageConnectors(action: MessageAction): Connector[]
 ⋮----
@@ -8007,6 +8022,8 @@ public async runPromptInAgent(
 ): Promise<ResponseCompletedData[]>
 ⋮----
 // send messages to connectors
+⋮----
+private getTaskNameFromPrompt(prompt: string)
 ⋮----
 public async runSubagent(
     profile: AgentProfile,
@@ -8093,8 +8110,6 @@ public async askQuestion(questionData: QuestionData, awaitAnswer = true): Promis
 ⋮----
 // Store the resolve function for the promise
 ⋮----
-public async updateAutocompletionData(words: string[], models: string[])
-⋮----
 public updateAiderModels(modelsData: ModelsData)
 ⋮----
 public updateModels(mainModel: string, weakModel: string | null, editFormat: EditFormat = 'diff')
@@ -8123,6 +8138,12 @@ public async addContextMessage(role: MessageRole, content: string, usageReport?:
 ⋮----
 public sendAddMessage(role: MessageRole = MessageRole.User, content: string, acknowledge = true)
 ⋮----
+public sendUserMessage(data: UserMessageData)
+⋮----
+public sendToolMessage(data: ToolData)
+⋮----
+// Update total costs when adding the tool message
+⋮----
 public async clearContext(addToHistory = false, updateContextInfo = true)
 ⋮----
 public interruptResponse()
@@ -8144,13 +8165,13 @@ public addToolMessage(
 ⋮----
 private updateTotalCosts(usageReport: UsageReportData)
 ⋮----
-public addUserMessage(content: string, mode?: Mode, promptContext?: PromptContext)
+private addUserMessage(id: string, content: string, promptContext?: PromptContext)
 ⋮----
 public async removeLastMessage()
 ⋮----
 public async redoLastUserPrompt(mode: Mode, updatedPrompt?: string)
 ⋮----
-await this.reloadConnectorMessages(); // This sends 'clear-project' which truncates UI messages
+await this.reloadConnectorMessages(); // This sends 'clear-task' which truncates UI messages
 ⋮----
 // No need to await runPrompt here, let it run in the background
 ⋮----
@@ -8245,6 +8266,8 @@ public async runCustomCommand(commandName: string, args: string[], mode: Mode = 
 // All other modes (code, ask, architect)
 ⋮----
 // Clear loading message after execution completes (success or failure)
+⋮----
+async restart()
 
 ================
 File: src/main/telemetry/index.ts
@@ -8330,6 +8353,7 @@ import { EventManager } from '@/events';
 export interface TerminalInstance {
   id: string;
   baseDir: string;
+  taskId: string;
   ptyProcess: pty.IPty;
   cols: number;
   rows: number;
@@ -8347,7 +8371,7 @@ private getShellCommand(): string
 ⋮----
 private getShellArgs(): string[]
 ⋮----
-public createTerminal(baseDir: string, cols: number = 80, rows: number = 24): string
+public createTerminal(baseDir: string, taskId: string, cols: number = 80, rows: number = 24): string
 ⋮----
 // Handle data from terminal
 ⋮----
@@ -8363,9 +8387,9 @@ public closeTerminal(terminalId: string): boolean
 ⋮----
 public closeTerminalForProject(baseDir: string): void
 ⋮----
-public getTerminalForProject(baseDir: string): TerminalInstance | undefined
+public getTerminalForTask(taskId: string): TerminalInstance | undefined
 ⋮----
-public getTerminalsForProject(baseDir: string): TerminalInstance[]
+public getTerminalsForTask(taskId: string): TerminalInstance[]
 ⋮----
 public close(): void
 
@@ -8658,7 +8682,6 @@ import {
   EditFormat,
   EnvironmentVariable,
   FileEdit,
-  Font,
   McpServerConfig,
   McpTool,
   Mode,
@@ -8667,13 +8690,12 @@ import {
   OS,
   ProjectData,
   ProjectSettings,
-  ProjectStartMode,
   ProviderModelsData,
   ProviderProfile,
   ResponseCompletedData,
   SettingsData,
+  TaskContextData,
   TaskData,
-  Theme,
   TodoItem,
   UsageDataRow,
   VersionsInfo,
@@ -8702,13 +8724,7 @@ loadSettings(): SettingsData
 ⋮----
 async saveSettings(newSettings: SettingsData): Promise<SettingsData>
 ⋮----
-saveTheme(theme: Theme): Theme | undefined
-⋮----
-saveFont(font: Font): Font | undefined
-⋮----
-saveFontSize(fontSize: number): number | undefined
-⋮----
-async loadModelsInfo(): Promise<Record<string, ModelInfo>>
+async getModelsInfo(): Promise<Record<string, ModelInfo>>
 ⋮----
 return {}; // Return empty object or handle error as appropriate
 ⋮----
@@ -8716,11 +8732,13 @@ getProjectSettings(baseDir: string): ProjectSettings
 ⋮----
 patchProjectSettings(baseDir: string, settings: Partial<ProjectSettings>): ProjectSettings
 ⋮----
-startProject(baseDir: string): void
+async startProject(baseDir: string)
 ⋮----
 async stopProject(baseDir: string): Promise<void>
 ⋮----
-async restartProject(baseDir: string, startupMode?: ProjectStartMode): Promise<void>
+async restartProject(baseDir: string): Promise<void>
+⋮----
+async restartTask(baseDir: string, taskId: string): Promise<void>
 ⋮----
 getOpenProjects(): ProjectData[]
 ⋮----
@@ -8740,39 +8758,41 @@ addRecentProject(baseDir: string): void
 ⋮----
 removeRecentProject(baseDir: string): void
 ⋮----
-interruptResponse(baseDir: string): void
+interruptResponse(baseDir: string, taskId: string): void
 ⋮----
-clearContext(baseDir: string, includeLastMessage = true): void
+clearContext(baseDir: string, taskId: string, includeLastMessage = true): void
 ⋮----
-async removeLastMessage(baseDir: string): Promise<void>
+async removeLastMessage(baseDir: string, taskId: string): Promise<void>
 ⋮----
-async redoLastUserPrompt(baseDir: string, mode: Mode, updatedPrompt?: string): Promise<void>
+async redoLastUserPrompt(baseDir: string, taskId: string, mode: Mode, updatedPrompt?: string): Promise<void>
 ⋮----
-async compactConversation(baseDir: string, mode: Mode, customInstructions?: string): Promise<void>
+async compactConversation(baseDir: string, taskId: string, mode: Mode, customInstructions?: string): Promise<void>
 ⋮----
 async loadInputHistory(baseDir: string): Promise<string[]>
 ⋮----
-async getAddableFiles(baseDir: string, searchRegex?: string): Promise<string[]>
+async getAddableFiles(baseDir: string, taskId: string, searchRegex?: string): Promise<string[]>
 ⋮----
-async addFile(baseDir: string, filePath: string, readOnly = false): Promise<void>
+async addFile(baseDir: string, taskId: string, filePath: string, readOnly = false): Promise<void>
 ⋮----
-dropFile(baseDir: string, filePath: string): void
+dropFile(baseDir: string, taskId: string, filePath: string): void
 ⋮----
-async pasteImage(baseDir: string): Promise<void>
+async pasteImage(baseDir: string, taskId: string): Promise<void>
 ⋮----
-applyEdits(baseDir: string, edits: FileEdit[]): void
+applyEdits(baseDir: string, taskId: string, edits: FileEdit[]): void
 ⋮----
-async runPrompt(baseDir: string, prompt: string, mode?: Mode): Promise<ResponseCompletedData[]>
+async runPrompt(baseDir: string, taskId: string, prompt: string, mode?: Mode): Promise<ResponseCompletedData[]>
 ⋮----
-answerQuestion(baseDir: string, answer: string): void
+answerQuestion(baseDir: string, taskId: string, answer: string): void
 ⋮----
-runCommand(baseDir: string, command: string): void
+runCommand(baseDir: string, taskId: string, command: string): void
 ⋮----
 async getCustomCommands(baseDir: string): Promise<CustomCommand[]>
 ⋮----
-async runCustomCommand(baseDir: string, commandName: string, args: string[], mode: Mode): Promise<void>
+async runCustomCommand(baseDir: string, taskId: string, commandName: string, args: string[], mode: Mode): Promise<void>
 ⋮----
 updateMainModel(baseDir: string, mainModel: string): void
+⋮----
+// Only clear weak model if not locked
 ⋮----
 updateWeakModel(baseDir: string, weakModel: string): void
 ⋮----
@@ -8788,7 +8808,7 @@ async reloadMcpServers(mcpServers: Record<string, McpServerConfig>, force = fals
 ⋮----
 // Get the currently active project's base directory
 ⋮----
-async createTerminal(baseDir: string, cols?: number, rows?: number): Promise<string>
+async createTerminal(baseDir: string, taskId: string, cols?: number, rows?: number): Promise<string>
 ⋮----
 writeToTerminal(terminalId: string, data: string): void
 ⋮----
@@ -8796,11 +8816,11 @@ resizeTerminal(terminalId: string, cols: number, rows: number): void
 ⋮----
 closeTerminal(terminalId: string): void
 ⋮----
-getTerminalForProject(baseDir: string): string | null
+getTerminalForTask(taskId: string): string | null
 ⋮----
-getTerminalsForProject(baseDir: string):
+getTerminalsForTask(baseDir: string):
 ⋮----
-async scrapeWeb(baseDir: string, url: string, filePath?: string): Promise<void>
+async scrapeWeb(baseDir: string, taskId: string, url: string, filePath?: string): Promise<void>
 ⋮----
 // Normalize URL for filename
 ⋮----
@@ -8808,15 +8828,17 @@ async scrapeWeb(baseDir: string, url: string, filePath?: string): Promise<void>
 ⋮----
 // Check if path looks like a directory (ends with separator)
 ⋮----
-async saveTask(baseDir: string, name: string, id?: string): Promise<TaskData>
+async createNewTask(baseDir: string): Promise<TaskData>
 ⋮----
-async loadTask(baseDir: string, id: string): Promise<void>
+async updateTask(baseDir: string, id: string, updates: Partial<TaskData>): Promise<TaskData | undefined>
 ⋮----
 async deleteTask(baseDir: string, id: string): Promise<void>
 ⋮----
 async getTasks(baseDir: string): Promise<TaskData[]>
 ⋮----
-async exportTaskToMarkdown(baseDir: string): Promise<void>
+async loadTask(baseDir: string, taskId: string): Promise<TaskContextData>
+⋮----
+async exportTaskToMarkdown(baseDir: string, taskId: string): Promise<void>
 ⋮----
 setZoomLevel(zoomLevel: number): void
 ⋮----
@@ -8854,17 +8876,17 @@ async isValidPath(baseDir: string, path: string): Promise<boolean>
 ⋮----
 async getFilePathSuggestions(currentPath: string, directoriesOnly = true): Promise<string[]>
 ⋮----
-async getTodos(baseDir: string): Promise<TodoItem[]>
+async getTodos(baseDir: string, taskId: string): Promise<TodoItem[]>
 ⋮----
-async addTodo(baseDir: string, name: string): Promise<TodoItem[]>
+async addTodo(baseDir: string, taskId: string, name: string): Promise<TodoItem[]>
 ⋮----
-async updateTodo(baseDir: string, name: string, updates: Partial<TodoItem>): Promise<TodoItem[]>
+async updateTodo(baseDir: string, taskId: string, name: string, updates: Partial<TodoItem>): Promise<TodoItem[]>
 ⋮----
-async deleteTodo(baseDir: string, name: string): Promise<TodoItem[]>
+async deleteTodo(baseDir: string, taskId: string, name: string): Promise<TodoItem[]>
 ⋮----
-async clearAllTodos(baseDir: string): Promise<TodoItem[]>
+async clearAllTodos(baseDir: string, taskId: string): Promise<TodoItem[]>
 ⋮----
-async initProjectRulesFile(baseDir: string): Promise<void>
+async initProjectRulesFile(baseDir: string, taskId: string): Promise<void>
 ⋮----
 enableServer(username?: string, password?: string): SettingsData
 ⋮----
@@ -8977,7 +8999,7 @@ updateProgress = () =>
 ================
 File: src/main/ipc-handlers.ts
 ================
-import { EditFormat, FileEdit, ProviderProfile, McpServerConfig, Mode, Model, ProjectSettings, SettingsData, ProjectStartMode, TodoItem } from '@common/types';
+import { EditFormat, FileEdit, McpServerConfig, Mode, Model, ProjectSettings, ProviderProfile, SettingsData, TaskData, TodoItem } from '@common/types';
 import { ipcMain } from 'electron';
 ⋮----
 import { EventsHandler } from './events-handler';
@@ -9388,7 +9410,7 @@ File: src/preload/index.ts
 ================
 import {
   AutocompletionData,
-  ClearProjectData,
+  ClearTaskData,
   CommandOutputData,
   ContextFilesUpdatedData,
   CustomCommandsUpdatedData,
@@ -9398,27 +9420,30 @@ import {
   McpServerConfig,
   ModelsData,
   OS,
+  ProjectSettings,
   ProjectStartedData,
+  ProviderModelsData,
+  ProvidersUpdatedData,
   QuestionData,
   ResponseChunkData,
   ResponseCompletedData,
+  SettingsData,
+  TaskData,
   TerminalData,
   TerminalExitData,
   TokensInfoData,
   ToolData,
   UserMessageData,
   VersionsInfo,
-  ProviderModelsData,
-  ProvidersUpdatedData,
-  SettingsData,
 } from '@common/types';
 import { electronAPI } from '@electron-toolkit/preload';
-⋮----
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import { ApplicationAPI } from '@common/api';
 import { compareBaseDirs } from '@common/utils';
 ⋮----
 const listener = (_: Electron.IpcRendererEvent, data: SettingsData) =>
+⋮----
+// Task lifecycle event listeners
 ⋮----
 // Terminal operations
 ⋮----
@@ -9429,7 +9454,7 @@ File: src/renderer/src/api/browser-api.ts
 ================
 import {
   AutocompletionData,
-  ClearProjectData,
+  ClearTaskData,
   CloudflareTunnelStatus,
   CommandOutputData,
   ContextFilesUpdatedData,
@@ -9450,7 +9475,6 @@ import {
   ProjectData,
   ProjectSettings,
   ProjectStartedData,
-  ProjectStartMode,
   ProviderModelsData,
   ProviderProfile,
   ProvidersUpdatedData,
@@ -9458,6 +9482,7 @@ import {
   ResponseChunkData,
   ResponseCompletedData,
   SettingsData,
+  TaskContextData,
   TaskData,
   TerminalData,
   TerminalExitData,
@@ -9489,10 +9514,18 @@ type EventDataMap = {
   tool: ToolData;
   'user-message': UserMessageData;
   'input-history-updated': InputHistoryData;
-  'clear-project': ClearProjectData;
+  'clear-task': ClearTaskData;
   'project-started': ProjectStartedData;
   'provider-models-updated': ProviderModelsData;
   'providers-updated': ProvidersUpdatedData;
+  'project-settings-updated': { baseDir: string; settings: ProjectSettings };
+  'task-created': TaskData;
+  'task-initialized': TaskData;
+  'task-updated': TaskData;
+  'task-deleted': TaskData;
+  'task-started': TaskData;
+  'task-completed': TaskData;
+  'task-cancelled': TaskData;
 };
 ⋮----
 type EventCallback<T> = (data: T) => void;
@@ -9500,6 +9533,7 @@ type EventCallback<T> = (data: T) => void;
 interface ListenerEntry<T> {
   callback: EventCallback<T>;
   baseDir?: string;
+  taskId?: string;
 }
 ⋮----
 class UnsupportedError extends Error
@@ -9514,9 +9548,13 @@ constructor()
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
+// Filter by baseDir
+⋮----
+// Filter by taskId for task-level events
+⋮----
 private ensureSocketConnected(): void
 ⋮----
-private addListener<T extends keyof EventDataMap>(eventType: T, baseDir: string | undefined, callback: EventCallback<EventDataMap[T]>): () => void
+private addListener<T extends keyof EventDataMap>(eventType: T, callback: EventCallback<EventDataMap[T]>, baseDir?: string, taskId?: string): () => void
 ⋮----
 private async post<B, R>(endpoint: string, body: B): Promise<R>
 ⋮----
@@ -9532,12 +9570,14 @@ isOpenLogsDirectorySupported(): boolean
 openLogsDirectory(): Promise<boolean>
 loadSettings(): Promise<SettingsData>
 saveSettings(settings: SettingsData): Promise<SettingsData>
-startProject(baseDir: string): void
+startProject(baseDir: string): Promise<void>
 stopProject(baseDir: string): void
-restartProject(baseDir: string, startupMode?: ProjectStartMode): void
-runPrompt(baseDir: string, prompt: string, mode?: Mode): void
-redoLastUserPrompt(baseDir: string, mode: Mode, updatedPrompt?: string): void
-answerQuestion(baseDir: string, answer: string): void
+⋮----
+restartProject(baseDir: string): void
+restartTask(baseDir: string, taskId: string): void
+runPrompt(baseDir: string, taskId: string, prompt: string, mode?: Mode): void
+redoLastUserPrompt(baseDir: string, taskId: string, mode: Mode, updatedPrompt?: string): void
+answerQuestion(baseDir: string, taskId: string, answer: string): void
 loadInputHistory(baseDir: string): Promise<string[]>
 isOpenDialogSupported(): boolean
 showOpenDialog(options: Electron.OpenDialogSyncOptions): Promise<Electron.OpenDialogReturnValue>
@@ -9554,35 +9594,37 @@ updateEditFormats(baseDir: string, editFormats: Record<string, EditFormat>): voi
 getProjectSettings(baseDir: string): Promise<ProjectSettings>
 patchProjectSettings(baseDir: string, settings: Partial<ProjectSettings>): Promise<ProjectSettings>
 getFilePathSuggestions(currentPath: string, directoriesOnly?: boolean): Promise<string[]>
-getAddableFiles(baseDir: string): Promise<string[]>
-addFile(baseDir: string, filePath: string, readOnly?: boolean): void
+getAddableFiles(baseDir: string, taskId: string): Promise<string[]>
+addFile(baseDir: string, taskId: string, filePath: string, readOnly?: boolean): void
 async isValidPath(baseDir: string, path: string): Promise<boolean>
 async isProjectPath(path: string): Promise<boolean>
-dropFile(baseDir: string, path: string): void
-runCommand(baseDir: string, command: string): void
-pasteImage(baseDir: string): void
-scrapeWeb(baseDir: string, url: string, filePath?: string): Promise<string>
-initProjectRulesFile(baseDir: string): Promise<void>
-getTodos(baseDir: string): Promise<TodoItem[]>
-addTodo(baseDir: string, name: string): Promise<TodoItem[]>
-updateTodo(baseDir: string, name: string, updates: Partial<TodoItem>): Promise<TodoItem[]>
-deleteTodo(baseDir: string, name: string): Promise<TodoItem[]>
-clearAllTodos(baseDir: string): Promise<TodoItem[]>
+dropFile(baseDir: string, taskId: string, path: string): void
+runCommand(baseDir: string, taskId: string, command: string): void
+pasteImage(baseDir: string, taskId: string): void
+scrapeWeb(baseDir: string, taskId: string, url: string, filePath?: string): Promise<void>
+initProjectRulesFile(baseDir: string, taskId: string): Promise<void>
+getTodos(baseDir: string, taskId: string): Promise<TodoItem[]>
+addTodo(baseDir: string, taskId: string, name: string): Promise<TodoItem[]>
+updateTodo(baseDir: string, taskId: string, name: string, updates: Partial<TodoItem>): Promise<TodoItem[]>
+deleteTodo(baseDir: string, taskId: string, name: string): Promise<TodoItem[]>
+clearAllTodos(baseDir: string, taskId: string): Promise<TodoItem[]>
 loadMcpServerTools(serverName: string, config?: McpServerConfig): Promise<McpTool[] | null>
 reloadMcpServers(mcpServers: Record<string, McpServerConfig>, force = false): Promise<void>
-saveTask(baseDir: string, name: string, id?: string): Promise<boolean>
+createNewTask(baseDir: string): Promise<TaskData>
+updateTask(baseDir: string, id: string, updates: Partial<TaskData>): Promise<boolean>
 deleteTask(baseDir: string, id: string): Promise<boolean>
-loadTask(baseDir: string, id: string): Promise<void>
 getTasks(baseDir: string): Promise<TaskData[]>
-exportTaskToMarkdown(baseDir: string): Promise<void>
+loadTask(baseDir: string, id: string): Promise<TaskContextData>
+exportTaskToMarkdown(baseDir: string, taskId: string): Promise<void>
 getRecentProjects(): Promise<string[]>
 addRecentProject(baseDir: string): Promise<void>
 removeRecentProject(baseDir: string): Promise<void>
-interruptResponse(baseDir: string): void
-applyEdits(baseDir: string, edits: FileEdit[]): void
-clearContext(baseDir: string): void
-removeLastMessage(baseDir: string): void
-compactConversation(baseDir: string, mode: Mode, customInstructions?: string): void
+interruptResponse(baseDir: string, taskId: string): void
+applyEdits(baseDir: string, taskId: string, edits: FileEdit[]): void
+⋮----
+clearContext(baseDir: string, taskId: string): void
+removeLastMessage(baseDir: string, taskId: string): void
+compactConversation(baseDir: string, taskId: string, mode: Mode, customInstructions?: string): void
 setZoomLevel(level: number): Promise<void>
 ⋮----
 // eslint-disable-next-line no-console
@@ -9601,39 +9643,56 @@ deleteModel(providerId: string, modelId: string): Promise<ProviderModelsData>
 queryUsageData(from: string, to: string): Promise<UsageDataRow[]>
 getEffectiveEnvironmentVariable(key: string, baseDir?: string): Promise<EnvironmentVariable | undefined>
 addSettingsUpdatedListener(callback: (data: SettingsData) => void): () => void
-addResponseChunkListener(baseDir: string, callback: (data: ResponseChunkData) => void): () => void
-addResponseCompletedListener(baseDir: string, callback: (data: ResponseCompletedData) => void): () => void
-addLogListener(baseDir: string, callback: (data: LogData) => void): () => void
-addContextFilesUpdatedListener(baseDir: string, callback: (data: ContextFilesUpdatedData) => void): () => void
+addResponseChunkListener(baseDir: string, taskId: string, callback: (data: ResponseChunkData) => void): () => void
+addResponseCompletedListener(baseDir: string, taskId: string, callback: (data: ResponseCompletedData) => void): () => void
+addLogListener(baseDir: string, taskId: string, callback: (data: LogData) => void): () => void
+addContextFilesUpdatedListener(baseDir: string, taskId: string, callback: (data: ContextFilesUpdatedData) => void): () => void
 addCustomCommandsUpdatedListener(baseDir: string, callback: (data: CustomCommandsUpdatedData) => void): () => void
-addUpdateAutocompletionListener(baseDir: string, callback: (data: AutocompletionData) => void): () => void
-addAskQuestionListener(baseDir: string, callback: (data: QuestionData) => void): () => void
-addUpdateAiderModelsListener(baseDir: string, callback: (data: ModelsData) => void): () => void
-addCommandOutputListener(baseDir: string, callback: (data: CommandOutputData) => void): () => void
-addTokensInfoListener(baseDir: string, callback: (data: TokensInfoData) => void): () => void
-addToolListener(baseDir: string, callback: (data: ToolData) => void): () => void
-addUserMessageListener(baseDir: string, callback: (data: UserMessageData) => void): () => void
+addUpdateAutocompletionListener(baseDir: string, taskId: string, callback: (data: AutocompletionData) => void): () => void
+addAskQuestionListener(baseDir: string, taskId: string, callback: (data: QuestionData) => void): () => void
+addUpdateAiderModelsListener(baseDir: string, taskId: string, callback: (data: ModelsData) => void): () => void
+addCommandOutputListener(baseDir: string, taskId: string, callback: (data: CommandOutputData) => void): () => void
+addTokensInfoListener(baseDir: string, taskId: string, callback: (data: TokensInfoData) => void): () => void
+addToolListener(baseDir: string, taskId: string, callback: (data: ToolData) => void): () => void
+addUserMessageListener(baseDir: string, taskId: string, callback: (data: UserMessageData) => void): () => void
 addInputHistoryUpdatedListener(baseDir: string, callback: (data: InputHistoryData) => void): () => void
-addClearProjectListener(baseDir: string, callback: (data: ClearProjectData) => void): () => void
+addClearTaskListener(baseDir: string, taskId: string, callback: (data: ClearTaskData) => void): () => void
 addProjectStartedListener(baseDir: string, callback: (data: ProjectStartedData) => void): () => void
 addVersionsInfoUpdatedListener(callback: (data: VersionsInfo) => void): () => void
 ⋮----
 addProviderModelsUpdatedListener(callback: (data: ProviderModelsData) => void): () => void
 ⋮----
 addProvidersUpdatedListener(callback: (data: ProvidersUpdatedData) => void): () => void
+⋮----
+addProjectSettingsUpdatedListener(baseDir: string, callback: (data:
+⋮----
+// Task lifecycle event listeners
+addTaskCreatedListener(baseDir: string, callback: (data: TaskData) => void): () => void
+⋮----
+addTaskInitializedListener(baseDir: string, callback: (data: TaskData) => void): () => void
+⋮----
+addTaskUpdatedListener(baseDir: string, callback: (data: TaskData) => void): () => void
+⋮----
+addTaskStartedListener(baseDir: string, callback: (data: TaskData) => void): () => void
+⋮----
+addTaskCompletedListener(baseDir: string, callback: (data: TaskData) => void): () => void
+⋮----
+addTaskCancelledListener(baseDir: string, callback: (data: TaskData) => void): () => void
+⋮----
+addTaskDeletedListener(baseDir: string, callback: (data: TaskData) => void): () => void
 addTerminalDataListener(baseDir: string, callback: (data: TerminalData) => void): () => void
 addTerminalExitListener(baseDir: string, callback: (data: TerminalExitData) => void): () => void
 addContextMenuListener(callback: (params: Electron.ContextMenuParams) => void): () => void
 addOpenSettingsListener(callback: (tabIndex: number) => void): () => void
 getCustomCommands(baseDir: string): Promise<CustomCommand[]>
-runCustomCommand(baseDir: string, commandName: string, args: string[], mode: Mode): Promise<void>
+runCustomCommand(baseDir: string, taskId: string, commandName: string, args: string[], mode: Mode): Promise<void>
 isTerminalSupported(): boolean
-createTerminal(baseDir: string, cols?: number, rows?: number): Promise<string>
+createTerminal(baseDir: string, taskId: string, cols?: number, rows?: number): Promise<string>
 writeToTerminal(terminalId: string, data: string): Promise<boolean>
 resizeTerminal(terminalId: string, cols: number, rows: number): Promise<boolean>
 closeTerminal(terminalId: string): Promise<boolean>
-getTerminalForProject(baseDir: string): Promise<string | null>
-getAllTerminalsForProject(baseDir: string): Promise<Array<
+getTerminalForTask(baseDir: string): Promise<string | null>
+getAllTerminalsForTask(taskId: string): Promise<Array<
 isManageServerSupported(): boolean
 ⋮----
 startServer(username?: string, password?: string): Promise<boolean>
@@ -9670,11 +9729,11 @@ import { useClickOutside } from '@/hooks/useClickOutside';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { Accordion } from '@/components/common/Accordion';
-import { useSettings } from '@/context/SettingsContext';
-import { useProjectSettings } from '@/context/ProjectSettingsContext';
+import { useSettings } from '@/contexts/SettingsContext';
+import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
 import { Checkbox } from '@/components/common/Checkbox';
 import { SettingsDialog } from '@/components/settings/SettingsDialog';
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type Props = {
   isActive: boolean;
@@ -9722,7 +9781,7 @@ import { useTranslation } from 'react-i18next';
 ⋮----
 import { Checkbox } from '../common/Checkbox';
 ⋮----
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type Props = {
   serverName: string;
@@ -9903,7 +9962,7 @@ import { ReactNode } from 'react';
 import { twMerge } from 'tailwind-merge';
 ⋮----
 type ButtonVariant = 'contained' | 'text' | 'outline';
-type ButtonColor = 'primary' | 'secondary' | 'danger';
+type ButtonColor = 'primary' | 'secondary' | 'tertiary' | 'danger';
 type ButtonSize = 'sm' | 'md' | 'xs';
 ⋮----
 type Props = {
@@ -9965,7 +10024,7 @@ import { CopyMessageButton } from '../message/CopyMessageButton';
 import { IconButton } from './IconButton';
 ⋮----
 import { DiffViewer, UDiffViewer } from '@/components/common/DiffViewer';
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 const isCustomDiffContent = (content: string): boolean =>
 ⋮----
@@ -9979,6 +10038,7 @@ const parseDiffContent = (content: string):
 ⋮----
 type Props = {
   baseDir: string;
+  taskId?: string;
   language: string;
   children?: string;
   file?: string;
@@ -10168,10 +10228,14 @@ className=
 File: src/renderer/src/components/common/Input.tsx
 ================
 import { forwardRef, InputHTMLAttributes, ReactNode } from 'react';
+import { twMerge } from 'tailwind-merge';
 ⋮----
-export type Props = InputHTMLAttributes<HTMLInputElement> & {
+type InputSize = 'md' | 'sm';
+⋮----
+export type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> & {
   wrapperClassName?: string;
   label?: ReactNode;
+  size?: InputSize;
 };
 
 ================
@@ -10503,7 +10567,7 @@ body.theme-light .context-dimmed {
 ================
 File: src/renderer/src/components/ContextFiles/ContextFiles.tsx
 ================
-import { ContextFile, ContextFilesUpdatedData, OS, TokensInfoData } from '@common/types';
+import { ContextFile, OS, TokensInfoData } from '@common/types';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import objectHash from 'object-hash';
 import { ControlledTreeEnvironment, Tree } from 'react-complex-tree';
@@ -10512,11 +10576,12 @@ import { BiCollapseVertical, BiExpandVertical } from 'react-icons/bi';
 import { LuFolderTree } from 'react-icons/lu';
 import { TbPencilOff } from 'react-icons/tb';
 import { useTranslation } from 'react-i18next';
+import { usePrevious } from '@reactuses/core';
 ⋮----
 import { StyledTooltip } from '../common/StyledTooltip';
 ⋮----
 import { useOS } from '@/hooks/useOS';
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 interface TreeItem {
   index: string;
@@ -10534,12 +10599,14 @@ const createFileTree = (files: ContextFile[]) =>
 ⋮----
 type Props = {
   baseDir: string;
+  taskId: string;
   allFiles: string[];
+  contextFiles: ContextFile[];
   showFileDialog: () => void;
   tokensInfo?: TokensInfoData | null;
 };
 ⋮----
-// Handle highlighting of new files
+// eslint-disable-next-line react-hooks/exhaustive-deps
 ⋮----
 const checkChild = (childKey: string) =>
 ⋮----
@@ -12589,10 +12656,11 @@ import { FileFinder } from '@/components/project/FileFinder';
 import { FileChip } from '@/components/common/FileChip';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { Checkbox } from '@/components/common/Checkbox';
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type Props = {
   baseDir: string;
+  taskId: string;
   onClose: () => void;
   onAddFiles: (filePaths: string[], readOnly?: boolean) => void;
   initialReadOnly?: boolean;
@@ -12632,10 +12700,11 @@ import { PiKeyReturn } from 'react-icons/pi';
 import { AutocompletionInput } from '@/components/AutocompletionInput';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type Props = {
   baseDir?: string;
+  taskId?: string;
   isReadOnly: boolean;
   selectedPaths: string[];
   onPathAdded: (path: string) => void;
@@ -12684,7 +12753,7 @@ File: src/renderer/src/components/project/MobileSidebar.tsx
 import React from 'react';
 import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
-import { Mode, TokensInfoData, ProjectSettings } from '@common/types';
+import { Mode, TokensInfoData, ProjectSettings, ContextFile } from '@common/types';
 import { FiChevronDown } from 'react-icons/fi';
 ⋮----
 import { SidebarContent } from '@/components/project/SidebarContent';
@@ -12697,13 +12766,15 @@ type Props = {
   showSidebar: boolean;
   setShowSidebar: (show: boolean) => void;
   baseDir: string;
+  taskId: string;
   allFiles: string[];
+  contextFiles: ContextFile[];
   tokensInfo: TokensInfoData | null;
   aiderTotalCost: number;
   maxInputTokens: number;
   clearMessages: (clearContext?: boolean) => void;
   runCommand: (command: string) => void;
-  restartProject: () => void;
+  restartTask: () => void;
   mode: Mode;
   setAddFileDialogOptions: React.Dispatch<React.SetStateAction<AddFileDialogOptions | null>>;
   projectSettings: ProjectSettings;
@@ -12714,13 +12785,15 @@ export const MobileSidebar = ({
   showSidebar,
   setShowSidebar,
   baseDir,
+  taskId,
   allFiles,
+  contextFiles,
   tokensInfo,
   aiderTotalCost,
   maxInputTokens,
   clearMessages,
   runCommand,
-  restartProject,
+  restartTask,
   mode,
   setAddFileDialogOptions,
   projectSettings,
@@ -12752,7 +12825,7 @@ import { Accordion } from '@/components/common/Accordion';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type Props = {
   onClose: () => void;
@@ -12777,13 +12850,13 @@ confirmButtonText=
 ================
 File: src/renderer/src/components/project/ProjectBar.tsx
 ================
-import { EditFormat, Mode, Model, ModelsData, RawModelInfo, TaskData } from '@common/types';
-import React, { ReactNode, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { EditFormat, Mode, Model, ModelsData, RawModelInfo } from '@common/types';
+import React, { ReactNode, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
 import { BsCodeSlash, BsFilter, BsLayoutSidebar } from 'react-icons/bs';
 import { CgTerminal } from 'react-icons/cg';
 import { GoProjectRoadmap } from 'react-icons/go';
 import { IoMdClose } from 'react-icons/io';
-import { MdHistory } from 'react-icons/md';
+import { VscLock, VscUnlock } from 'react-icons/vsc';
 import { RiRobot2Line } from 'react-icons/ri';
 import { useTranslation } from 'react-i18next';
 import { getProviderModelId } from '@common/agent';
@@ -12792,14 +12865,10 @@ import { IconButton } from '@/components/common/IconButton';
 import { AgentModelSelector } from '@/components/AgentModelSelector';
 import { ModelSelector, ModelSelectorRef } from '@/components/ModelSelector';
 import { EditFormatSelector } from '@/components/PromptField/EditFormatSelector';
-import { SessionsPopup } from '@/components/SessionsPopup';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
-import { useSettings } from '@/context/SettingsContext';
-import { useProjectSettings } from '@/context/ProjectSettingsContext';
-import { useClickOutside } from '@/hooks/useClickOutside';
-import { useBooleanState } from '@/hooks/useBooleanState';
-import { showSuccessNotification } from '@/utils/notifications';
-import { useApi } from '@/context/ApiContext';
+import { useSettings } from '@/contexts/SettingsContext';
+import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
+import { useApi } from '@/contexts/ApiContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useModelProviders } from '@/contexts/ModelProviderContext';
 ⋮----
@@ -12810,6 +12879,7 @@ export type ProjectTopBarRef = {
 ⋮----
 type Props = {
   baseDir: string;
+  taskId: string;
   modelsData: ModelsData | null;
   mode: Mode;
   onModelsChange?: (modelsData: ModelsData | null) => void;
@@ -12818,17 +12888,7 @@ type Props = {
   onToggleSidebar: () => void;
 };
 ⋮----
-// eslint-disable-next-line no-console
-⋮----
 // optimistic update
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-// eslint-disable-next-line no-console
 ⋮----
 // Two-row layout for Agent mode with Aider tools
 ⋮----
@@ -12855,7 +12915,7 @@ import { useTranslation } from 'react-i18next';
 ⋮----
 import type { DragEndEvent } from '@dnd-kit/core';
 ⋮----
-import { MenuOption, useContextMenu } from '@/context/ContextMenuContext';
+import { MenuOption, useContextMenu } from '@/contexts/ContextMenuContext';
 ⋮----
 type ProjectOperations = {
   onCloseProject: (baseDir: string) => Promise<void>;
@@ -12923,54 +12983,186 @@ e.stopPropagation(); // Prevent tab selection/drag initiation
 ================
 File: src/renderer/src/components/project/ProjectView.tsx
 ================
-import {
-  AutocompletionData,
-  ClearProjectData,
-  CommandOutputData,
-  InputHistoryData,
-  LogData,
-  Mode,
-  Model,
-  ModelsData,
-  ProjectData,
-  QuestionData,
-  ResponseChunkData,
-  ResponseCompletedData,
-  TodoItem,
-  TokensInfoData,
-  ToolData,
-  UserMessageData,
-} from '@common/types';
+import { InputHistoryData, ProjectData, ProjectStartMode, TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { useLocalStorage } from '@reactuses/core';
+import { CgSpinner } from 'react-icons/cg';
+⋮----
+import { useSettings } from '@/contexts/SettingsContext';
+import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
+import { TaskView } from '@/components/project/TaskView';
+import { COLLAPSED_WIDTH, EXPANDED_WIDTH, TaskSidebar } from '@/components/project/TaskSidebar';
+import { useApi } from '@/contexts/ApiContext';
+import { TaskProvider } from '@/contexts/TaskContext';
+⋮----
+type Props = {
+  project: ProjectData;
+  isActive?: boolean;
+};
+⋮----
+// Task will be automatically added via the existing listener
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+const handleProjectStarted = () =>
+⋮----
+const handleTaskCreated = (taskData: TaskData) =>
+⋮----
+const handleTaskInitialized = (taskData: TaskData) =>
+⋮----
+const handleTaskUpdated = (taskData: TaskData) =>
+⋮----
+const handleTaskStarted = (taskData: TaskData) =>
+⋮----
+const handleTaskCompleted = (taskData: TaskData) =>
+⋮----
+const handleTaskCancelled = (taskData: TaskData) =>
+⋮----
+const handleTaskDeleted = (taskData: TaskData) =>
+⋮----
+const handleInputHistoryUpdate = (data: InputHistoryData) =>
+⋮----
+// Set up listeners
+⋮----
+const initProject = async () =>
+⋮----
+// Start project
+⋮----
+// Load tasks
+⋮----
+// Handle startup mode
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+const handleTaskSelect = (taskId: string) =>
+⋮----
+const handleToggleCollapse = () =>
+⋮----
+// Task will be automatically updated via the existing handleTaskUpdated listener
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// Task will be automatically removed via the existing handleTaskDeleted listener
+⋮----
+// eslint-disable-next-line no-console
+
+================
+File: src/renderer/src/components/project/SidebarContent.tsx
+================
+import { TokensInfoData, Mode, ProjectSettings, ContextFile } from '@common/types';
+⋮----
+import { ContextFiles } from '@/components/ContextFiles';
+import { CostInfo } from '@/components/CostInfo';
+⋮----
+type Props = {
+  baseDir: string;
+  taskId: string;
+  allFiles: string[];
+  contextFiles: ContextFile[];
+  tokensInfo: TokensInfoData | null;
+  aiderTotalCost: number;
+  maxInputTokens: number;
+  clearMessages: (clearContext?: boolean) => void;
+  runCommand: (command: string) => void;
+  restartTask: () => void;
+  mode: Mode;
+  showFileDialog: () => void;
+  projectSettings: ProjectSettings;
+  saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
+};
+⋮----
+export const SidebarContent = ({
+  baseDir,
+  taskId,
+  allFiles,
+  contextFiles,
+  tokensInfo,
+  aiderTotalCost,
+  maxInputTokens,
+  clearMessages,
+  runCommand,
+  restartTask,
+  mode,
+  showFileDialog,
+  projectSettings,
+  saveProjectSettings,
+}: Props) =>
+
+================
+File: src/renderer/src/components/project/TaskSidebar.tsx
+================
+import { TaskData } from '@common/types';
+import { useTranslation } from 'react-i18next';
+import { KeyboardEvent, MouseEvent, useState } from 'react';
+import { HiOutlinePencil, HiOutlineTrash, HiPlus } from 'react-icons/hi';
+import { RiMenuUnfold4Line } from 'react-icons/ri';
+import { CgSpinner } from 'react-icons/cg';
+import { clsx } from 'clsx';
+import { AnimatePresence, motion } from 'framer-motion';
+⋮----
+import { useTask } from '@/contexts/TaskContext';
+import { Input } from '@/components/common/Input';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Button } from '@/components/common/Button';
+⋮----
+type Props = {
+  baseDir: string;
+  loading: boolean;
+  tasks: TaskData[];
+  activeTaskId: string | null;
+  onTaskSelect: (taskId: string) => void;
+  createNewTask?: () => void;
+  className?: string;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
+  updateTask?: (baseDir: string, taskId: string, updates: Partial<TaskData>) => Promise<boolean>;
+  deleteTask?: (baseDir: string, taskId: string) => Promise<boolean>;
+};
+⋮----
+const handleTaskClick = (taskId: string) =>
+⋮----
+const handleDeleteClick = (e: MouseEvent<HTMLButtonElement>, taskId: string) =>
+⋮----
+const handleConfirmDelete = async (taskId: string) =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+const handleCancelDelete = () =>
+⋮----
+const handleEditClick = (e: MouseEvent<HTMLButtonElement>, taskId: string, taskName: string) =>
+⋮----
+const handleConfirmEdit = async (taskId: string) =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+const handleCancelEdit = () =>
+⋮----
+const handleEditKeyDown = (e: KeyboardEvent<HTMLInputElement>) =>
+⋮----
+const handleCreateTask = () =>
+⋮----
+
+⋮----
+className=
+
+================
+File: src/renderer/src/components/project/TaskView.tsx
+================
+import { Mode, Model, ModelsData, ProjectData, TaskData, TodoItem } from '@common/types';
+import { useTranslation } from 'react-i18next';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { CgSpinner } from 'react-icons/cg';
 import { ResizableBox } from 'react-resizable';
-import { v4 as uuidv4 } from 'uuid';
 import { clsx } from 'clsx';
 import { getActiveAgentProfile } from '@common/utils';
-import { TODO_TOOL_CLEAR_ITEMS, TODO_TOOL_GET_ITEMS, TODO_TOOL_GROUP_NAME, TODO_TOOL_SET_ITEMS, TODO_TOOL_UPDATE_ITEM_COMPLETION } from '@common/tools';
 import { getProviderModelId } from '@common/agent';
 ⋮----
-import {
-  CommandOutputMessage,
-  isCommandOutputMessage,
-  isLoadingMessage,
-  isLogMessage,
-  isResponseMessage,
-  isToolMessage,
-  isUserMessage,
-  LoadingMessage,
-  LogMessage,
-  Message,
-  ReflectedMessage,
-  ResponseMessage,
-  ToolMessage,
-  UserMessage,
-} from '@/types/message';
+import { isLogMessage, isResponseMessage, isToolMessage, isUserMessage, Message } from '@/types/message';
 import { Messages, MessagesRef } from '@/components/message/Messages';
 import { VirtualizedMessages, VirtualizedMessagesRef } from '@/components/message/VirtualizedMessages';
-import { useSettings } from '@/context/SettingsContext';
-import { useProjectSettings } from '@/context/ProjectSettingsContext';
+import { useSettings } from '@/contexts/SettingsContext';
+import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
 import { AddFileDialog } from '@/components/project/AddFileDialog';
 import { ProjectBar, ProjectTopBarRef } from '@/components/project/ProjectBar';
 import { PromptField, PromptFieldRef } from '@/components/PromptField';
@@ -12981,9 +13173,10 @@ import { MobileSidebar } from '@/components/project/MobileSidebar';
 import { SidebarContent } from '@/components/project/SidebarContent';
 ⋮----
 import { useSearchText } from '@/hooks/useSearchText';
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useModelProviders } from '@/contexts/ModelProviderContext';
+import { useTask } from '@/contexts/TaskContext';
 ⋮----
 type AddFileDialogOptions = {
   readOnly: boolean;
@@ -12991,71 +13184,21 @@ type AddFileDialogOptions = {
 ⋮----
 type Props = {
   project: ProjectData;
+  task: TaskData;
+  inputHistory: string[];
   isActive?: boolean;
 };
 ⋮----
-const handleProjectStarted = () =>
-⋮----
-// Load existing todos
-const loadTodos = async () =>
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-const handleResponseChunk = (
-⋮----
-const handleResponseCompleted = (
-⋮----
-// If no processing message exists, find the last response message
-⋮----
-// If no response message exists, create a new one
-⋮----
-const handleCommandOutput = (
-⋮----
-const handleTodoTool = (toolName: string, args: Record<string, unknown> | undefined, response: string | undefined) =>
-⋮----
-// If response is not JSON, it might be a message like "No todo items found"
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-const handleTool = (
-⋮----
-const createNewToolMessage = () =>
-⋮----
-const handleLog = (
-⋮----
-// Mark all messages in the same group as finished before removing loading messages
-⋮----
-// Create a new message object with updated promptContext.group.finished
-⋮----
-// Then remove loading messages
-⋮----
-// Update existing loading message
-⋮----
-// Add new loading message
-⋮----
-const handleUpdateAutocompletion = (
-⋮----
-const handleUpdateAiderModels = (data: ModelsData) =>
-⋮----
-const handleTokensInfo = (data: TokensInfoData) =>
-⋮----
-const handleQuestion = (data: QuestionData) =>
-⋮----
-const handleInputHistoryUpdate = (data: InputHistoryData) =>
-⋮----
-const handleUserMessage = (data: UserMessageData) =>
-⋮----
-mode: data.mode || projectSettings?.currentMode || 'code', // Use projectSettings.currentMode as fallback
-⋮----
-const handleClearProject = (
-⋮----
-// eslint-disable-next-line react-hooks/exhaustive-deps
+const renderLoading = (message: string) => (
+    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-bg-primary to-bg-primary-light z-10">
+      <CgSpinner className="animate-spin w-8 h-8" />
+      <div className="mt-2 text-xs text-center text-text-primary">{message}</div>
+    </div>
+  );
 ⋮----
 const handleAddFiles = (filePaths: string[], readOnly = false) =>
 ⋮----
 const showFileDialog = (readOnly: boolean) =>
-⋮----
-const clearSession = () =>
 ⋮----
 const clearMessages = (clearContext = true) =>
 ⋮----
@@ -13071,8 +13214,6 @@ const answerQuestion = (answer: string) =>
 ⋮----
 const scrapeWeb = async (url: string, filePath?: string) =>
 ⋮----
-const getMessage = () =>
-⋮----
 const handleInterruptResponse = () =>
 ⋮----
 const handleModelChange = (modelsData: ModelsData | null) =>
@@ -13084,7 +13225,6 @@ const runPrompt = (prompt: string) =>
 } // Should not happen if component is rendered
 ⋮----
 // This submission is an edit of a previous message
-⋮----
 setEditingMessageIndex(null); // Clear editing state
 ⋮----
 const handleEditLastUserMessage = (content?: string) =>
@@ -13093,7 +13233,7 @@ const handleEditLastUserMessage = (content?: string) =>
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
-const restartProject = () =>
+const handleRestartTask = () =>
 ⋮----
 const exportMessagesToImage = () =>
 ⋮----
@@ -13128,44 +13268,6 @@ const handleClearAllTodos = async () =>
 const handleTerminalViewResize = () =>
 ⋮----
 const handleCopyTerminalOutput = (output: string) =>
-
-================
-File: src/renderer/src/components/project/SidebarContent.tsx
-================
-import { TokensInfoData, Mode, ProjectSettings } from '@common/types';
-⋮----
-import { ContextFiles } from '@/components/ContextFiles';
-import { CostInfo } from '@/components/CostInfo';
-⋮----
-type Props = {
-  baseDir: string;
-  allFiles: string[];
-  tokensInfo: TokensInfoData | null;
-  aiderTotalCost: number;
-  maxInputTokens: number;
-  clearMessages: (clearContext?: boolean) => void;
-  runCommand: (command: string) => void;
-  restartProject: () => void;
-  mode: Mode;
-  showFileDialog: () => void;
-  projectSettings: ProjectSettings;
-  saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
-};
-⋮----
-export const SidebarContent = ({
-  baseDir,
-  allFiles,
-  tokensInfo,
-  aiderTotalCost,
-  maxInputTokens,
-  clearMessages,
-  runCommand,
-  restartProject,
-  mode,
-  showFileDialog,
-  projectSettings,
-  saveProjectSettings,
-}: Props) =>
 
 ================
 File: src/renderer/src/components/project/TodoListItem.tsx
@@ -13395,7 +13497,7 @@ import { ModeSelector } from '@/components/PromptField/ModeSelector';
 import { showErrorNotification } from '@/utils/notifications';
 import { Button } from '@/components/common/Button';
 import { useCustomCommands } from '@/hooks/useCustomCommands';
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 const isPathLike = (input: string): boolean =>
 ⋮----
@@ -13407,6 +13509,7 @@ export interface PromptFieldRef {
 ⋮----
 type Props = {
   baseDir: string;
+  taskId: string;
   processing: boolean;
   isActive: boolean;
   words?: string[];
@@ -13573,7 +13676,7 @@ import { Input } from '@/components/common/Input';
 import { Checkbox } from '@/components/common/Checkbox';
 import { Select } from '@/components/common/Select';
 import { TextArea } from '@/components/common/TextArea';
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 // Helper functions for accordion summaries
 const getRunSettingsSummary = (profile: AgentProfile) =>
@@ -13755,7 +13858,7 @@ import { McpToolItem } from './McpToolItem';
 import { Accordion } from '@/components/common/Accordion';
 import { IconButton } from '@/components/common/IconButton';
 import { Checkbox } from '@/components/common/Checkbox';
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type Props = {
   serverName: string;
@@ -13826,7 +13929,7 @@ import { Button } from '@/components/common/Button';
 import { Checkbox } from '@/components/common/Checkbox';
 import { Section } from '@/components/common/Section';
 import { useVersions } from '@/hooks/useVersions';
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type Props = {
   settings: SettingsData;
@@ -13983,7 +14086,7 @@ import { Section } from '../common/Section';
 import { Button } from '../common/Button';
 import { Checkbox } from '../common/Checkbox';
 ⋮----
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 import { IconButton } from '@/components/common/IconButton';
 ⋮----
 type Props = {
@@ -14032,16 +14135,16 @@ label=
 ================
 File: src/renderer/src/components/settings/SettingsDialog.tsx
 ================
-import { SettingsData, ProjectStartMode } from '@common/types';
+import { SettingsData } from '@common/types';
 import { useEffect, useMemo, useState } from 'react';
 import { isEqual } from 'lodash';
 import { useTranslation } from 'react-i18next';
 import { LlmProviderName } from '@common/agent';
 ⋮----
 import { Settings } from '@/pages/Settings';
-import { useSettings } from '@/context/SettingsContext';
+import { useSettings } from '@/contexts/SettingsContext';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type Props = {
   onClose: () => void;
@@ -14087,7 +14190,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links';
 import { TerminalData, TerminalExitData } from '@common/types';
 import { clsx } from 'clsx';
 ⋮----
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 export type TerminalRef = {
   focus: () => void;
@@ -14098,6 +14201,7 @@ export type TerminalRef = {
 ⋮----
 type Props = {
   baseDir: string;
+  taskId: string;
   visible: boolean;
   className?: string;
 };
@@ -14158,6 +14262,7 @@ type TerminalTab = {
 ⋮----
 type Props = {
   baseDir: string;
+  taskId: string;
   visible: boolean;
   className?: string;
   onVisibilityChange: (visible: boolean) => void;
@@ -14366,7 +14471,7 @@ import { MessageBreakdownChart } from './MessageBreakdownChart';
 import { ModelUsageDistributionChart } from './ModelUsageDistributionChart';
 import { GroupBy } from './utils';
 ⋮----
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 import { DatePicker } from '@/components/common/DatePicker';
 import { MultiSelect } from '@/components/common/MultiSelect';
 import { IconButton } from '@/components/common/IconButton';
@@ -14525,7 +14630,7 @@ type Props = {
   aiderTotalCost: number;
   clearMessages?: () => void;
   refreshRepoMap?: () => void;
-  restartProject?: () => void;
+  restartTask?: () => void;
   maxInputTokens?: number;
   mode: Mode;
   projectSettings: ProjectSettings;
@@ -14577,74 +14682,6 @@ placeholder=
 onChange=
 
 ================
-File: src/renderer/src/components/SessionDialog.tsx
-================
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
-⋮----
-import { BaseDialog } from './common/BaseDialog';
-import { Button } from './common/Button';
-import { Checkbox } from './common/Checkbox';
-import { Input } from './common/Input';
-⋮----
-type Props = {
-  onClose: () => void;
-  onSave: (name: string, loadMessages: boolean, loadFiles: boolean) => void;
-  initialName?: string;
-  initialLoadMessages?: boolean;
-  initialLoadFiles?: boolean;
-  isEdit?: boolean;
-};
-⋮----
-const handleSave = () =>
-⋮----
-
-⋮----
-<Input label=
-⋮----
-<h3 className="text-sm font-medium mb-2">
-⋮----
-<Checkbox label=
-
-================
-File: src/renderer/src/components/SessionsPopup.tsx
-================
-import { KeyboardEvent, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { IoAddOutline, IoClose, IoListOutline, IoSaveOutline, IoTrashOutline } from 'react-icons/io5';
-import { LuImageDown } from 'react-icons/lu';
-import { RiChatDownloadLine } from 'react-icons/ri';
-import { TaskData } from '@common/types';
-⋮----
-import { ConfirmDialog } from '@/components/common/ConfirmDialog';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
-⋮----
-type Props = {
-  sessions: TaskData[];
-  onLoadSessionMessages: (id: string) => void;
-  onSaveSession: (name: string, id?: string) => void;
-  onDeleteSession: (id: string) => void;
-  onExportSessionToMarkdown: () => void;
-  onExportSessionToImage: () => void;
-};
-⋮----
-const handleDeleteSession = () =>
-⋮----
-const handleSaveNewSession = () =>
-⋮----
-const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) =>
-⋮----
-data-tooltip-content=
-⋮----
-onChange=
-⋮----
-placeholder=
-⋮----
-setNewSessionName('');
-⋮----
-title=
-
-================
 File: src/renderer/src/components/TelemetryInfoDialog.tsx
 ================
 import { useState } from 'react';
@@ -14653,7 +14690,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { BaseDialog } from '@/components/common/BaseDialog';
 import { Button } from '@/components/common/Button';
 import { Checkbox } from '@/components/common/Checkbox';
-import { useSettings } from '@/context/SettingsContext';
+import { useSettings } from '@/contexts/SettingsContext';
 ⋮----
 const handleOk = async () =>
 ⋮----
@@ -14681,7 +14718,7 @@ type Props = {
 ⋮----
 
 ================
-File: src/renderer/src/context/ApiContext.tsx
+File: src/renderer/src/contexts/ApiContext.tsx
 ================
 import { createContext, useMemo, ReactNode, useContext } from 'react';
 import { ApplicationAPI } from '@common/api';
@@ -14693,13 +14730,13 @@ export const ApiProvider = (
 export const useApi = (): ApplicationAPI =>
 
 ================
-File: src/renderer/src/context/ContextMenuContext.tsx
+File: src/renderer/src/contexts/ContextMenuContext.tsx
 ================
 import { createContext, ReactNode, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 ⋮----
 import { useClickOutside } from '@/hooks/useClickOutside';
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type ContextMenuContextType = {
   showMenu: (x: number, y: number, options: MenuOption[], targetElement?: Element | null) => void;
@@ -14741,14 +14778,43 @@ const handleContextMenu = (params: Electron.ContextMenuParams) =>
 // Handle other elements with text content
 
 ================
-File: src/renderer/src/context/ProjectSettingsContext.tsx
+File: src/renderer/src/contexts/ModelProviderContext.tsx
+================
+import React, { createContext, ReactNode, useCallback, useContext, useEffect, useState, useOptimistic, startTransition } from 'react';
+import { Model, ProviderProfile } from '@common/types';
+⋮----
+import { useApi } from '@/contexts/ApiContext';
+⋮----
+type ModelProviderContextType = {
+  refresh: () => void;
+  models: Model[];
+  providers: ProviderProfile[];
+  saveProvider: (profile: ProviderProfile) => Promise<void>;
+  deleteProvider: (profileId: string) => Promise<void>;
+  upsertModel: (providerId: string, modelId: string, model: Model) => Promise<void>;
+  deleteModel: (providerId: string, modelId: string) => Promise<void>;
+  modelsLoading: boolean;
+  providersLoading: boolean;
+  errors: Record<string, string>;
+};
+⋮----
+export const ModelProviderProvider: React.FC<
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+export const useModelProviders = (): ModelProviderContextType =>
+
+================
+File: src/renderer/src/contexts/ProjectSettingsContext.tsx
 ================
 import { ProjectSettings } from '@common/types';
 import { createContext, useContext, useState, useEffect, ReactNode, useOptimistic, startTransition } from 'react';
 import { DEFAULT_AGENT_PROFILE } from '@common/agent';
 ⋮----
-import { useSettings } from '@/context/SettingsContext';
-import { useApi } from '@/context/ApiContext';
+import { useSettings } from '@/contexts/SettingsContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type ProjectSettingsContextType = {
   projectSettings: ProjectSettings | null;
@@ -14779,12 +14845,12 @@ const loadSettings = async () =>
 export const useProjectSettings = () =>
 
 ================
-File: src/renderer/src/context/SettingsContext.tsx
+File: src/renderer/src/contexts/SettingsContext.tsx
 ================
 import { Font, SettingsData, Theme } from '@common/types';
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 ⋮----
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type SettingsContextType = {
   settings: SettingsData | null;
@@ -14808,33 +14874,158 @@ const saveSettings = async (updated: SettingsData) =>
 export const useSettings = () =>
 
 ================
-File: src/renderer/src/contexts/ModelProviderContext.tsx
+File: src/renderer/src/contexts/TaskContext.tsx
 ================
-import React, { createContext, ReactNode, useCallback, useContext, useEffect, useState, useOptimistic, startTransition } from 'react';
-import { Model, ProviderProfile } from '@common/types';
+import React, { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+import {
+  AutocompletionData,
+  ClearTaskData,
+  CommandOutputData,
+  ContextFile,
+  ContextFilesUpdatedData,
+  LogData,
+  ModelsData,
+  QuestionData,
+  ResponseChunkData,
+  ResponseCompletedData,
+  TaskData,
+  TodoItem,
+  TokensInfoData,
+  ToolData,
+  UserMessageData,
+} from '@common/types';
+import { v4 as uuidv4 } from 'uuid';
+import { TODO_TOOL_CLEAR_ITEMS, TODO_TOOL_GET_ITEMS, TODO_TOOL_GROUP_NAME, TODO_TOOL_SET_ITEMS, TODO_TOOL_UPDATE_ITEM_COMPLETION } from '@common/tools';
+import { useTranslation } from 'react-i18next';
 ⋮----
-import { useApi } from '@/context/ApiContext';
+import {
+  CommandOutputMessage,
+  isCommandOutputMessage,
+  isLoadingMessage,
+  LoadingMessage,
+  LogMessage,
+  Message,
+  ReflectedMessage,
+  ResponseMessage,
+  ToolMessage,
+  UserMessage,
+} from '@/types/message';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
-type ModelProviderContextType = {
-  refresh: () => void;
-  models: Model[];
-  providers: ProviderProfile[];
-  saveProvider: (profile: ProviderProfile) => Promise<void>;
-  deleteProvider: (profileId: string) => Promise<void>;
-  upsertModel: (providerId: string, modelId: string, model: Model) => Promise<void>;
-  deleteModel: (providerId: string, modelId: string) => Promise<void>;
-  modelsLoading: boolean;
-  providersLoading: boolean;
-  errors: Record<string, string>;
-};
+interface TaskState {
+  loading: boolean;
+  loaded: boolean;
+  processing: boolean;
+  finishAcknowledged: boolean;
+  messages: Message[];
+  tokensInfo: TokensInfoData | null;
+  question: QuestionData | null;
+  todoItems: TodoItem[];
+  allFiles: string[];
+  autocompletionWords: string[];
+  aiderTotalCost: number;
+  contextFiles: ContextFile[];
+  aiderModelsData: ModelsData | null;
+}
 ⋮----
-export const ModelProviderProvider: React.FC<
+interface TaskContextType {
+  getTaskState: (taskId: string, loadIfNotLoaded?: boolean) => TaskState | null;
+  addInterruptedMessage: (taskId: string) => void;
+  clearSession: (taskId: string, messagesOnly: boolean) => void;
+  restartTask: (taskId: string) => void;
+  setMessages: (taskId: string, updateMessages: (prevState: Message[]) => Message[]) => void;
+  // TODO: add listeners for todo items and remove
+  setTodoItems: (taskId: string, updateTodoItems: (prev: TodoItem[]) => TodoItem[]) => void;
+  // TODO: add question answer, clear question events and listeners and remove
+  setQuestion: (taskId: string, question: QuestionData | null) => void;
+  setAiderModelsData: (taskId: string, modelsData: ModelsData | null) => void;
+}
+⋮----
+// TODO: add listeners for todo items and remove
+⋮----
+// TODO: add question answer, clear question events and listeners and remove
+⋮----
+export const TaskProvider: React.FC<{
+  baseDir: string;
+  tasks: TaskData[];
+  children: ReactNode;
+}> = (
+⋮----
+const loadTask = async (taskId: string) =>
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
+const getTaskState = (taskId: string, loadIfNotLoaded = true): TaskState | null =>
+⋮----
+const setMessages = (taskId: string, updateMessages: (prevState: Message[]) => Message[]) =>
+⋮----
+// setEditingMessageIndex(null);
+⋮----
+const setTodoItems = (taskId: string, updateTodoItems: (prev: TodoItem[]) => TodoItem[]) =>
+⋮----
+// TODO: move to main process
+⋮----
+const subscribeForTaskEvents = (taskId: string) =>
+⋮----
+const setProcessing = (processing: boolean) =>
+⋮----
+const setAiderTotalCost = (aiderTotalCost: number) =>
+⋮----
+const setAllFiles = (allFiles: string[]) =>
+⋮----
+const setAutocompletionWords = (autocompletionWords: string[]) =>
+⋮----
+const setTokensInfo = (tokensInfo: TokensInfoData | null) =>
+⋮----
+const handleResponseChunk = (
+⋮----
+const handleResponseCompleted = (
+⋮----
+// If no processing message exists, find the last response message
+⋮----
+// If no response message exists, create a new one
+⋮----
+const handleCommandOutput = (
+⋮----
+const handleTodoTool = (toolName: string, args: Record<string, unknown> | undefined, response: string | undefined) =>
+⋮----
+// If response is not JSON, it might be a message like "No todo items found"
+⋮----
 // eslint-disable-next-line no-console
 ⋮----
-export const useModelProviders = (): ModelProviderContextType =>
+const handleTool = (
+⋮----
+const createNewToolMessage = () =>
+⋮----
+const handleLog = (
+⋮----
+// Mark all messages in the same group as finished before removing loading messages
+⋮----
+// Create a new message object with updated promptContext.group.finished
+⋮----
+// Then remove loading messages
+⋮----
+// Update existing loading message
+⋮----
+// Add new loading message
+⋮----
+const handleUpdateAutocompletion = (
+⋮----
+const handleTokensInfo = (data: TokensInfoData) =>
+⋮----
+const handleQuestion = (data: QuestionData) =>
+⋮----
+const handleUserMessage = (data: UserMessageData) =>
+⋮----
+const handleClearProject = (
+⋮----
+const handleContextFilesUpdated = (
+⋮----
+const handleUpdateAiderModels = (data: ModelsData) =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+export const useTask = (): TaskContextType =>
 
 ================
 File: src/renderer/src/hooks/useBooleanState.ts
@@ -14864,7 +15055,7 @@ File: src/renderer/src/hooks/useCustomCommands.ts
 import { CustomCommand } from '@common/types';
 import { useEffect, useState } from 'react';
 ⋮----
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 export const useCustomCommands = (baseDir: string) =>
 ⋮----
@@ -14878,7 +15069,7 @@ File: src/renderer/src/hooks/useEffectiveEnvironmentVariable.ts
 import { EnvironmentVariable } from '@common/types';
 import { useEffect, useState } from 'react';
 ⋮----
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type UseEffectiveEnvironmentVariableResult = {
   environmentVariable: EnvironmentVariable | null;
@@ -14942,7 +15133,7 @@ File: src/renderer/src/hooks/useOS.ts
 import { OS } from '@common/types';
 import { useEffect, useState } from 'react';
 ⋮----
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 export const useOS = (): OS | null =>
 ⋮----
@@ -15042,7 +15233,7 @@ File: src/renderer/src/hooks/useVersions.ts
 import { VersionsInfo } from '@common/types';
 import { useCallback, useEffect, useState } from 'react';
 ⋮----
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 export const useVersions = () =>
 ⋮----
@@ -15448,10 +15639,10 @@ import { ProjectView } from '@/components/project/ProjectView';
 import { SettingsDialog } from '@/components/settings/SettingsDialog';
 import { useVersions } from '@/hooks/useVersions';
 import { HtmlInfoDialog } from '@/components/common/HtmlInfoDialog';
-import { ProjectSettingsProvider } from '@/context/ProjectSettingsContext';
+import { ProjectSettingsProvider } from '@/contexts/ProjectSettingsContext';
 import { TelemetryInfoDialog } from '@/components/TelemetryInfoDialog';
 import { showInfoNotification } from '@/utils/notifications';
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 import { ModelLibrary } from '@/components/ModelLibrary';
 ⋮----
 const handleReorderProjects = async (reorderedProjects: ProjectData[]) =>
@@ -15492,7 +15683,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { SettingsData } from '@common/types';
 ⋮----
-import { useSettings } from '@/context/SettingsContext';
+import { useSettings } from '@/contexts/SettingsContext';
 import { AiderSettings } from '@/components/settings/AiderSettings';
 import { LanguageSelector } from '@/components/settings/LanguageSelector';
 import { OnboardingProviderSetup } from '@/components/onboarding/OnboardingProviderSetup';
@@ -15535,7 +15726,7 @@ import { ReactNode, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LlmProviderName } from '@common/agent';
 ⋮----
-import { useApi } from '@/context/ApiContext';
+import { useApi } from '@/contexts/ApiContext';
 import { AiderSettings } from '@/components/settings/AiderSettings';
 import { GeneralSettings } from '@/components/settings/GeneralSettings';
 import { AgentSettings } from '@/components/settings/agent/AgentSettings';
@@ -16992,7 +17183,7 @@ File: src/renderer/src/themes/themes.scss
 ================
 File: src/renderer/src/types/message.ts
 ================
-import { Group, Mode, PromptContext, TokensInfoData, UsageReportData } from '@common/types';
+import { Group, PromptContext, TokensInfoData, UsageReportData } from '@common/types';
 ⋮----
 export interface Message {
   id: string;
@@ -17004,7 +17195,6 @@ export interface Message {
 ⋮----
 export interface UserMessage extends Message {
   type: 'user';
-  mode?: Mode;
 }
 ⋮----
 export interface ResponseMessage extends Message {
@@ -17114,13 +17304,13 @@ import { THEMES } from '@common/types';
 import { useResponsive } from '@/hooks/useResponsive';
 import { Onboarding } from '@/pages/Onboarding';
 import { Home } from '@/pages/Home';
-import { ContextMenuProvider, useContextMenu } from '@/context/ContextMenuContext';
-import { SettingsProvider, useSettings } from '@/context/SettingsContext';
+import { ContextMenuProvider, useContextMenu } from '@/contexts/ContextMenuContext';
+import { SettingsProvider, useSettings } from '@/contexts/SettingsContext';
 ⋮----
 import { ROUTES } from '@/utils/routes';
 ⋮----
 import { StyledTooltip } from '@/components/common/StyledTooltip';
-import { ApiProvider } from '@/context/ApiContext';
+import { ApiProvider } from '@/contexts/ApiContext';
 import { ModelProviderProvider } from '@/contexts/ModelProviderContext';
 ⋮----
 const ThemeAndFontManager = () =>
