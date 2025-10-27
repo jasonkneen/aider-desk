@@ -1,6 +1,6 @@
 # Changelog
 
-## [UNRELEASED]
+## [0.37.1]
 
 - fixed issue with no responses when using Requesty provider
 - todo tools are now properly used with new task management
