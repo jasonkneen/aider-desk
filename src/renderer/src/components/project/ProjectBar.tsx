@@ -31,7 +31,6 @@ type Props = {
   modelsData: ModelsData | null;
   mode: Mode;
   onModelsChange?: (modelsData: ModelsData | null) => void;
-  onExportSessionToImage: () => void;
   runCommand: (command: string) => void;
   onToggleSidebar: () => void;
 };

@@ -5,6 +5,7 @@
 - performance improvements related to rendered messages
 - omit showing empty Thinking block when there is no thinking content
 - loading current question in browser client and added event when answering question
+- added export to markdown and export to image actions for a task
 
 ## [0.37.1]
 

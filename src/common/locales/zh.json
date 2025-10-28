@@ -990,7 +990,9 @@
     "deleteTask": "删除任务",
     "deleteConfirm": "您确定要删除这个任务吗？",
     "createTask": "创建新任务",
-    "editTask": "编辑任务",
-    "taskNamePlaceholder": "输入任务名称..."
+    "rename": "重命名",
+    "taskNamePlaceholder": "输入任务名称...",
+    "exportAsMarkdown": "导出为 Markdown",
+    "exportAsImage": "导出为图片"
   }
 }

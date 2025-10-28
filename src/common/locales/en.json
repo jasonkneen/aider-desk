@@ -982,7 +982,9 @@
     "deleteTask": "Delete task",
     "deleteConfirm": "Are you sure you want to delete this task?",
     "createTask": "Create new task",
-    "editTask": "Edit task",
-    "taskNamePlaceholder": "Enter task name..."
+    "rename": "Rename",
+    "taskNamePlaceholder": "Enter task name...",
+    "exportAsMarkdown": "Export as markdown",
+    "exportAsImage": "Export as image"
   }
 }

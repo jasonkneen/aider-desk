@@ -1,6 +1,6 @@
 import { Mode, Model, ModelsData, ProjectData, TaskData, TodoItem } from '@common/types';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { CgSpinner } from 'react-icons/cg';
 import { ResizableBox } from 'react-resizable';
 import { clsx } from 'clsx';
@@ -31,6 +31,10 @@ type AddFileDialogOptions = {
   readOnly: boolean;
 };
 
+export type TaskViewRef = {
+  exportMessagesToImage: () => void;
+};
+
 type Props = {
   project: ProjectData;
   task: TaskData;
@@ -38,7 +42,7 @@ type Props = {
   isActive?: boolean;
 };
 
-export const TaskView = ({ project, task, inputHistory, isActive = false }: Props) => {
+export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHistory, isActive = false }, ref) => {
   const { t } = useTranslation();
   const { settings } = useSettings();
   const { projectSettings, saveProjectSettings } = useProjectSettings();
@@ -63,6 +67,12 @@ export const TaskView = ({ project, task, inputHistory, isActive = false }: Prop
   const [transitionMessages, setTransitionMessages] = useState<Message[]>([]);
 
   const { renderSearchInput } = useSearchText(messagesRef.current?.container || null, 'absolute top-1 left-1');
+
+  useImperativeHandle(ref, () => ({
+    exportMessagesToImage: () => {
+      messagesRef.current?.exportToImage();
+    },
+  }));
 
   const currentModel = useMemo(() => {
     let model: Model | undefined;
@@ -204,10 +214,6 @@ export const TaskView = ({ project, task, inputHistory, isActive = false }: Prop
     setAiderModelsData(task.id, null);
   };
 
-  const exportMessagesToImage = () => {
-    messagesRef.current?.exportToImage();
-  };
-
   const handleRedoLastUserPrompt = () => {
     setMessages(task.id, (prevMessages) => {
       const lastUserMessageIndex = prevMessages.findLastIndex(isUserMessage);
@@ -309,7 +315,6 @@ export const TaskView = ({ project, task, inputHistory, isActive = false }: Prop
           modelsData={aiderModelsData}
           mode={projectSettings.currentMode}
           onModelsChange={handleModelChange}
-          onExportSessionToImage={exportMessagesToImage}
           runCommand={runCommand}
           onToggleSidebar={() => setShowSidebar(!showSidebar)}
         />
@@ -491,4 +496,6 @@ export const TaskView = ({ project, task, inputHistory, isActive = false }: Prop
       )}
     </div>
   );
-};
+});
+
+TaskView.displayName = 'TaskView';

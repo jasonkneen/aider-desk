@@ -1,12 +1,12 @@
 import { InputHistoryData, ProjectData, ProjectStartMode, TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocalStorage } from '@reactuses/core';
 import { CgSpinner } from 'react-icons/cg';
 
 import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
-import { TaskView } from '@/components/project/TaskView';
+import { TaskView, TaskViewRef } from '@/components/project/TaskView';
 import { COLLAPSED_WIDTH, EXPANDED_WIDTH, TaskSidebar } from '@/components/project/TaskSidebar';
 import { useApi } from '@/contexts/ApiContext';
 import { TaskProvider } from '@/contexts/TaskContext';
@@ -28,6 +28,7 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
   const [tasksLoading, setTasksLoading] = useState(true);
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [isCollapsed, setIsCollapsed] = useLocalStorage(`task-sidebar-collapsed-${project.baseDir}`, false);
+  const taskViewRef = useRef<TaskViewRef>(null);
 
   const createNewTask = useCallback(async () => {
     try {
@@ -190,6 +191,22 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
     [activeTaskId, api, createNewTask],
   );
 
+  const handleExportTaskToImage = useCallback(() => {
+    taskViewRef.current?.exportMessagesToImage();
+  }, []);
+
+  const handleExportTaskToMarkdown = useCallback(
+    async (taskId: string) => {
+      try {
+        await api.exportTaskToMarkdown(project.baseDir, taskId);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to export task to markdown:', error);
+      }
+    },
+    [api, project.baseDir],
+  );
+
   const renderLoading = () => {
     return (
       <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-bg-primary to-bg-primary-light z-10">
@@ -227,6 +244,8 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
           onToggleCollapse={handleToggleCollapse}
           updateTask={handleUpdateTask}
           deleteTask={handleDeleteTask}
+          onExportToMarkdown={handleExportTaskToMarkdown}
+          onExportToImage={handleExportTaskToImage}
         />
 
         <div
@@ -235,7 +254,7 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
             left: isCollapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH,
           }}
         >
-          {activeTask && <TaskView key={activeTask.id} project={project} task={activeTask} inputHistory={inputHistory} isActive={isActive} />}
+          {activeTask && <TaskView key={activeTask.id} ref={taskViewRef} project={project} task={activeTask} inputHistory={inputHistory} isActive={isActive} />}
         </div>
       </div>
     </TaskProvider>

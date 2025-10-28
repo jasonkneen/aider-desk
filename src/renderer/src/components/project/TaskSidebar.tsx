@@ -1,9 +1,12 @@
 import { TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { KeyboardEvent, MouseEvent, useState, memo } from 'react';
+import { KeyboardEvent, MouseEvent, useState, memo, useRef } from 'react';
 import { HiOutlinePencil, HiOutlineTrash, HiPlus } from 'react-icons/hi';
 import { RiMenuUnfold4Line } from 'react-icons/ri';
+import { FaEllipsisVertical } from 'react-icons/fa6';
+import { IoLogoMarkdown } from 'react-icons/io';
 import { CgSpinner } from 'react-icons/cg';
+import { MdImage } from 'react-icons/md';
 import { clsx } from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
 
@@ -11,9 +14,106 @@ import { useTask } from '@/contexts/TaskContext';
 import { Input } from '@/components/common/Input';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { Button } from '@/components/common/Button';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 export const COLLAPSED_WIDTH = 44;
 export const EXPANDED_WIDTH = 256;
+
+type TaskMenuButtonProps = {
+  onEdit: (e: MouseEvent) => void;
+  onDelete: (e: MouseEvent) => void;
+  onExportToMarkdown?: (e: MouseEvent) => void;
+  onExportToImage?: (e: MouseEvent) => void;
+};
+
+const TaskMenuButton = ({ onEdit, onDelete, onExportToMarkdown, onExportToImage }: TaskMenuButtonProps) => {
+  const { t } = useTranslation();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLDivElement>(null);
+
+  useClickOutside([menuRef, buttonRef], () => {
+    setIsMenuOpen(false);
+  });
+
+  const handleMenuClick = () => {
+    setIsMenuOpen(!isMenuOpen);
+  };
+
+  const handleEditClick = (e: MouseEvent) => {
+    onEdit(e);
+    setIsMenuOpen(false);
+  };
+
+  const handleDeleteClick = (e: MouseEvent) => {
+    onDelete(e);
+    setIsMenuOpen(false);
+  };
+
+  const handleExportToMarkdownClick = (e: MouseEvent) => {
+    onExportToMarkdown?.(e);
+    setIsMenuOpen(false);
+  };
+
+  const handleExportToImageClick = (e: MouseEvent) => {
+    onExportToImage?.(e);
+    setIsMenuOpen(false);
+  };
+
+  return (
+    <div className={clsx('relative flex items-center pl-2', isMenuOpen ? 'flex' : 'display-none w-0 group-hover:w-auto group-hover:display-flex')}>
+      <div ref={buttonRef}>
+        <button
+          className={clsx(
+            'transition-opacity p-1.5 rounded-md hover:bg-bg-tertiary text-text-muted hover:text-text-primary',
+            !isMenuOpen && 'opacity-0 group-hover:opacity-100',
+          )}
+          onClick={handleMenuClick}
+        >
+          <FaEllipsisVertical className="w-4 h-4" />
+        </button>
+      </div>
+      {isMenuOpen && (
+        <div ref={menuRef} className="absolute right-0 top-full mt-1 w-[170px] bg-bg-secondary-light border border-border-default-dark rounded shadow-lg z-10">
+          <ul className="display-none group-hover:display-block">
+            <li
+              className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
+              onClick={handleEditClick}
+            >
+              <HiOutlinePencil className="w-4 h-4" />
+              <span className="whitespace-nowrap">{t('taskSidebar.rename')}</span>
+            </li>
+            {onExportToMarkdown && (
+              <li
+                className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
+                onClick={handleExportToMarkdownClick}
+              >
+                <IoLogoMarkdown className="w-4 h-4" />
+                <span className="whitespace-nowrap">{t('taskSidebar.exportAsMarkdown')}</span>
+              </li>
+            )}
+            {onExportToImage && (
+              <li
+                className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
+                onClick={handleExportToImageClick}
+              >
+                <MdImage className="w-4 h-4" />
+                <span className="whitespace-nowrap">{t('taskSidebar.exportAsImage')}</span>
+              </li>
+            )}
+            <li
+              className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
+              onClick={handleDeleteClick}
+            >
+              <HiOutlineTrash className="w-4 h-4 text-error" />
+              <span className="whitespace-nowrap">{t('taskSidebar.deleteTask')}</span>
+            </li>
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+};
 
 type Props = {
   baseDir: string;
@@ -27,6 +127,8 @@ type Props = {
   onToggleCollapse: () => void;
   updateTask?: (baseDir: string, taskId: string, updates: Partial<TaskData>) => Promise<boolean>;
   deleteTask?: (baseDir: string, taskId: string) => Promise<boolean>;
+  onExportToMarkdown?: (taskId: string) => void;
+  onExportToImage?: (taskId: string) => void;
 };
 
 const TaskSidebarComponent = ({
@@ -41,6 +143,8 @@ const TaskSidebarComponent = ({
   onToggleCollapse,
   updateTask,
   deleteTask,
+  onExportToMarkdown,
+  onExportToImage,
 }: Props) => {
   const { t } = useTranslation();
   const { getTaskState } = useTask();
@@ -54,7 +158,7 @@ const TaskSidebarComponent = ({
     onTaskSelect(taskId);
   };
 
-  const handleDeleteClick = (e: MouseEvent<HTMLButtonElement>, taskId: string) => {
+  const handleDeleteClick = (e: MouseEvent, taskId: string) => {
     e.stopPropagation();
     setDeleteConfirmTaskId(taskId);
     setEditingTaskId(null);
@@ -76,7 +180,7 @@ const TaskSidebarComponent = ({
     setDeleteConfirmTaskId(null);
   };
 
-  const handleEditClick = (e: MouseEvent<HTMLButtonElement>, taskId: string, taskName: string) => {
+  const handleEditClick = (e: MouseEvent, taskId: string, taskName: string) => {
     e.stopPropagation();
     setEditingTaskId(taskId);
     setEditTaskName(taskName);
@@ -142,25 +246,12 @@ const TaskSidebarComponent = ({
 
         <div className="flex items-center pl-2">{renderTaskStateIcon(task.id, false)}</div>
 
-        <div className="flex items-center display-none w-0 group-hover:w-auto group-hover:display-flex pl-2">
-          <button
-            data-tooltip-id="task-sidebar-tooltip"
-            data-tooltip-content={t('taskSidebar.editTask')}
-            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md hover:bg-bg-tertiary text-text-muted hover:text-text-primary"
-            onClick={(e) => handleEditClick(e, task.id, task.name)}
-          >
-            <HiOutlinePencil className="w-4 h-4" />
-          </button>
-
-          <button
-            data-tooltip-id="task-sidebar-tooltip"
-            data-tooltip-content={t('taskSidebar.deleteTask')}
-            className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-md hover:bg-bg-tertiary text-text-muted hover:text-error-dark"
-            onClick={(e) => handleDeleteClick(e, task.id)}
-          >
-            <HiOutlineTrash className="w-4 h-4" />
-          </button>
-        </div>
+        <TaskMenuButton
+          onEdit={(e) => handleEditClick(e, task.id, task.name)}
+          onDelete={(e) => handleDeleteClick(e, task.id)}
+          onExportToMarkdown={onExportToMarkdown ? () => onExportToMarkdown(task.id) : undefined}
+          onExportToImage={onExportToImage ? () => onExportToImage(task.id) : undefined}
+        />
       </div>
 
       {editingTaskId === task.id && (
