@@ -1941,8 +1941,8 @@ File: src/common/locales/en.json
     "servers": "MCP servers",
     "tools": "Tools"
   },
-  "tasks": {
-    "title": "Tasks",
+  "todo": {
+    "title": "Todos",
     "addTodo": "Add Todo",
     "editTodo": "Edit Todo",
     "deleteTodo": "Delete Todo",
@@ -1952,7 +1952,7 @@ File: src/common/locales/en.json
     "cancelTodo": "Cancel",
     "noTodos": "No todo items",
     "confirmDelete": "Are you sure you want to delete this todo item?",
-    "clearAllTodos": "Clear all tasks"
+    "clearAllTodos": "Clear all todo items"
   },
   "tool": {
     "noDescription": "No description",
@@ -2908,7 +2908,7 @@ File: src/common/locales/zh.json
     },
     "tools": "工具"
   },
-  "tasks": {
+  "todo": {
     "title": "任务",
     "addTodo": "添加待办",
     "editTodo": "编辑待办",
@@ -4185,6 +4185,7 @@ export interface TaskContext {
 export interface TaskContextData {
   messages: (ResponseCompletedData | UserMessageData | ToolData)[];
   files: ContextFile[];
+  todoItems: TodoItem[];
 }
 ⋮----
 export type TaskData = z.infer<typeof TaskDataSchema>;
@@ -10874,13 +10875,14 @@ if (isError)
 File: src/renderer/src/components/message/GroupMessageBlock.tsx
 ================
 import { AnimatePresence, motion } from 'framer-motion';
-import { useMemo, useState } from 'react';
+import { memo, useMemo, useState } from 'react';
 import { clsx } from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { LocalizedString, UsageReportData } from '@common/types';
 ⋮----
 import { MessageBlock } from './MessageBlock';
 import { MessageBar } from './MessageBar';
+import { areMessagesEqual } from './utils';
 ⋮----
 import { Accordion } from '@/components/common/Accordion';
 import { GroupMessage, Message, ResponseMessage, ToolMessage, isResponseMessage, isToolMessage, isUserMessage } from '@/types/message';
@@ -10910,6 +10912,12 @@ const getGroupDisplayName = (name?: string | LocalizedString) =>
 {/* Color Bar */}
 ⋮----
 {/* Content */}
+⋮----
+// Check basic message properties
+⋮----
+// Check group properties
+⋮----
+// Check children arrays
 
 ================
 File: src/renderer/src/components/message/index.ts
@@ -10999,6 +11007,7 @@ const handleEditClick = () =>
 ================
 File: src/renderer/src/components/message/MessageBlock.tsx
 ================
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   HELPERS_TOOL_GROUP_NAME,
@@ -11033,6 +11042,7 @@ import { BashToolMessage } from './BashToolMessage';
 import { FetchToolMessage } from './FetchToolMessage';
 import { SemanticSearchToolMessage } from './SemanticSearchToolMessage';
 import { SubagentToolMessage } from './SubagentToolMessage';
+import { areMessagesEqual } from './utils';
 ⋮----
 import {
   isCommandOutputMessage,
@@ -11324,7 +11334,7 @@ import { ThinkingAnswerBlock } from './ThinkingAnswerBlock';
 ⋮----
 import { CodeBlock } from '@/components/common/CodeBlock';
 import { CodeInline } from '@/components/common/CodeInline';
-import { GroupMessage, Message } from '@/types/message';
+import { GroupMessage, isResponseMessage, isToolMessage, Message, ToolMessage } from '@/types/message';
 ⋮----
 // First check if the content matches the thinking/answer format
 ⋮----
@@ -11448,6 +11458,14 @@ return result; // Return default if rawContent is empty
 ⋮----
 // Ignore error if the raw content is not valid JSON
 // eslint-disable-next-line no-console
+⋮----
+export const areMessagesEqual = (prevMessage: Message, nextMessage: Message): boolean =>
+⋮----
+// Check basic message properties
+⋮----
+// Check usageReport for ResponseMessage and ToolMessage
+⋮----
+// Check args for ToolMessage
 ⋮----
 export const groupMessagesByPromptContext = (messages: Message[]): Message[] =>
 ⋮----
@@ -13094,7 +13112,7 @@ File: src/renderer/src/components/project/TaskSidebar.tsx
 ================
 import { TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { KeyboardEvent, MouseEvent, useState } from 'react';
+import { KeyboardEvent, MouseEvent, useState, memo } from 'react';
 import { HiOutlinePencil, HiOutlineTrash, HiPlus } from 'react-icons/hi';
 import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { CgSpinner } from 'react-icons/cg';
@@ -13145,6 +13163,18 @@ const handleCreateTask = () =>
 
 ⋮----
 className=
+⋮----
+// Custom comparison function for React.memo
+⋮----
+// Compare primitive props
+⋮----
+// Compare function props
+⋮----
+// Compare tasks array - shallow check first, then deep check for task properties
+⋮----
+// Check if tasks have changed in meaningful ways
+⋮----
+// Only check properties that affect rendering
 
 ================
 File: src/renderer/src/components/project/TaskView.tsx
@@ -14951,17 +14981,9 @@ export const TaskProvider: React.FC<{
   children: ReactNode;
 }> = (
 ⋮----
-const loadTask = async (taskId: string) =>
-⋮----
 // eslint-disable-next-line no-console
 ⋮----
-const getTaskState = (taskId: string, loadIfNotLoaded = true): TaskState | null =>
-⋮----
-const setMessages = (taskId: string, updateMessages: (prevState: Message[]) => Message[]) =>
-⋮----
 // setEditingMessageIndex(null);
-⋮----
-const setTodoItems = (taskId: string, updateTodoItems: (prev: TodoItem[]) => TodoItem[]) =>
 ⋮----
 // TODO: move to main process
 ⋮----
@@ -17408,7 +17430,7 @@ File: src/renderer/index.html
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: file:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http: https: ws: wss:;"
+      content="default-src 'self'; script-src 'self' https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; img-src 'self' data: file:; font-src 'self' https://fonts.gstatic.com; connect-src 'self' http: https: ws: wss:;"
     />
     <link rel="stylesheet" href="/src/fonts.css">
   </head>
@@ -17632,7 +17654,7 @@ File: package.json
 ================
 {
   "name": "aider-desk",
-  "version": "0.37.0-dev",
+  "version": "0.38.0-dev",
   "description": "Aider desktop application wrapper",
   "main": "./out/main/index.js",
   "author": "Hotovo",
@@ -17692,7 +17714,7 @@ File: package.json
     "@probelabs/probe": "0.6.0-rc128",
     "@reactuses/core": "^6.0.6",
     "@replit/codemirror-vim": "^6.3.0",
-    "@requesty/ai-sdk": "^2.0.2",
+    "@requesty/ai-sdk": "^2.0.4",
     "@smithy/eventstream-codec": "^2.0.0",
     "@smithy/protocol-http": "^3.3.0",
     "@smithy/signature-v4": "^2.0.0",
