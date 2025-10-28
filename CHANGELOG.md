@@ -3,6 +3,7 @@
 ## [UNRELEASED]
 
 - performance improvements related to rendered messages
+- omit showing empty Thinking block when there is no thinking content
 
 ## [0.37.1]
 
