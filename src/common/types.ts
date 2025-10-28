@@ -141,6 +141,14 @@ export interface QuestionData {
   key?: string;
 }
 
+export interface QuestionAnsweredData {
+  baseDir: string;
+  taskId: string;
+  question: QuestionData;
+  answer: string;
+  userInput?: string;
+}
+
 export type ContextFileSourceType = 'companion' | 'aider' | 'app' | string;
 
 export enum OS {
@@ -551,10 +559,11 @@ export interface TaskContext {
   contextFiles: ContextFile[];
 }
 
-export interface TaskContextData {
+export interface TaskStateData {
   messages: (ResponseCompletedData | UserMessageData | ToolData)[];
   files: ContextFile[];
   todoItems: TodoItem[];
+  question: QuestionData | null;
 }
 
 export const TaskDataSchema = z.object({
@@ -641,4 +650,8 @@ export interface TerminalExitData {
   taskId: string;
   exitCode: number;
   signal?: number;
+}
+
+export interface Test {
+  propertyA: string;
 }

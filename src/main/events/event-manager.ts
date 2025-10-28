@@ -8,6 +8,7 @@ import {
   LogData,
   ModelsData,
   QuestionData,
+  QuestionAnsweredData,
   ResponseChunkData,
   ResponseCompletedData,
   TerminalData,
@@ -95,6 +96,18 @@ export class EventManager {
   sendAskQuestion(questionData: QuestionData): void {
     this.sendToMainWindow('ask-question', questionData);
     this.broadcastToEventConnectors('ask-question', questionData);
+  }
+
+  sendQuestionAnswered(baseDir: string, taskId: string, question: QuestionData, answer: string, userInput?: string): void {
+    const data: QuestionAnsweredData = {
+      baseDir,
+      taskId,
+      question,
+      answer,
+      userInput,
+    };
+    this.sendToMainWindow('question-answered', data);
+    this.broadcastToEventConnectors('question-answered', data);
   }
 
   // Autocompletion events

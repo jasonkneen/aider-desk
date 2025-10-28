@@ -20,7 +20,7 @@ import {
   ProviderProfile,
   ResponseCompletedData,
   SettingsData,
-  TaskContextData,
+  TaskStateData,
   TaskData,
   TodoItem,
   UsageDataRow,
@@ -480,12 +480,13 @@ export class EventsHandler {
     return this.projectManager.getProject(baseDir).getTasks();
   }
 
-  async loadTask(baseDir: string, taskId: string): Promise<TaskContextData> {
+  async loadTask(baseDir: string, taskId: string): Promise<TaskStateData> {
     return (
       this.projectManager.getProject(baseDir).getTask(taskId)?.load() || {
         messages: [],
         files: [],
         todoItems: [],
+        question: null,
       }
     );
   }

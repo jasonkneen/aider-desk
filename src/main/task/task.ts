@@ -21,7 +21,7 @@ import {
   ResponseChunkData,
   ResponseCompletedData,
   SettingsData,
-  TaskContextData,
+  TaskStateData,
   TaskData,
   TodoItem,
   TokensInfoData,
@@ -173,7 +173,7 @@ export class Task {
     this.initialized = true;
   }
 
-  public async load(): Promise<TaskContextData> {
+  public async load(): Promise<TaskStateData> {
     logger.info('Loading task', {
       baseDir: this.project.baseDir,
       taskId: this.taskId,
@@ -185,6 +185,7 @@ export class Task {
       messages: this.contextManager.getContextMessagesData(),
       files: this.contextManager.getContextFiles(),
       todoItems: await this.getTodos(),
+      question: this.currentQuestion,
     };
   }
 
@@ -624,10 +625,15 @@ export class Task {
       this.storedQuestionAnswers.set(this.getQuestionKey(this.currentQuestion), determinedAnswer as 'y' | 'n');
     }
 
+    const questionToAnswer = this.currentQuestion;
+
     if (!this.currentQuestion.internal) {
-      this.findMessageConnectors('answer-question').forEach((connector) => connector.sendAnswerQuestionMessage(determinedAnswer!));
+      this.findMessageConnectors('answer-question').forEach((connector) => connector.sendAnswerQuestionMessage(determinedAnswer));
     }
     this.currentQuestion = null;
+
+    // Send question-answered event
+    this.eventManager.sendQuestionAnswered(this.project.baseDir, this.taskId, questionToAnswer, determinedAnswer, userInput);
 
     if (this.currentQuestionResolves.length > 0) {
       for (const currentQuestionResolve of this.currentQuestionResolves) {
@@ -977,6 +983,7 @@ export class Task {
     }
 
     this.findMessageConnectors('interrupt-response').forEach((connector) => connector.sendInterruptResponseMessage());
+    this.addLogMessage('warning', 'messages.interrupted');
     this.agent.interrupt();
     this.promptFinished();
   }

@@ -53,7 +53,7 @@ export const LogMessageBlock = ({ message, onRemove, compact = false }: Props) =
     <div className={`${baseClasses} ${config.levelClasses} relative group`}>
       {renderMessage()}
       <div className="absolute top-2 right-2 flex items-center space-x-1">
-        <CopyMessageButton content={message.content} className={config.tooltipClass} />
+        <CopyMessageButton content={t(message.content)} className={config.tooltipClass} />
         {onRemove && (
           <IconButton
             icon={<MdClose className="w-4 h-4" />}

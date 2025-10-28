@@ -24,11 +24,12 @@ import {
   ProviderModelsData,
   ProviderProfile,
   ProvidersUpdatedData,
+  QuestionAnsweredData,
   QuestionData,
   ResponseChunkData,
   ResponseCompletedData,
   SettingsData,
-  TaskContextData,
+  TaskStateData,
   TaskData,
   TerminalData,
   TerminalExitData,
@@ -98,7 +99,7 @@ export interface ApplicationAPI {
   updateTask: (baseDir: string, id: string, updates: Partial<TaskData>) => Promise<boolean>;
   deleteTask: (baseDir: string, id: string) => Promise<boolean>;
   getTasks: (baseDir: string) => Promise<TaskData[]>;
-  loadTask: (baseDir: string, taskId: string) => Promise<TaskContextData>;
+  loadTask: (baseDir: string, taskId: string) => Promise<TaskStateData>;
   exportTaskToMarkdown: (baseDir: string, taskId: string) => Promise<void>;
   getRecentProjects: () => Promise<string[]>;
   addRecentProject: (baseDir: string) => Promise<void>;
@@ -133,6 +134,7 @@ export interface ApplicationAPI {
   addCustomCommandsUpdatedListener: (baseDir: string, callback: (data: CustomCommandsUpdatedData) => void) => () => void;
   addUpdateAutocompletionListener: (baseDir: string, taskId: string, callback: (data: AutocompletionData) => void) => () => void;
   addAskQuestionListener: (baseDir: string, taskId: string, callback: (data: QuestionData) => void) => () => void;
+  addQuestionAnsweredListener: (baseDir: string, taskId: string, callback: (data: QuestionAnsweredData) => void) => () => void;
   addUpdateAiderModelsListener: (baseDir: string, taskId: string, callback: (data: ModelsData) => void) => () => void;
   addCommandOutputListener: (baseDir: string, taskId: string, callback: (data: CommandOutputData) => void) => () => void;
   addTokensInfoListener: (baseDir: string, taskId: string, callback: (data: TokensInfoData) => void) => () => void;

@@ -45,7 +45,7 @@ export const TaskView = ({ project, task, inputHistory, isActive = false }: Prop
   const { isMobile } = useResponsive();
   const api = useApi();
   const { models } = useModelProviders();
-  const { getTaskState, clearSession, restartTask, addInterruptedMessage, setMessages, setQuestion, setTodoItems, setAiderModelsData } = useTask();
+  const { getTaskState, clearSession, restartTask, setMessages, setTodoItems, setAiderModelsData, answerQuestion, interruptResponse } = useTask();
 
   const taskState = getTaskState(task.id);
   const aiderModelsData = taskState?.aiderModelsData || null;
@@ -142,20 +142,8 @@ export const TaskView = ({ project, task, inputHistory, isActive = false }: Prop
     runCommand(`test ${testCmd || ''}`);
   };
 
-  const answerQuestion = (answer: string) => {
-    if (question) {
-      api.answerQuestion(project.baseDir, task.id, answer);
-      setQuestion(task.id, null);
-    }
-  };
-
   const scrapeWeb = async (url: string, filePath?: string) => {
     await api.scrapeWeb(project.baseDir, task.id, url, filePath);
-  };
-
-  const handleInterruptResponse = () => {
-    api.interruptResponse(project.baseDir, task.id);
-    addInterruptedMessage(task.id);
   };
 
   const handleModelChange = (modelsData: ModelsData | null) => {
@@ -168,10 +156,6 @@ export const TaskView = ({ project, task, inputHistory, isActive = false }: Prop
   };
 
   const runPrompt = (prompt: string) => {
-    if (question) {
-      setQuestion(task.id, null);
-    }
-
     if (!projectSettings) {
       return;
     } // Should not happen if component is rendered
@@ -422,8 +406,8 @@ export const TaskView = ({ project, task, inputHistory, isActive = false }: Prop
               showFileDialog={showFileDialog}
               addFiles={handleAddFiles}
               question={question}
-              answerQuestion={answerQuestion}
-              interruptResponse={handleInterruptResponse}
+              answerQuestion={(answer) => answerQuestion(task.id, answer)}
+              interruptResponse={() => interruptResponse(task.id)}
               runCommand={runCommand}
               runTests={runTests}
               redoLastUserPrompt={handleRedoLastUserPrompt}

@@ -14,6 +14,7 @@ import {
   ProjectStartedData,
   ProviderModelsData,
   ProvidersUpdatedData,
+  QuestionAnsweredData,
   QuestionData,
   ResponseChunkData,
   ResponseCompletedData,
@@ -202,6 +203,18 @@ const api: ApplicationAPI = {
     ipcRenderer.on('ask-question', listener);
     return () => {
       ipcRenderer.removeListener('ask-question', listener);
+    };
+  },
+  addQuestionAnsweredListener: (baseDir, taskId, callback) => {
+    const listener = (_: Electron.IpcRendererEvent, data: QuestionAnsweredData) => {
+      if (!compareBaseDirs(data.baseDir, baseDir) || data.taskId !== taskId) {
+        return;
+      }
+      callback(data);
+    };
+    ipcRenderer.on('question-answered', listener);
+    return () => {
+      ipcRenderer.removeListener('question-answered', listener);
     };
   },
 

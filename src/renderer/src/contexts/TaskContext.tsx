@@ -70,15 +70,14 @@ const processingResponseMessageMap = new Map<string, ResponseMessage>();
 
 interface TaskContextType {
   getTaskState: (taskId: string, loadIfNotLoaded?: boolean) => TaskState | null;
-  addInterruptedMessage: (taskId: string) => void;
   clearSession: (taskId: string, messagesOnly: boolean) => void;
   restartTask: (taskId: string) => void;
   setMessages: (taskId: string, updateMessages: (prevState: Message[]) => Message[]) => void;
   // TODO: add listeners for todo items and remove
   setTodoItems: (taskId: string, updateTodoItems: (prev: TodoItem[]) => TodoItem[]) => void;
-  // TODO: add question answer, clear question events and listeners and remove
-  setQuestion: (taskId: string, question: QuestionData | null) => void;
   setAiderModelsData: (taskId: string, modelsData: ModelsData | null) => void;
+  answerQuestion: (taskId: string, answer: string) => void;
+  interruptResponse: (taskId: string) => void;
 }
 
 const TaskContext = createContext<TaskContextType | null>(null);
@@ -104,9 +103,9 @@ export const TaskProvider: React.FC<{
   const loadTask = useCallback(
     async (taskId: string) => {
       try {
-        const contextData = await api.loadTask(baseDir, taskId);
+        const { messages: stateMessages, files, todoItems, question } = await api.loadTask(baseDir, taskId);
 
-        const messages: Message[] = contextData.messages.reduce((messages, message) => {
+        const messages: Message[] = stateMessages.reduce((messages, message) => {
           if (message.type === 'response-completed') {
             if (message.reflectedMessage) {
               const reflected: ReflectedMessage = {
@@ -164,8 +163,9 @@ export const TaskProvider: React.FC<{
             loading: false,
             loaded: true,
             messages,
-            contextFiles: contextData.files,
-            todoItems: contextData.todoItems || [],
+            contextFiles: files,
+            todoItems: todoItems || [],
+            question,
           });
           return newMap;
         });
@@ -203,7 +203,10 @@ export const TaskProvider: React.FC<{
     setTaskStateMap((prev) => {
       const newMap = new Map(prev);
       const current = newMap.get(taskId) || EMPTY_TASK_STATE;
-      newMap.set(taskId, { ...current, messages: updateMessages(current.messages) });
+      newMap.set(taskId, {
+        ...current,
+        messages: updateMessages(current.messages),
+      });
       return newMap;
     });
   }, []);
@@ -241,17 +244,13 @@ export const TaskProvider: React.FC<{
     setTaskStateMap((prev) => {
       const newMap = new Map(prev);
       const current = newMap.get(taskId) || EMPTY_TASK_STATE;
-      newMap.set(taskId, { ...current, todoItems: updateTodoItems(current.todoItems) });
+      newMap.set(taskId, {
+        ...current,
+        todoItems: updateTodoItems(current.todoItems),
+      });
       return newMap;
     });
   }, []);
-
-  const setQuestion = useCallback(
-    (taskId: string, question: QuestionData | null) => {
-      updateTaskState(taskId, { question });
-    },
-    [updateTaskState],
-  );
 
   const setAiderModelsData = useCallback(
     (taskId: string, modelsData: ModelsData | null) => {
@@ -260,23 +259,33 @@ export const TaskProvider: React.FC<{
     [updateTaskState],
   );
 
-  // TODO: move to main process
-  const addInterruptedMessage = useCallback(
-    (taskId: string) => {
-      const interruptMessage: LogMessage = {
-        id: uuidv4(),
-        type: 'log',
-        level: 'warning',
-        content: t('messages.interrupted'),
-      };
+  const setQuestion = useCallback(
+    (taskId: string, question: QuestionData | null) => {
+      updateTaskState(taskId, { question });
+    },
+    [updateTaskState],
+  );
 
-      setMessages(taskId, (prevMessages) => [...prevMessages.filter((message) => !isLoadingMessage(message)), interruptMessage]);
+  const answerQuestion = useCallback(
+    (taskId: string, answer: string) => {
+      const taskState = taskStateMap.get(taskId);
+      if (taskState?.question) {
+        api.answerQuestion(baseDir, taskId, answer);
+        updateTaskState(taskId, { question: null });
+      }
+    },
+    [api, baseDir, taskStateMap, updateTaskState],
+  );
+
+  const interruptResponse = useCallback(
+    (taskId: string) => {
+      api.interruptResponse(baseDir, taskId);
       updateTaskState(taskId, {
         processing: false,
         question: null,
       });
     },
-    [setMessages, t, updateTaskState],
+    [api, baseDir, updateTaskState],
   );
 
   useEffect(() => {
@@ -630,6 +639,10 @@ export const TaskProvider: React.FC<{
         setQuestion(taskId, data);
       };
 
+      const handleQuestionAnswered = () => {
+        setQuestion(taskId, null);
+      };
+
       const handleUserMessage = (data: UserMessageData) => {
         const userMessage: UserMessage = {
           id: uuidv4(),
@@ -672,6 +685,7 @@ export const TaskProvider: React.FC<{
       const removeLogListener = api.addLogListener(baseDir, taskId, handleLog);
       const removeTokensInfoListener = api.addTokensInfoListener(baseDir, taskId, handleTokensInfo);
       const removeAskQuestionListener = api.addAskQuestionListener(baseDir, taskId, handleQuestion);
+      const removeQuestionAnsweredListener = api.addQuestionAnsweredListener(baseDir, taskId, handleQuestionAnswered);
       const removeToolListener = api.addToolListener(baseDir, taskId, handleTool);
       const removeUserMessageListener = api.addUserMessageListener(baseDir, taskId, handleUserMessage);
       const removeClearProjectListener = api.addClearTaskListener(baseDir, taskId, handleClearProject);
@@ -686,6 +700,7 @@ export const TaskProvider: React.FC<{
         removeLogListener();
         removeTokensInfoListener();
         removeAskQuestionListener();
+        removeQuestionAnsweredListener();
         removeToolListener();
         removeUserMessageListener();
         removeClearProjectListener();
@@ -719,11 +734,11 @@ export const TaskProvider: React.FC<{
         getTaskState,
         clearSession,
         restartTask,
-        addInterruptedMessage,
         setTodoItems,
-        setQuestion,
         setMessages,
         setAiderModelsData,
+        answerQuestion,
+        interruptResponse,
       }}
     >
       {children}

@@ -24,11 +24,12 @@ import {
   ProviderModelsData,
   ProviderProfile,
   ProvidersUpdatedData,
+  QuestionAnsweredData,
   QuestionData,
   ResponseChunkData,
   ResponseCompletedData,
   SettingsData,
-  TaskContextData,
+  TaskStateData,
   TaskData,
   TerminalData,
   TerminalExitData,
@@ -54,6 +55,7 @@ type EventDataMap = {
   'custom-commands-updated': CustomCommandsUpdatedData;
   'update-autocompletion': AutocompletionData;
   'ask-question': QuestionData;
+  'question-answered': QuestionAnsweredData;
   'update-aider-models': ModelsData;
   'command-output': CommandOutputData;
   'update-tokens-info': TokensInfoData;
@@ -114,6 +116,7 @@ export class BrowserApi implements ApplicationAPI {
       'custom-commands-updated': new Map(),
       'update-autocompletion': new Map(),
       'ask-question': new Map(),
+      'question-answered': new Map(),
       'update-aider-models': new Map(),
       'command-output': new Map(),
       'update-tokens-info': new Map(),
@@ -429,7 +432,7 @@ export class BrowserApi implements ApplicationAPI {
   getTasks(baseDir: string): Promise<TaskData[]> {
     return this.get('/project/tasks', { projectDir: baseDir });
   }
-  loadTask(baseDir: string, id: string): Promise<TaskContextData> {
+  loadTask(baseDir: string, id: string): Promise<TaskStateData> {
     return this.post('/project/tasks/load', { projectDir: baseDir, id });
   }
   exportTaskToMarkdown(baseDir: string, taskId: string): Promise<void> {
@@ -536,6 +539,10 @@ export class BrowserApi implements ApplicationAPI {
   }
   addAskQuestionListener(baseDir: string, taskId: string, callback: (data: QuestionData) => void): () => void {
     return this.addListener('ask-question', callback, baseDir, taskId);
+  }
+
+  addQuestionAnsweredListener(baseDir: string, taskId: string, callback: (data: QuestionAnsweredData) => void): () => void {
+    return this.addListener('question-answered', callback, baseDir, taskId);
   }
   addUpdateAiderModelsListener(baseDir: string, taskId: string, callback: (data: ModelsData) => void): () => void {
     return this.addListener('update-aider-models', callback, baseDir, taskId);
