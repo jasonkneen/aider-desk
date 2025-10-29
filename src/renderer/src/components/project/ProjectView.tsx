@@ -29,8 +29,14 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [isCollapsed, setIsCollapsed] = useLocalStorage(`task-sidebar-collapsed-${project.baseDir}`, false);
   const taskViewRef = useRef<TaskViewRef>(null);
+  const activeTask = activeTaskId ? tasks.find((task) => task.id === activeTaskId) : null;
 
   const createNewTask = useCallback(async () => {
+    if (activeTask && !activeTask.createdAt) {
+      // when there is active task and is new we don't need to create new one
+      return;
+    }
+
     try {
       const newTask = await api.createNewTask(project.baseDir);
       // Task will be automatically added via the existing listener
@@ -39,33 +45,33 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
       // eslint-disable-next-line no-console
       console.error('Failed to create new task:', error);
     }
-  }, [api, project.baseDir]);
+  }, [activeTask, api, project.baseDir]);
 
-  const handleStartupMode = useCallback(
-    async (tasks: TaskData[]) => {
+  useEffect(() => {
+    const handleStartupMode = async (tasks: TaskData[]) => {
       const mode = settings?.startupMode ?? ProjectStartMode.Empty;
+      let startupTask: TaskData | null = null;
 
       switch (mode) {
         case ProjectStartMode.Empty: {
-          await createNewTask();
+          startupTask = await api.createNewTask(project.baseDir);
           break;
         }
         case ProjectStartMode.Last: {
-          const lastTask = tasks.filter((task) => task.createdAt && task.updatedAt).sort((a, b) => b.updatedAt!.localeCompare(a.updatedAt!))[0];
+          startupTask = tasks.filter((task) => task.createdAt && task.updatedAt).sort((a, b) => b.updatedAt!.localeCompare(a.updatedAt!))[0];
 
-          if (lastTask) {
-            setActiveTaskId(lastTask.id);
-          } else {
-            await createNewTask();
+          if (!startupTask) {
+            startupTask = await api.createNewTask(project.baseDir);
           }
           break;
         }
       }
-    },
-    [settings?.startupMode, createNewTask],
-  );
 
-  useEffect(() => {
+      if (startupTask) {
+        setActiveTaskId(startupTask.id);
+      }
+    };
+
     const handleProjectStarted = () => {
       setStarting(false);
     };
@@ -148,7 +154,7 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
       removeTaskDeletedListener();
       removeInputHistoryListener();
     };
-  }, [api, createNewTask, project.baseDir, handleStartupMode]);
+  }, [api, project.baseDir, settings?.startupMode]);
 
   const handleTaskSelect = (taskId: string) => {
     setActiveTaskId(taskId);
@@ -215,8 +221,6 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
       </div>
     );
   };
-
-  const activeTask = activeTaskId ? tasks.find((task) => task.id === activeTaskId) : null;
 
   if (!projectSettings || !settings) {
     return (
