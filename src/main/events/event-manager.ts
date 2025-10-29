@@ -247,7 +247,7 @@ export class EventManager {
   }
 
   sendTaskInitialized(task: TaskData): void {
-    this.sendToMainWindow('task-initialize', task);
+    this.sendToMainWindow('task-initialized', task);
     this.broadcastToEventConnectors('task-initialized', task);
   }
 

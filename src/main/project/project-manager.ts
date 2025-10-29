@@ -9,6 +9,7 @@ import { Project } from '@/project';
 import { Store } from '@/store';
 import { EventManager } from '@/events';
 import { ModelManager } from '@/models';
+import { WorktreeManager } from '@/worktrees';
 
 export class ProjectManager {
   private projects: Project[] = [];
@@ -20,6 +21,7 @@ export class ProjectManager {
     private readonly dataManager: DataManager,
     private readonly eventManager: EventManager,
     private readonly modelManager: ModelManager,
+    private readonly worktreeManager: WorktreeManager,
   ) {}
 
   private findProject(baseDir: string): Project | undefined {
@@ -28,7 +30,16 @@ export class ProjectManager {
 
   private createProject(baseDir: string) {
     logger.info('Creating new project', { baseDir });
-    const project = new Project(baseDir, this.store, this.mcpManager, this.telemetryManager, this.dataManager, this.eventManager, this.modelManager);
+    const project = new Project(
+      baseDir,
+      this.store,
+      this.mcpManager,
+      this.telemetryManager,
+      this.dataManager,
+      this.eventManager,
+      this.modelManager,
+      this.worktreeManager,
+    );
     this.projects.push(project);
     return project;
   }

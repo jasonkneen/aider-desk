@@ -19,6 +19,7 @@ import { TelemetryManager } from '@/telemetry';
 import { EventManager } from '@/events';
 import { Task } from '@/task';
 import { migrateSessionsToTasks } from '@/project/migrations';
+import { WorktreeManager } from '@/worktrees';
 
 export class Project {
   private readonly customCommandManager: CustomCommandManager;
@@ -36,6 +37,7 @@ export class Project {
     private readonly dataManager: DataManager,
     private readonly eventManager: EventManager,
     private readonly modelManager: ModelManager,
+    private readonly worktreeManager: WorktreeManager,
   ) {
     this.customCommandManager = new CustomCommandManager(this);
     // initialize global task
@@ -75,6 +77,7 @@ export class Project {
       this.dataManager,
       this.eventManager,
       this.modelManager,
+      this.worktreeManager,
     );
     this.tasks.set(taskId, task);
 

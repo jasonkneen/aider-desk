@@ -18,6 +18,25 @@ import { z } from 'zod';
 import type { JSONSchema7Definition } from '@ai-sdk/provider';
 import type { AssistantContent, ToolContent, UserContent } from 'ai';
 
+// Worktree schema definition
+export const WorktreeSchema = z.object({
+  path: z.string(),
+  baseBranch: z.string().optional(),
+  baseCommit: z.string().optional(),
+});
+
+export type Worktree = z.infer<typeof WorktreeSchema>;
+
+// Merge state for tracking merge operations and enabling revert
+export const MergeStateSchema = z.object({
+  beforeMergeCommitHash: z.string(),
+  worktreeBranchCommitHash: z.string(),
+  mainOriginalStashId: z.string().optional(),
+  timestamp: z.number(),
+});
+
+export type MergeState = z.infer<typeof MergeStateSchema>;
+
 export type LocalizedString = {
   key: string;
   params?: Record<string, unknown>;
@@ -564,7 +583,12 @@ export interface TaskStateData {
   files: ContextFile[];
   todoItems: TodoItem[];
   question: QuestionData | null;
+  workingMode: WorkingMode;
 }
+
+export const WorkingModeSchema = z.enum(['local', 'worktree']);
+
+export type WorkingMode = z.infer<typeof WorkingModeSchema>;
 
 export const TaskDataSchema = z.object({
   id: z.string(),
@@ -574,6 +598,9 @@ export const TaskDataSchema = z.object({
   updatedAt: z.string().optional(),
   startedAt: z.string().optional(),
   completedAt: z.string().optional(),
+  worktree: WorktreeSchema.optional(),
+  workingMode: WorkingModeSchema.optional(),
+  lastMergeState: MergeStateSchema.optional(),
   aiderTotalCost: z.number(),
   agentTotalCost: z.number(),
 });

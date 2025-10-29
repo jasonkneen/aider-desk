@@ -25,6 +25,7 @@ import { DataManager } from '@/data-manager';
 import { TerminalManager } from '@/terminal';
 import { EventsHandler } from '@/events-handler';
 import { HEADLESS_MODE, SERVER_PORT } from '@/constants';
+import { WorktreeManager } from '@/worktrees';
 
 const setupCustomMenu = (): void => {
   const menuTemplate: Electron.MenuItemConstructorOptions[] = [
@@ -164,8 +165,10 @@ const initManagers = async (
   const dataManager = new DataManager();
   dataManager.init();
 
+  const worktreeManager = new WorktreeManager();
+
   // Initialize project manager
-  const projectManager = new ProjectManager(store, mcpManager, telemetryManager, dataManager, eventManager, modelManager);
+  const projectManager = new ProjectManager(store, mcpManager, telemetryManager, dataManager, eventManager, modelManager, worktreeManager);
 
   // Initialize terminal manager
   const terminalManager = new TerminalManager(eventManager, telemetryManager);

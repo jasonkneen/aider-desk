@@ -703,4 +703,27 @@ export class BrowserApi implements ApplicationAPI {
   getCloudflareTunnelStatus(): Promise<CloudflareTunnelStatus> {
     throw new UnsupportedError('Cloudflare tunnel not supported in browser mode');
   }
+
+  // Worktree merge operations
+  mergeWorktreeToMain(baseDir: string, taskId: string, squash: boolean): Promise<void> {
+    return this.post('/project/worktree/merge-to-main', {
+      projectDir: baseDir,
+      taskId,
+      squash,
+    });
+  }
+
+  applyUncommittedChanges(baseDir: string, taskId: string): Promise<void> {
+    return this.post('/project/worktree/apply-uncommitted', {
+      projectDir: baseDir,
+      taskId,
+    });
+  }
+
+  revertLastMerge(baseDir: string, taskId: string): Promise<void> {
+    return this.post('/project/worktree/revert-last-merge', {
+      projectDir: baseDir,
+      taskId,
+    });
+  }
 }

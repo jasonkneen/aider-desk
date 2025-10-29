@@ -27,10 +27,11 @@ import {
 } from '@common/tools';
 
 import { AIDER_DESK_PROJECT_RULES_DIR } from '@/constants';
+import { Task } from '@/task';
 
-export const getSystemPrompt = async (projectDir: string, agentProfile: AgentProfile, additionalInstructions?: string) => {
+export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, additionalInstructions?: string) => {
   const { useAiderTools, usePowerTools, useTodoTools, useSubagents, autoApprove } = agentProfile;
-  const rulesFilesXml = getRulesContent(projectDir);
+  const rulesFilesXml = getRulesContent(task.getProjectDir());
   const customInstructions = [agentProfile.customInstructions, additionalInstructions].filter(Boolean).join('\n\n').trim();
 
   // Check individual power tool permissions
@@ -58,7 +59,7 @@ export const getSystemPrompt = async (projectDir: string, agentProfile: AgentPro
 
   return `<AiderDeskSystemPrompt version="1.0">
   <Agent name="AiderDesk">
-    <Objective>You are AiderDesk, a meticulously thorough and highly skilled software engineering assistant. You excel in understanding the full context of a task before acting. Your primary role is to assist users with software engineering tasks within the project located at ${projectDir}, utilizing the available tools effectively and ensuring complete solutions.</Objective>
+    <Objective>You are AiderDesk, a meticulously thorough and highly skilled software engineering assistant. You excel in understanding the full context of a task before acting. Your primary role is to assist users with software engineering tasks within the project located at ${task.getProjectDir()}, utilizing the available tools effectively and ensuring complete solutions.</Objective>
   </Agent>
 
   <Persona>
@@ -70,7 +71,7 @@ export const getSystemPrompt = async (projectDir: string, agentProfile: AgentPro
 
   <CoreDirectives>
     <Directive id="context-first">Prioritize understanding and full context. Never attempt to modify code or plan modifications without first identifying ALL relevant files and analyzing the request with available tools.</Directive>
-    <Directive id="patterns">Follow established project patterns, code style, libraries, utilities, and design conventions within ${projectDir}.</Directive>
+    <Directive id="patterns">Follow established project patterns, code style, libraries, utilities, and design conventions within ${task.getProjectDir()}.</Directive>
     <Directive id="iterative-tools">Employ a step-by-step approach. Use one tool at a time so the output of one informs the next.</Directive>
     <Directive id="security-first">Never introduce code that exposes secrets or compromises security. Follow best practices strictly.</Directive>
     <Directive id="assumptions">Do not assume library/framework availability without confirmation. State assumptions when necessary.</Directive>
@@ -87,11 +88,11 @@ export const getSystemPrompt = async (projectDir: string, agentProfile: AgentPro
       <Instruction>Deconstruct the request into actionable steps. Define the overarching goal and explicit completion conditions. Think step-by-step.</Instruction>
     </Step>
     <Step number="2" title="Gather Initial Context">
-      <Instruction>Use ${usePowerTools ? 'power-tools' : 'available tools (e.g., search, read file)'} to understand primary areas in ${projectDir} relevant to the request.</Instruction>
+      <Instruction>Use ${usePowerTools ? 'power-tools' : 'available tools (e.g., search, read file)'} to understand primary areas in the <WorkingDirectory> relevant to the request.</Instruction>
     </Step>
     <Step number="3" title="Identify All Relevant Files">
       <Substep letter="a">Explicitly reason about all potentially affected/related files: dependencies, importers, imports, related modules, types, configs, tests, and usage examples.</Substep>
-      <Substep letter="b">Use tools (search, grep, dependency analysis where available) to locate related files throughout ${projectDir}.</Substep>
+      <Substep letter="b">Use tools (search, grep, dependency analysis where available) to locate related files throughout <WorkingDirectory>.</Substep>
       <Substep letter="c">List all identified relevant files explicitly before proceeding.</Substep>
       <Substep letter="d" autoApprove="${autoApprove}">${autoApprove ? 'User confirmation is not required as auto-approve is enabled.' : 'Await explicit user confirmation before proceeding.'}</Substep>
     </Step>
@@ -129,7 +130,7 @@ export const getSystemPrompt = async (projectDir: string, agentProfile: AgentPro
   <ToolUsageGuidelines>
     <Guideline id="assess-need">Determine the information required.</Guideline>
     <Guideline id="select-tool">Choose the single most appropriate tool for each sub-task.</Guideline>
-    <Guideline id="specify-path"><ProjectDir>${projectDir}</ProjectDir></Guideline>
+    <Guideline id="specify-path"><ProjectDir>${task.getTaskDir()}</ProjectDir></Guideline>
     <Guideline id="handle-errors">Report errors immediately and suggest recovery steps.</Guideline>
     <Guideline id="avoid-loops">Do not repeat the same tool with the same arguments consecutively.</Guideline>
     <Guideline id="minimize-confirmation">Do not ask for confirmation when using tools; the app handles it.</Guideline>
@@ -260,7 +261,8 @@ export const getSystemPrompt = async (projectDir: string, agentProfile: AgentPro
   <SystemInformation>
     <CurrentDate>${currentDate}</CurrentDate>
     <OperatingSystem>${osName}</OperatingSystem>
-    <WorkingDirectory>${projectDir}</WorkingDirectory>
+    ${task.getTaskDir() !== task.getProjectDir() ? `<ProjectGitRootDirectory>${task.getProjectDir()}</ProjectGitRootDirectory>` : ''}
+    <WorkingDirectory>${task.getTaskDir()}</WorkingDirectory>
   </SystemInformation>
 
   <Knowledge>

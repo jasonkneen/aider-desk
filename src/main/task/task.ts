@@ -28,6 +28,7 @@ import {
   ToolData,
   UsageReportData,
   UserMessageData,
+  WorkingMode,
 } from '@common/types';
 import { extractTextContent, fileExists, getActiveAgentProfile, parseUsageReport } from '@common/utils';
 import { COMPACT_CONVERSATION_AGENT_PROFILE, INIT_PROJECT_AGENTS_PROFILE } from '@common/agent';
@@ -53,6 +54,7 @@ import { getEnvironmentVariablesForAider } from '@/utils';
 import { ContextManager } from '@/task/context-manager';
 import { Project } from '@/project';
 import { AiderManager } from '@/task/aider-manager';
+import { WorktreeManager } from '@/worktrees';
 
 export class Task {
   private initialized = false;
@@ -74,7 +76,7 @@ export class Task {
   readonly git: SimpleGit;
 
   constructor(
-    public readonly project: Project,
+    private readonly project: Project,
     public readonly taskId: string,
     private readonly store: Store,
     private readonly mcpManager: McpManager,
@@ -83,6 +85,7 @@ export class Task {
     private readonly dataManager: DataManager,
     private readonly eventManager: EventManager,
     private readonly modelManager: ModelManager,
+    private readonly worktreeManager: WorktreeManager,
   ) {
     this.task = {
       id: taskId,
@@ -161,8 +164,41 @@ export class Task {
         baseDir: this.project.baseDir,
         taskId: this.taskId,
       });
+      this.eventManager.sendTaskInitialized(this.task);
       this.aiderManager.sendUpdateAiderModels();
       return;
+    }
+
+    // Check if worktree is enabled for this task
+    const workingMode = this.task.workingMode;
+    const existingWorktree = await this.worktreeManager.getTaskWorktree(this.project.baseDir, this.taskId);
+
+    if (workingMode === 'worktree') {
+      if (existingWorktree) {
+        this.task.worktree = existingWorktree;
+      } else {
+        // Create a default worktree for this task
+        this.task.worktree = await this.worktreeManager.createWorktree(this.project.baseDir, this.taskId);
+      }
+    } else if (workingMode === 'local') {
+      // Check if worktree exists and set worktreeEnabled accordingly
+      if (existingWorktree) {
+        await this.worktreeManager.removeWorktree(this.project.baseDir, existingWorktree);
+      }
+    } else {
+      logger.debug('Empty workingMode, setting to local', {
+        baseDir: this.project.baseDir,
+        taskId: this.taskId,
+        workingMode,
+        currentWorktree: existingWorktree,
+      });
+      if (existingWorktree) {
+        this.task.worktree = existingWorktree;
+        this.task.workingMode = 'worktree';
+      } else {
+        this.task.worktree = undefined;
+        this.task.workingMode = 'local';
+      }
     }
 
     await this.loadContext();
@@ -186,6 +222,7 @@ export class Task {
       files: this.contextManager.getContextFiles(),
       todoItems: await this.getTodos(),
       question: this.currentQuestion,
+      workingMode: this.task.workingMode || 'local',
     };
   }
 
@@ -244,6 +281,14 @@ export class Task {
     this.connectors = this.connectors.filter((c) => c !== connector);
   }
 
+  public getProjectDir() {
+    return this.project.baseDir;
+  }
+
+  public getTaskDir() {
+    return this.task.worktree ? this.task.worktree.path : this.project.baseDir;
+  }
+
   private normalizeFilePath(filePath: string): string {
     const normalizedPath = path.normalize(filePath);
 
@@ -262,7 +307,7 @@ export class Task {
     if (clearContext) {
       this.eventManager.sendClearTask(this.project.baseDir, this.taskId, true, true);
     }
-    this.interruptResponse();
+    this.interruptResponse(false);
 
     await this.aiderManager.kill();
     await this.cleanUpEmptyTask();
@@ -975,7 +1020,7 @@ export class Task {
     }
   }
 
-  public interruptResponse() {
+  public interruptResponse(addMessage = true) {
     logger.debug('Interrupting response:', { baseDir: this.project.baseDir });
 
     if (this.currentQuestion) {
@@ -983,7 +1028,9 @@ export class Task {
     }
 
     this.findMessageConnectors('interrupt-response').forEach((connector) => connector.sendInterruptResponseMessage());
-    this.addLogMessage('warning', 'messages.interrupted');
+    if (addMessage) {
+      this.addLogMessage('warning', 'messages.interrupted');
+    }
     this.agent.interrupt();
     this.promptFinished();
   }
@@ -1542,7 +1589,7 @@ ${error.stderr}`,
           profile = { ...profile, autoApprove: true };
         }
 
-        const systemPrompt = await getSystemPrompt(this.project.baseDir, profile);
+        const systemPrompt = await getSystemPrompt(this, profile);
 
         const messages = command.includeContext === false ? [] : undefined;
         const contextFiles = command.includeContext === false ? [] : undefined;
@@ -1562,7 +1609,7 @@ ${error.stderr}`,
       return;
     }
 
-    this.interruptResponse();
+    this.interruptResponse(false);
     await this.close();
     await this.init();
     if (this.task.createdAt) {
@@ -1572,5 +1619,190 @@ ${error.stderr}`,
       });
     }
     await this.updateContextInfo();
+  }
+
+  public async updateTask(updates: Partial<TaskData>): Promise<TaskData> {
+    // Handle worktree configuration changes
+    if (updates.workingMode !== undefined && updates.workingMode !== this.task.workingMode) {
+      if (!(await this.applyWorkingMode(updates.workingMode))) {
+        return this.task;
+      }
+    }
+
+    this.task.updatedAt = new Date().toISOString();
+
+    if (!this.task.createdAt) {
+      // if this task is new empty task update should not trigger save
+      this.eventManager.sendTaskUpdated(this.task);
+      return this.task;
+    }
+
+    return this.saveTask(updates);
+  }
+
+  private async applyWorkingMode(mode: WorkingMode) {
+    logger.info('Applying workingMode configuration', {
+      baseDir: this.project.baseDir,
+      taskId: this.taskId,
+      mode,
+    });
+
+    await this.waitForCurrentPromptToFinish();
+
+    const currentWorktree = await this.worktreeManager.getTaskWorktree(this.project.baseDir, this.taskId);
+    if (mode === 'worktree') {
+      if (!currentWorktree) {
+        this.task.worktree = await this.worktreeManager.createWorktree(this.project.baseDir, this.taskId);
+      }
+      this.task.workingMode = mode;
+    } else if (mode === 'local') {
+      if (currentWorktree) {
+        // Check for unsaved work before removing worktree
+        const workStatus = await this.worktreeManager.checkWorktreeForUnmergedWork(this.project.baseDir, currentWorktree.path);
+
+        if (workStatus.hasUncommittedChanges || workStatus.hasUnmergedCommits) {
+          // Build warning message
+          const warnings: string[] = [];
+          if (workStatus.hasUncommittedChanges) {
+            warnings.push('- Uncommitted changes');
+          }
+          if (workStatus.hasUnmergedCommits) {
+            warnings.push(`- ${workStatus.unmergedCommitCount} commit${workStatus.unmergedCommitCount > 1 ? 's' : ''} not merged to main branch`);
+          }
+
+          const warningMessage = `Warning: This worktree has unsaved work:\n${warnings.join('\n')}\n\nRemoving the worktree will delete this work. If you want to keep this work, use Merge action to merge it to the main branch first.\n\nAre you sure you want to continue and remove the worktree?`;
+
+          const [answer] = await this.askQuestion(
+            {
+              baseDir: this.project.baseDir,
+              taskId: this.taskId,
+              text: warningMessage,
+              defaultAnswer: 'n',
+              internal: true,
+            },
+            true,
+          );
+
+          if (answer !== 'y') {
+            logger.info('User cancelled worktree removal due to unsaved work');
+            // Revert the mode change
+            this.task.workingMode = 'worktree';
+            return false;
+          }
+        }
+
+        await this.worktreeManager.removeWorktree(this.project.baseDir, currentWorktree);
+      }
+      this.task.worktree = undefined;
+      this.task.workingMode = mode;
+    }
+
+    await this.aiderManager.start();
+
+    return true;
+  }
+
+  public async mergeWorktreeToMain(squash: boolean): Promise<void> {
+    if (!this.task.worktree) {
+      throw new Error('No worktree exists for this task');
+    }
+
+    logger.info('Merging worktree to main', {
+      baseDir: this.project.baseDir,
+      taskId: this.taskId,
+      squash,
+    });
+
+    await this.waitForCurrentPromptToFinish();
+
+    try {
+      this.addLogMessage('loading', squash ? 'Squashing and merging worktree to main branch...' : 'Merging worktree to main branch...');
+
+      // For squash merge, we need a commit message
+      let commitMessage: string | undefined;
+      if (squash) {
+        // Get the task name or generate a default message
+        commitMessage = this.task.name || `Task ${this.taskId} changes`;
+      }
+
+      const mergeState = await this.worktreeManager.mergeWorktreeToMainWithUncommitted(
+        this.project.baseDir,
+        this.task.id,
+        this.task.worktree.path,
+        squash,
+        commitMessage,
+      );
+
+      // Store merge state for potential revert
+      await this.saveTask({ lastMergeState: mergeState });
+
+      this.addLogMessage('info', squash ? 'Successfully squashed and merged worktree to main branch' : 'Successfully merged worktree to main branch', true);
+    } catch (error) {
+      logger.error('Failed to merge worktree:', { error });
+      this.addLogMessage(
+        'error',
+        // @ts-expect-error checking keys in error
+        `${'gitOutput' in error ? error.gitOutput : error instanceof Error ? error.message : String(error)}`,
+        true,
+      );
+      throw error;
+    }
+  }
+
+  public async applyUncommittedChanges(): Promise<void> {
+    if (!this.task.worktree) {
+      throw new Error('No worktree exists for this task');
+    }
+
+    logger.info('Applying uncommitted changes to main', {
+      baseDir: this.project.baseDir,
+      taskId: this.taskId,
+    });
+
+    await this.waitForCurrentPromptToFinish();
+
+    try {
+      this.addLogMessage('loading', 'Applying uncommitted changes to main branch...');
+
+      await this.worktreeManager.applyUncommittedChangesToMain(this.project.baseDir, this.task.id, this.task.worktree.path);
+
+      this.addLogMessage('info', 'Successfully applied uncommitted changes to main branch', true);
+    } catch (error) {
+      logger.error('Failed to apply uncommitted changes:', error);
+      this.addLogMessage('error', `Failed to apply uncommitted changes: ${error instanceof Error ? error.message : String(error)}`, true);
+      throw error;
+    }
+  }
+
+  public async revertLastMerge(): Promise<void> {
+    if (!this.task.lastMergeState) {
+      throw new Error('No merge state found to revert');
+    }
+
+    if (!this.task.worktree) {
+      throw new Error('No worktree exists for this task');
+    }
+
+    logger.info('Reverting last merge', {
+      baseDir: this.project.baseDir,
+      taskId: this.taskId,
+    });
+
+    await this.waitForCurrentPromptToFinish();
+
+    try {
+      this.addLogMessage('loading', 'Reverting last merge...');
+
+      await this.worktreeManager.revertMerge(this.project.baseDir, this.task.id, this.task.worktree.path, this.task.lastMergeState);
+
+      // Clear merge state after successful revert
+      await this.saveTask({ lastMergeState: undefined });
+
+      this.addLogMessage('info', 'Successfully reverted last merge', true);
+    } catch (error) {
+      logger.error('Failed to revert merge:', error);
+      this.addLogMessage('error', `Failed to revert merge: ${error instanceof Error ? error.message : String(error)}`, true);
+      throw error;
+    }
   }
 }

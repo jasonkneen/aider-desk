@@ -106,7 +106,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         return `File edit to '${filePath}' denied by user. Reason: ${userInput}`;
       }
 
-      const absolutePath = path.resolve(task.project.baseDir, filePath);
+      const absolutePath = path.resolve(task.getTaskDir(), filePath);
       try {
         const fileContent = await fs.readFile(absolutePath, 'utf8');
         let modifiedContent: string;
@@ -174,7 +174,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         return `File read of '${filePath}' denied by user. Reason: ${userInput}`;
       }
 
-      const absolutePath = path.resolve(task.project.baseDir, filePath);
+      const absolutePath = path.resolve(task.getTaskDir(), filePath);
       try {
         const fileContentBuffer = await fs.readFile(absolutePath);
         if (isBinary(absolutePath, fileContentBuffer)) {
@@ -233,7 +233,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         return `File write to '${filePath}' denied by user. Reason: ${userInput}`;
       }
 
-      const absolutePath = path.resolve(task.project.baseDir, filePath);
+      const absolutePath = path.resolve(task.getTaskDir(), filePath);
 
       const addToGit = async () => {
         try {
@@ -307,7 +307,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         return `Glob search with pattern '${pattern}' denied by user. Reason: ${userInput}`;
       }
 
-      const absoluteCwd = cwd ? path.resolve(task.project.baseDir, cwd) : task.project.baseDir;
+      const absoluteCwd = cwd ? path.resolve(task.getTaskDir(), cwd) : task.getTaskDir();
       try {
         const files = await glob(pattern, {
           cwd: absoluteCwd,
@@ -318,10 +318,10 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
         // Convert to absolute paths for filtering, then back to relative
         const absoluteFiles = files.map((file) => path.resolve(absoluteCwd, file));
-        const filteredFiles = await filterIgnoredFiles(task.project.baseDir, absoluteFiles);
+        const filteredFiles = await filterIgnoredFiles(task.getTaskDir(), absoluteFiles);
 
-        // Ensure paths are relative to task.project.baseDir
-        const result = filteredFiles.map((file) => path.relative(task.project.baseDir, file));
+        // Ensure paths are relative to task.getTaskDir()
+        const result = filteredFiles.map((file) => path.relative(task.getTaskDir(), file));
 
         return result;
       } catch (error) {
@@ -372,7 +372,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
       try {
         const files = await glob(filePattern, {
-          cwd: task.project.baseDir,
+          cwd: task.getTaskDir(),
           nodir: true,
           absolute: true,
         });
@@ -382,7 +382,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         }
 
         // Filter out ignored files in batch
-        const filteredFiles = await filterIgnoredFiles(task.project.baseDir, files);
+        const filteredFiles = await filterIgnoredFiles(task.getTaskDir(), files);
 
         if (filteredFiles.length === 0) {
           return `No files found matching pattern '${filePattern}' (all files were ignored).`;
@@ -399,7 +399,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         for (const absoluteFilePath of filteredFiles) {
           const fileContent = await fs.readFile(absoluteFilePath, 'utf8');
           const lines = fileContent.split('\n');
-          const relativeFilePath = path.relative(task.project.baseDir, absoluteFilePath);
+          const relativeFilePath = path.relative(task.getTaskDir(), absoluteFilePath);
 
           lines.forEach((line, index) => {
             if (searchRegex.test(line)) {
@@ -467,7 +467,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         return `Bash command execution denied by user. Reason: ${userInput}`;
       }
 
-      const absoluteCwd = cwd ? path.resolve(task.project.baseDir, cwd) : task.project.baseDir;
+      const absoluteCwd = cwd ? path.resolve(task.getTaskDir(), cwd) : task.getTaskDir();
       try {
         const { stdout, stderr } = await execAsync(command, {
           cwd: absoluteCwd,
@@ -540,7 +540,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
       path: z
         .string()
         .optional()
-        .default(task.project.baseDir)
+        .default(task.getTaskDir())
         .describe('Absolute path to search in. For dependencies use "go:github.com/owner/repo", "js:package_name", or "rust:cargo_name" etc.'),
       allowTests: z.boolean().optional().default(false).describe('Allow test files in search results'),
       exact: z.boolean().optional().default(false).describe('Perform exact search without tokenization (case-insensitive)'),
@@ -564,14 +564,14 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
       // Use parameter maxTokens if provided, otherwise use the default
       const effectiveMaxTokens = paramMaxTokens || 10000;
 
-      let searchPath = inputPath || task.project.baseDir;
+      let searchPath = inputPath || task.getTaskDir();
 
       // Check if it's a dependency path (format: language:rest)
       const isDependencyPath = /^[a-zA-Z]+:/.test(searchPath);
 
       if (!isDependencyPath && !path.isAbsolute(searchPath)) {
-        // If path is relative (including "." and "./"), resolve it relative to task.project.baseDir
-        searchPath = path.resolve(task.project.baseDir, searchPath);
+        // If path is relative (including "." and "./"), resolve it relative to task.getTaskDir()
+        searchPath = path.resolve(task.getTaskDir(), searchPath);
       }
 
       try {

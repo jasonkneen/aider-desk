@@ -172,4 +172,9 @@ export interface ApplicationAPI {
   closeTerminal: (terminalId: string) => Promise<boolean>;
   getTerminalForTask: (taskId: string) => Promise<string | null>;
   getAllTerminalsForTask: (taskId: string) => Promise<Array<{ id: string; taskId: string; cols: number; rows: number }>>;
+
+  // Worktree merge operations
+  mergeWorktreeToMain: (baseDir: string, taskId: string, squash: boolean) => Promise<void>;
+  applyUncommittedChanges: (baseDir: string, taskId: string) => Promise<void>;
+  revertLastMerge: (baseDir: string, taskId: string) => Promise<void>;
 }

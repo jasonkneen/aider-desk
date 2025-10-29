@@ -1,5 +1,5 @@
-import { Mode, Model, ModelsData, ProjectData, TaskData, TodoItem } from '@common/types';
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition } from 'react';
+import { Mode, Model, ModelsData, ProjectData, TaskData, TodoItem, WorkingMode } from '@common/types';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CgSpinner } from 'react-icons/cg';
 import { ResizableBox } from 'react-resizable';
@@ -13,7 +13,7 @@ import { VirtualizedMessages, VirtualizedMessagesRef } from '@/components/messag
 import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
 import { AddFileDialog } from '@/components/project/AddFileDialog';
-import { ProjectBar, ProjectTopBarRef } from '@/components/project/ProjectBar';
+import { TaskBar, TaskBarRef } from '@/components/project/TaskBar';
 import { PromptField, PromptFieldRef } from '@/components/PromptField';
 import { Button } from '@/components/common/Button';
 import { TodoWindow } from '@/components/project/TodoWindow';
@@ -60,13 +60,14 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
   const [showSidebar, setShowSidebar] = useState(isMobile);
 
   const promptFieldRef = useRef<PromptFieldRef>(null);
-  const projectTopBarRef = useRef<ProjectTopBarRef>(null);
+  const projectTopBarRef = useRef<TaskBarRef>(null);
   const messagesRef = useRef<MessagesRef | VirtualizedMessagesRef>(null);
   const terminalViewRef = useRef<TerminalViewRef | null>(null);
   const [messagesPending, startMessagesTransition] = useTransition();
   const [transitionMessages, setTransitionMessages] = useState<Message[]>([]);
+  const [searchContainer, setSearchContainer] = useState<HTMLElement | null>(null);
 
-  const { renderSearchInput } = useSearchText(messagesRef.current?.container || null, 'absolute top-1 left-1');
+  const { renderSearchInput } = useSearchText(searchContainer, 'absolute top-1 left-1');
 
   useImperativeHandle(ref, () => ({
     exportMessagesToImage: () => {
@@ -105,6 +106,36 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
       <div className="mt-2 text-xs text-center text-text-primary">{message}</div>
     </div>
   );
+
+  const handleWorkingModeChange = useCallback(
+    async (newWorkingMode: WorkingMode) => {
+      if (!task) {
+        return;
+      }
+
+      try {
+        await api.updateTask(project.baseDir, task.id, {
+          workingMode: newWorkingMode,
+        });
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to update working mode:', error);
+      }
+    },
+    [task, project.baseDir, api],
+  );
+
+  const handleOpenModelSelector = useCallback(() => {
+    projectTopBarRef.current?.openMainModelSelector();
+  }, []);
+
+  const handleOpenAgentModelSelector = useCallback(() => {
+    projectTopBarRef.current?.openAgentModelSelector();
+  }, []);
+
+  const handleScrollToBottom = useCallback(() => {
+    messagesRef.current?.scrollToBottom();
+  }, []);
 
   if (!taskState) {
     return renderLoading(t('common.loadingTask'));
@@ -308,15 +339,16 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
     <div className={clsx('h-full bg-gradient-to-b from-bg-primary to-bg-primary-light relative', isMobile ? 'flex flex-col' : 'flex')}>
       {!loaded && renderLoading(t('common.loadingTask'))}
       <div className="flex flex-col flex-grow overflow-hidden">
-        <ProjectBar
+        <TaskBar
           ref={projectTopBarRef}
           baseDir={project.baseDir}
-          taskId={task.id}
+          task={task}
           modelsData={aiderModelsData}
           mode={projectSettings.currentMode}
           onModelsChange={handleModelChange}
           runCommand={runCommand}
           onToggleSidebar={() => setShowSidebar(!showSidebar)}
+          onWorkingModeChange={handleWorkingModeChange}
         />
         <div className="flex-grow overflow-y-hidden relative flex flex-col">
           {renderSearchInput()}
@@ -333,7 +365,12 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
           <div className="overflow-hidden flex-grow relative">
             {settings.virtualizedRendering ? (
               <VirtualizedMessages
-                ref={messagesRef}
+                ref={(node) => {
+                  messagesRef.current = node;
+                  if (node?.container) {
+                    setSearchContainer(node.container);
+                  }
+                }}
                 baseDir={project.baseDir}
                 messages={displayedMessages}
                 allFiles={allFiles}
@@ -344,7 +381,12 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
               />
             ) : (
               <Messages
-                ref={messagesRef}
+                ref={(node) => {
+                  messagesRef.current = node;
+                  if (node?.container) {
+                    setSearchContainer(node.container);
+                  }
+                }}
                 baseDir={project.baseDir}
                 messages={displayedMessages}
                 allFiles={allFiles}
@@ -416,13 +458,13 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
               runCommand={runCommand}
               runTests={runTests}
               redoLastUserPrompt={handleRedoLastUserPrompt}
-              openModelSelector={projectTopBarRef.current?.openMainModelSelector}
-              openAgentModelSelector={projectTopBarRef.current?.openAgentModelSelector}
+              openModelSelector={handleOpenModelSelector}
+              openAgentModelSelector={handleOpenAgentModelSelector}
               promptBehavior={settings.promptBehavior}
               clearLogMessages={clearLogMessages}
               toggleTerminal={api.isTerminalSupported() ? toggleTerminal : undefined}
               terminalVisible={terminalVisible}
-              scrollToBottom={messagesRef.current?.scrollToBottom}
+              scrollToBottom={handleScrollToBottom}
             />
           </div>
         </div>

@@ -403,6 +403,33 @@ export class EventsHandler {
     }));
   }
 
+  async mergeWorktreeToMain(baseDir: string, taskId: string, squash: boolean): Promise<void> {
+    const task = this.projectManager.getProject(baseDir).getTask(taskId);
+    if (!task) {
+      throw new Error(`Task ${taskId} not found`);
+    }
+
+    await task.mergeWorktreeToMain(squash);
+  }
+
+  async applyUncommittedChanges(baseDir: string, taskId: string): Promise<void> {
+    const task = this.projectManager.getProject(baseDir).getTask(taskId);
+    if (!task) {
+      throw new Error(`Task ${taskId} not found`);
+    }
+
+    await task.applyUncommittedChanges();
+  }
+
+  async revertLastMerge(baseDir: string, taskId: string): Promise<void> {
+    const task = this.projectManager.getProject(baseDir).getTask(taskId);
+    if (!task) {
+      throw new Error(`Task ${taskId} not found`);
+    }
+
+    await task.revertLastMerge();
+  }
+
   async scrapeWeb(baseDir: string, taskId: string, url: string, filePath?: string): Promise<void> {
     const content = await scrapeWeb(url);
     const project = this.projectManager.getProject(baseDir);
@@ -469,7 +496,13 @@ export class EventsHandler {
   }
 
   async updateTask(baseDir: string, id: string, updates: Partial<TaskData>): Promise<TaskData | undefined> {
-    return this.projectManager.getProject(baseDir).getTask(id)?.saveTask(updates);
+    const task = this.projectManager.getProject(baseDir).getTask(id);
+    if (!task) {
+      return undefined;
+    }
+
+    // Delegate to Task.updateTask method which handles worktree logic
+    return task.updateTask(updates);
   }
 
   async deleteTask(baseDir: string, id: string): Promise<void> {
@@ -487,6 +520,7 @@ export class EventsHandler {
         files: [],
         todoItems: [],
         question: null,
+        workingMode: 'local',
       }
     );
   }

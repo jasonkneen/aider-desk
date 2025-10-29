@@ -22,7 +22,7 @@ export class ApprovalManager {
     }
 
     const questionData: QuestionData = {
-      baseDir: this.task.project.baseDir,
+      baseDir: this.task.getProjectDir(),
       taskId: this.task.taskId,
       text,
       subject,

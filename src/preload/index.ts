@@ -523,6 +523,11 @@ const api: ApplicationAPI = {
   closeTerminal: (terminalId) => ipcRenderer.invoke('terminal-close', terminalId),
   getTerminalForTask: (baseDir) => ipcRenderer.invoke('terminal-get-for-task', baseDir),
   getAllTerminalsForTask: (baseDir) => ipcRenderer.invoke('terminal-get-all-for-task', baseDir),
+
+  // Worktree merge operations
+  mergeWorktreeToMain: (baseDir, taskId, squash) => ipcRenderer.invoke('merge-worktree-to-main', baseDir, taskId, squash),
+  applyUncommittedChanges: (baseDir, taskId) => ipcRenderer.invoke('apply-uncommitted-changes', baseDir, taskId),
+  revertLastMerge: (baseDir, taskId) => ipcRenderer.invoke('revert-last-merge', baseDir, taskId),
 };
 
 if (process.contextIsolated) {

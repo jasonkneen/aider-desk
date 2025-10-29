@@ -291,6 +291,19 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     return eventsHandler.getTerminalsForTask(taskId);
   });
 
+  // Worktree merge handlers
+  ipcMain.handle('merge-worktree-to-main', async (_, baseDir: string, taskId: string, squash: boolean) => {
+    await eventsHandler.mergeWorktreeToMain(baseDir, taskId, squash);
+  });
+
+  ipcMain.handle('apply-uncommitted-changes', async (_, baseDir: string, taskId: string) => {
+    await eventsHandler.applyUncommittedChanges(baseDir, taskId);
+  });
+
+  ipcMain.handle('revert-last-merge', async (_, baseDir: string, taskId: string) => {
+    await eventsHandler.revertLastMerge(baseDir, taskId);
+  });
+
   // Server control handlers
   ipcMain.handle('start-server', async (_, username?: string, password?: string) => {
     const started = await serverController.startServer();

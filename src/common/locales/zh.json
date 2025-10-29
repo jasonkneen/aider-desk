@@ -542,6 +542,13 @@
     "context": "上下文",
     "agent": "代理"
   },
+  "modeTooltip": {
+    "code": "使用 Aider AI 助手进行直接代码生成和编辑",
+    "agent": "具有高级推理和工具使用能力的自主 AI 代理",
+    "ask": "询问有关代码库的问题而不进行更改",
+    "architect": "高级项目规划和架构设计",
+    "context": "搜索和探索代码库上下文"
+  },
   "addFileDialog": {
     "title": "添加上下文文件",
     "browse": "浏览文件",
@@ -833,7 +840,17 @@
     "editFormatTooltip": "这是用于编辑代码的格式。更改它可能会导致模型表现不如预期。",
     "aider": "Aider",
     "toggleSidebar": "切换侧边栏",
-    "modelLibrary": "模型库"
+    "modelLibrary": "模型库",
+    "worktree": "工作树",
+    "worktreeTooltip": "切换此任务的工作树"
+  },
+  "workingMode": {
+    "local": "本地",
+    "worktree": "工作树"
+  },
+  "workingModeTooltip": {
+    "local": "在此任务中直接在本地项目目录中进行更改",
+    "worktree": "使用 git 工作树为此任务进行隔离的更改"
   },
   "reasoningEffort": {
     "label": "推理",
@@ -994,5 +1011,25 @@
     "taskNamePlaceholder": "输入任务名称...",
     "exportAsMarkdown": "导出为 Markdown",
     "exportAsImage": "导出为图片"
+  },
+  "worktree": {
+    "merge": "合并",
+    "squash": "压缩合并",
+    "revert": "撤销合并",
+    "onlyUncommitted": "仅未提交的更改",
+    "mergeTooltip": "将工作树更改合并到主分支",
+    "revertTooltip": "撤销最后一次合并的更改",
+    "confirmMerge": "您确定要{{action}}工作树更改到主分支吗？这将包含任何未提交的更改。",
+    "confirmRevert": "您确定要撤销最后一次合并吗？这将把主分支重置到之前的状态。",
+    "confirmMergeTitle": "确认合并",
+    "confirmSquashTitle": "确认压缩合并",
+    "confirmOnlyUncommittedTitle": "确认应用未提交的更改",
+    "confirmMergeMessage": "您确定要将工作树更改合并到主分支吗？",
+    "confirmSquashMessage": "您确定要压缩并合并工作树更改到主分支吗？",
+    "confirmOnlyUncommittedMessage": "您确定要将工作树中的未提交更改应用到主分支吗？不会执行 git 合并操作。",
+    "dontAskAgain": "不再询问",
+    "confirmRevertTitle": "确认撤销",
+    "confirmRevertMessage": "您确定要撤销最后一次合并吗？这将撤销从工作树合并回主分支的更改。",
+    "revert": "撤销"
   }
 }

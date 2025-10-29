@@ -80,7 +80,7 @@ export const createAiderToolset = (task: Task, profile: AgentProfile, promptCont
 
       const results: string[] = [];
       for (const filePath of paths) {
-        const absolutePath = path.resolve(task.project.baseDir, filePath);
+        const absolutePath = path.resolve(task.getTaskDir(), filePath);
         let fileExists = false;
         try {
           await fs.access(absolutePath);

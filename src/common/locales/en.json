@@ -586,6 +586,13 @@
     "context": "Context",
     "agent": "Agent"
   },
+  "modeTooltip": {
+    "code": "Direct code generation and editing with Aider AI assistant",
+    "agent": "Autonomous AI agent with advanced reasoning and tool usage capabilities",
+    "ask": "Ask questions about your codebase without making changes",
+    "architect": "High-level project planning and architecture design",
+    "context": "Search and explore your codebase context"
+  },
   "addFileDialog": {
     "title": "Add context files",
     "browse": "Browse files",
@@ -862,7 +869,17 @@
     "editFormatTooltip": "This is the format used for editing code. Changing it might cause the model to not perform as expected.",
     "aider": "Aider",
     "toggleSidebar": "Toggle sidebar",
-    "modelLibrary": "Model Library"
+    "modelLibrary": "Model Library",
+    "worktree": "Worktree",
+    "worktreeTooltip": "Toggle worktree for this task"
+  },
+  "workingMode": {
+    "local": "Local",
+    "worktree": "Worktree"
+  },
+  "workingModeTooltip": {
+    "local": "Make changes directly in the local project directory for this task",
+    "worktree": "Use git worktree to make isolated changes for this task"
   },
   "reasoningEffort": {
     "label": "Reasoning",
@@ -986,5 +1003,25 @@
     "taskNamePlaceholder": "Enter task name...",
     "exportAsMarkdown": "Export as markdown",
     "exportAsImage": "Export as image"
+  },
+  "worktree": {
+    "merge": "Merge",
+    "squash": "Squash & Merge",
+    "revert": "Revert Merge",
+    "onlyUncommitted": "Only uncommitted",
+    "mergeTooltip": "Merge worktree changes to main branch",
+    "revertTooltip": "Revert the last merged changes",
+    "confirmMerge": "Are you sure you want to {{action}} the worktree changes to the main branch? This will include any uncommitted changes.",
+    "confirmRevert": "Are you sure you want to revert the last merge? This will reset the main branch to its previous state.",
+    "confirmMergeTitle": "Confirm Merge",
+    "confirmSquashTitle": "Confirm Squash",
+    "confirmOnlyUncommittedTitle": "Confirm Apply Uncommitted Changes",
+    "confirmMergeMessage": "Are you sure you want to merge the worktree changes to the main branch?",
+    "confirmSquashMessage": "Are you sure you want to squash and merge the worktree changes to the main branch?",
+    "confirmOnlyUncommittedMessage": "Are you sure you want to apply uncommitted changes from worktree to main branch? No git merge will be performed.",
+    "dontAskAgain": "Don't ask me again",
+    "confirmRevertTitle": "Confirm Revert",
+    "confirmRevertMessage": "Are you sure you want to revert the last merge? This will undo the changes that were merged from the worktree back to the main branch.",
+    "revert": "Revert"
   }
 }

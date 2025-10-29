@@ -32,7 +32,7 @@ export class ContextManager {
     this.files = initialFiles;
 
     // Task-specific storage path - single context per task
-    this.storagePath = path.join(task.project.baseDir, AIDER_DESK_TASKS_DIR, taskId, 'context.json');
+    this.storagePath = path.join(task.getProjectDir(), AIDER_DESK_TASKS_DIR, taskId, 'context.json');
   }
 
   public enableAutosave() {
@@ -79,13 +79,13 @@ export class ContextManager {
     if (contextFile.readOnly) {
       return false;
     }
-    return isFileIgnored(this.task.project.baseDir, contextFile.path);
+    return isFileIgnored(this.task.getTaskDir(), contextFile.path);
   }
 
   async addContextFile(contextFile: ContextFile): Promise<ContextFile[]> {
-    const absolutePath = path.resolve(this.task.project.baseDir, contextFile.path);
+    const absolutePath = path.resolve(this.task.getTaskDir(), contextFile.path);
     const isDir = await isDirectory(absolutePath);
-    const alreadyAdded = this.files.find((file) => path.resolve(this.task.project.baseDir, file.path) === absolutePath);
+    const alreadyAdded = this.files.find((file) => path.resolve(this.task.getTaskDir(), file.path) === absolutePath);
 
     if (alreadyAdded) {
       return [];
@@ -149,11 +149,11 @@ export class ContextManager {
   }
 
   dropContextFile(filePath: string): ContextFile[] {
-    const absolutePath = path.resolve(this.task.project.baseDir, filePath);
+    const absolutePath = path.resolve(this.task.getTaskDir(), filePath);
     const droppedFiles: ContextFile[] = [];
 
     this.files = this.files.filter((f) => {
-      const contextFileAbsolutePath = path.resolve(this.task.project.baseDir, f.path);
+      const contextFileAbsolutePath = path.resolve(this.task.getTaskDir(), f.path);
       const isMatch = f.path === filePath || contextFileAbsolutePath === absolutePath || !path.relative(absolutePath, contextFileAbsolutePath).startsWith('..');
 
       if (isMatch) {
@@ -421,7 +421,7 @@ export class ContextManager {
     // Filter out files that no longer exist
     const existingFiles: ContextFile[] = [];
     for (const file of this.files) {
-      const absolutePath = path.resolve(this.task.project.baseDir, file.path);
+      const absolutePath = path.resolve(this.task.getTaskDir(), file.path);
       if (await fileExists(absolutePath)) {
         existingFiles.push(file);
       }
@@ -577,7 +577,7 @@ export class ContextManager {
               type: 'response-completed',
               messageId: message.id,
               content: finalContent.trim(),
-              baseDir: this.task.project.baseDir,
+              baseDir: this.task.getProjectDir(),
               taskId: this.taskId,
               reflectedMessage: message.reflectedMessage,
               editedFiles: message.editedFiles,
@@ -602,7 +602,7 @@ export class ContextManager {
               const [serverName, toolName] = extractServerNameToolName(toolCall.toolName);
               const toolData: ToolData = {
                 type: 'tool',
-                baseDir: this.task.project.baseDir,
+                baseDir: this.task.getProjectDir(),
                 taskId: this.taskId,
                 id: toolCall.toolCallId,
                 serverName,
@@ -630,7 +630,7 @@ export class ContextManager {
             type: 'response-completed',
             messageId: message.id,
             content: content,
-            baseDir: this.task.project.baseDir,
+            baseDir: this.task.getProjectDir(),
             taskId: this.taskId,
             reflectedMessage: message.reflectedMessage,
             usageReport: message.usageReport,
@@ -643,7 +643,7 @@ export class ContextManager {
         const userMessageData: UserMessageData = {
           type: 'user',
           id: message.id || uuidv4(),
-          baseDir: this.task.project.baseDir,
+          baseDir: this.task.getProjectDir(),
           taskId: this.taskId,
           content: content,
           promptContext: message.promptContext,
@@ -671,7 +671,7 @@ export class ContextManager {
                     type: 'response-completed',
                     messageId: response.messageId,
                     content: response.content,
-                    baseDir: this.task.project.baseDir,
+                    baseDir: this.task.getProjectDir(),
                     taskId: this.taskId,
                     reflectedMessage: response.reflectedMessage,
                     editedFiles: response.editedFiles,
@@ -723,7 +723,7 @@ export class ContextManager {
                           type: 'response-completed',
                           messageId: subMessage.id,
                           content: subFinalContent,
-                          baseDir: this.task.project.baseDir,
+                          baseDir: this.task.getProjectDir(),
                           taskId: this.taskId,
                           usageReport: subMessage.usageReport,
                           promptContext: subMessage.promptContext,
@@ -737,7 +737,7 @@ export class ContextManager {
                           const [subServerName, subToolName] = extractServerNameToolName(subPart.toolName);
                           const toolData: ToolData = {
                             type: 'tool',
-                            baseDir: this.task.project.baseDir,
+                            baseDir: this.task.getProjectDir(),
                             taskId: this.taskId,
                             id: subPart.toolCallId,
                             serverName: subServerName,
@@ -755,7 +755,7 @@ export class ContextManager {
                         type: 'response-completed',
                         messageId: subMessage.id,
                         content: content,
-                        baseDir: this.task.project.baseDir,
+                        baseDir: this.task.getProjectDir(),
                         taskId: this.taskId,
                         usageReport: subMessage.usageReport,
                         promptContext: subMessage.promptContext,

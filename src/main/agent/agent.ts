@@ -79,7 +79,7 @@ export class Agent {
     const fileInfos = await Promise.all(
       files.map(async (file) => {
         try {
-          const filePath = path.resolve(task.project.baseDir, file.path);
+          const filePath = path.resolve(task.getTaskDir(), file.path);
           const fileContentBuffer = await fs.readFile(filePath);
 
           // If binary, try to detect if it's an image using image-type and return base64
@@ -142,7 +142,7 @@ export class Agent {
         });
       } else if (!file!.isImage && file!.content) {
         // Add to textFileContents array
-        const filePath = path.isAbsolute(file!.path) ? path.relative(task.project.baseDir, file!.path) : file!.path;
+        const filePath = path.isAbsolute(file!.path) ? path.relative(task.getTaskDir(), file!.path) : file!.path;
         const textContent = `<file>\n  <path>${filePath}</path>\n  <content-with-line-numbers>\n${file!.content}</content-with-line-numbers>\n</file>`;
         textFileContents.push(textContent);
       }
@@ -534,7 +534,7 @@ export class Agent {
 
     try {
       // reinitialize MCP clients for the current task and wait for them to be ready
-      await this.mcpManager.initMcpConnectors(settings.mcpServers, task.project.baseDir, false, profile.enabledServers);
+      await this.mcpManager.initMcpConnectors(settings.mcpServers, task.getTaskDir(), false, profile.enabledServers);
     } catch (error) {
       logger.error('Error reinitializing MCP clients:', error);
       task.addLogMessage('error', `Error reinitializing MCP clients: ${error}`, false, promptContext);
@@ -556,11 +556,11 @@ export class Agent {
         modelName: profile.model,
       });
 
-      const model = this.modelManager.createLlm(provider, profile.model, settings, task.project.baseDir);
+      const model = this.modelManager.createLlm(provider, profile.model, settings, task.getProjectDir());
       logger.debug('LLM model created successfully');
 
       if (!systemPrompt) {
-        systemPrompt = await getSystemPrompt(task.project.baseDir, profile);
+        systemPrompt = await getSystemPrompt(task, profile);
       }
 
       // repairToolCall function that attempts to repair tool calls
@@ -928,7 +928,7 @@ export class Agent {
 
       const messages = await this.prepareMessages(task, profile, task.getContextMessages(), task.getContextFiles());
       const toolSet = await this.getAvailableTools(task, profile, provider.provider);
-      const systemPrompt = await getSystemPrompt(task.project.baseDir, profile);
+      const systemPrompt = await getSystemPrompt(task, profile);
 
       const cacheControl = this.modelManager.getCacheControl(profile, provider.provider);
 
@@ -964,6 +964,10 @@ export class Agent {
   interrupt() {
     logger.info('Interrupting Agent run');
     this.abortController?.abort();
+  }
+
+  isRunning() {
+    return !!this.abortController;
   }
 
   private processStep<TOOLS extends ToolSet>(
@@ -1052,7 +1056,7 @@ export class Agent {
     promptContext?: PromptContext,
     abortSignal?: AbortSignal,
   ) {
-    const { contextCompactingThreshold = 0 } = task.project.getProjectSettings();
+    const { contextCompactingThreshold = 0 } = this.store.getProjectSettings(task.getProjectDir());
     const usageReport = resultMessages[resultMessages.length - 1]?.usageReport;
     const maxTokens = this.modelManager.getModel(profile.provider, profile.model)?.maxInputTokens;
 

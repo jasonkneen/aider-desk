@@ -191,6 +191,22 @@ const ScrapeWebSchema = z.object({
   filePath: z.string().optional(),
 });
 
+const MergeWorktreeToMainSchema = z.object({
+  projectDir: z.string().min(1, 'Project directory is required'),
+  taskId: z.string().min(1, 'Task id is required'),
+  squash: z.boolean(),
+});
+
+const ApplyUncommittedChangesSchema = z.object({
+  projectDir: z.string().min(1, 'Project directory is required'),
+  taskId: z.string().min(1, 'Task id is required'),
+});
+
+const RevertLastMergeSchema = z.object({
+  projectDir: z.string().min(1, 'Project directory is required'),
+  taskId: z.string().min(1, 'Task id is required'),
+});
+
 export class ProjectApi extends BaseApi {
   constructor(private readonly eventsHandler: EventsHandler) {
     super();
@@ -503,6 +519,51 @@ export class ProjectApi extends BaseApi {
         const { projectDir, taskId, url, filePath } = parsed;
         await this.eventsHandler.scrapeWeb(projectDir, taskId, url, filePath);
         res.status(200).json({ message: 'Web content scraped and added to context' });
+      }),
+    );
+
+    // Merge worktree to main
+    router.post(
+      '/project/worktree/merge-to-main',
+      this.handleRequest(async (req, res) => {
+        const parsed = this.validateRequest(MergeWorktreeToMainSchema, req.body, res);
+        if (!parsed) {
+          return;
+        }
+
+        const { projectDir, taskId, squash } = parsed;
+        await this.eventsHandler.mergeWorktreeToMain(projectDir, taskId, squash);
+        res.status(200).json({ message: 'Worktree merged to main' });
+      }),
+    );
+
+    // Apply uncommitted changes
+    router.post(
+      '/project/worktree/apply-uncommitted',
+      this.handleRequest(async (req, res) => {
+        const parsed = this.validateRequest(ApplyUncommittedChangesSchema, req.body, res);
+        if (!parsed) {
+          return;
+        }
+
+        const { projectDir, taskId } = parsed;
+        await this.eventsHandler.applyUncommittedChanges(projectDir, taskId);
+        res.status(200).json({ message: 'Uncommitted changes applied' });
+      }),
+    );
+
+    // Revert last merge
+    router.post(
+      '/project/worktree/revert-last-merge',
+      this.handleRequest(async (req, res) => {
+        const parsed = this.validateRequest(RevertLastMergeSchema, req.body, res);
+        if (!parsed) {
+          return;
+        }
+
+        const { projectDir, taskId } = parsed;
+        await this.eventsHandler.revertLastMerge(projectDir, taskId);
+        res.status(200).json({ message: 'Last merge reverted' });
       }),
     );
 

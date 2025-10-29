@@ -77,18 +77,22 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
     };
 
     const handleTaskCreated = (taskData: TaskData) => {
+      console.log('Task created:', taskData);
       setTasks((prev) => [...prev, taskData]);
     };
 
     const handleTaskInitialized = (taskData: TaskData) => {
+      console.log('Task initialized:', taskData);
       setTasks((prev) => prev.map((task) => (task.id === taskData.id ? taskData : task)));
     };
 
     const handleTaskUpdated = (taskData: TaskData) => {
+      console.log('Task updated:', taskData);
       setTasks((prev) => prev.map((task) => (task.id === taskData.id ? taskData : task)));
     };
 
     const handleTaskStarted = (taskData: TaskData) => {
+      console.log('Task started:', taskData);
       setTasks((prev) => prev.map((task) => (task.id === taskData.id ? taskData : task)));
     };
 

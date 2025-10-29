@@ -438,6 +438,8 @@ class ConnectorInputOutput(InputOutput):
       wait_for_async(self.connector, self.connector.send_log_message("warning", message, self.processing_loading_message, self.prompt_context))
 
   def is_error_ignored(self, message):
+    if message.trim().startswith("Scanning repo:"):
+      return True
     if message.endswith("is already in the chat as a read-only file"):
       return True
     if message.endswith("is already in the chat as an editable file"):
@@ -585,8 +587,8 @@ def clone_coder(connector, coder, prompt_context=None, messages=None, files=None
 
     for file in files:
       file_path = file['path']
-      if not file_path.startswith(connector.base_dir):
-        file_path = os.path.join(connector.base_dir, file_path)
+      if not file_path.startswith(connector.task_dir):
+        file_path = os.path.join(connector.task_dir, file_path)
 
       if file.get('readOnly', False):
         coder.abs_read_only_fnames.add(file_path)
@@ -637,9 +639,10 @@ def create_io(connector, coder, prompt_context=None):
   return io
 
 class Connector:
-  def __init__(self, base_dir, task_id, watch_files=False, server_url="http://localhost:24337", reasoning_effort=None, thinking_tokens=None, confirm_before_edit=False):
+  def __init__(self, base_dir, task_id, task_dir, watch_files=False, server_url="http://localhost:24337", reasoning_effort=None, thinking_tokens=None, confirm_before_edit=False):
     self.base_dir = base_dir
     self.task_id = task_id
+    self.task_dir = task_dir
     self.server_url = server_url
     self.reasoning_effort = reasoning_effort
     self.thinking_tokens = thinking_tokens
@@ -1040,7 +1043,9 @@ class Connector:
       for f in files:
         file_path = f['path']
         # Convert to relative path if it's an absolute path
-        if file_path.startswith(self.base_dir):
+        if file_path.startswith(self.task_dir):
+          relative_path = os.path.relpath(file_path, self.task_dir)
+        elif file_path.startswith(self.base_dir):
           relative_path = os.path.relpath(file_path, self.base_dir)
         else:
           relative_path = file_path
@@ -1063,7 +1068,7 @@ class Connector:
           try:
             tokenized_words = await asyncio.to_thread(
               self._tokenize_files_sync,
-              self.base_dir,
+              self.task_dir,
               rel_fnames,
               [],
               self.coder.io.encoding,
@@ -1115,7 +1120,7 @@ class Connector:
 
     def get_rel_fname(fname):
       try:
-        return os.path.relpath(fname, self.base_dir)
+        return os.path.relpath(fname, self.task_dir)
       except ValueError:
         return fname
 
@@ -1211,8 +1216,8 @@ class Connector:
 
     for file in files:
       file_path = file['path']
-      if not file_path.startswith(self.base_dir):
-        file_path = os.path.join(self.base_dir, file_path)
+      if not file_path.startswith(self.task_dir):
+        file_path = os.path.join(self.task_dir, file_path)
 
       if file.get('readOnly', False):
         abs_read_only_fnames.add(file_path)
@@ -1240,8 +1245,8 @@ class Connector:
     # Process the provided context files
     for file in files:
       file_path = file['path']
-      if not file_path.startswith(self.base_dir):
-        file_path = os.path.join(self.base_dir, file_path)
+      if not file_path.startswith(self.task_dir):
+        file_path = os.path.join(self.task_dir, file_path)
 
       # Skip directories
       if os.path.isdir(file_path):
@@ -1284,6 +1289,7 @@ def main(argv=None):
     server_url = os.getenv("CONNECTOR_SERVER_URL", "http://localhost:24337")
     base_dir = os.getenv("BASE_DIR", os.getcwd())
     task_id = os.getenv("TASK_ID", "default")
+    task_dir = os.getenv("TASK_DIR", os.getcwd())
     confirm_before_edit = os.getenv("CONNECTOR_CONFIRM_BEFORE_EDIT", "0") == "1"
 
     # Telemetry
@@ -1293,6 +1299,7 @@ def main(argv=None):
     connector = Connector(
       base_dir,
       task_id,
+      task_dir,
       watch_files=args.watch_files,
       server_url=server_url,
       reasoning_effort=args.reasoning_effort,

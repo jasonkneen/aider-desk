@@ -10,7 +10,7 @@ export const ApiProvider = ({ children }: { children: ReactNode }) => {
     if (window.api) {
       return window.api;
     }
-    return new BrowserApi() as ApplicationAPI;
+    return new BrowserApi();
   }, []);
 
   return <ApiContext.Provider value={api}>{children}</ApiContext.Provider>;
