@@ -267,7 +267,7 @@ const Home = () => {
           <h2 className={styles.sectionTitle}>Connect With Us</h2>
           <p className={styles.sectionSubtitle}>Have questions or feedback? Join our growing community!</p>
           <div className={styles.communityLinks}>
-            <a href="https://discord.gg/HxgHU4ue" className={styles.communityLink}>
+            <a href="https://discord.com/invite/dyM3G9nTe4" className={styles.communityLink}>
               Discord Server
             </a>
             <a href="https://github.com/hotovo/aider-desk/discussions" className={styles.communityLink}>

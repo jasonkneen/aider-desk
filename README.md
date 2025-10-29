@@ -2,7 +2,7 @@
 # ✨ AiderDesk: AI-Powered Coding
 
 [![Documentation](https://img.shields.io/badge/Docs-blue?logo=ReadTheDocs&logoColor=white)](https://aiderdesk.hotovo.com/docs)
-[![Discord](https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=white)](https://discord.gg/HxgHU4ue)
+[![Discord](https://img.shields.io/badge/Discord-5865F2?logo=discord&logoColor=white)](https://discord.com/invite/dyM3G9nTe4)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/hotovo/aider-desk)
 [![GitMCP](https://img.shields.io/endpoint?url=https://gitmcp.io/badge/hotovo/aider-desk)](https://gitmcp.io/hotovo/aider-desk)
 
