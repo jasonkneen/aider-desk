@@ -13049,9 +13049,13 @@ type Props = {
   isActive?: boolean;
 };
 ⋮----
+// when there is active task and is new we don't need to create new one
+⋮----
 // Task will be automatically added via the existing listener
 ⋮----
 // eslint-disable-next-line no-console
+⋮----
+const handleStartupMode = async (tasks: TaskData[]) =>
 ⋮----
 const handleProjectStarted = () =>
 ⋮----
