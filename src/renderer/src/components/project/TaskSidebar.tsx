@@ -9,6 +9,7 @@ import { CgSpinner } from 'react-icons/cg';
 import { MdImage } from 'react-icons/md';
 import { clsx } from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
+import { BiCopy } from 'react-icons/bi';
 
 import { useTask } from '@/contexts/TaskContext';
 import { Input } from '@/components/common/Input';
@@ -24,9 +25,10 @@ type TaskMenuButtonProps = {
   onDelete: (e: MouseEvent) => void;
   onExportToMarkdown?: (e: MouseEvent) => void;
   onExportToImage?: (e: MouseEvent) => void;
+  onCopyTaskId?: () => void;
 };
 
-const TaskMenuButton = ({ onEdit, onDelete, onExportToMarkdown, onExportToImage }: TaskMenuButtonProps) => {
+const TaskMenuButton = ({ onEdit, onDelete, onExportToMarkdown, onExportToImage, onCopyTaskId }: TaskMenuButtonProps) => {
   const { t } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -57,6 +59,11 @@ const TaskMenuButton = ({ onEdit, onDelete, onExportToMarkdown, onExportToImage 
 
   const handleExportToImageClick = (e: MouseEvent) => {
     onExportToImage?.(e);
+    setIsMenuOpen(false);
+  };
+
+  const handleCopyTaskIdClick = () => {
+    onCopyTaskId?.();
     setIsMenuOpen(false);
   };
 
@@ -101,6 +108,15 @@ const TaskMenuButton = ({ onEdit, onDelete, onExportToMarkdown, onExportToImage 
                 <span className="whitespace-nowrap">{t('taskSidebar.exportAsImage')}</span>
               </li>
             )}
+            {onCopyTaskId && (
+              <li
+                className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
+                onClick={handleCopyTaskIdClick}
+              >
+                <BiCopy className="w-4 h-4" />
+                <span className="whitespace-nowrap">{t('taskSidebar.copyTaskId')}</span>
+              </li>
+            )}
             <li
               className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
               onClick={handleDeleteClick}
@@ -129,6 +145,7 @@ type Props = {
   deleteTask?: (baseDir: string, taskId: string) => Promise<boolean>;
   onExportToMarkdown?: (taskId: string) => void;
   onExportToImage?: (taskId: string) => void;
+  onCopyTaskId?: (taskId: string) => void;
 };
 
 const TaskSidebarComponent = ({
@@ -145,6 +162,7 @@ const TaskSidebarComponent = ({
   deleteTask,
   onExportToMarkdown,
   onExportToImage,
+  onCopyTaskId,
 }: Props) => {
   const { t } = useTranslation();
   const { getTaskState } = useTask();
@@ -251,6 +269,7 @@ const TaskSidebarComponent = ({
           onDelete={(e) => handleDeleteClick(e, task.id)}
           onExportToMarkdown={onExportToMarkdown ? () => onExportToMarkdown(task.id) : undefined}
           onExportToImage={onExportToImage ? () => onExportToImage(task.id) : undefined}
+          onCopyTaskId={onCopyTaskId ? () => onCopyTaskId(task.id) : undefined}
         />
       </div>
 

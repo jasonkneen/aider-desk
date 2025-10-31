@@ -1002,12 +1002,13 @@
     "rename": "Rename",
     "taskNamePlaceholder": "Enter task name...",
     "exportAsMarkdown": "Export as markdown",
-    "exportAsImage": "Export as image"
+    "exportAsImage": "Export as image",
+    "copyTaskId": "Copy task ID",
+    "taskIdCopied": "Task ID {{taskId}} copied to clipboard"
   },
   "worktree": {
     "merge": "Merge",
     "squash": "Squash & Merge",
-    "revert": "Revert Merge",
     "onlyUncommitted": "Only uncommitted",
     "mergeTooltip": "Merge worktree changes to main branch",
     "revertTooltip": "Revert the last merged changes",

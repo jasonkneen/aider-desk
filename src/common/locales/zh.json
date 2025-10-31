@@ -1010,12 +1010,13 @@
     "rename": "重命名",
     "taskNamePlaceholder": "输入任务名称...",
     "exportAsMarkdown": "导出为 Markdown",
-    "exportAsImage": "导出为图片"
+    "exportAsImage": "导出为图片",
+    "copyTaskId": "复制任务 ID",
+    "taskIdCopied": "任务 ID {{taskId}} 已复制到剪贴板"
   },
   "worktree": {
     "merge": "合并",
     "squash": "压缩合并",
-    "revert": "撤销合并",
     "onlyUncommitted": "仅未提交的更改",
     "mergeTooltip": "将工作树更改合并到主分支",
     "revertTooltip": "撤销最后一次合并的更改",

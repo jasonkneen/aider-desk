@@ -8,6 +8,7 @@
 - added export to markdown and export to image actions for a task
 - avoid creating new task when there is already a new task
 - added possibility to use git worktree for isolated changes
+- added copy task ID action for a task
 
 ## [0.37.1]
 

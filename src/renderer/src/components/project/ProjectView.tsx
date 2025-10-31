@@ -10,6 +10,7 @@ import { TaskView, TaskViewRef } from '@/components/project/TaskView';
 import { COLLAPSED_WIDTH, EXPANDED_WIDTH, TaskSidebar } from '@/components/project/TaskSidebar';
 import { useApi } from '@/contexts/ApiContext';
 import { TaskProvider } from '@/contexts/TaskContext';
+import { showInfoNotification } from '@/utils/notifications';
 
 type Props = {
   project: ProjectData;
@@ -217,6 +218,14 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
     [api, project.baseDir],
   );
 
+  const handleCopyTaskId = useCallback(
+    (taskId: string) => {
+      void navigator.clipboard.writeText(taskId);
+      showInfoNotification(t('taskSidebar.taskIdCopied', { taskId }));
+    },
+    [t],
+  );
+
   const renderLoading = () => {
     return (
       <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-bg-primary to-bg-primary-light z-10">
@@ -254,6 +263,7 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
           deleteTask={handleDeleteTask}
           onExportToMarkdown={handleExportTaskToMarkdown}
           onExportToImage={handleExportTaskToImage}
+          onCopyTaskId={handleCopyTaskId}
         />
 
         <div
