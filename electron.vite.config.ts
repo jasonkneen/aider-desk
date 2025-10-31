@@ -7,10 +7,20 @@ import prism from 'vite-plugin-prismjs';
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin(), tsconfigPaths()],
+    plugins: [
+      externalizeDepsPlugin(),
+      tsconfigPaths({
+        projects: [resolve(__dirname, 'tsconfig.node.json')],
+      }),
+    ],
   },
   preload: {
-    plugins: [externalizeDepsPlugin(), tsconfigPaths()],
+    plugins: [
+      externalizeDepsPlugin(),
+      tsconfigPaths({
+        projects: [resolve(__dirname, 'tsconfig.node.json'), resolve(__dirname, 'tsconfig.web.json')],
+      }),
+    ],
   },
   renderer: {
     build: {
@@ -32,7 +42,9 @@ export default defineConfig({
           plugins: ['babel-plugin-react-compiler'],
         },
       }),
-      tsconfigPaths(),
+      tsconfigPaths({
+        projects: [resolve(__dirname, 'tsconfig.web.json')],
+      }),
     ],
     server: {
       host: '0.0.0.0',
