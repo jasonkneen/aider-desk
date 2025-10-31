@@ -73,7 +73,8 @@ export class Task {
   private readonly aiderManager: AiderManager;
 
   readonly task: TaskData;
-  readonly git: SimpleGit;
+
+  git: SimpleGit;
 
   constructor(
     private readonly project: Project,
@@ -122,6 +123,8 @@ export class Task {
         this.task[key] = data[key];
       }
     }
+
+    this.git = simpleGit(this.getTaskDir());
   }
 
   public async saveTask(updates?: Partial<TaskData>) {
@@ -200,6 +203,7 @@ export class Task {
         this.task.workingMode = 'local';
       }
     }
+    this.git = simpleGit(this.getTaskDir());
 
     await this.loadContext();
     await Promise.all([this.aiderManager.start(), this.updateContextInfo()]);
@@ -1697,6 +1701,7 @@ ${error.stderr}`,
       this.task.workingMode = mode;
     }
 
+    this.git = simpleGit(this.getTaskDir());
     await this.aiderManager.start();
 
     return true;
