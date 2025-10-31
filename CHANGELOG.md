@@ -9,6 +9,7 @@
 - avoid creating new task when there is already a new task
 - added possibility to use git worktree for isolated changes
 - added copy task ID action for a task
+- added welcome message for empty task view
 
 ## [0.37.1]
 

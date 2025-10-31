@@ -20,6 +20,7 @@ import { TodoWindow } from '@/components/project/TodoWindow';
 import { TerminalView, TerminalViewRef } from '@/components/terminal/TerminalView';
 import { MobileSidebar } from '@/components/project/MobileSidebar';
 import { SidebarContent } from '@/components/project/SidebarContent';
+import { WelcomeMessage } from '@/components/project/WelcomeMessage';
 import 'react-resizable/css/styles.css';
 import { useSearchText } from '@/hooks/useSearchText';
 import { useApi } from '@/contexts/ApiContext';
@@ -363,40 +364,46 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
             />
           )}
           <div className="overflow-hidden flex-grow relative">
-            {settings.virtualizedRendering ? (
-              <VirtualizedMessages
-                ref={(node) => {
-                  messagesRef.current = node;
-                  if (node?.container) {
-                    setSearchContainer(node.container);
-                  }
-                }}
-                baseDir={project.baseDir}
-                messages={displayedMessages}
-                allFiles={allFiles}
-                renderMarkdown={settings.renderMarkdown}
-                removeMessage={handleRemoveMessage}
-                redoLastUserPrompt={handleRedoLastUserPrompt}
-                editLastUserMessage={handleEditLastUserMessage}
-              />
+            {displayedMessages.length === 0 && !loading && !messagesPending ? (
+              <WelcomeMessage />
             ) : (
-              <Messages
-                ref={(node) => {
-                  messagesRef.current = node;
-                  if (node?.container) {
-                    setSearchContainer(node.container);
-                  }
-                }}
-                baseDir={project.baseDir}
-                messages={displayedMessages}
-                allFiles={allFiles}
-                renderMarkdown={settings.renderMarkdown}
-                removeMessage={handleRemoveMessage}
-                redoLastUserPrompt={handleRedoLastUserPrompt}
-                editLastUserMessage={handleEditLastUserMessage}
-              />
+              <>
+                {settings.virtualizedRendering ? (
+                  <VirtualizedMessages
+                    ref={(node) => {
+                      messagesRef.current = node;
+                      if (node?.container) {
+                        setSearchContainer(node.container);
+                      }
+                    }}
+                    baseDir={project.baseDir}
+                    messages={displayedMessages}
+                    allFiles={allFiles}
+                    renderMarkdown={settings.renderMarkdown}
+                    removeMessage={handleRemoveMessage}
+                    redoLastUserPrompt={handleRedoLastUserPrompt}
+                    editLastUserMessage={handleEditLastUserMessage}
+                  />
+                ) : (
+                  <Messages
+                    ref={(node) => {
+                      messagesRef.current = node;
+                      if (node?.container) {
+                        setSearchContainer(node.container);
+                      }
+                    }}
+                    baseDir={project.baseDir}
+                    messages={displayedMessages}
+                    allFiles={allFiles}
+                    renderMarkdown={settings.renderMarkdown}
+                    removeMessage={handleRemoveMessage}
+                    redoLastUserPrompt={handleRedoLastUserPrompt}
+                    editLastUserMessage={handleEditLastUserMessage}
+                  />
+                )}
+                {messagesPending && transitionMessages.length === 0 && renderLoading(t('common.loadingMessages'))}
+              </>
             )}
-            {messagesPending && transitionMessages.length === 0 && renderLoading(t('common.loadingMessages'))}
           </div>
           <ResizableBox
             className="flex flex-col flex-shrink-0"

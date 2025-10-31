@@ -1024,5 +1024,24 @@
     "confirmRevertTitle": "Confirm Revert",
     "confirmRevertMessage": "Are you sure you want to revert the last merge? This will undo the changes that were merged from the worktree back to the main branch.",
     "revert": "Revert"
+  },
+  "welcomeMessage": {
+    "title": "AiderDesk",
+    "subtitle": "Your AI-powered coding assistant",
+    "features": {
+      "title": "What you can do:",
+      "aiCoding": "Generate and modify code with AI assistance",
+      "contextManagement": "Add files to context for better results",
+      "multiModel": "Choose from multiple AI models and providers",
+      "modes": "Switch between Agent and Aider modes",
+      "commands": "Execute commands and run tests"
+    },
+    "tips": {
+      "title": "Getting started:",
+      "addFiles": "Add files to context using the sidebar or /add command",
+      "askQuestion": "Type your request in the prompt field below",
+      "useCommands": "Use / commands for quick actions",
+      "switchMode": "Try Agent mode for autonomous task completion"
+    }
   }
 }
