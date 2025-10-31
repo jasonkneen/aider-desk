@@ -962,8 +962,10 @@ export class Agent {
   }
 
   interrupt() {
-    logger.info('Interrupting Agent run');
-    this.abortController?.abort();
+    if (this.abortController) {
+      logger.info('Interrupting Agent run');
+      this.abortController.abort();
+    }
   }
 
   isRunning() {

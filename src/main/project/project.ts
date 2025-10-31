@@ -306,14 +306,15 @@ export class Project {
     this.tasks.forEach(callback);
   }
 
-  async close() {
-    this.customCommandManager.dispose();
-    await Promise.all(Array.from(this.tasks.values()).map((task) => task.close()));
-  }
-
   settingsChanged(oldSettings: SettingsData, newSettings: SettingsData) {
     this.tasks.forEach((task) => {
       task.settingsChanged(oldSettings, newSettings);
     });
+  }
+
+  async close() {
+    this.customCommandManager.dispose();
+    await Promise.all(Array.from(this.tasks.values()).map((task) => task.close()));
+    await this.worktreeManager.close(this.baseDir);
   }
 }

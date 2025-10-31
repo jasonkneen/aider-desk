@@ -23,6 +23,7 @@ export const WorktreeSchema = z.object({
   path: z.string(),
   baseBranch: z.string().optional(),
   baseCommit: z.string().optional(),
+  prunable: z.boolean().optional(),
 });
 
 export type Worktree = z.infer<typeof WorktreeSchema>;

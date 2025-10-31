@@ -206,14 +206,30 @@ const initManagers = async (
   // start listening
   httpServer.listen(SERVER_PORT);
 
-  const beforeQuit = async () => {
-    terminalManager.close();
-    await mcpManager.close();
-    await serverController.close();
-    await connectorManager.close();
-    await projectManager.close();
-    versionsManager.destroy();
-    await telemetryManager.destroy();
+  let cleanedUp = false;
+
+  const beforeQuit = async (event?: Electron.Event) => {
+    if (cleanedUp) {
+      return;
+    }
+
+    event?.preventDefault();
+
+    try {
+      cloudflareTunnelManager.stop();
+      terminalManager.close();
+      versionsManager.destroy();
+      dataManager.close();
+
+      await Promise.all([connectorManager.close(), serverController.close(), projectManager.close(), mcpManager.close(), telemetryManager.destroy()]);
+    } catch (error) {
+      logger.error('Error during cleanup:', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    cleanedUp = true;
+    app.quit();
   };
 
   app.on('before-quit', beforeQuit);

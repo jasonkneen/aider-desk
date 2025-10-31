@@ -1,4 +1,4 @@
-import { join } from 'path';
+import path, { join } from 'path';
 import { mkdir } from 'fs/promises';
 
 import { execWithShellPath, withLock } from '@/utils';
@@ -184,34 +184,40 @@ export class WorktreeManager {
         if (line.startsWith('worktree ')) {
           if (currentWorktree?.path) {
             worktrees.push({
-              path: currentWorktree.path,
-              baseBranch: currentWorktree.baseBranch,
+              ...currentWorktree,
             });
           }
           currentWorktree = { path: line.substring(9), baseBranch: '' };
         } else if (line.startsWith('branch ')) {
           currentWorktree = {
+            ...(currentWorktree || {}),
             path: currentWorktree ? currentWorktree.path : '',
             baseBranch: line.substring(7).replace('refs/heads/', ''),
           };
         } else if (line.startsWith('HEAD ')) {
           currentWorktree = {
+            ...(currentWorktree || {}),
             path: currentWorktree ? currentWorktree.path : '',
             baseCommit: line.substring(5),
           };
         } else if (line.startsWith('detached')) {
           currentWorktree = {
+            ...(currentWorktree || {}),
             path: currentWorktree ? currentWorktree.path : '',
             baseBranch: undefined,
+          };
+        } else if (line.startsWith('prunable')) {
+          currentWorktree = {
+            ...(currentWorktree || {}),
+            path: currentWorktree ? currentWorktree.path : '',
+            prunable: true,
           };
         }
       }
 
       if (currentWorktree?.path) {
         worktrees.push({
-          path: currentWorktree.path,
-          baseCommit: currentWorktree.baseCommit,
-          baseBranch: currentWorktree.baseBranch,
+          ...currentWorktree,
         });
       }
 
@@ -1189,5 +1195,33 @@ export class WorktreeManager {
         throw new Error(`Failed to revert merge: ${error instanceof Error ? error.message : String(error)}`);
       }
     });
+  }
+
+  private async pruneDeleted(projectDir: string): Promise<void> {
+    logger.info('Pruning deleted worktrees', {
+      projectDir,
+    });
+    const worktrees = await this.listWorktrees(projectDir);
+    logger.debug('Found worktrees', {
+      worktrees,
+    });
+    for (const worktree of worktrees) {
+      if (worktree.path.startsWith(path.join(projectDir, AIDER_DESK_TASKS_DIR)) && worktree.prunable) {
+        try {
+          logger.debug(`Pruning deleted worktree: ${worktree.path}`);
+          await execWithShellPath(`git worktree remove ${worktree.path}`, { cwd: projectDir });
+        } catch (error) {
+          logger.warn('Failed to prune worktree:', {
+            worktree,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+    }
+  }
+
+  async close(projectDir: string) {
+    logger.info('Closing worktree manager');
+    await this.pruneDeleted(projectDir);
   }
 }
