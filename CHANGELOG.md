@@ -10,6 +10,7 @@
 - added possibility to use git worktree for isolated changes
 - added copy task ID action for a task
 - added welcome message for empty task view
+- fixed issue with drop all files not working after changes in Settings -> Aider
 
 ## [0.37.1]
 

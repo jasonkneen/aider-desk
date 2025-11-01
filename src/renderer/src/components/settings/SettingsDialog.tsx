@@ -62,28 +62,7 @@ export const SettingsDialog = ({ onClose, initialTab = 0, initialAgentProfileId,
 
   const handleSave = async () => {
     if (localSettings) {
-      const aiderOptionsChanged = localSettings.aider.options !== originalSettings?.aider.options;
-      const aiderAutoCommitsChanged = localSettings.aider.autoCommits !== originalSettings?.aider.autoCommits;
-      const aiderWatchFilesChanged = localSettings.aider.watchFiles !== originalSettings?.aider.watchFiles;
-      const aiderCachingEnabledChanged = localSettings.aider.cachingEnabled !== originalSettings?.aider.cachingEnabled;
-      const aiderConfirmBeforeEditChanged = localSettings.aider.confirmBeforeEdit !== originalSettings?.aider.confirmBeforeEdit;
-      const startupModeChanged = localSettings.startupMode !== originalSettings?.startupMode;
-
       await saveSettings(localSettings);
-
-      if (
-        aiderOptionsChanged ||
-        aiderAutoCommitsChanged ||
-        aiderWatchFilesChanged ||
-        aiderCachingEnabledChanged ||
-        aiderConfirmBeforeEditChanged ||
-        startupModeChanged
-      ) {
-        const openProjects = await api.getOpenProjects();
-        openProjects.forEach((project) => {
-          api.restartProject(project.baseDir);
-        });
-      }
       onClose();
     }
   };

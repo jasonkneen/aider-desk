@@ -1317,11 +1317,23 @@ export class Task {
       void this.updateContextInfo();
     }
 
-    // Check for changes in environment variables or LLM providers
-    const aiderEnvVarsChanged = oldSettings.aider.environmentVariables !== newSettings.aider.environmentVariables;
-    const llmProvidersChanged = JSON.stringify(oldSettings.llmProviders) !== JSON.stringify(newSettings.llmProviders);
+    if (!this.initialized) {
+      return;
+    }
 
-    if (aiderEnvVarsChanged || llmProvidersChanged) {
+    // Check for changes in Aider
+    const aiderEnvVarsChanged = oldSettings.aider.environmentVariables !== newSettings.aider.environmentVariables;
+    const aiderOptionsChanged = oldSettings.aider.options !== newSettings?.aider.options;
+    const aiderAutoCommitsChanged = oldSettings.aider.autoCommits !== newSettings?.aider.autoCommits;
+    const aiderWatchFilesChanged = oldSettings.aider.watchFiles !== newSettings?.aider.watchFiles;
+    const aiderCachingEnabledChanged = oldSettings.aider.cachingEnabled !== newSettings?.aider.cachingEnabled;
+    const aiderConfirmBeforeEditChanged = oldSettings.aider.confirmBeforeEdit !== newSettings?.aider.confirmBeforeEdit;
+
+    if (aiderOptionsChanged || aiderAutoCommitsChanged || aiderWatchFilesChanged || aiderCachingEnabledChanged || aiderConfirmBeforeEditChanged) {
+      logger.debug('Aider options changed, restarting Aider.');
+      void this.aiderManager.start();
+    } else if (aiderEnvVarsChanged) {
+      logger.debug('Aider environment variables changed, updating connectors.');
       const updatedEnvironmentVariables = getEnvironmentVariablesForAider(newSettings, this.project.baseDir);
       this.sendUpdateEnvVars(updatedEnvironmentVariables);
     }
