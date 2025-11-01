@@ -90,7 +90,7 @@ export const WorktreeMergeButton = ({ onMerge, onSquash, onOnlyUncommitted, disa
       </button>
 
       {isOpen && (
-        <div className="absolute top-full right-0 mt-1 bg-bg-primary-light border border-border-default-dark rounded shadow-lg z-50 min-w-[140px]">
+        <div className="absolute top-full right-0 mt-1 bg-bg-primary-light border border-border-default-dark rounded shadow-lg z-50 min-w-[150px]">
           <button onClick={handleMergeClick} className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-bg-tertiary transition-colors">
             {t('worktree.merge')}
           </button>

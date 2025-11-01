@@ -505,12 +505,19 @@ export class WorktreeManager {
     try {
       logger.info(`Squashing and merging worktree to ${mainBranch}: ${worktreePath}`);
 
-      // Get current branch name in worktree
+      // Get current branch name in worktree (for logging purposes)
       let command = 'git branch --show-current';
       executedCommands.push(`git branch --show-current (in ${worktreePath})`);
       const { stdout: currentBranch, stderr: stderr1 } = await execWithShellPath(command, { cwd: worktreePath });
       lastOutput = currentBranch || stderr1 || '';
-      const branchName = currentBranch.trim();
+      const branchName = currentBranch.trim() || 'detached HEAD';
+
+      // Get the HEAD commit hash from worktree (works for both branches and detached HEAD)
+      command = 'git rev-parse HEAD';
+      executedCommands.push(`git rev-parse HEAD (in ${worktreePath})`);
+      const { stdout: worktreeHead, stderr: stderr1b } = await execWithShellPath(command, { cwd: worktreePath });
+      lastOutput = worktreeHead || stderr1b || '';
+      const worktreeCommitHash = worktreeHead.trim();
 
       // Get the base commit (where the worktree branch diverged from main)
       command = `git merge-base ${mainBranch} HEAD`;
@@ -570,12 +577,12 @@ export class WorktreeManager {
 
       // SAFETY CHECK 2: Use --ff-only merge to prevent history rewriting
       // This will fail if local main has diverged from the worktree branch
-      command = `git merge --ff-only ${branchName}`;
-      executedCommands.push(`git merge --ff-only ${branchName} (in ${projectPath})`);
+      command = `git merge --ff-only ${worktreeCommitHash}`;
+      executedCommands.push(`git merge --ff-only ${worktreeCommitHash} (in ${projectPath})`);
       try {
         const mergeResult = await execWithShellPath(command, { cwd: projectPath });
         lastOutput = mergeResult.stdout || mergeResult.stderr || '';
-        logger.debug(`Successfully fast-forwarded ${mainBranch} to ${branchName}`);
+        logger.debug(`Successfully fast-forwarded ${mainBranch} to ${branchName} (${worktreeCommitHash})`);
       } catch (error: unknown) {
         const err = error as Error & { stderr?: string; stdout?: string };
         throw new Error(
@@ -611,12 +618,19 @@ export class WorktreeManager {
     try {
       logger.info(`Merging worktree to ${mainBranch} (without squashing): ${worktreePath}`);
 
-      // Get current branch name in worktree
+      // Get current branch name in worktree (for logging purposes)
       let command = 'git branch --show-current';
       executedCommands.push(`git branch --show-current (in ${worktreePath})`);
       const { stdout: currentBranch, stderr: stderr1 } = await execWithShellPath(command, { cwd: worktreePath });
       lastOutput = currentBranch || stderr1 || '';
-      const branchName = currentBranch.trim();
+      const branchName = currentBranch.trim() || 'detached HEAD';
+
+      // Get the HEAD commit hash from worktree (works for both branches and detached HEAD)
+      command = 'git rev-parse HEAD';
+      executedCommands.push(`git rev-parse HEAD (in ${worktreePath})`);
+      const { stdout: worktreeHead, stderr: stderr1b } = await execWithShellPath(command, { cwd: worktreePath });
+      lastOutput = worktreeHead || stderr1b || '';
+      const worktreeCommitHash = worktreeHead.trim();
 
       // Check if there are any changes to merge
       command = `git log --oneline ${mainBranch}..HEAD`;
@@ -655,12 +669,12 @@ export class WorktreeManager {
 
       // SAFETY CHECK 2: Use --ff-only merge to prevent history rewriting
       // This will fail if local main has diverged from the worktree branch
-      command = `git merge --ff-only ${branchName}`;
-      executedCommands.push(`git merge --ff-only ${branchName} (in ${projectPath})`);
+      command = `git merge --ff-only ${worktreeCommitHash}`;
+      executedCommands.push(`git merge --ff-only ${worktreeCommitHash} (in ${projectPath})`);
       try {
         const mergeResult = await execWithShellPath(command, { cwd: projectPath });
         lastOutput = mergeResult.stdout || mergeResult.stderr || '';
-        logger.debug(`Successfully fast-forwarded ${mainBranch} to ${branchName}`);
+        logger.debug(`Successfully fast-forwarded ${mainBranch} to ${branchName} (${worktreeCommitHash})`);
       } catch (error: unknown) {
         const err = error as Error & { stderr?: string; stdout?: string };
         throw new Error(
