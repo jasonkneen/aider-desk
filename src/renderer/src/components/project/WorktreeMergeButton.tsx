@@ -2,11 +2,9 @@ import { useState, useRef } from 'react';
 import { FaDownload } from 'react-icons/fa6';
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
-import { useLocalStorage } from '@reactuses/core';
 
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
-import { Checkbox } from '@/components/common/Checkbox';
 
 type Props = {
   onMerge: () => void;
@@ -21,9 +19,6 @@ export const WorktreeMergeButton = ({ onMerge, onSquash, onOnlyUncommitted, disa
   const [showMergeConfirm, setShowMergeConfirm] = useState(false);
   const [showSquashConfirm, setShowSquashConfirm] = useState(false);
   const [showOnlyUncommittedConfirm, setShowOnlyUncommittedConfirm] = useState(false);
-  const [mergeDisabled, setMergeDisabled] = useLocalStorage('worktree-merge-confirmation-disabled', false);
-  const [squashDisabled, setSquashDisabled] = useLocalStorage('worktree-squash-confirmation-disabled', false);
-  const [onlyUncommittedDisabled, setOnlyUncommittedDisabled] = useLocalStorage('worktree-only-uncommitted-confirmation-disabled', false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useClickOutside(dropdownRef, () => setIsOpen(false));
@@ -36,29 +31,17 @@ export const WorktreeMergeButton = ({ onMerge, onSquash, onOnlyUncommitted, disa
 
   const handleMergeClick = () => {
     setIsOpen(false);
-    if (mergeDisabled) {
-      onMerge();
-    } else {
-      setShowMergeConfirm(true);
-    }
+    setShowMergeConfirm(true);
   };
 
   const handleSquashClick = () => {
     setIsOpen(false);
-    if (squashDisabled) {
-      onSquash();
-    } else {
-      setShowSquashConfirm(true);
-    }
+    setShowSquashConfirm(true);
   };
 
   const handleOnlyUncommittedClick = () => {
     setIsOpen(false);
-    if (onlyUncommittedDisabled) {
-      onOnlyUncommitted();
-    } else {
-      setShowOnlyUncommittedConfirm(true);
-    }
+    setShowOnlyUncommittedConfirm(true);
   };
 
   const handleMergeConfirm = () => {
@@ -115,7 +98,6 @@ export const WorktreeMergeButton = ({ onMerge, onSquash, onOnlyUncommitted, disa
           closeOnEscape
         >
           <p className="text-sm mb-3">{t('worktree.confirmMergeMessage')}</p>
-          <Checkbox label={t('worktree.dontAskAgain')} checked={mergeDisabled || false} onChange={setMergeDisabled} />
         </ConfirmDialog>
       )}
 
@@ -128,7 +110,6 @@ export const WorktreeMergeButton = ({ onMerge, onSquash, onOnlyUncommitted, disa
           closeOnEscape
         >
           <p className="text-sm mb-3">{t('worktree.confirmSquashMessage')}</p>
-          <Checkbox label={t('worktree.dontAskAgain')} checked={squashDisabled || false} onChange={setSquashDisabled} />
         </ConfirmDialog>
       )}
 
@@ -141,7 +122,6 @@ export const WorktreeMergeButton = ({ onMerge, onSquash, onOnlyUncommitted, disa
           closeOnEscape
         >
           <p className="text-sm mb-3">{t('worktree.confirmOnlyUncommittedMessage')}</p>
-          <Checkbox label={t('worktree.dontAskAgain')} checked={onlyUncommittedDisabled || false} onChange={setOnlyUncommittedDisabled} />
         </ConfirmDialog>
       )}
     </div>
