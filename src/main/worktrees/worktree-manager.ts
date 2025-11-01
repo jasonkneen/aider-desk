@@ -512,13 +512,6 @@ export class WorktreeManager {
       lastOutput = currentBranch || stderr1 || '';
       const branchName = currentBranch.trim() || 'detached HEAD';
 
-      // Get the HEAD commit hash from worktree (works for both branches and detached HEAD)
-      command = 'git rev-parse HEAD';
-      executedCommands.push(`git rev-parse HEAD (in ${worktreePath})`);
-      const { stdout: worktreeHead, stderr: stderr1b } = await execWithShellPath(command, { cwd: worktreePath });
-      lastOutput = worktreeHead || stderr1b || '';
-      const worktreeCommitHash = worktreeHead.trim();
-
       // Get the base commit (where the worktree branch diverged from main)
       command = `git merge-base ${mainBranch} HEAD`;
       executedCommands.push(`git merge-base ${mainBranch} HEAD (in ${worktreePath})`);
@@ -568,6 +561,13 @@ export class WorktreeManager {
       executedCommands.push(`git commit -m "..." (in ${worktreePath})`);
       const commitResult = await execWithShellPath(command, { cwd: worktreePath });
       lastOutput = commitResult.stdout || commitResult.stderr || '';
+
+      // Get the HEAD commit hash from worktree AFTER rebase and squash
+      command = 'git rev-parse HEAD';
+      executedCommands.push(`git rev-parse HEAD (in ${worktreePath})`);
+      const { stdout: worktreeHead, stderr: stderr1b } = await execWithShellPath(command, { cwd: worktreePath });
+      lastOutput = worktreeHead || stderr1b || '';
+      const worktreeCommitHash = worktreeHead.trim();
 
       // Switch to main branch in the main repository
       command = `git checkout ${mainBranch}`;
@@ -625,13 +625,6 @@ export class WorktreeManager {
       lastOutput = currentBranch || stderr1 || '';
       const branchName = currentBranch.trim() || 'detached HEAD';
 
-      // Get the HEAD commit hash from worktree (works for both branches and detached HEAD)
-      command = 'git rev-parse HEAD';
-      executedCommands.push(`git rev-parse HEAD (in ${worktreePath})`);
-      const { stdout: worktreeHead, stderr: stderr1b } = await execWithShellPath(command, { cwd: worktreePath });
-      lastOutput = worktreeHead || stderr1b || '';
-      const worktreeCommitHash = worktreeHead.trim();
-
       // Check if there are any changes to merge
       command = `git log --oneline ${mainBranch}..HEAD`;
       const { stdout: commits, stderr: stderr2 } = await execWithShellPath(command, { cwd: worktreePath });
@@ -660,6 +653,13 @@ export class WorktreeManager {
           `Failed to rebase worktree onto ${mainBranch}. Conflicts must be resolved first.\n\n` + `Git output: ${err.stderr || err.stdout || err.message}`,
         );
       }
+
+      // Get the HEAD commit hash from worktree AFTER rebase
+      command = 'git rev-parse HEAD';
+      executedCommands.push(`git rev-parse HEAD (in ${worktreePath})`);
+      const { stdout: worktreeHead, stderr: stderr1b } = await execWithShellPath(command, { cwd: worktreePath });
+      lastOutput = worktreeHead || stderr1b || '';
+      const worktreeCommitHash = worktreeHead.trim();
 
       // Switch to main branch in the main repository
       command = `git checkout ${mainBranch}`;
