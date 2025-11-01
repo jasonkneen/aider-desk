@@ -36,6 +36,7 @@ type Props<T extends string = string> = {
   disabled?: boolean;
   popupPlacement?: PopupPlacement;
   minWidth?: number;
+  iconOnly?: boolean;
 };
 
 export const ItemSelector = <T extends string = string>({
@@ -46,6 +47,7 @@ export const ItemSelector = <T extends string = string>({
   disabled = false,
   popupPlacement = 'top-left',
   minWidth = 150,
+  iconOnly = false,
 }: Props<T>) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
@@ -81,7 +83,7 @@ export const ItemSelector = <T extends string = string>({
         className="flex items-center gap-1 px-2 py-1 bg-bg-secondary text-text-tertiary hover:bg-bg-secondary-light hover:text-text-primary focus:outline-none transition-colors duration-200 text-xs border-border-default border rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <SelectedIcon className="w-4 h-4" />
-        <span className="mb-[-2px] ml-1 text-2xs">{t(selectedItem.labelKey)}</span>
+        {!iconOnly && <span className="mb-[-2px] ml-1 text-2xs">{t(selectedItem.labelKey)}</span>}
         {isOpen ? <MdKeyboardArrowUp className="w-4 h-4 ml-0.5" /> : <MdKeyboardArrowDown className="w-4 h-4 ml-0.5" />}
       </button>
 

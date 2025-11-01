@@ -3,6 +3,7 @@ import { AiFillFolderOpen } from 'react-icons/ai';
 import { IoGitBranch } from 'react-icons/io5';
 
 import { ItemConfig, ItemSelector } from '@/components/common/ItemSelector';
+import { useResponsive } from '@/hooks/useResponsive';
 import { WorktreeMergeButton } from '@/components/project/WorktreeMergeButton';
 import { WorktreeRevertButton } from '@/components/project/WorktreeRevertButton';
 
@@ -32,6 +33,8 @@ type Props = {
 };
 
 export const TaskWorkingMode = ({ task, onWorkingModeChange, onMerge, onSquash, onOnlyUncommitted, onRevert, isMerging }: Props) => {
+  const { isMobile } = useResponsive();
+
   return (
     <div className="flex items-center gap-1">
       {task.workingMode === 'worktree' && (
@@ -40,7 +43,14 @@ export const TaskWorkingMode = ({ task, onWorkingModeChange, onMerge, onSquash, 
           <WorktreeMergeButton onMerge={onMerge} onSquash={onSquash} onOnlyUncommitted={onOnlyUncommitted} disabled={isMerging} />
         </>
       )}
-      <ItemSelector items={WORKING_MODE_ITEMS} selectedValue={task.workingMode!} onChange={onWorkingModeChange} popupPlacement="bottom-right" minWidth={120} />
+      <ItemSelector
+        items={WORKING_MODE_ITEMS}
+        selectedValue={task.workingMode!}
+        onChange={onWorkingModeChange}
+        popupPlacement="bottom-right"
+        minWidth={120}
+        iconOnly={isMobile}
+      />
     </div>
   );
 };
