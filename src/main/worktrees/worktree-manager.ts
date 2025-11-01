@@ -512,17 +512,10 @@ export class WorktreeManager {
       lastOutput = currentBranch || stderr1 || '';
       const branchName = currentBranch.trim() || 'detached HEAD';
 
-      // Get the base commit (where the worktree branch diverged from main)
-      command = `git merge-base ${mainBranch} HEAD`;
-      executedCommands.push(`git merge-base ${mainBranch} HEAD (in ${worktreePath})`);
-      const { stdout: baseCommit, stderr: stderr2 } = await execWithShellPath(command, { cwd: worktreePath });
-      lastOutput = baseCommit || stderr2 || '';
-      const base = baseCommit.trim();
-
-      // Check if there are any changes to squash
-      command = `git log --oneline ${base}..HEAD`;
-      const { stdout: commits, stderr: stderr3 } = await execWithShellPath(command, { cwd: worktreePath });
-      lastOutput = commits || stderr3 || '';
+      // Check if there are any changes to merge (before rebase)
+      command = `git log --oneline ${mainBranch}..HEAD`;
+      const { stdout: commits, stderr: stderr2 } = await execWithShellPath(command, { cwd: worktreePath });
+      lastOutput = commits || stderr2 || '';
       if (!commits.trim()) {
         return;
       }
@@ -549,24 +542,12 @@ export class WorktreeManager {
         );
       }
 
-      // Now squash all commits since base into one
-      command = `git reset --soft ${base}`;
-      executedCommands.push(`git reset --soft ${base} (in ${worktreePath})`);
-      const resetResult = await execWithShellPath(command, { cwd: worktreePath });
-      lastOutput = resetResult.stdout || resetResult.stderr || '';
-
-      // Properly escape commit message for cross-platform compatibility
-      const escapedMessage = commitMessage.replace(/"/g, '\\"');
-      command = `git commit -m "${escapedMessage}"`;
-      executedCommands.push(`git commit -m "..." (in ${worktreePath})`);
-      const commitResult = await execWithShellPath(command, { cwd: worktreePath });
-      lastOutput = commitResult.stdout || commitResult.stderr || '';
-
-      // Get the HEAD commit hash from worktree AFTER rebase and squash
+      // Get the HEAD commit hash from worktree AFTER rebase (but before squashing)
+      // This preserves the worktree's commit history
       command = 'git rev-parse HEAD';
       executedCommands.push(`git rev-parse HEAD (in ${worktreePath})`);
-      const { stdout: worktreeHead, stderr: stderr1b } = await execWithShellPath(command, { cwd: worktreePath });
-      lastOutput = worktreeHead || stderr1b || '';
+      const { stdout: worktreeHead, stderr: stderr3 } = await execWithShellPath(command, { cwd: worktreePath });
+      lastOutput = worktreeHead || stderr3 || '';
       const worktreeCommitHash = worktreeHead.trim();
 
       // Switch to main branch in the main repository
@@ -575,25 +556,44 @@ export class WorktreeManager {
       const checkoutResult = await execWithShellPath(command, { cwd: projectPath });
       lastOutput = checkoutResult.stdout || checkoutResult.stderr || '';
 
-      // SAFETY CHECK 2: Use --ff-only merge to prevent history rewriting
-      // This will fail if local main has diverged from the worktree branch
-      command = `git merge --ff-only ${worktreeCommitHash}`;
-      executedCommands.push(`git merge --ff-only ${worktreeCommitHash} (in ${projectPath})`);
+      // SQUASH MERGE: Use git merge --squash to create a squashed staging of all changes
+      // This keeps the worktree branch history intact while creating a single commit in main
+      command = `git merge --squash ${worktreeCommitHash}`;
+      executedCommands.push(`git merge --squash ${worktreeCommitHash} (in ${projectPath})`);
       try {
-        const mergeResult = await execWithShellPath(command, { cwd: projectPath });
-        lastOutput = mergeResult.stdout || mergeResult.stderr || '';
-        logger.debug(`Successfully fast-forwarded ${mainBranch} to ${branchName} (${worktreeCommitHash})`);
+        const squashResult = await execWithShellPath(command, { cwd: projectPath });
+        lastOutput = squashResult.stdout || squashResult.stderr || '';
+        logger.debug(`Successfully squashed changes from ${branchName}`);
       } catch (error: unknown) {
         const err = error as Error & { stderr?: string; stdout?: string };
-        throw new Error(
-          `Failed to fast-forward ${mainBranch} to ${branchName}.\n\n` +
-            `This usually means ${mainBranch} has commits that ${branchName} doesn't have.\n` +
-            `You may need to rebase the worktree onto ${mainBranch} first, or reset ${mainBranch} to match origin.\n\n` +
-            `Git output: ${err.stderr || err.stdout || err.message}`,
-        );
+        throw new Error(`Failed to squash merge from ${branchName}.\n\n` + `Git output: ${err.stderr || err.stdout || err.message}`);
       }
 
-      logger.info(`Successfully squashed and merged worktree to ${mainBranch}`);
+      // Check if there are staged changes to commit
+      command = 'git diff --cached --quiet';
+      const hasStagedChanges = await execWithShellPath(command, { cwd: projectPath })
+        .then(() => false)
+        .catch(() => true);
+
+      if (!hasStagedChanges) {
+        logger.info('No changes to commit after squash merge (worktree was already up to date with main)');
+        return;
+      }
+
+      // Commit the squashed changes with the provided message
+      const escapedMessage = commitMessage.replace(/"/g, '\\"');
+      command = `git commit -m "${escapedMessage}"`;
+      executedCommands.push(`git commit -m "..." (in ${projectPath})`);
+      try {
+        const commitResult = await execWithShellPath(command, { cwd: projectPath });
+        lastOutput = commitResult.stdout || commitResult.stderr || '';
+        logger.debug(`Successfully committed squashed changes to ${mainBranch}`);
+      } catch (error: unknown) {
+        const err = error as Error & { stderr?: string; stdout?: string };
+        throw new Error(`Failed to commit squashed changes to ${mainBranch}.\n\n` + `Git output: ${err.stderr || err.stdout || err.message}`);
+      }
+
+      logger.info(`Successfully squashed and merged worktree to ${mainBranch} (worktree history preserved)`);
     } catch (error: unknown) {
       const err = error as Error & { stderr?: string; stdout?: string };
       logger.error(`Failed to squash and merge worktree to ${mainBranch}:`, err);
@@ -711,13 +711,11 @@ export class WorktreeManager {
     return [
       `# In worktree: Rebase onto ${mainBranch} to get latest changes`,
       `git rebase ${mainBranch}`,
-      '# In worktree: Squash all commits into one',
-      `git reset --soft $(git merge-base ${mainBranch} HEAD)`,
-      'git commit -m "Your commit message"',
       `# In main repo: Switch to ${mainBranch}`,
       `git checkout ${mainBranch}`,
-      '# In main repo: Merge the worktree branch',
-      `git merge --ff-only ${branchName}`,
+      '# In main repo: Squash merge the worktree branch (preserves worktree history)',
+      `git merge --squash ${branchName}`,
+      'git commit -m "Your commit message"',
     ];
   }
 
