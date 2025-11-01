@@ -176,11 +176,17 @@ src/
       environment.ts
       file-system.ts
       index.ts
+      mutex.ts
       python.ts
+      shell.ts
       web-scrapper.ts
     versions/
       index.ts
       versions-manager.ts
+    worktrees/
+      index.ts
+      types.ts
+      worktree-manager.ts
     constants.ts
     events-handler.ts
     index.ts
@@ -224,6 +230,7 @@ src/
           IconButton.tsx
           InfoIcon.tsx
           Input.tsx
+          ItemSelector.tsx
           MarkdownInfoDialog.tsx
           ModalOverlayLayout.tsx
           MultiSelect.tsx
@@ -318,14 +325,17 @@ src/
           MobileSidebar.tsx
           NoProjectsOpen.tsx
           OpenProjectDialog.tsx
-          ProjectBar.tsx
           ProjectTabs.tsx
           ProjectView.tsx
           SidebarContent.tsx
+          TaskBar.tsx
           TaskSidebar.tsx
           TaskView.tsx
           TodoListItem.tsx
           TodoWindow.tsx
+          WelcomeMessage.tsx
+          WorktreeMergeButton.tsx
+          WorktreeRevertButton.tsx
         PromptField/
           CommandSuggestion.tsx
           EditFormatSelector.tsx
@@ -333,6 +343,7 @@ src/
           InputHistoryMenu.tsx
           ModeSelector.tsx
           PromptField.tsx
+          TaskWorkingMode.tsx
         settings/
           agent/
             AgentProfileItem.tsx
@@ -743,7 +754,7 @@ coder = Coder.create(**kwargs)
 ⋮----
 file_path = file['path']
 ⋮----
-file_path = os.path.join(connector.base_dir, file_path)
+file_path = os.path.join(connector.task_dir, file_path)
 ⋮----
 def create_base_coder(connector)
 ⋮----
@@ -755,7 +766,7 @@ io = ConnectorInputOutput(
 ⋮----
 class Connector
 ⋮----
-def __init__(self, base_dir, task_id, watch_files=False, server_url="http://localhost:24337", reasoning_effort=None, thinking_tokens=None, confirm_before_edit=False)
+def __init__(self, base_dir, task_id, task_dir, watch_files=False, server_url="http://localhost:24337", reasoning_effort=None, thinking_tokens=None, confirm_before_edit=False)
 ⋮----
 # Create initial coder for setup and non-prompt operations
 ⋮----
@@ -932,6 +943,8 @@ rel_fnames = []
 file_path = f['path']
 # Convert to relative path if it's an absolute path
 ⋮----
+relative_path = os.path.relpath(file_path, self.task_dir)
+⋮----
 relative_path = os.path.relpath(file_path, self.base_dir)
 ⋮----
 relative_path = file_path
@@ -1003,7 +1016,7 @@ tokens = 0
 abs_fnames = set()
 abs_read_only_fnames = set()
 ⋮----
-file_path = os.path.join(self.base_dir, file_path)
+file_path = os.path.join(self.task_dir, file_path)
 ⋮----
 all_abs_files = self.coder.get_all_abs_files()
 other_files = set(all_abs_files) - abs_fnames
@@ -1040,6 +1053,7 @@ args, _ = parser.parse_known_args(argv) # Use parse_known_args to ignore unknown
 server_url = os.getenv("CONNECTOR_SERVER_URL", "http://localhost:24337")
 base_dir = os.getenv("BASE_DIR", os.getcwd())
 task_id = os.getenv("TASK_ID", "default")
+task_dir = os.getenv("TASK_DIR", os.getcwd())
 confirm_before_edit = os.getenv("CONNECTOR_CONFIRM_BEFORE_EDIT", "0") == "1"
 ⋮----
 # Telemetry
@@ -1871,6 +1885,13 @@ File: src/common/locales/en.json
     "context": "Context",
     "agent": "Agent"
   },
+  "modeTooltip": {
+    "code": "Direct code generation and editing with Aider AI assistant",
+    "agent": "Autonomous AI agent with advanced reasoning and tool usage capabilities",
+    "ask": "Ask questions about your codebase without making changes",
+    "architect": "High-level project planning and architecture design",
+    "context": "Search and explore your codebase context"
+  },
   "addFileDialog": {
     "title": "Add context files",
     "browse": "Browse files",
@@ -2147,7 +2168,17 @@ File: src/common/locales/en.json
     "editFormatTooltip": "This is the format used for editing code. Changing it might cause the model to not perform as expected.",
     "aider": "Aider",
     "toggleSidebar": "Toggle sidebar",
-    "modelLibrary": "Model Library"
+    "modelLibrary": "Model Library",
+    "worktree": "Worktree",
+    "worktreeTooltip": "Toggle worktree for this task"
+  },
+  "workingMode": {
+    "local": "Local",
+    "worktree": "Worktree"
+  },
+  "workingModeTooltip": {
+    "local": "Make changes directly in the local project directory for this task",
+    "worktree": "Use git worktree to make isolated changes for this task"
   },
   "reasoningEffort": {
     "label": "Reasoning",
@@ -2270,7 +2301,47 @@ File: src/common/locales/en.json
     "rename": "Rename",
     "taskNamePlaceholder": "Enter task name...",
     "exportAsMarkdown": "Export as markdown",
-    "exportAsImage": "Export as image"
+    "exportAsImage": "Export as image",
+    "copyTaskId": "Copy task ID",
+    "taskIdCopied": "Task ID {{taskId}} copied to clipboard"
+  },
+  "worktree": {
+    "merge": "Merge",
+    "squash": "Squash & Merge",
+    "onlyUncommitted": "Only uncommitted",
+    "mergeTooltip": "Merge worktree changes to main branch",
+    "revertTooltip": "Revert the last merged changes",
+    "confirmMerge": "Are you sure you want to {{action}} the worktree changes to the main branch? This will include any uncommitted changes.",
+    "confirmRevert": "Are you sure you want to revert the last merge? This will reset the main branch to its previous state.",
+    "confirmMergeTitle": "Confirm Merge",
+    "confirmSquashTitle": "Confirm Squash",
+    "confirmOnlyUncommittedTitle": "Confirm Apply Uncommitted Changes",
+    "confirmMergeMessage": "Are you sure you want to merge the worktree changes to the main branch?",
+    "confirmSquashMessage": "Are you sure you want to squash and merge the worktree changes to the main branch?",
+    "confirmOnlyUncommittedMessage": "Are you sure you want to apply uncommitted changes from worktree to main branch? No git merge will be performed.",
+    "dontAskAgain": "Don't ask me again",
+    "confirmRevertTitle": "Confirm Revert",
+    "confirmRevertMessage": "Are you sure you want to revert the last merge? This will undo the changes that were merged from the worktree back to the main branch.",
+    "revert": "Revert"
+  },
+  "welcomeMessage": {
+    "title": "AiderDesk",
+    "subtitle": "Your AI-powered coding assistant",
+    "features": {
+      "title": "What you can do:",
+      "aiCoding": "Generate and modify code with AI assistance",
+      "contextManagement": "Add files to context for better results",
+      "multiModel": "Choose from multiple AI models and providers",
+      "modes": "Switch between Agent and Aider modes",
+      "commands": "Execute commands and run tests"
+    },
+    "tips": {
+      "title": "Getting started:",
+      "addFiles": "Add files to context using the sidebar or /add command",
+      "askQuestion": "Type your request in the prompt field below",
+      "useCommands": "Use / commands for quick actions",
+      "switchMode": "Try Agent mode for autonomous task completion"
+    }
   }
 }
 
@@ -2821,6 +2892,13 @@ File: src/common/locales/zh.json
     "context": "上下文",
     "agent": "代理"
   },
+  "modeTooltip": {
+    "code": "使用 Aider AI 助手进行直接代码生成和编辑",
+    "agent": "具有高级推理和工具使用能力的自主 AI 代理",
+    "ask": "询问有关代码库的问题而不进行更改",
+    "architect": "高级项目规划和架构设计",
+    "context": "搜索和探索代码库上下文"
+  },
   "addFileDialog": {
     "title": "添加上下文文件",
     "browse": "浏览文件",
@@ -3112,7 +3190,17 @@ File: src/common/locales/zh.json
     "editFormatTooltip": "这是用于编辑代码的格式。更改它可能会导致模型表现不如预期。",
     "aider": "Aider",
     "toggleSidebar": "切换侧边栏",
-    "modelLibrary": "模型库"
+    "modelLibrary": "模型库",
+    "worktree": "工作树",
+    "worktreeTooltip": "切换此任务的工作树"
+  },
+  "workingMode": {
+    "local": "本地",
+    "worktree": "工作树"
+  },
+  "workingModeTooltip": {
+    "local": "在此任务中直接在本地项目目录中进行更改",
+    "worktree": "使用 git 工作树为此任务进行隔离的更改"
   },
   "reasoningEffort": {
     "label": "推理",
@@ -3272,7 +3360,47 @@ File: src/common/locales/zh.json
     "rename": "重命名",
     "taskNamePlaceholder": "输入任务名称...",
     "exportAsMarkdown": "导出为 Markdown",
-    "exportAsImage": "导出为图片"
+    "exportAsImage": "导出为图片",
+    "copyTaskId": "复制任务 ID",
+    "taskIdCopied": "任务 ID {{taskId}} 已复制到剪贴板"
+  },
+  "worktree": {
+    "merge": "合并",
+    "squash": "压缩合并",
+    "onlyUncommitted": "仅未提交的更改",
+    "mergeTooltip": "将工作树更改合并到主分支",
+    "revertTooltip": "撤销最后一次合并的更改",
+    "confirmMerge": "您确定要{{action}}工作树更改到主分支吗？这将包含任何未提交的更改。",
+    "confirmRevert": "您确定要撤销最后一次合并吗？这将把主分支重置到之前的状态。",
+    "confirmMergeTitle": "确认合并",
+    "confirmSquashTitle": "确认压缩合并",
+    "confirmOnlyUncommittedTitle": "确认应用未提交的更改",
+    "confirmMergeMessage": "您确定要将工作树更改合并到主分支吗？",
+    "confirmSquashMessage": "您确定要压缩并合并工作树更改到主分支吗？",
+    "confirmOnlyUncommittedMessage": "您确定要将工作树中的未提交更改应用到主分支吗？不会执行 git 合并操作。",
+    "dontAskAgain": "不再询问",
+    "confirmRevertTitle": "确认撤销",
+    "confirmRevertMessage": "您确定要撤销最后一次合并吗？这将撤销从工作树合并回主分支的更改。",
+    "revert": "撤销"
+  },
+  "welcomeMessage": {
+    "title": "AiderDesk",
+    "subtitle": "您的 AI 驱动编程助手",
+    "features": {
+      "title": "您可以做什么：",
+      "aiCoding": "使用 AI 辅助生成和修改代码",
+      "contextManagement": "添加文件到上下文以获得更好的结果",
+      "multiModel": "选择多种 AI 模型和提供商",
+      "modes": "在代理和 Aider 模式之间切换",
+      "commands": "执行命令和运行测试"
+    },
+    "tips": {
+      "title": "入门指南：",
+      "addFiles": "使用侧边栏或 /add 命令添加文件到上下文",
+      "askQuestion": "在下方的提示字段中输入您的请求",
+      "useCommands": "使用 / 命令进行快速操作",
+      "switchMode": "尝试代理模式以实现自主任务完成"
+    }
   }
 }
 
@@ -3663,6 +3791,11 @@ export interface ApplicationAPI {
   closeTerminal: (terminalId: string) => Promise<boolean>;
   getTerminalForTask: (taskId: string) => Promise<string | null>;
   getAllTerminalsForTask: (taskId: string) => Promise<Array<{ id: string; taskId: string; cols: number; rows: number }>>;
+
+  // Worktree merge operations
+  mergeWorktreeToMain: (baseDir: string, taskId: string, squash: boolean) => Promise<void>;
+  applyUncommittedChanges: (baseDir: string, taskId: string) => Promise<void>;
+  revertLastMerge: (baseDir: string, taskId: string) => Promise<void>;
 }
 ⋮----
 // Todo operations
@@ -3670,6 +3803,8 @@ export interface ApplicationAPI {
 // Task lifecycle event listeners
 ⋮----
 // Terminal operations
+⋮----
+// Worktree merge operations
 
 ================
 File: src/common/tools.ts
@@ -3698,6 +3833,14 @@ import { z } from 'zod';
 ⋮----
 import type { JSONSchema7Definition } from '@ai-sdk/provider';
 import type { AssistantContent, ToolContent, UserContent } from 'ai';
+⋮----
+// Worktree schema definition
+⋮----
+export type Worktree = z.infer<typeof WorktreeSchema>;
+⋮----
+// Merge state for tracking merge operations and enabling revert
+⋮----
+export type MergeState = z.infer<typeof MergeStateSchema>;
 ⋮----
 export type LocalizedString = {
   key: string;
@@ -4201,7 +4344,10 @@ export interface TaskStateData {
   files: ContextFile[];
   todoItems: TodoItem[];
   question: QuestionData | null;
+  workingMode: WorkingMode;
 }
+⋮----
+export type WorkingMode = z.infer<typeof WorkingModeSchema>;
 ⋮----
 export type TaskData = z.infer<typeof TaskDataSchema>;
 ⋮----
@@ -4521,7 +4667,7 @@ absolute: false, // Keep paths relative to cwd for easier processing
 ⋮----
 // Convert to absolute paths for filtering, then back to relative
 ⋮----
-// Ensure paths are relative to task.project.baseDir
+// Ensure paths are relative to task.getTaskDir()
 ⋮----
 // Filter out ignored files in batch
 ⋮----
@@ -4531,7 +4677,7 @@ const searchRegex = new RegExp(searchTerm, caseSensitive ? undefined : 'i'); // 
 ⋮----
 // Check if it's a dependency path (format: language:rest)
 ⋮----
-// If path is relative (including "." and "./"), resolve it relative to task.project.baseDir
+// If path is relative (including "." and "./"), resolve it relative to task.getTaskDir()
 ⋮----
 // @ts-expect-error probe is not typed properly
 ⋮----
@@ -4835,6 +4981,8 @@ content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.cont
 ⋮----
 interrupt()
 ⋮----
+isRunning()
+⋮----
 private processStep<TOOLS extends ToolSet>(
     currentResponseId: string,
     { reasoningText, text, toolCalls, toolResults, finishReason, usage, providerMetadata, response }: StepResult<TOOLS>,
@@ -5093,8 +5241,9 @@ import {
 } from '@common/tools';
 ⋮----
 import { AIDER_DESK_PROJECT_RULES_DIR } from '@/constants';
+import { Task } from '@/task';
 ⋮----
-export const getSystemPrompt = async (projectDir: string, agentProfile: AgentProfile, additionalInstructions?: string) =>
+export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, additionalInstructions?: string) =>
 ⋮----
 // Check individual power tool permissions
 ⋮----
@@ -6824,6 +6973,7 @@ import { Project } from '@/project';
 import { Store } from '@/store';
 import { EventManager } from '@/events';
 import { ModelManager } from '@/models';
+import { WorktreeManager } from '@/worktrees';
 ⋮----
 export class ProjectManager
 ⋮----
@@ -6869,6 +7019,7 @@ import { TelemetryManager } from '@/telemetry';
 import { EventManager } from '@/events';
 import { Task } from '@/task';
 import { migrateSessionsToTasks } from '@/project/migrations';
+import { WorktreeManager } from '@/worktrees';
 ⋮----
 export class Project
 ⋮----
@@ -6880,6 +7031,7 @@ constructor(
     private readonly dataManager: DataManager,
     private readonly eventManager: EventManager,
     private readonly modelManager: ModelManager,
+    private readonly worktreeManager: WorktreeManager,
 )
 ⋮----
 // initialize global task
@@ -6928,9 +7080,9 @@ async getTasks(): Promise<TaskData[]>
 ⋮----
 forEachTask(callback: (task: Task) => void)
 ⋮----
-async close()
-⋮----
 settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
+⋮----
+async close()
 
 ================
 File: src/main/server/rest-api/base-api.ts
@@ -7098,6 +7250,12 @@ registerRoutes(router: Router): void
 // Compact conversation
 ⋮----
 // Scrape web
+⋮----
+// Merge worktree to main
+⋮----
+// Apply uncommitted changes
+⋮----
+// Revert last merge
 ⋮----
 // Update open projects order
 ⋮----
@@ -7959,6 +8117,7 @@ import {
   ToolData,
   UsageReportData,
   UserMessageData,
+  WorkingMode,
 } from '@common/types';
 import { extractTextContent, fileExists, getActiveAgentProfile, parseUsageReport } from '@common/utils';
 import { COMPACT_CONVERSATION_AGENT_PROFILE, INIT_PROJECT_AGENTS_PROFILE } from '@common/agent';
@@ -7984,11 +8143,12 @@ import { getEnvironmentVariablesForAider } from '@/utils';
 import { ContextManager } from '@/task/context-manager';
 import { Project } from '@/project';
 import { AiderManager } from '@/task/aider-manager';
+import { WorktreeManager } from '@/worktrees';
 ⋮----
 export class Task
 ⋮----
 constructor(
-    public readonly project: Project,
+    private readonly project: Project,
     public readonly taskId: string,
     private readonly store: Store,
     private readonly mcpManager: McpManager,
@@ -7997,6 +8157,7 @@ constructor(
     private readonly dataManager: DataManager,
     private readonly eventManager: EventManager,
     private readonly modelManager: ModelManager,
+    private readonly worktreeManager: WorktreeManager,
 )
 ⋮----
 private async loadTaskData()
@@ -8004,6 +8165,12 @@ private async loadTaskData()
 public async saveTask(updates?: Partial<TaskData>)
 ⋮----
 public async init()
+⋮----
+// Check if worktree is enabled for this task
+⋮----
+// Create a default worktree for this task
+⋮----
+// Check if worktree exists and set worktreeEnabled accordingly
 ⋮----
 public async load(): Promise<TaskStateData>
 ⋮----
@@ -8014,6 +8181,10 @@ public addConnector(connector: Connector)
 // Handle connector addition in AiderManager
 ⋮----
 public removeConnector(connector: Connector)
+⋮----
+public getProjectDir()
+⋮----
+public getTaskDir()
 ⋮----
 private normalizeFilePath(filePath: string): string
 ⋮----
@@ -8171,7 +8342,7 @@ public sendToolMessage(data: ToolData)
 ⋮----
 public async clearContext(addToHistory = false, updateContextInfo = true)
 ⋮----
-public interruptResponse()
+public interruptResponse(addMessage = true)
 ⋮----
 public applyEdits(edits: FileEdit[])
 ⋮----
@@ -8293,6 +8464,36 @@ public async runCustomCommand(commandName: string, args: string[], mode: Mode = 
 // Clear loading message after execution completes (success or failure)
 ⋮----
 async restart()
+⋮----
+public async updateTask(updates: Partial<TaskData>): Promise<TaskData>
+⋮----
+// Handle worktree configuration changes
+⋮----
+// if this task is new empty task update should not trigger save
+⋮----
+private async applyWorkingMode(mode: WorkingMode)
+⋮----
+// Check for unsaved work before removing worktree
+⋮----
+// Build warning message
+⋮----
+// Revert the mode change
+⋮----
+public async mergeWorktreeToMain(squash: boolean): Promise<void>
+⋮----
+// For squash merge, we need a commit message
+⋮----
+// Get the task name or generate a default message
+⋮----
+// Store merge state for potential revert
+⋮----
+// @ts-expect-error checking keys in error
+⋮----
+public async applyUncommittedChanges(): Promise<void>
+⋮----
+public async revertLastMerge(): Promise<void>
+⋮----
+// Clear merge state after successful revert
 
 ================
 File: src/main/telemetry/index.ts
@@ -8546,6 +8747,94 @@ File: src/main/utils/index.ts
 
 
 ================
+File: src/main/utils/mutex.ts
+================
+import logger from '@/logger';
+⋮----
+/**
+ * A simple async mutex implementation for preventing race conditions
+ * in critical sections of code. Supports named locks and timeouts.
+ */
+export class Mutex
+⋮----
+private defaultTimeout = 30000; // 30 seconds
+⋮----
+/**
+   * Acquire a lock for the given resource name
+   * @param resourceName - Unique name for the resource to lock
+   * @param timeout - Optional timeout in milliseconds (default: 30 seconds)
+   * @returns Promise<() => void> - Release function to unlock the resource
+   */
+async acquire(resourceName: string, timeout: number = this.defaultTimeout): Promise<() => void>
+⋮----
+// If there's already a lock for this resource, wait for it
+⋮----
+// Create a new lock promise
+⋮----
+// Store the lock
+⋮----
+// Return the release function
+⋮----
+/**
+   * Execute a function with a mutex lock
+   * @param resourceName - Unique name for the resource to lock
+   * @param fn - Function to execute while holding the lock
+   * @param timeout - Optional timeout in milliseconds
+   * @returns Promise<T> - Result of the function execution
+   */
+async withLock<T>(resourceName: string, fn: () => Promise<T> | T, timeout?: number): Promise<T>
+⋮----
+/**
+   * Check if a resource is currently locked
+   * @param resourceName - Name of the resource to check
+   * @returns boolean - True if the resource is locked
+   */
+isLocked(resourceName: string): boolean
+⋮----
+/**
+   * Get the current number of active locks
+   * @returns number - Number of active locks
+   */
+getActiveLockCount(): number
+⋮----
+/**
+   * Get all currently locked resource names
+   * @returns string[] - Array of locked resource names
+   */
+getLockedResources(): string[]
+⋮----
+/**
+   * Force release all locks (use with caution)
+   */
+releaseAll(): void
+⋮----
+// Global mutex instance for the application
+⋮----
+/**
+ * Convenience function to execute code with a named lock
+ * @param resourceName - Unique name for the resource to lock
+ * @param fn - Function to execute while holding the lock
+ * @param timeout - Optional timeout in milliseconds
+ * @returns Promise<T> - Result of the function execution
+ */
+export const withLock = async <T>(resourceName: string, fn: ()
+⋮----
+/**
+ * Convenience function to acquire a named lock
+ * @param resourceName - Unique name for the resource to lock
+ * @param timeout - Optional timeout in milliseconds
+ * @returns Promise<() => void> - Release function to unlock the resource
+ */
+export const acquireLock = async (resourceName: string, timeout?: number): Promise<()
+⋮----
+/**
+ * Check if a resource is currently locked
+ * @param resourceName - Name of the resource to check
+ * @returns boolean - True if the resource is locked
+ */
+export const isLocked = (resourceName: string): boolean
+
+================
 File: src/main/utils/python.ts
 ================
 import path from 'path';
@@ -8572,6 +8861,197 @@ export const getCurrentPythonLibVersion = async (library: string): Promise<strin
  * @returns The latest version string or null if not found or an error occurs.
  */
 export const getLatestPythonLibVersion = async (library: string): Promise<string | null> =>
+
+================
+File: src/main/utils/shell.ts
+================
+import { exec, execSync } from 'child_process';
+⋮----
+import { promisify } from 'util';
+⋮----
+import { app } from 'electron';
+⋮----
+import logger from '@/logger';
+⋮----
+interface ShellInfo {
+  path: string;
+  name: string;
+  args?: string[];
+}
+⋮----
+class ShellDetector
+⋮----
+/**
+   * Get the user's default shell
+   * @param forceRefresh Force re-detection instead of using cache
+   * @returns Shell information including path and name
+   */
+static getDefaultShell(forceRefresh = false): ShellInfo
+⋮----
+private static detectShell(): ShellInfo
+⋮----
+private static detectWindowsShell(): ShellInfo
+⋮----
+// Check for PowerShell Core first
+⋮----
+// Check for Windows PowerShell
+⋮----
+// Fall back to cmd.exe
+⋮----
+// Last resort
+⋮----
+private static detectUnixShell(): ShellInfo
+⋮----
+// First, try the SHELL environment variable
+⋮----
+// On macOS, try to get the default shell from Directory Services
+⋮----
+// Ignore errors and continue with fallback detection
+⋮----
+// Try to read from /etc/passwd
+⋮----
+// Ignore errors and continue with fallback detection
+⋮----
+// Try common shell paths in order of preference
+⋮----
+// Last resort - use sh
+⋮----
+private static findExecutable(name: string): string | null
+⋮----
+// Not executable, continue searching
+⋮----
+private static getShellArgs(shellName: string): string[]
+⋮----
+// Return appropriate arguments for interactive shell sessions
+⋮----
+return ['-i']; // Interactive mode
+⋮----
+return ['-NoExit']; // Keep PowerShell open
+⋮----
+/**
+   * Get shell-specific command execution arguments
+   * @param command The command to execute
+   * @returns Array of arguments to pass to spawn/exec
+   */
+static getShellCommandArgs(command: string):
+⋮----
+// Unix shells
+⋮----
+/**
+   * Check if a shell exists at the given path
+   * @param shellPath Path to the shell executable
+   * @returns true if the shell exists and is executable
+   */
+static isShellAvailable(shellPath: string): boolean
+⋮----
+/**
+ * Get the path separator for the current platform
+ */
+const getPathSeparator = (): string
+⋮----
+/**
+ * Get the user's shell PATH by executing their shell
+ */
+export const getShellPath = (): string =>
+⋮----
+// In packaged apps, always refresh PATH on first call to avoid cached restricted PATH
+⋮----
+// On Windows, use cmd.exe to get PATH
+⋮----
+// Also try to get PATH from PowerShell for more complete results
+⋮----
+// Combine both paths
+⋮----
+// PowerShell might not be available, continue with cmd.exe result
+⋮----
+// Unix/macOS logic - use ShellDetector to get the actual shell
+⋮----
+// For Linux, avoid slow interactive shell startup
+// Use non-interactive mode for better performance
+⋮----
+? `${shell} -c 'echo $PATH'` // Fast non-interactive mode for Linux
+: `${shell} -l -i -c 'echo $PATH'`; // Keep login shell for macOS
+⋮----
+// Execute the command to get the PATH
+// For packaged apps, ALWAYS use login shell to get the user's real PATH
+⋮----
+// Use minimal base PATH - just enough to find the shell
+⋮----
+// Use login shell to load user's full environment
+⋮----
+// First try with explicit sourcing of shell config files
+⋮----
+// For zsh, source the standard config files
+⋮----
+// For bash, source the standard config files
+⋮----
+timeout: isLinux ? 3000 : 10000, // Shorter timeout for Linux
+⋮----
+// Add ZDOTDIR for zsh users who might have custom config location
+⋮----
+// Try the standard login shell approach
+⋮----
+timeout: isLinux ? 3000 : 10000, // Shorter timeout for Linux
+⋮----
+// Fallback to current PATH + common locations
+⋮----
+// In development, try faster approach first
+⋮----
+timeout: isLinux ? 3000 : 10000, // Shorter timeout for Linux
+⋮----
+// Combine with current process PATH to ensure we don't lose anything
+⋮----
+// Also include npm global bin directories
+⋮----
+// Skip npm/yarn checks on Linux for better performance (they're usually in PATH already)
+⋮----
+// Try to get npm global bin directory
+⋮----
+// Ignore npm bin errors
+⋮----
+// Try to get yarn global bin directory
+⋮----
+// Ignore yarn bin errors
+⋮----
+// Windows-specific paths
+⋮----
+// Check for nvm-windows
+⋮----
+// Check for nvm-windows symlink
+⋮----
+// Unix/macOS-specific paths
+⋮----
+// Linux-specific common paths
+⋮----
+// Only add Linux paths that exist and aren't already in PATH
+⋮----
+// Check for nvm directories - look for all versions
+⋮----
+// Ignore nvm directory read errors
+⋮----
+// Try alternative method: read shell config files directly (Unix/macOS only)
+⋮----
+// Look for PATH exports
+⋮----
+// Expand $PATH references
+⋮----
+// Final fallback to process PATH
+⋮----
+/**
+ * Find an executable in the shell PATH
+ */
+export const findExecutableInPath = (executable: string): string | null =>
+⋮----
+// On Windows, executables might have .exe, .cmd, or .bat extensions
+⋮----
+// On Windows, check if file exists
+⋮----
+// On Unix, check if the executable exists and is executable
+⋮----
+// Not found in this directory
+⋮----
+// Wrapper for execAsync that includes enhanced PATH
+export const execWithShellPath = async (command: string, options?:
 
 ================
 File: src/main/utils/web-scrapper.ts
@@ -8683,6 +9163,372 @@ public async downloadLatestAiderDesk(): Promise<void>
 // Reset autoDownload back to false after initiating
 ⋮----
 autoUpdater.autoDownload = false; // Ensure it's reset on error
+
+================
+File: src/main/worktrees/index.ts
+================
+
+
+================
+File: src/main/worktrees/types.ts
+================
+// Re-export Worktree types from common
+
+================
+File: src/main/worktrees/worktree-manager.ts
+================
+import path, { join } from 'path';
+import { mkdir } from 'fs/promises';
+⋮----
+import { execWithShellPath, withLock } from '@/utils';
+import { AIDER_DESK_TASKS_DIR } from '@/constants';
+import logger from '@/logger';
+import { MergeState, Worktree } from '@/worktrees/types';
+⋮----
+export interface GitError extends Error {
+  gitCommands?: string[];
+  gitOutput?: string;
+  workingDirectory?: string;
+  projectPath?: string;
+  originalError?: Error;
+}
+⋮----
+// Interface for raw commit data
+interface RawCommitData {
+  hash: string;
+  message: string;
+  date: string | Date;
+  author?: string;
+  additions?: number;
+  deletions?: number;
+  filesChanged?: number;
+}
+⋮----
+export class WorktreeManager
+⋮----
+private getWorktreePath(projectPath: string, taskId: string): string
+⋮----
+private async initializeWorktree(projectPath: string, taskId: string): Promise<void>
+⋮----
+async createWorktree(projectPath: string, taskId: string, branch?: string, baseBranch = 'HEAD'): Promise<Worktree>
+⋮----
+// 1. Initialize repository if necessary
+⋮----
+// Initialize git repository
+⋮----
+// 2. Clean up any existing worktree directory first
+⋮----
+// Ignore cleanup errors
+⋮----
+// 3. Ensure the repository has at least one commit
+⋮----
+// Repository has no commits yet, create initial commit
+⋮----
+// Ignore add errors (no files to add)
+⋮----
+// 4. Logic for creating the worktree
+⋮----
+const baseRef = baseBranch; // Will be 'HEAD' if not provided
+⋮----
+// A. Branch name provided: Check if branch exists or create it
+⋮----
+// Check if it's an actual branch (not just a commit SHA)
+⋮----
+// Branch doesn't exist
+⋮----
+// A1. Use existing branch
+⋮----
+// Get the base commit (the tip of the existing branch)
+⋮----
+// A2. Create new branch from baseRef (which defaults to 'HEAD')
+⋮----
+// Verify that the base branch exists if specified and is a branch name
+⋮----
+// Capture the base commit before creating the worktree
+⋮----
+// Create the new branch and checkout the worktree
+⋮----
+actualBaseBranch = branch; // Use the newly created branch name
+⋮----
+// B. No branch name provided: Create detached worktree from current HEAD (or specified baseRef)
+⋮----
+// Note: git worktree add <path> defaults to current HEAD
+⋮----
+// Capture the base commit (the commit it's detached at)
+⋮----
+// Use the baseRef for the branch name, or resolve the current branch if baseRef is 'HEAD'
+⋮----
+async removeWorktree(projectDir: string, worktree: Worktree): Promise<void>
+⋮----
+// If the worktree is not found, that's okay - it might have been manually deleted
+⋮----
+// For other errors, still throw
+⋮----
+async listWorktrees(projectDir: string): Promise<Worktree[]>
+⋮----
+async listBranches(projectPath: string): Promise<Array<
+⋮----
+// Get all local branches
+⋮----
+// Get all worktrees to identify which branches have worktrees
+⋮----
+// Remove leading *, +, and spaces. The + indicates uncommitted changes
+⋮----
+// Sort branches: worktree branches first, then the rest
+⋮----
+// Within each group, sort alphabetically
+⋮----
+async getProjectMainBranch(projectPath: string): Promise<string>
+⋮----
+// ONLY check the current branch in the project root directory
+⋮----
+// Throw error if we're in detached HEAD state
+⋮----
+// Deprecated: Use getProjectMainBranch instead
+async detectMainBranch(projectPath: string): Promise<string>
+⋮----
+// Deprecated: Use getProjectMainBranch instead
+async getEffectiveMainBranch(project:
+⋮----
+async hasChangesToRebase(worktreePath: string, mainBranch: string): Promise<boolean>
+⋮----
+// Check if main branch has commits that the current branch doesn't have
+// Use cross-platform approach
+⋮----
+// Error checking, assume no changes
+⋮----
+async checkForRebaseConflicts(
+    worktreePath: string,
+    mainBranch: string,
+): Promise<
+⋮----
+// First check if there are any changes to rebase
+⋮----
+// Get the merge base
+⋮----
+// Try a dry-run merge to detect conflicts
+// We use merge-tree to check for conflicts without modifying the working tree
+⋮----
+// Parse merge-tree output for conflicts
+⋮----
+// Get list of files that would conflict
+⋮----
+// Find files modified in both branches
+⋮----
+// Get commit info for better error reporting
+⋮----
+// If merge-tree is not available (older git), fall back to checking modified files
+⋮----
+// Get files changed in both branches
+⋮----
+// Find files modified in both branches (potential conflicts)
+⋮----
+// Get commit info
+⋮----
+// On error, return unknown status
+⋮----
+async rebaseMainIntoWorktree(worktreePath: string, mainBranch: string): Promise<void>
+⋮----
+// Rebase the current worktree branch onto local main branch
+⋮----
+// Create detailed error with git command output
+⋮----
+async abortRebase(worktreePath: string): Promise<void>
+⋮----
+// Check if we're in the middle of a rebase
+⋮----
+// Abort the rebase
+⋮----
+private async squashAndMergeWorktreeToMain(projectPath: string, worktreePath: string, mainBranch: string, commitMessage: string): Promise<void>
+⋮----
+// Get current branch name in worktree
+⋮----
+// Get the base commit (where the worktree branch diverged from main)
+⋮----
+// Check if there are any changes to squash
+⋮----
+// SAFETY CHECK 1: Rebase worktree onto main FIRST before squashing
+⋮----
+// If rebase fails, abort it in the worktree
+⋮----
+// Ignore abort errors
+⋮----
+// Now squash all commits since base into one
+⋮----
+// Properly escape commit message for cross-platform compatibility
+⋮----
+// Switch to main branch in the main repository
+⋮----
+// SAFETY CHECK 2: Use --ff-only merge to prevent history rewriting
+// This will fail if local main has diverged from the worktree branch
+⋮----
+// Create detailed error with git command output
+⋮----
+// Prioritize actual error messages over lastOutput (which may contain unrelated data like commit counts)
+⋮----
+private async mergeWorktreeToMain(projectPath: string, worktreePath: string, mainBranch: string): Promise<void>
+⋮----
+// Get current branch name in worktree
+⋮----
+// Check if there are any changes to merge
+⋮----
+// SAFETY CHECK 1: Rebase worktree onto main FIRST (resolves conflicts in worktree, not main)
+⋮----
+// If rebase fails, abort it in the worktree
+⋮----
+// Ignore abort errors
+⋮----
+// Switch to main branch in the main repository
+⋮----
+// SAFETY CHECK 2: Use --ff-only merge to prevent history rewriting
+// This will fail if local main has diverged from the worktree branch
+⋮----
+// Create detailed error with git command output
+⋮----
+// Prioritize actual error messages over lastOutput (which may contain unrelated data like commit counts)
+⋮----
+generateRebaseCommands(mainBranch: string): string[]
+⋮----
+generateSquashCommands(mainBranch: string, branchName: string): string[]
+⋮----
+generateMergeCommands(mainBranch: string, branchName: string): string[]
+⋮----
+async gitPull(worktreePath: string): Promise<
+⋮----
+async gitPush(worktreePath: string): Promise<
+⋮----
+async getLastCommits(worktreePath: string, count: number = 20): Promise<RawCommitData[]>
+⋮----
+async getOriginBranch(worktreePath: string, branch: string): Promise<string | null>
+⋮----
+async getTaskWorktree(projectPath: string, taskId: string): Promise<Worktree | null>
+⋮----
+// Find worktree that matches our task's worktree path
+⋮----
+// If no worktree exists for this task, return null
+⋮----
+/**
+   * Check if there are uncommitted changes in the given path
+   */
+async hasUncommittedChanges(path: string): Promise<boolean>
+⋮----
+/**
+   * Stash uncommitted changes with a unique identifier
+   * Returns the stash identifier or null if no changes to stash
+   */
+async stashUncommittedChanges(stashId: string, path: string, message: string): Promise<string | null>
+⋮----
+/**
+   * Apply a stash by its identifier
+   */
+async applyStash(path: string, stashId: string): Promise<void>
+⋮----
+// Find the stash entry that matches our identifier
+⋮----
+// Extract stash reference (e.g., "stash@{0}")
+⋮----
+/**
+   * Drop a stash by its identifier
+   */
+async dropStash(path: string, stashId: string): Promise<void>
+⋮----
+// Find the stash entry that matches our identifier
+⋮----
+// Extract stash reference (e.g., "stash@{0}")
+⋮----
+// Don't throw - dropping stash is not critical
+⋮----
+/**
+   * Merge worktree to main branch with uncommitted changes support
+   * Returns MergeState for potential revert
+   */
+async mergeWorktreeToMainWithUncommitted(
+    projectPath: string,
+    taskId: string,
+    worktreePath: string,
+    squash: boolean,
+    commitMessage?: string,
+): Promise<MergeState>
+⋮----
+// 1. Track initial state
+⋮----
+// 2. Stash uncommitted changes in worktree
+⋮----
+// 3. Stash uncommitted changes in main branch if any
+⋮----
+// 4. Perform the merge operation (existing methods handle the actual merge)
+⋮----
+// 5. Apply worktree stash to both branches (keeping changes uncommitted)
+⋮----
+// Drop the worktree stash after successful application
+⋮----
+// 6. Restore main branch's original uncommitted changes if any
+// DO NOT drop this stash - we need it for potential revert
+⋮----
+// Return merge state for potential revert
+⋮----
+// Recovery: try to restore stashes
+⋮----
+/**
+   * Check if worktree has uncommitted changes or unmerged commits
+   * Returns information about unsaved work in the worktree
+   */
+async checkWorktreeForUnmergedWork(
+    projectPath: string,
+    worktreePath: string,
+): Promise<
+⋮----
+// 1. Check for uncommitted changes
+⋮----
+// 2. Get the main branch name
+⋮----
+// 3. Check for commits in worktree that are not in main branch
+⋮----
+// If we can't get commits, log but don't fail
+⋮----
+// On error, return safe defaults (assume there might be work)
+⋮----
+/**
+   * Apply uncommitted changes from worktree to main branch without merging commits
+   * This transfers work-in-progress changes while keeping them uncommitted in both branches
+   */
+async applyUncommittedChangesToMain(projectPath: string, taskId: string, worktreePath: string): Promise<void>
+⋮----
+// 1. Check if there are uncommitted changes in worktree
+⋮----
+// 2. Stash uncommitted changes from worktree
+⋮----
+// 3. Apply stash to main branch (keeping uncommitted)
+⋮----
+// 4. Apply stash back to worktree (keeping uncommitted)
+⋮----
+// 5. Clean up stash
+⋮----
+// Recovery: try to restore stash to worktree
+⋮----
+/**
+   * Revert a merge operation using the stored MergeState
+   * Restores the main branch to its pre-merge state while preserving uncommitted changes
+   */
+async revertMerge(projectPath: string, taskId: string, worktreePath: string, mergeState: MergeState): Promise<void>
+⋮----
+// 1. Stash current uncommitted changes in worktree
+⋮----
+// 2. Reset main branch to previous state (this removes worktree-originated uncommitted changes)
+⋮----
+// 3. Reset worktree branch to previous state
+⋮----
+// 4. Restore main's original uncommitted changes if they were preserved
+⋮----
+// Clean up the stash after successful revert
+⋮----
+// 5. Restore uncommitted changes in worktree
+⋮----
+// Recovery: try to restore worktree stash
+⋮----
+private async pruneDeleted(projectDir: string): Promise<void>
+⋮----
+async close(projectDir: string)
 
 ================
 File: src/main/constants.ts
@@ -8845,6 +9691,12 @@ getTerminalForTask(taskId: string): string | null
 ⋮----
 getTerminalsForTask(baseDir: string):
 ⋮----
+async mergeWorktreeToMain(baseDir: string, taskId: string, squash: boolean): Promise<void>
+⋮----
+async applyUncommittedChanges(baseDir: string, taskId: string): Promise<void>
+⋮----
+async revertLastMerge(baseDir: string, taskId: string): Promise<void>
+⋮----
 async scrapeWeb(baseDir: string, taskId: string, url: string, filePath?: string): Promise<void>
 ⋮----
 // Normalize URL for filename
@@ -8856,6 +9708,8 @@ async scrapeWeb(baseDir: string, taskId: string, url: string, filePath?: string)
 async createNewTask(baseDir: string): Promise<TaskData>
 ⋮----
 async updateTask(baseDir: string, id: string, updates: Partial<TaskData>): Promise<TaskData | undefined>
+⋮----
+// Delegate to Task.updateTask method which handles worktree logic
 ⋮----
 async deleteTask(baseDir: string, id: string): Promise<void>
 ⋮----
@@ -8953,6 +9807,7 @@ import { DataManager } from '@/data-manager';
 import { TerminalManager } from '@/terminal';
 import { EventsHandler } from '@/events-handler';
 import { HEADLESS_MODE, SERVER_PORT } from '@/constants';
+import { WorktreeManager } from '@/worktrees';
 ⋮----
 const setupCustomMenu = (): void =>
 ⋮----
@@ -8997,7 +9852,7 @@ const initManagers = async (
 ⋮----
 // start listening
 ⋮----
-const beforeQuit = async () =>
+const beforeQuit = async (event?: Electron.Event) =>
 ⋮----
 // Handle CTRL+C (SIGINT)
 ⋮----
@@ -9034,6 +9889,8 @@ import { ServerController } from '@/server';
 export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController: ServerController) =>
 ⋮----
 // Terminal handlers
+⋮----
+// Worktree merge handlers
 ⋮----
 // Server control handlers
 ⋮----
@@ -9473,6 +10330,8 @@ const listener = (_: Electron.IpcRendererEvent, data: SettingsData) =>
 ⋮----
 // Terminal operations
 ⋮----
+// Worktree merge operations
+⋮----
 // eslint-disable-next-line no-console
 
 ================
@@ -9738,6 +10597,13 @@ startCloudflareTunnel(): Promise<boolean>
 stopCloudflareTunnel(): Promise<void>
 ⋮----
 getCloudflareTunnelStatus(): Promise<CloudflareTunnelStatus>
+⋮----
+// Worktree merge operations
+mergeWorktreeToMain(baseDir: string, taskId: string, squash: boolean): Promise<void>
+⋮----
+applyUncommittedChanges(baseDir: string, taskId: string): Promise<void>
+⋮----
+revertLastMerge(baseDir: string, taskId: string): Promise<void>
 
 ================
 File: src/renderer/src/components/AgentSelector/AgentSelector.tsx
@@ -10267,6 +11133,42 @@ export type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> & {
   label?: ReactNode;
   size?: InputSize;
 };
+
+================
+File: src/renderer/src/components/common/ItemSelector.tsx
+================
+import { ElementType, useId, useRef, useState } from 'react';
+import { MdKeyboardArrowDown, MdKeyboardArrowUp } from 'react-icons/md';
+import { useTranslation } from 'react-i18next';
+⋮----
+import { StyledTooltip } from './StyledTooltip';
+⋮----
+import { useClickOutside } from '@/hooks/useClickOutside';
+⋮----
+export type ItemConfig<T extends string = string> = {
+  value: T;
+  icon: ElementType;
+  labelKey: string;
+  tooltipKey?: string;
+};
+⋮----
+type PopupPlacement = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+⋮----
+const getPopupPositionClasses = (placement: PopupPlacement): string =>
+⋮----
+type Props<T extends string = string> = {
+  items: ItemConfig<T>[];
+  selectedValue: T;
+  onChange: (value: T) => void;
+  className?: string;
+  disabled?: boolean;
+  popupPlacement?: PopupPlacement;
+  minWidth?: number;
+};
+⋮----
+const toggleOpen = () =>
+⋮----
+const handleItemSelect = (value: T) =>
 
 ================
 File: src/renderer/src/components/common/MarkdownInfoDialog.tsx
@@ -12897,58 +13799,6 @@ title=
 confirmButtonText=
 
 ================
-File: src/renderer/src/components/project/ProjectBar.tsx
-================
-import { EditFormat, Mode, Model, ModelsData, RawModelInfo } from '@common/types';
-import React, { ReactNode, useCallback, useImperativeHandle, useMemo, useRef } from 'react';
-import { BsCodeSlash, BsFilter, BsLayoutSidebar } from 'react-icons/bs';
-import { CgTerminal } from 'react-icons/cg';
-import { GoProjectRoadmap } from 'react-icons/go';
-import { IoMdClose } from 'react-icons/io';
-import { VscLock, VscUnlock } from 'react-icons/vsc';
-import { RiRobot2Line } from 'react-icons/ri';
-import { useTranslation } from 'react-i18next';
-import { getProviderModelId } from '@common/agent';
-⋮----
-import { IconButton } from '@/components/common/IconButton';
-import { AgentModelSelector } from '@/components/AgentModelSelector';
-import { ModelSelector, ModelSelectorRef } from '@/components/ModelSelector';
-import { EditFormatSelector } from '@/components/PromptField/EditFormatSelector';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
-import { useSettings } from '@/contexts/SettingsContext';
-import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
-import { useApi } from '@/contexts/ApiContext';
-import { useResponsive } from '@/hooks/useResponsive';
-import { useModelProviders } from '@/contexts/ModelProviderContext';
-⋮----
-export type ProjectTopBarRef = {
-  openMainModelSelector: (model?: string) => void;
-  openAgentModelSelector: (model?: string) => void;
-};
-⋮----
-type Props = {
-  baseDir: string;
-  taskId: string;
-  modelsData: ModelsData | null;
-  mode: Mode;
-  onModelsChange?: (modelsData: ModelsData | null) => void;
-  runCommand: (command: string) => void;
-  onToggleSidebar: () => void;
-};
-⋮----
-// optimistic update
-⋮----
-// Two-row layout for Agent mode with Aider tools
-⋮----
-{/* Row 1: AGENT */}
-⋮----
-{/* Row 2: AIDER */}
-⋮----
-// Original horizontal layout for other modes
-⋮----
-tooltip=
-
-================
 File: src/renderer/src/components/project/ProjectTabs.tsx
 ================
 import { ProjectData } from '@common/types';
@@ -13043,6 +13893,7 @@ import { TaskView, TaskViewRef } from '@/components/project/TaskView';
 import { COLLAPSED_WIDTH, EXPANDED_WIDTH, TaskSidebar } from '@/components/project/TaskSidebar';
 import { useApi } from '@/contexts/ApiContext';
 import { TaskProvider } from '@/contexts/TaskContext';
+import { showInfoNotification } from '@/utils/notifications';
 ⋮----
 type Props = {
   project: ProjectData;
@@ -13144,6 +13995,66 @@ export const SidebarContent = ({
 }: Props) =>
 
 ================
+File: src/renderer/src/components/project/TaskBar.tsx
+================
+import { EditFormat, Mode, Model, ModelsData, RawModelInfo, TaskData, WorkingMode } from '@common/types';
+import React, { ReactNode, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { BsCodeSlash, BsFilter, BsLayoutSidebar } from 'react-icons/bs';
+import { CgTerminal } from 'react-icons/cg';
+import { GoProjectRoadmap } from 'react-icons/go';
+import { IoMdClose } from 'react-icons/io';
+import { VscLock, VscUnlock } from 'react-icons/vsc';
+import { RiRobot2Line } from 'react-icons/ri';
+import { useTranslation } from 'react-i18next';
+import { getProviderModelId } from '@common/agent';
+⋮----
+import { IconButton } from '@/components/common/IconButton';
+import { AgentModelSelector } from '@/components/AgentModelSelector';
+import { ModelSelector, ModelSelectorRef } from '@/components/ModelSelector';
+import { EditFormatSelector } from '@/components/PromptField/EditFormatSelector';
+import { TaskWorkingMode } from '@/components/PromptField/TaskWorkingMode';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { useSettings } from '@/contexts/SettingsContext';
+import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
+import { useApi } from '@/contexts/ApiContext';
+import { useResponsive } from '@/hooks/useResponsive';
+import { useModelProviders } from '@/contexts/ModelProviderContext';
+⋮----
+export type TaskBarRef = {
+  openMainModelSelector: (model?: string) => void;
+  openAgentModelSelector: (model?: string) => void;
+};
+⋮----
+type Props = {
+  baseDir: string;
+  task: TaskData;
+  modelsData: ModelsData | null;
+  mode: Mode;
+  onModelsChange?: (modelsData: ModelsData | null) => void;
+  runCommand: (command: string) => void;
+  onToggleSidebar: () => void;
+  onWorkingModeChange: (mode: WorkingMode) => void;
+};
+⋮----
+// optimistic update
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// Two-row layout for Agent mode with Aider tools
+⋮----
+{/* Row 1: AGENT */}
+⋮----
+{/* Row 2: AIDER */}
+⋮----
+// Original horizontal layout for other modes
+⋮----
+tooltip=
+
+================
 File: src/renderer/src/components/project/TaskSidebar.tsx
 ================
 import { TaskData } from '@common/types';
@@ -13157,6 +14068,7 @@ import { CgSpinner } from 'react-icons/cg';
 import { MdImage } from 'react-icons/md';
 import { clsx } from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
+import { BiCopy } from 'react-icons/bi';
 ⋮----
 import { useTask } from '@/contexts/TaskContext';
 import { Input } from '@/components/common/Input';
@@ -13169,6 +14081,7 @@ type TaskMenuButtonProps = {
   onDelete: (e: MouseEvent) => void;
   onExportToMarkdown?: (e: MouseEvent) => void;
   onExportToImage?: (e: MouseEvent) => void;
+  onCopyTaskId?: () => void;
 };
 ⋮----
 const handleMenuClick = () =>
@@ -13180,6 +14093,8 @@ const handleDeleteClick = (e: MouseEvent) =>
 const handleExportToMarkdownClick = (e: MouseEvent) =>
 ⋮----
 const handleExportToImageClick = (e: MouseEvent) =>
+⋮----
+const handleCopyTaskIdClick = () =>
 ⋮----
 const handleTaskClick = (taskId: string) =>
 ⋮----
@@ -13218,8 +14133,8 @@ className=
 ================
 File: src/renderer/src/components/project/TaskView.tsx
 ================
-import { Mode, Model, ModelsData, ProjectData, TaskData, TodoItem } from '@common/types';
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition } from 'react';
+import { Mode, Model, ModelsData, ProjectData, TaskData, TodoItem, WorkingMode } from '@common/types';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CgSpinner } from 'react-icons/cg';
 import { ResizableBox } from 'react-resizable';
@@ -13233,13 +14148,14 @@ import { VirtualizedMessages, VirtualizedMessagesRef } from '@/components/messag
 import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
 import { AddFileDialog } from '@/components/project/AddFileDialog';
-import { ProjectBar, ProjectTopBarRef } from '@/components/project/ProjectBar';
+import { TaskBar, TaskBarRef } from '@/components/project/TaskBar';
 import { PromptField, PromptFieldRef } from '@/components/PromptField';
 import { Button } from '@/components/common/Button';
 import { TodoWindow } from '@/components/project/TodoWindow';
 import { TerminalView, TerminalViewRef } from '@/components/terminal/TerminalView';
 import { MobileSidebar } from '@/components/project/MobileSidebar';
 import { SidebarContent } from '@/components/project/SidebarContent';
+import { WelcomeMessage } from '@/components/project/WelcomeMessage';
 ⋮----
 import { useSearchText } from '@/hooks/useSearchText';
 import { useApi } from '@/contexts/ApiContext';
@@ -13268,6 +14184,8 @@ const renderLoading = (message: string) => (
       <div className="mt-2 text-xs text-center text-text-primary">{message}</div>
     </div>
   );
+⋮----
+// eslint-disable-next-line no-console
 ⋮----
 const handleAddFiles = (filePaths: string[], readOnly = false) =>
 ⋮----
@@ -13335,6 +14253,9 @@ const handleClearAllTodos = async () =>
 const handleTerminalViewResize = () =>
 ⋮----
 const handleCopyTerminalOutput = (output: string) =>
+⋮----
+if (node?.container)
+setSearchContainer(node.container);
 ⋮----
 answerQuestion=
 
@@ -13430,6 +14351,81 @@ placeholder=
 /* Collapsed state */
 
 ================
+File: src/renderer/src/components/project/WelcomeMessage.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { FiCode, FiFile, FiLayers, FiZap, FiTerminal } from 'react-icons/fi';
+⋮----
+// @ts-expect-error TypeScript is not aware of asset import
+import icon from '../../../../../resources/icon.png?asset';
+⋮----
+<h1 className="text-xl font-semibold text-text-primary mb-2">
+<p className="text-sm text-text-secondary mb-10">
+⋮----
+<span>
+
+================
+File: src/renderer/src/components/project/WorktreeMergeButton.tsx
+================
+import { useState, useRef } from 'react';
+import { FaDownload } from 'react-icons/fa6';
+import { MdKeyboardArrowDown } from 'react-icons/md';
+import { useTranslation } from 'react-i18next';
+import { useLocalStorage } from '@reactuses/core';
+⋮----
+import { useClickOutside } from '@/hooks/useClickOutside';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { Checkbox } from '@/components/common/Checkbox';
+⋮----
+type Props = {
+  onMerge: () => void;
+  onSquash: () => void;
+  onOnlyUncommitted: () => void;
+  disabled?: boolean;
+};
+⋮----
+const handleToggle = () =>
+⋮----
+const handleMergeClick = () =>
+⋮----
+const handleSquashClick = () =>
+⋮----
+const handleOnlyUncommittedClick = () =>
+⋮----
+const handleMergeConfirm = () =>
+⋮----
+const handleSquashConfirm = () =>
+⋮----
+const handleOnlyUncommittedConfirm = () =>
+⋮----
+title=
+
+================
+File: src/renderer/src/components/project/WorktreeRevertButton.tsx
+================
+import { useState } from 'react';
+import { MdUndo } from 'react-icons/md';
+import { useTranslation } from 'react-i18next';
+import { useLocalStorage } from '@reactuses/core';
+⋮----
+import { IconButton } from '@/components/common/IconButton';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { Checkbox } from '@/components/common/Checkbox';
+⋮----
+type Props = {
+  onRevert: () => void;
+  disabled?: boolean;
+};
+⋮----
+const handleRevertClick = () =>
+⋮----
+const handleRevertConfirm = () =>
+⋮----
+tooltip=
+⋮----
+title=
+
+================
 File: src/renderer/src/components/PromptField/CommandSuggestion.tsx
 ================
 import { useTranslation } from 'react-i18next';
@@ -13509,32 +14505,21 @@ onClick=
 ================
 File: src/renderer/src/components/PromptField/ModeSelector.tsx
 ================
-import { ElementType, useRef, useState } from 'react';
 import { CgTerminal } from 'react-icons/cg';
 import { FaRegQuestionCircle } from 'react-icons/fa';
 import { AiOutlineFileSearch } from 'react-icons/ai';
 import { RiRobot2Line } from 'react-icons/ri';
 import { GoProjectRoadmap } from 'react-icons/go';
-import { MdKeyboardArrowDown, MdKeyboardArrowUp } from 'react-icons/md';
 import { Mode } from '@common/types';
-import { useTranslation } from 'react-i18next';
 ⋮----
-import { useClickOutside } from '@/hooks/useClickOutside';
-⋮----
-type ModeConfig = {
-  icon: ElementType;
-  labelKey: string;
-  tooltipKey: string;
-};
+import { ItemSelector, ItemConfig } from '@/components/common/ItemSelector';
 ⋮----
 type Props = {
   mode: Mode;
   onModeChange: (mode: Mode) => void;
 };
 ⋮----
-const toggleModeSelectorVisible = ()
-⋮----
-const handleModeChange = (newMode: Mode) =>
+export const ModeSelector = (
 
 ================
 File: src/renderer/src/components/PromptField/PromptField.tsx
@@ -13662,6 +14647,27 @@ render: (completion) =>
 Prec.high(keymapExtension),
 ⋮----
 onClose=
+
+================
+File: src/renderer/src/components/PromptField/TaskWorkingMode.tsx
+================
+import { TaskData, WorkingMode } from '@common/types';
+import { AiFillFolderOpen } from 'react-icons/ai';
+import { IoGitBranch } from 'react-icons/io5';
+⋮----
+import { ItemConfig, ItemSelector } from '@/components/common/ItemSelector';
+import { WorktreeMergeButton } from '@/components/project/WorktreeMergeButton';
+import { WorktreeRevertButton } from '@/components/project/WorktreeRevertButton';
+⋮----
+type Props = {
+  task: TaskData;
+  onWorkingModeChange: (mode: WorkingMode) => void;
+  onMerge: () => void;
+  onSquash: () => void;
+  onOnlyUncommitted: () => void;
+  onRevert: () => void;
+  isMerging: boolean;
+};
 
 ================
 File: src/renderer/src/components/settings/agent/AgentProfileItem.tsx
