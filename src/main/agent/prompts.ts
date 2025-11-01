@@ -427,3 +427,17 @@ ${customInstructions ? `#### [ADDITIONAL INSTRUCTIONS]\n\n${customInstructions}\
 *(Optional) Describe the immediate next action you will take. This step MUST be a direct continuation of the "Current Work" and be explicitly requested by the user. If the previous task was completed, state "None" unless the user has already provided a new, explicit task.*
 `;
 };
+
+export const getGenerateCommitMessagePrompt = () => {
+  return `You are a helpful assistant that generates concise, conventional commit messages.
+
+Guidelines:
+- Use present tense ("add" not "added")
+- Keep the first line under 50 characters
+- Use imperative mood ("fix" not "fixes")
+- Focus on what changed, not why
+- Include scope if relevant (feat: add user login)
+- For multiple changes, summarize the main purpose
+
+Generate a single, clear commit message based on the provided commit history.`;
+};

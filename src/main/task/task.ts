@@ -38,7 +38,7 @@ import debounce from 'lodash/debounce';
 import type { SimpleGit } from 'simple-git';
 
 import { getAllFiles } from '@/utils/file-system';
-import { getCompactConversationPrompt, getInitProjectPrompt, getSystemPrompt } from '@/agent/prompts';
+import { getCompactConversationPrompt, getGenerateCommitMessagePrompt, getInitProjectPrompt, getSystemPrompt } from '@/agent/prompts';
 import { AIDER_DESK_TASKS_DIR, AIDER_DESK_TODOS_FILE } from '@/constants';
 import { Agent, McpManager } from '@/agent';
 import { Connector } from '@/connector';
@@ -1738,8 +1738,33 @@ ${error.stderr}`,
       // For squash merge, we need a commit message
       let commitMessage: string | undefined;
       if (squash) {
-        // Get the task name or generate a default message
-        commitMessage = this.task.name || `Task ${this.taskId} changes`;
+        // Get changes information for AI generation
+        const changesDiff = await this.worktreeManager.getChangesDiff(this.project.baseDir, this.task.worktree.path);
+
+        if (changesDiff) {
+          // Try to generate commit message using AI
+          const agentProfile = getActiveAgentProfile(this.store.getSettings(), this.store.getProjectSettings(this.project.baseDir));
+          if (agentProfile) {
+            try {
+              commitMessage = await this.agent.generateText(
+                agentProfile,
+                getGenerateCommitMessagePrompt(),
+                `Generate a concise conventional commit message for these changes:\n\n${changesDiff}\n\nOnly answer with the commit message, nothing else.`,
+              );
+              logger.info('Generated commit message:', { commitMessage });
+            } catch (error) {
+              logger.warn('Failed to generate AI commit message, falling back to task name:', error);
+              // Fallback to task name if AI generation fails
+              commitMessage = this.task.name || `Task ${this.taskId} changes`;
+            }
+          } else {
+            logger.warn('No active agent profile found, using task name for commit message');
+            commitMessage = this.task.name || `Task ${this.taskId} changes`;
+          }
+        } else {
+          // No commits to merge, use default message
+          commitMessage = this.task.name || `Task ${this.taskId} changes`;
+        }
       }
 
       const mergeState = await this.worktreeManager.mergeWorktreeToMainWithUncommitted(

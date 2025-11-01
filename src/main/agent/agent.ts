@@ -916,6 +916,32 @@ export class Agent {
     return messages;
   }
 
+  async generateText(agentProfile: AgentProfile, systemPrompt: string, prompt: string): Promise<string> {
+    const providers = this.store.getProviders();
+    const provider = providers.find((p) => p.id === agentProfile.provider);
+    if (!provider) {
+      throw new Error(`Provider ${agentProfile.provider} not found`);
+    }
+
+    const settings = this.store.getSettings();
+    const model = this.modelManager.createLlm(provider, agentProfile.model, settings, '');
+
+    logger.info('Generating text:', {
+      providerId: provider.id,
+      providerName: provider.provider.name,
+      modelName: agentProfile.model,
+      systemPrompt: systemPrompt.substring(0, 100),
+      prompt: prompt.substring(0, 100),
+    });
+    const result = await generateText({
+      model,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: prompt }],
+    });
+
+    return result.text;
+  }
+
   async estimateTokens(task: Task, profile: AgentProfile): Promise<number> {
     try {
       const settings = this.store.getSettings();

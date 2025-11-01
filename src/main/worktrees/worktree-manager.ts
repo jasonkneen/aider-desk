@@ -814,6 +814,35 @@ export class WorktreeManager {
     }
   }
 
+  async getChangesDiff(projectPath: string, worktreePath: string): Promise<string> {
+    try {
+      const mainBranch = await this.getProjectMainBranch(projectPath);
+
+      // Check if there are any commits in worktree that are not in main
+      const { stdout: commits } = await execWithShellPath(`git log --oneline ${mainBranch}..HEAD`, { cwd: worktreePath });
+
+      if (!commits.trim()) {
+        // No commits in worktree, return empty string
+        return '';
+      }
+
+      // Get the first commit hash in the worktree branch (oldest commit not in main)
+      const commitLines = commits.trim().split('\n');
+      const oldestCommitHash = commitLines[commitLines.length - 1].split(' ')[0];
+
+      // Get full diff from the commit before the oldest worktree commit to HEAD
+      const { stdout } = await execWithShellPath(`git diff ${oldestCommitHash}^..HEAD`, { cwd: worktreePath });
+
+      return stdout.trim();
+    } catch (error: unknown) {
+      const err = error as Error & { stderr?: string; stdout?: string };
+      const gitError: GitError = new Error(err.message || 'Failed to get changes diff');
+      gitError.gitOutput = err.stderr || err.stdout || err.message || '';
+      gitError.workingDirectory = worktreePath;
+      throw gitError;
+    }
+  }
+
   async getOriginBranch(worktreePath: string, branch: string): Promise<string | null> {
     try {
       await execWithShellPath(`git rev-parse --verify origin/${branch}`, { cwd: worktreePath });
