@@ -607,8 +607,8 @@ export class EventsHandler {
     return getEffectiveEnvironmentVariable(key, this.store.getSettings(), baseDir);
   }
 
-  async getProviderModels(): Promise<ProviderModelsData> {
-    return await this.modelManager.getProviderModels();
+  async getProviderModels(reload = false): Promise<ProviderModelsData> {
+    return await this.modelManager.getProviderModels(reload);
   }
 
   getProviders(): ProviderProfile[] {

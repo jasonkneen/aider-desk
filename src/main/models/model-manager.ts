@@ -356,10 +356,16 @@ export class ModelManager {
     }
   }
 
-  async getProviderModels(): Promise<ProviderModelsData> {
+  async getProviderModels(reload = false): Promise<ProviderModelsData> {
     await this.initPromise;
-    if (Object.keys(this.providerModels).length === 0) {
-      // Fallback in case loading failed during init
+
+    if (reload || Object.keys(this.providerModels).length === 0) {
+      // Clear cached models if reloading
+      if (reload) {
+        this.providerModels = {};
+        this.providerErrors = {};
+      }
+      // Load models from all providers
       await this.loadProviderModels(this.store.getProviders());
     }
 

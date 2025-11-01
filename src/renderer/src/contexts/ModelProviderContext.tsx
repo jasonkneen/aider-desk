@@ -37,19 +37,22 @@ export const ModelProviderProvider: React.FC<{ children: ReactNode }> = ({ child
     return a.id.localeCompare(b.id);
   });
 
-  const loadModels = useCallback(async () => {
-    setModelsLoading(true);
-    try {
-      const { models, errors } = await api.getProviderModels();
-      setModels(models!);
-      setErrors(errors || {});
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to load models:', error);
-    } finally {
-      setModelsLoading(false);
-    }
-  }, [api]);
+  const loadModels = useCallback(
+    async (reload = false) => {
+      setModelsLoading(true);
+      try {
+        const { models, errors } = await api.getProviderModels(reload);
+        setModels(models!);
+        setErrors(errors || {});
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load models:', error);
+      } finally {
+        setModelsLoading(false);
+      }
+    },
+    [api],
+  );
 
   const loadProviders = useCallback(async () => {
     try {
@@ -65,9 +68,8 @@ export const ModelProviderProvider: React.FC<{ children: ReactNode }> = ({ child
   }, [api]);
 
   const refresh = useCallback(() => {
-    void loadModels();
-    void loadProviders();
-  }, [loadModels, loadProviders]);
+    void loadModels(true);
+  }, [loadModels]);
 
   const saveProvider = useCallback(
     async (profile: ProviderProfile) => {

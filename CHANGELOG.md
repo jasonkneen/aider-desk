@@ -11,6 +11,7 @@
 - added copy task ID action for a task
 - added welcome message for empty task view
 - fixed issue with drop all files not working after changes in Settings -> Aider
+- added Refresh action to Model Library to reload models
 
 ## [0.37.1]
 

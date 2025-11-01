@@ -1,7 +1,7 @@
 import { useState, ReactNode } from 'react';
 import { useDebounce } from '@reactuses/core';
 import { useTranslation } from 'react-i18next';
-import { FiEdit2, FiTrash2, FiPlus, FiEye, FiSliders } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiPlus, FiEye, FiSliders, FiRefreshCw } from 'react-icons/fi';
 import { Model, ProviderProfile } from '@common/types';
 
 import { Input } from '@/components/common/Input';
@@ -19,9 +19,21 @@ type Props = {
   onEditModel: (model: Model) => void;
   onDeleteModel: (model: Model) => void;
   onToggleHidden: (model: Model) => void;
+  onRefreshModels: () => void;
+  modelsLoading?: boolean;
 };
 
-export const ModelTableSection = ({ models, selectedProviderIds, providers, onAddModel, onEditModel, onDeleteModel, onToggleHidden }: Props) => {
+export const ModelTableSection = ({
+  models,
+  selectedProviderIds,
+  providers,
+  onAddModel,
+  onEditModel,
+  onDeleteModel,
+  onToggleHidden,
+  onRefreshModels,
+  modelsLoading = false,
+}: Props) => {
   const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [showHidden, setShowHidden] = useState(false);
@@ -174,10 +186,16 @@ export const ModelTableSection = ({ models, selectedProviderIds, providers, onAd
                   })}
             </div>
           </div>
-          <Button onClick={onAddModel} size="sm" variant="text">
-            <FiPlus className="w-4 h-4 mr-2" />
-            {t('modelLibrary.addModel')}
-          </Button>
+          <div className="flex items-center space-x-2">
+            <Button onClick={onRefreshModels} size="sm" variant="text" disabled={modelsLoading}>
+              <FiRefreshCw className={`w-4 h-4 mr-2 ${modelsLoading ? 'animate-spin' : ''}`} />
+              {t('modelLibrary.refresh')}
+            </Button>
+            <Button onClick={onAddModel} size="sm" variant="text">
+              <FiPlus className="w-4 h-4 mr-2" />
+              {t('modelLibrary.addModel')}
+            </Button>
+          </div>
         </div>
       </div>
 

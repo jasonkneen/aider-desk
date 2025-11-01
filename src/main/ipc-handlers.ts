@@ -334,8 +334,8 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     return eventsHandler.getCloudflareTunnelStatus();
   });
 
-  ipcMain.handle('get-provider-models', async () => {
-    return await eventsHandler.getProviderModels();
+  ipcMain.handle('get-provider-models', async (_, reload = false) => {
+    return await eventsHandler.getProviderModels(reload);
   });
 
   ipcMain.handle('get-providers', () => {

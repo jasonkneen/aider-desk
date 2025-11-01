@@ -495,8 +495,8 @@ export class BrowserApi implements ApplicationAPI {
   loadModelsInfo(): Promise<Record<string, ModelInfo>> {
     return this.get('/models-info');
   }
-  getProviderModels(): Promise<ProviderModelsData> {
-    return this.get('/models', {});
+  getProviderModels(reload?: boolean): Promise<ProviderModelsData> {
+    return this.get('/models', { reload });
   }
   getProviders(): Promise<ProviderProfile[]> {
     return this.get('/providers');

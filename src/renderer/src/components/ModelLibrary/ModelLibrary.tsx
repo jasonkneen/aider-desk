@@ -18,7 +18,7 @@ type Props = {
 
 export const ModelLibrary = ({ onClose }: Props) => {
   const { t } = useTranslation();
-  const { models, providers, saveProvider, deleteProvider, upsertModel, deleteModel, errors: providerErrors } = useModelProviders();
+  const { models, providers, saveProvider, deleteProvider, upsertModel, deleteModel, errors: providerErrors, refresh, modelsLoading } = useModelProviders();
   const [selectedProviderIds, setSelectedProviderIds] = useState<string[]>([]);
   const [configuringProvider, setConfiguringProvider] = useState<LlmProviderName | null>(null);
   const [editingProfile, setEditingProfile] = useState<ProviderProfile | undefined>(undefined);
@@ -149,6 +149,8 @@ export const ModelLibrary = ({ onClose }: Props) => {
           onEditModel={handleEditModel}
           onDeleteModel={handleDeleteModel}
           onToggleHidden={handleToggleHidden}
+          onRefreshModels={refresh}
+          modelsLoading={modelsLoading}
         />
       </div>
     </ModalOverlayLayout>

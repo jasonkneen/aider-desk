@@ -173,6 +173,7 @@
     "search": "Search Models",
     "providers": "Providers",
     "all": "All",
+    "refresh": "Refresh",
     "selectProvider": "Select a Provider to Configure",
     "profileForm": {
       "title": "Configure Profile for {{provider}} Provider",

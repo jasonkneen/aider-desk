@@ -39,8 +39,9 @@ export class ProvidersApi extends BaseApi {
     // Get provider models
     router.get(
       '/models',
-      this.handleRequest(async (_, res) => {
-        const models = await this.eventsHandler.getProviderModels();
+      this.handleRequest(async (req, res) => {
+        const reload = req.query.reload === 'true';
+        const models = await this.eventsHandler.getProviderModels(reload);
         res.status(200).json(models);
       }),
     );

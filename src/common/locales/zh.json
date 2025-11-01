@@ -172,6 +172,7 @@
     "search": "搜索模型",
     "providers": "提供商",
     "all": "全部",
+    "refresh": "刷新",
     "selectProvider": "选择要配置的提供商",
     "profileForm": {
       "title": "配置 {{provider}} 提供商的配置文件",

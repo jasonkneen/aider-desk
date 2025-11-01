@@ -120,7 +120,7 @@ export interface ApplicationAPI {
   loadModelsInfo: () => Promise<Record<string, ModelInfo>>;
   queryUsageData: (from: string, to: string) => Promise<UsageDataRow[]>;
   getEffectiveEnvironmentVariable: (key: string, baseDir?: string) => Promise<EnvironmentVariable | undefined>;
-  getProviderModels: () => Promise<ProviderModelsData>;
+  getProviderModels: (reload?: boolean) => Promise<ProviderModelsData>;
   getProviders: () => Promise<ProviderProfile[]>;
   updateProviders: (providers: ProviderProfile[]) => Promise<ProviderProfile[]>;
   upsertModel: (providerId: string, modelId: string, model: Model) => Promise<ProviderModelsData>;
