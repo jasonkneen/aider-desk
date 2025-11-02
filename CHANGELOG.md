@@ -13,6 +13,7 @@
 - fixed issue with drop all files not working after changes in Settings -> Aider
 - added Refresh action to Model Library to reload models
 - added reasoning effort support for Azure provider and fixed reasoning models not working
+- remember the prompt field value when switching between tasks
 
 ## [0.37.1]
 
