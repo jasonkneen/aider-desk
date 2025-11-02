@@ -1472,6 +1472,7 @@ File: src/common/locales/en.json
     "search": "Search Models",
     "providers": "Providers",
     "all": "All",
+    "refresh": "Refresh",
     "selectProvider": "Select a Provider to Configure",
     "profileForm": {
       "title": "Configure Profile for {{provider}} Provider",
@@ -2522,6 +2523,7 @@ File: src/common/locales/zh.json
     "search": "搜索模型",
     "providers": "提供商",
     "all": "全部",
+    "refresh": "刷新",
     "selectProvider": "选择要配置的提供商",
     "profileForm": {
       "title": "配置 {{provider}} 提供商的配置文件",
@@ -3739,7 +3741,7 @@ export interface ApplicationAPI {
   loadModelsInfo: () => Promise<Record<string, ModelInfo>>;
   queryUsageData: (from: string, to: string) => Promise<UsageDataRow[]>;
   getEffectiveEnvironmentVariable: (key: string, baseDir?: string) => Promise<EnvironmentVariable | undefined>;
-  getProviderModels: () => Promise<ProviderModelsData>;
+  getProviderModels: (reload?: boolean) => Promise<ProviderModelsData>;
   getProviders: () => Promise<ProviderProfile[]>;
   updateProviders: (providers: ProviderProfile[]) => Promise<ProviderProfile[]>;
   upsertModel: (providerId: string, modelId: string, model: Model) => Promise<ProviderModelsData>;
@@ -4968,6 +4970,8 @@ private async prepareMessages(task: Task, profile: AgentProfile, contextMessages
 ⋮----
 // Add message history
 ⋮----
+async generateText(agentProfile: AgentProfile, systemPrompt: string, prompt: string): Promise<string>
+⋮----
 async estimateTokens(task: Task, profile: AgentProfile): Promise<number>
 ⋮----
 // Format tools for the prompt
@@ -5254,6 +5258,8 @@ const getRulesContent = (projectDir: string) =>
 export const getInitProjectPrompt = () =>
 ⋮----
 export const getCompactConversationPrompt = (customInstructions?: string) =>
+⋮----
+export const getGenerateCommitMessagePrompt = () =>
 
 ================
 File: src/main/agent/utils.ts
@@ -6723,9 +6729,11 @@ const loadModels = async () =>
    */
 private updateEnvVarsProviders()
 ⋮----
-async getProviderModels(): Promise<ProviderModelsData>
+async getProviderModels(reload = false): Promise<ProviderModelsData>
 ⋮----
-// Fallback in case loading failed during init
+// Clear cached models if reloading
+⋮----
+// Load models from all providers
 ⋮----
 private async loadModelOverrides(): Promise<void>
 ⋮----
@@ -8127,7 +8135,7 @@ import debounce from 'lodash/debounce';
 import type { SimpleGit } from 'simple-git';
 ⋮----
 import { getAllFiles } from '@/utils/file-system';
-import { getCompactConversationPrompt, getInitProjectPrompt, getSystemPrompt } from '@/agent/prompts';
+import { getCompactConversationPrompt, getGenerateCommitMessagePrompt, getInitProjectPrompt, getSystemPrompt } from '@/agent/prompts';
 import { AIDER_DESK_TASKS_DIR, AIDER_DESK_TODOS_FILE } from '@/constants';
 import { Agent, McpManager } from '@/agent';
 import { Connector } from '@/connector';
@@ -8405,7 +8413,7 @@ settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
 ⋮----
 // Check for changes in agent config properties that affect token count
 ⋮----
-// Check for changes in environment variables or LLM providers
+// Check for changes in Aider
 ⋮----
 private sendUpdateEnvVars(environmentVariables: Record<string, unknown>)
 ⋮----
@@ -8483,7 +8491,13 @@ public async mergeWorktreeToMain(squash: boolean): Promise<void>
 ⋮----
 // For squash merge, we need a commit message
 ⋮----
-// Get the task name or generate a default message
+// Get changes information for AI generation
+⋮----
+// Try to generate commit message using AI
+⋮----
+// Fallback to task name if AI generation fails
+⋮----
+// No commits to merge, use default message
 ⋮----
 // Store merge state for potential revert
 ⋮----
@@ -9341,11 +9355,9 @@ async abortRebase(worktreePath: string): Promise<void>
 ⋮----
 private async squashAndMergeWorktreeToMain(projectPath: string, worktreePath: string, mainBranch: string, commitMessage: string): Promise<void>
 ⋮----
-// Get current branch name in worktree
+// Get current branch name in worktree (for logging purposes)
 ⋮----
-// Get the base commit (where the worktree branch diverged from main)
-⋮----
-// Check if there are any changes to squash
+// Check if there are any changes to merge (before rebase)
 ⋮----
 // SAFETY CHECK 1: Rebase worktree onto main FIRST before squashing
 ⋮----
@@ -9353,14 +9365,17 @@ private async squashAndMergeWorktreeToMain(projectPath: string, worktreePath: st
 ⋮----
 // Ignore abort errors
 ⋮----
-// Now squash all commits since base into one
-⋮----
-// Properly escape commit message for cross-platform compatibility
+// Get the HEAD commit hash from worktree AFTER rebase (but before squashing)
+// This preserves the worktree's commit history
 ⋮----
 // Switch to main branch in the main repository
 ⋮----
-// SAFETY CHECK 2: Use --ff-only merge to prevent history rewriting
-// This will fail if local main has diverged from the worktree branch
+// SQUASH MERGE: Use git merge --squash to create a squashed staging of all changes
+// This keeps the worktree branch history intact while creating a single commit in main
+⋮----
+// Check if there are staged changes to commit
+⋮----
+// Commit the squashed changes with the provided message
 ⋮----
 // Create detailed error with git command output
 ⋮----
@@ -9368,7 +9383,7 @@ private async squashAndMergeWorktreeToMain(projectPath: string, worktreePath: st
 ⋮----
 private async mergeWorktreeToMain(projectPath: string, worktreePath: string, mainBranch: string): Promise<void>
 ⋮----
-// Get current branch name in worktree
+// Get current branch name in worktree (for logging purposes)
 ⋮----
 // Check if there are any changes to merge
 ⋮----
@@ -9377,6 +9392,8 @@ private async mergeWorktreeToMain(projectPath: string, worktreePath: string, mai
 // If rebase fails, abort it in the worktree
 ⋮----
 // Ignore abort errors
+⋮----
+// Get the HEAD commit hash from worktree AFTER rebase
 ⋮----
 // Switch to main branch in the main repository
 ⋮----
@@ -9398,6 +9415,16 @@ async gitPull(worktreePath: string): Promise<
 async gitPush(worktreePath: string): Promise<
 ⋮----
 async getLastCommits(worktreePath: string, count: number = 20): Promise<RawCommitData[]>
+⋮----
+async getChangesDiff(projectPath: string, worktreePath: string): Promise<string>
+⋮----
+// Check if there are any commits in worktree that are not in main
+⋮----
+// No commits in worktree, return empty string
+⋮----
+// Get the first commit hash in the worktree branch (oldest commit not in main)
+⋮----
+// Get full diff from the commit before the oldest worktree commit to HEAD
 ⋮----
 async getOriginBranch(worktreePath: string, branch: string): Promise<string | null>
 ⋮----
@@ -9735,7 +9762,7 @@ async queryUsageData(from: Date, to: Date): Promise<UsageDataRow[]>
 ⋮----
 getEffectiveEnvironmentVariable(key: string, baseDir?: string): EnvironmentVariable | undefined
 ⋮----
-async getProviderModels(): Promise<ProviderModelsData>
+async getProviderModels(reload = false): Promise<ProviderModelsData>
 ⋮----
 getProviders(): ProviderProfile[]
 ⋮----
@@ -10522,7 +10549,7 @@ async getReleaseNotes(): Promise<string | null>
 clearReleaseNotes(): Promise<void>
 async getOS(): Promise<OS>
 loadModelsInfo(): Promise<Record<string, ModelInfo>>
-getProviderModels(): Promise<ProviderModelsData>
+getProviderModels(reload?: boolean): Promise<ProviderModelsData>
 getProviders(): Promise<ProviderProfile[]>
 updateProviders(providers: ProviderProfile[]): Promise<ProviderProfile[]>
 upsertModel(providerId: string, modelId: string, model: Model): Promise<ProviderModelsData>
@@ -11164,6 +11191,7 @@ type Props<T extends string = string> = {
   disabled?: boolean;
   popupPlacement?: PopupPlacement;
   minWidth?: number;
+  iconOnly?: boolean;
 };
 ⋮----
 const toggleOpen = () =>
@@ -13297,7 +13325,7 @@ File: src/renderer/src/components/ModelLibrary/ModelTableSection.tsx
 import { useState, ReactNode } from 'react';
 import { useDebounce } from '@reactuses/core';
 import { useTranslation } from 'react-i18next';
-import { FiEdit2, FiTrash2, FiPlus, FiEye, FiSliders } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiPlus, FiEye, FiSliders, FiRefreshCw } from 'react-icons/fi';
 import { Model, ProviderProfile } from '@common/types';
 ⋮----
 import { Input } from '@/components/common/Input';
@@ -13315,6 +13343,8 @@ type Props = {
   onEditModel: (model: Model) => void;
   onDeleteModel: (model: Model) => void;
   onToggleHidden: (model: Model) => void;
+  onRefreshModels: () => void;
+  modelsLoading?: boolean;
 };
 ⋮----
 const getRowClassName = (row: Model) =>
@@ -14371,11 +14401,9 @@ import { useState, useRef } from 'react';
 import { FaDownload } from 'react-icons/fa6';
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
-import { useLocalStorage } from '@reactuses/core';
 ⋮----
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
-import { Checkbox } from '@/components/common/Checkbox';
 ⋮----
 type Props = {
   onMerge: () => void;
@@ -14656,6 +14684,7 @@ import { AiFillFolderOpen } from 'react-icons/ai';
 import { IoGitBranch } from 'react-icons/io5';
 ⋮----
 import { ItemConfig, ItemSelector } from '@/components/common/ItemSelector';
+import { useResponsive } from '@/hooks/useResponsive';
 import { WorktreeMergeButton } from '@/components/project/WorktreeMergeButton';
 import { WorktreeRevertButton } from '@/components/project/WorktreeRevertButton';
 ⋮----
@@ -18365,7 +18394,6 @@ import { ToastContainer } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 import { THEMES } from '@common/types';
 ⋮----
-import { useResponsive } from '@/hooks/useResponsive';
 import { Onboarding } from '@/pages/Onboarding';
 import { Home } from '@/pages/Home';
 import { ContextMenuProvider, useContextMenu } from '@/contexts/ContextMenuContext';
