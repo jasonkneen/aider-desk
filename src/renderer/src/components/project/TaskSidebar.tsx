@@ -21,12 +21,12 @@ export const COLLAPSED_WIDTH = 44;
 export const EXPANDED_WIDTH = 256;
 
 type TaskMenuButtonProps = {
-  onEdit: (e: MouseEvent) => void;
-  onDelete: (e: MouseEvent) => void;
-  onExportToMarkdown?: (e: MouseEvent) => void;
-  onExportToImage?: (e: MouseEvent) => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onExportToMarkdown?: () => void;
+  onExportToImage?: () => void;
   onCopyTaskId?: () => void;
-  onDuplicateTask?: (e: MouseEvent) => void;
+  onDuplicateTask?: () => void;
 };
 
 const TaskMenuButton = ({ onEdit, onDelete, onExportToMarkdown, onExportToImage, onCopyTaskId, onDuplicateTask }: TaskMenuButtonProps) => {
@@ -44,32 +44,38 @@ const TaskMenuButton = ({ onEdit, onDelete, onExportToMarkdown, onExportToImage,
   };
 
   const handleEditClick = (e: MouseEvent) => {
-    onEdit(e);
+    e.stopPropagation();
+    onEdit();
     setIsMenuOpen(false);
   };
 
   const handleDeleteClick = (e: MouseEvent) => {
-    onDelete(e);
+    e.stopPropagation();
+    onDelete();
     setIsMenuOpen(false);
   };
 
   const handleExportToMarkdownClick = (e: MouseEvent) => {
-    onExportToMarkdown?.(e);
+    e.stopPropagation();
+    onExportToMarkdown?.();
     setIsMenuOpen(false);
   };
 
   const handleExportToImageClick = (e: MouseEvent) => {
-    onExportToImage?.(e);
+    e.stopPropagation();
+    onExportToImage?.();
     setIsMenuOpen(false);
   };
 
-  const handleCopyTaskIdClick = () => {
+  const handleCopyTaskIdClick = (e: MouseEvent) => {
+    e.stopPropagation();
     onCopyTaskId?.();
     setIsMenuOpen(false);
   };
 
   const handleDuplicateTaskClick = (e: MouseEvent) => {
-    onDuplicateTask?.(e);
+    e.stopPropagation();
+    onDuplicateTask?.();
     setIsMenuOpen(false);
   };
 
@@ -81,7 +87,10 @@ const TaskMenuButton = ({ onEdit, onDelete, onExportToMarkdown, onExportToImage,
             'transition-opacity p-1.5 rounded-md hover:bg-bg-tertiary text-text-muted hover:text-text-primary',
             !isMenuOpen && 'opacity-0 group-hover:opacity-100',
           )}
-          onClick={handleMenuClick}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleMenuClick();
+          }}
         >
           <FaEllipsisVertical className="w-4 h-4" />
         </button>
@@ -193,8 +202,7 @@ const TaskSidebarComponent = ({
     onTaskSelect(taskId);
   };
 
-  const handleDeleteClick = (e: MouseEvent, taskId: string) => {
-    e.stopPropagation();
+  const handleDeleteClick = (taskId: string) => {
     setDeleteConfirmTaskId(taskId);
     setEditingTaskId(null);
   };
@@ -215,8 +223,7 @@ const TaskSidebarComponent = ({
     setDeleteConfirmTaskId(null);
   };
 
-  const handleEditClick = (e: MouseEvent, taskId: string, taskName: string) => {
-    e.stopPropagation();
+  const handleEditClick = (taskId: string, taskName: string) => {
     setEditingTaskId(taskId);
     setEditTaskName(taskName);
     setDeleteConfirmTaskId(null);
@@ -282,8 +289,8 @@ const TaskSidebarComponent = ({
         <div className="flex items-center pl-2">{renderTaskStateIcon(task.id, false)}</div>
 
         <TaskMenuButton
-          onEdit={(e) => handleEditClick(e, task.id, task.name)}
-          onDelete={(e) => handleDeleteClick(e, task.id)}
+          onEdit={() => handleEditClick(task.id, task.name)}
+          onDelete={() => handleDeleteClick(task.id)}
           onExportToMarkdown={onExportToMarkdown ? () => onExportToMarkdown(task.id) : undefined}
           onExportToImage={onExportToImage ? () => onExportToImage(task.id) : undefined}
           onCopyTaskId={onCopyTaskId ? () => onCopyTaskId(task.id) : undefined}

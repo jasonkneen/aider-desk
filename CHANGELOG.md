@@ -16,6 +16,7 @@
 - remember the prompt field value when switching between tasks
 - added save prompt action for future task executions
 - added action to duplicate task
+- avoid selecting a task when only opening its context menu
 
 ## [0.37.1]
 
