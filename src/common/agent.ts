@@ -77,6 +77,7 @@ export interface AzureProvider extends LlmProviderBase {
   apiKey: string;
   resourceName: string;
   apiVersion?: string;
+  reasoningEffort?: ReasoningEffort;
 }
 export const isAzureProvider = (provider: LlmProviderBase): provider is AzureProvider => provider.name === 'azure';
 
@@ -356,7 +357,6 @@ export const COMPACT_CONVERSATION_AGENT_PROFILE: AgentProfile = {
 };
 
 // TODO: move to providers.ts
-export const AZURE_DEFAULT_API_VERSION = '2025-01-01-preview';
 export const getDefaultProviderParams = <T extends LlmProvider>(providerName: LlmProviderName): T => {
   let provider: LlmProvider;
 
@@ -377,7 +377,7 @@ export const getDefaultProviderParams = <T extends LlmProvider>(providerName: Ll
         name: 'azure',
         apiKey: '',
         resourceName: '',
-        apiVersion: AZURE_DEFAULT_API_VERSION,
+        apiVersion: '',
       } satisfies AzureProvider;
       break;
     case 'anthropic':

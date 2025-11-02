@@ -614,6 +614,52 @@ export class ModelManager {
     return strategy.getProviderOptions(llmProvider, modelObj);
   }
 
+  getProviderParameters(llmProvider: LlmProvider, modelId: string): Record<string, unknown> {
+    const strategy = this.providerRegistry[llmProvider.name];
+    if (!strategy?.getProviderParameters) {
+      return {};
+    }
+
+    // Find the provider profile for this LLM provider
+    const providers = this.store.getProviders();
+    const providerProfile = providers.find((p) => p.provider.name === llmProvider.name);
+
+    if (!providerProfile) {
+      logger.warn(`Provider profile not found for ${llmProvider.name}, using fallback without model overrides`, {
+        modelId,
+        providerName: llmProvider.name,
+      });
+      const fallbackModel: Model = {
+        id: modelId,
+        providerId: '',
+      };
+      return strategy.getProviderParameters(llmProvider, fallbackModel);
+    }
+
+    // Look up the actual Model object from providerModels
+    const models = this.providerModels[providerProfile.id] || [];
+    const modelObj = models.find((m) => m.id === modelId);
+
+    if (!modelObj) {
+      logger.warn(`Model ${modelId} not found in provider ${providerProfile.id}, using fallback without model overrides`, {
+        modelId,
+        providerId: providerProfile.id,
+        availableModels: models.map((m) => m.id),
+      });
+      const fallbackModel: Model = {
+        id: modelId,
+        providerId: providerProfile.id,
+      };
+      return strategy.getProviderParameters(llmProvider, fallbackModel);
+    }
+
+    logger.debug(`Found model object for ${modelId} in provider ${providerProfile.id}`, {
+      hasProviderOverrides: !!modelObj.providerOverrides,
+    });
+
+    return strategy.getProviderParameters(llmProvider, modelObj);
+  }
+
   /**
    * Returns provider-specific tools for the given provider and model
    */

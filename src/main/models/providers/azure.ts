@@ -1,9 +1,10 @@
 import { createAzure } from '@ai-sdk/azure';
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { AZURE_DEFAULT_API_VERSION, AzureProvider } from '@common/agent';
+import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, ReasoningEffort } from '@common/types';
+import { AzureProvider, isAzureProvider, LlmProvider } from '@common/agent';
+import { type OpenAIChatLanguageModelOptions } from '@ai-sdk/openai';
 
 import type { LanguageModelUsage } from 'ai';
-import type { LanguageModelV2 } from '@ai-sdk/provider';
+import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 
 import logger from '@/logger';
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
@@ -56,7 +57,6 @@ export const createAzureLlm = (profile: ProviderProfile, model: Model, settings:
   const provider = profile.provider as AzureProvider;
   let apiKey = provider.apiKey;
   let resourceName = provider.resourceName;
-  let apiVersion = provider.apiVersion;
 
   if (!apiKey) {
     const effectiveVar = getEffectiveEnvironmentVariable('AZURE_API_KEY', settings, projectDir);
@@ -82,18 +82,9 @@ export const createAzureLlm = (profile: ProviderProfile, model: Model, settings:
     throw new Error('Azure OpenAI resource name is required in Providers settings or Aider environment variables (AZURE_API_BASE)');
   }
 
-  if (!apiVersion) {
-    const effectiveVar = getEffectiveEnvironmentVariable('AZURE_API_VERSION', settings, projectDir);
-    if (effectiveVar) {
-      apiVersion = effectiveVar.value;
-      logger.debug(`Loaded AZURE_API_VERSION from ${effectiveVar.source}`);
-    }
-  }
-
   const azureProvider = createAzure({
     resourceName,
     apiKey,
-    apiVersion: apiVersion || AZURE_DEFAULT_API_VERSION,
     headers: profile.headers,
   });
   return azureProvider(model.id);
@@ -150,6 +141,59 @@ export const getAzureUsageReport = (
   return usageReportData;
 };
 
+export const getAzureProviderOptions = (llmProvider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined => {
+  if (isAzureProvider(llmProvider)) {
+    // Extract reasoningEffort from model overrides or provider config
+    const providerOverrides = model.providerOverrides as Partial<AzureProvider> | undefined;
+    const reasoningEffort = providerOverrides?.reasoningEffort ?? llmProvider.reasoningEffort;
+
+    // Map ReasoningEffort enum to AI SDK format
+    const mappedReasoningEffort =
+      reasoningEffort === undefined || reasoningEffort === ReasoningEffort.None
+        ? undefined
+        : (reasoningEffort.toLowerCase() as 'minimal' | 'low' | 'medium' | 'high');
+
+    const options: OpenAIChatLanguageModelOptions = {};
+
+    if (mappedReasoningEffort) {
+      logger.debug('Using reasoning effort:', { mappedReasoningEffort });
+      options.reasoningEffort = mappedReasoningEffort;
+      if (model.maxOutputTokens) {
+        options.maxCompletionTokens = model.maxOutputTokens;
+      }
+    }
+
+    if (Object.keys(options).length === 0) {
+      return undefined;
+    }
+
+    return {
+      openai: options,
+    };
+  }
+
+  return undefined;
+};
+
+export const getAzureProviderParameters = (llmProvider: LlmProvider, model: Model): Record<string, unknown> => {
+  if (isAzureProvider(llmProvider)) {
+    // Extract reasoningEffort from model overrides or provider config
+    const providerOverrides = model.providerOverrides as Partial<AzureProvider> | undefined;
+    const reasoningEffort = providerOverrides?.reasoningEffort ?? llmProvider.reasoningEffort;
+
+    if (reasoningEffort && reasoningEffort !== ReasoningEffort.None) {
+      logger.debug('Clearing temperature and maxOutputTokens for Azure with reasoning effort:', { reasoningEffort });
+      return {
+        // not supported by Azure with reasoning models
+        maxOutputTokens: undefined,
+        temperature: undefined,
+      };
+    }
+  }
+
+  return {};
+};
+
 // === Complete Strategy Implementation ===
 export const azureProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
@@ -163,4 +207,6 @@ export const azureProviderStrategy: LlmProviderStrategy = {
   }),
   hasEnvVars: hasAzureEnvVars,
   getAiderMapping: getAzureAiderMapping,
+  getProviderOptions: getAzureProviderOptions,
+  getProviderParameters: getAzureProviderParameters,
 };

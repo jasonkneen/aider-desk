@@ -58,7 +58,12 @@ Azure OpenAI provides enterprise-grade AI models with enhanced security, complia
   - Found in your Azure OpenAI resource overview page
 - **API Version**: The API version to use
   - Environment variable: `AZURE_API_VERSION`
-  - Default: `2025-01-01-preview`
+- **Reasoning Effort**: Control the level of reasoning for supported reasoning models
+  - **None**: No reasoning (default)
+  - **Minimal**: Minimal reasoning, faster responses
+  - **Low**: Low reasoning, balanced speed
+  - **Medium**: Balanced reasoning and speed
+  - **High**: Maximum reasoning, more thorough but slower
 
 ### Setup
 
@@ -73,6 +78,12 @@ Azure OpenAI provides enterprise-grade AI models with enhanced security, complia
 - **Custom Models Required**: Azure models are not automatically discovered. You need to add custom models manually through the [Model Library](../features/model-library.md)
 - **Resource Name Format**: Use only the resource name (e.g., `my-openai-resource`), not the full endpoint URL
 - **Regional Deployment**: Models are deployed to specific Azure regions, ensure your resource is in the desired region
+- **Reasoning Models**: For reasoning models (like o1-series), you must configure the reasoning effort in the Model Library:
+  1. Go to **Model Library** → **Models** tab
+  2. Select your Azure reasoning model
+  3. Expand **Provider Overrides** section
+  4. Set **Reasoning Effort** to something other than **None**
+  5. This fixes the error: `Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.`
 
 ---
 

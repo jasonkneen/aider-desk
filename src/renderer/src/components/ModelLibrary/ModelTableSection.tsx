@@ -160,7 +160,7 @@ export const ModelTableSection = ({
         </div>
       ),
       align: 'left',
-      maxWidth: 100,
+      maxWidth: 110,
     },
   ];
 

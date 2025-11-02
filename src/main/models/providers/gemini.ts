@@ -213,7 +213,7 @@ export const getGeminiProviderTools = (provider: LlmProvider, model: Model): Too
 
   return {
     google_search: google.tools.googleSearch({}),
-  };
+  } as ToolSet;
 };
 
 // === Complete Strategy Implementation ===

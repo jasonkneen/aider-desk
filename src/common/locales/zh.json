@@ -234,12 +234,6 @@
     "baseUrl": "基础 URL",
     "modelName": "模型",
     "baseUrlPlaceholder": "例如 http://localhost:8080/v1",
-    "reasoningEffort": "推理努力",
-    "reasoningEffortNone": "无",
-    "reasoningEffortMinimal": "最小",
-    "reasoningEffortLow": "低",
-    "reasoningEffortMedium": "中",
-    "reasoningEffortHigh": "高",
     "useWebSearch": "使用网络搜索",
     "useWebSearchTooltip": "启用后，模型将使用 OpenAI 的网络搜索工具来访问互联网上的当前信息。"
   },
@@ -854,9 +848,10 @@
     "worktree": "使用 git 工作树为此任务进行隔离的更改"
   },
   "reasoningEffort": {
-    "label": "推理",
+    "label": "推理工作量",
     "tooltip": "推理工作量决定模型在采取行动前的思考程度。高推理工作量意味着模型会在采取行动前思考更多，但响应时间也会更长。",
     "none": "无",
+    "minimal": "最小",
     "low": "低",
     "medium": "中",
     "high": "高",

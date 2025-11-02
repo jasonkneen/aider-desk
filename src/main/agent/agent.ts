@@ -518,6 +518,7 @@ export class Agent {
 
     const cacheControl = this.modelManager.getCacheControl(profile, provider.provider);
     const providerOptions = this.modelManager.getProviderOptions(provider.provider, profile.model);
+    const providerParameters = this.modelManager.getProviderParameters(provider.provider, profile.model);
 
     const userRequestMessage: ContextUserMessage = {
       id: promptContext?.id || uuidv4(),
@@ -710,6 +711,7 @@ export class Agent {
           experimental_telemetry: {
             isEnabled: true,
           },
+          ...providerParameters,
           onError: ({ error }) => {
             if (effectiveAbortSignal?.aborted) {
               return;

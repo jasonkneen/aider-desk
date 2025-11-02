@@ -72,6 +72,11 @@ export interface LlmProviderStrategy {
    * Returns provider-specific tools that should be available to the agent
    */
   getProviderTools?: (provider: LlmProvider, model: Model) => ToolSet | Promise<ToolSet>;
+
+  /**
+   * Returns provider-specific parameters for the given model
+   */
+  getProviderParameters?: (provider: LlmProvider, model: Model) => Record<string, unknown>;
 }
 
 export type LlmProviderRegistry = Record<LlmProviderName, LlmProviderStrategy>;

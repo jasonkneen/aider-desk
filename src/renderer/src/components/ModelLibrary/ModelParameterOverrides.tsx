@@ -7,6 +7,7 @@ import { GeminiModelOverrides } from './providers/GeminiModelOverrides';
 import { VertexAiModelOverrides } from './providers/VertexAiModelOverrides';
 import { OpenAiModelOverrides } from './providers/OpenAiModelOverrides';
 import { RequestyModelOverrides } from './providers/RequestyModelOverrides';
+import { AzureModelOverrides } from './providers/AzureModelOverrides';
 
 import { Button } from '@/components/common/Button';
 import { Accordion } from '@/components/common/Accordion';
@@ -22,6 +23,7 @@ const PROVIDER_OVERRIDES_MAP: Partial<Record<LlmProviderName, ComponentType<Prov
   'vertex-ai': VertexAiModelOverrides,
   openai: OpenAiModelOverrides,
   requesty: RequestyModelOverrides,
+  azure: AzureModelOverrides,
 };
 
 type Props = {

@@ -235,12 +235,6 @@
     "baseUrl": "Base URL",
     "modelName": "Model Name",
     "baseUrlPlaceholder": "e.g. http://localhost:8080/v1",
-    "reasoningEffort": "Reasoning Effort",
-    "reasoningEffortNone": "None",
-    "reasoningEffortMinimal": "Minimal",
-    "reasoningEffortLow": "Low",
-    "reasoningEffortMedium": "Medium",
-    "reasoningEffortHigh": "High",
     "useWebSearch": "Use Web Search",
     "useWebSearchTooltip": "When enabled, the model will use OpenAI's web search tool to access current information from the internet."
   },
@@ -883,9 +877,10 @@
     "worktree": "Use git worktree to make isolated changes for this task"
   },
   "reasoningEffort": {
-    "label": "Reasoning",
+    "label": "Reasoning effort",
     "tooltip": "Reasoning effort determines how much the model will think before taking action. High reasoning effort means the model will think more before taking action, but will also take longer to respond.",
     "none": "None",
+    "minimal": "Minimal",
     "low": "Low",
     "medium": "Medium",
     "high": "High",
