@@ -157,9 +157,9 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
     };
   }, [api, project.baseDir, settings?.startupMode]);
 
-  const handleTaskSelect = (taskId: string) => {
+  const handleTaskSelect = useCallback((taskId: string) => {
     setActiveTaskId(taskId);
-  };
+  }, []);
 
   const handleToggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
@@ -222,6 +222,20 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
     [t],
   );
 
+  const handleDuplicateTask = useCallback(
+    async (taskId: string) => {
+      try {
+        const duplicatedTask = await api.duplicateTask(project.baseDir, taskId);
+        // Optionally switch to the new task
+        handleTaskSelect(duplicatedTask.id);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to duplicate task:', error);
+      }
+    },
+    [api, project.baseDir, handleTaskSelect],
+  );
+
   const renderLoading = () => {
     return (
       <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-bg-primary to-bg-primary-light z-10">
@@ -260,6 +274,7 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
           onExportToMarkdown={handleExportTaskToMarkdown}
           onExportToImage={handleExportTaskToImage}
           onCopyTaskId={handleCopyTaskId}
+          onDuplicateTask={handleDuplicateTask}
         />
 
         <div

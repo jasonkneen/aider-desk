@@ -294,6 +294,20 @@ export class Project {
     }
   }
 
+  public async duplicateTask(taskId: string): Promise<TaskData> {
+    const sourceTask = this.tasks.get(taskId);
+    if (!sourceTask) {
+      throw new Error(`Task with id ${taskId} not found`);
+    }
+
+    const newTask = this.prepareTask();
+    await newTask.duplicateFrom(sourceTask);
+    this.eventManager.sendTaskCreated(newTask.task);
+    await newTask.init();
+
+    return newTask.task;
+  }
+
   async getTasks(): Promise<TaskData[]> {
     await this.tasksLoadingPromise;
 

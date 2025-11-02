@@ -513,6 +513,10 @@ export class EventsHandler {
     await this.projectManager.getProject(baseDir).deleteTask(id);
   }
 
+  async duplicateTask(baseDir: string, taskId: string): Promise<TaskData> {
+    return await this.projectManager.getProject(baseDir).duplicateTask(taskId);
+  }
+
   async getTasks(baseDir: string): Promise<TaskData[]> {
     return this.projectManager.getProject(baseDir).getTasks();
   }

@@ -15,6 +15,7 @@
 - added reasoning effort support for Azure provider and fixed reasoning models not working
 - remember the prompt field value when switching between tasks
 - added save prompt action for future task executions
+- added action to duplicate task
 
 ## [0.37.1]
 

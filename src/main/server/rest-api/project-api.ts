@@ -162,6 +162,11 @@ const DeleteTaskSchema = z.object({
   id: z.string().min(1, 'Task id is required'),
 });
 
+const DuplicateTaskSchema = z.object({
+  projectDir: z.string().min(1, 'Project directory is required'),
+  taskId: z.string().min(1, 'Task id is required'),
+});
+
 const GetTaskContextDataSchema = z.object({
   projectDir: z.string().min(1, 'Project directory is required'),
   id: z.string().min(1, 'Task id is required'),
@@ -429,6 +434,21 @@ export class ProjectApi extends BaseApi {
         const { projectDir, id } = parsed;
         await this.eventsHandler.deleteTask(projectDir, id);
         res.status(200).json({ message: 'Task deleted' });
+      }),
+    );
+
+    // Duplicate task
+    router.post(
+      '/project/tasks/duplicate',
+      this.handleRequest(async (req, res) => {
+        const parsed = this.validateRequest(DuplicateTaskSchema, req.body, res);
+        if (!parsed) {
+          return;
+        }
+
+        const { projectDir, taskId } = parsed;
+        const duplicatedTask = await this.eventsHandler.duplicateTask(projectDir, taskId);
+        res.status(200).json(duplicatedTask);
       }),
     );
 

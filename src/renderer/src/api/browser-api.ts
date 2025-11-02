@@ -432,6 +432,9 @@ export class BrowserApi implements ApplicationAPI {
   deleteTask(baseDir: string, id: string): Promise<boolean> {
     return this.post('/project/tasks/delete', { projectDir: baseDir, id });
   }
+  duplicateTask(baseDir: string, taskId: string): Promise<TaskData> {
+    return this.post('/project/tasks/duplicate', { projectDir: baseDir, taskId });
+  }
   getTasks(baseDir: string): Promise<TaskData[]> {
     return this.get('/project/tasks', { projectDir: baseDir });
   }

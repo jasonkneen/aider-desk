@@ -1012,7 +1012,8 @@
     "exportAsMarkdown": "导出为 Markdown",
     "exportAsImage": "导出为图片",
     "copyTaskId": "复制任务 ID",
-    "taskIdCopied": "任务 ID {{taskId}} 已复制到剪贴板"
+    "taskIdCopied": "任务 ID {{taskId}} 已复制到剪贴板",
+    "duplicateTask": "复制任务"
   },
   "worktree": {
     "merge": "合并",

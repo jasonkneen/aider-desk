@@ -1004,7 +1004,8 @@
     "exportAsMarkdown": "Export as markdown",
     "exportAsImage": "Export as image",
     "copyTaskId": "Copy task ID",
-    "taskIdCopied": "Task ID {{taskId}} copied to clipboard"
+    "taskIdCopied": "Task ID {{taskId}} copied to clipboard",
+    "duplicateTask": "Duplicate Task"
   },
   "worktree": {
     "merge": "Merge",

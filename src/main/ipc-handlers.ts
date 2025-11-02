@@ -178,6 +178,10 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     return await eventsHandler.deleteTask(baseDir, id);
   });
 
+  ipcMain.handle('duplicate-task', async (_, baseDir: string, taskId: string) => {
+    return await eventsHandler.duplicateTask(baseDir, taskId);
+  });
+
   ipcMain.handle('get-tasks', async (_, baseDir: string) => {
     return await eventsHandler.getTasks(baseDir);
   });

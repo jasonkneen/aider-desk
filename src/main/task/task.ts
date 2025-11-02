@@ -1875,4 +1875,39 @@ ${error.stderr}`,
       throw error;
     }
   }
+
+  public async duplicateFrom(sourceTask: Task): Promise<void> {
+    // Copy basic task data
+    const sourceData = sourceTask.task;
+    await this.saveTask({
+      name: `${sourceData.name} (Copy)`,
+    });
+
+    // Copy context files
+    const contextFiles = sourceTask.getContextFiles();
+    for (const file of contextFiles) {
+      await this.addFile(file);
+    }
+
+    // Copy messages
+    const messages = sourceTask.getContextMessages();
+    for (const message of messages) {
+      this.contextManager.addContextMessage(message);
+    }
+
+    await this.updateContextInfo();
+
+    // Copy todos
+    const todos = await sourceTask.getTodos();
+    if (todos.length > 0) {
+      await this.setTodos(todos, 'Duplicated from original task');
+    }
+
+    // Copy worktree if exists
+    if (sourceData.worktree && sourceData.workingMode === 'worktree') {
+      await this.updateTask({
+        workingMode: 'worktree',
+      });
+    }
+  }
 }
