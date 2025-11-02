@@ -278,6 +278,10 @@ export class EventsHandler {
     return this.projectManager.getProject(baseDir).getTask(taskId)?.runPrompt(prompt, mode) || [];
   }
 
+  async savePrompt(baseDir: string, taskId: string, prompt: string): Promise<void> {
+    return this.projectManager.getProject(baseDir).getTask(taskId)?.savePromptOnly(prompt);
+  }
+
   answerQuestion(baseDir: string, taskId: string, answer: string): void {
     this.projectManager.getProject(baseDir).getTask(taskId)?.answerQuestion(answer);
   }

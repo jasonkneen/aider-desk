@@ -12,6 +12,12 @@ const RunPromptSchema = z.object({
   mode: z.enum(['agent', 'code', 'ask', 'architect', 'context']).optional(),
 });
 
+const SavePromptSchema = z.object({
+  projectDir: z.string().min(1, 'Project directory is required'),
+  taskId: z.string().min(1, 'Task ID is required'),
+  prompt: z.string().min(1, 'Prompt is required'),
+});
+
 export class PromptApi extends BaseApi {
   private isPromptRunning = false;
 
@@ -49,6 +55,22 @@ export class PromptApi extends BaseApi {
           // Clear the running flag even if there's an error
           this.isPromptRunning = false;
         }
+      }),
+    );
+
+    router.post(
+      '/save-prompt',
+      this.handleRequest(async (req, res) => {
+        const parsed = this.validateRequest(SavePromptSchema, req.body, res);
+        if (!parsed) {
+          return;
+        }
+
+        const { projectDir, taskId, prompt } = parsed;
+
+        await this.eventsHandler.savePrompt(projectDir, taskId, prompt);
+
+        res.status(200).json({ message: 'Prompt saved successfully' });
       }),
     );
   }

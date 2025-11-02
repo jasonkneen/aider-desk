@@ -214,6 +214,10 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
     }
   };
 
+  const handleSavePrompt = async (prompt: string) => {
+    await api.savePrompt(project.baseDir, task.id, prompt);
+  };
+
   const handleEditLastUserMessage = (content?: string) => {
     let contentToEdit = content;
     const messageIndex = displayedMessages.findLastIndex(isUserMessage);
@@ -364,7 +368,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
             />
           )}
           <div className="overflow-hidden flex-grow relative">
-            {displayedMessages.length === 0 && !loading && !messagesPending ? (
+            {displayedMessages.length === 0 && !loading && !messagesPending && !processing ? (
               <WelcomeMessage />
             ) : (
               <>
@@ -383,6 +387,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
                     removeMessage={handleRemoveMessage}
                     redoLastUserPrompt={handleRedoLastUserPrompt}
                     editLastUserMessage={handleEditLastUserMessage}
+                    processing={processing}
                   />
                 ) : (
                   <Messages
@@ -399,6 +404,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
                     removeMessage={handleRemoveMessage}
                     redoLastUserPrompt={handleRedoLastUserPrompt}
                     editLastUserMessage={handleEditLastUserMessage}
+                    processing={processing}
                   />
                 )}
                 {messagesPending && transitionMessages.length === 0 && renderLoading(t('common.loadingMessages'))}
@@ -452,6 +458,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
               mode={projectSettings.currentMode}
               onModeChanged={handleModeChange}
               runPrompt={runPrompt}
+              savePrompt={handleSavePrompt}
               editLastUserMessage={handleEditLastUserMessage}
               isActive={isActive}
               words={autocompletionWords}

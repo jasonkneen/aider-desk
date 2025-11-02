@@ -18,6 +18,10 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     eventsHandler.runPrompt(baseDir, taskId, prompt, mode);
   });
 
+  ipcMain.handle('save-prompt', async (_, baseDir: string, taskId: string, prompt: string) => {
+    return await eventsHandler.savePrompt(baseDir, taskId, prompt);
+  });
+
   ipcMain.on('answer-question', (_, baseDir: string, taskId: string, answer: string) => {
     eventsHandler.answerQuestion(baseDir, taskId, answer);
   });

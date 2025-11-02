@@ -14,6 +14,7 @@
 - added Refresh action to Model Library to reload models
 - added reasoning effort support for Azure provider and fixed reasoning models not working
 - remember the prompt field value when switching between tasks
+- added save prompt action for future task executions
 
 ## [0.37.1]
 

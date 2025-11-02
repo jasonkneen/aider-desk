@@ -16,7 +16,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 import { useDebounce, useLocalStorage } from '@reactuses/core';
 import { useTranslation } from 'react-i18next';
 import { BiSend } from 'react-icons/bi';
-import { MdPlaylistRemove, MdStop } from 'react-icons/md';
+import { MdPlaylistRemove, MdSave, MdStop } from 'react-icons/md';
 import { VscTerminal } from 'react-icons/vsc';
 import { clsx } from 'clsx';
 
@@ -98,6 +98,7 @@ type Props = {
   mode: Mode;
   onModeChanged: (mode: Mode) => void;
   runPrompt: (prompt: string) => void;
+  savePrompt: (prompt: string) => Promise<void>;
   showFileDialog: (readOnly: boolean) => void;
   addFiles?: (filePaths: string[], readOnly?: boolean) => void;
   clearMessages: () => void;
@@ -130,6 +131,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
       onModeChanged,
       showFileDialog,
       runPrompt,
+      savePrompt,
       addFiles,
       clearMessages,
       scrapeWeb,
@@ -546,6 +548,18 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
       }
     };
 
+    const handleSavePrompt = async () => {
+      if (text) {
+        try {
+          await savePrompt(text);
+          prepareForNextPrompt();
+          setPlaceholderIndex(Math.floor(Math.random() * PLACEHOLDER_COUNT));
+        } catch (error) {
+          showErrorNotification(t('promptField.saveError', { error: error instanceof Error ? error.message : String(error) }));
+        }
+      }
+    };
+
     const getAutocompleteDetailLabel = (item: string): [string | null, boolean] => {
       if (item.startsWith('/')) {
         // Check if it's a custom command
@@ -872,18 +886,32 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
                 <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
               </div>
             ) : (
-              <button
-                onClick={handleSubmit}
-                disabled={!text.trim() || disabled}
-                className={clsx(
-                  'absolute right-2 top-1/2 -translate-y-[12px] text-text-muted-light hover:text-text-tertiary hover:bg-bg-tertiary rounded p-1 transition-all duration-200',
-                  !text.trim() ? 'opacity-0' : 'opacity-100',
-                )}
-                data-tooltip-id="prompt-field-tooltip"
-                data-tooltip-content={t('promptField.sendMessage')}
-              >
-                <BiSend className="w-4 h-4" />
-              </button>
+              <>
+                <button
+                  onClick={handleSavePrompt}
+                  disabled={!text.trim() || disabled}
+                  className={clsx(
+                    'absolute right-10 top-1/2 -translate-y-[12px] text-text-muted-light hover:text-text-tertiary hover:bg-bg-tertiary rounded p-1 transition-all duration-200',
+                    !text.trim() ? 'opacity-0' : 'opacity-100',
+                  )}
+                  data-tooltip-id="prompt-field-tooltip"
+                  data-tooltip-content={t('promptField.savePrompt')}
+                >
+                  <MdSave className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={!text.trim() || disabled}
+                  className={clsx(
+                    'absolute right-2 top-1/2 -translate-y-[12px] text-text-muted-light hover:text-text-tertiary hover:bg-bg-tertiary rounded p-1 transition-all duration-200',
+                    !text.trim() ? 'opacity-0' : 'opacity-100',
+                  )}
+                  data-tooltip-id="prompt-field-tooltip"
+                  data-tooltip-content={t('promptField.sendMessage')}
+                >
+                  <BiSend className="w-4 h-4" />
+                </button>
+              </>
             )}
           </div>
           <div className="relative w-full flex items-center gap-1.5">

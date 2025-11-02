@@ -264,6 +264,9 @@ export class BrowserApi implements ApplicationAPI {
   runPrompt(baseDir: string, taskId: string, prompt: string, mode?: Mode): void {
     this.post('/run-prompt', { projectDir: baseDir, taskId, prompt, mode });
   }
+  savePrompt(baseDir: string, taskId: string, prompt: string): Promise<void> {
+    return this.post('/save-prompt', { projectDir: baseDir, taskId, prompt });
+  }
   redoLastUserPrompt(baseDir: string, taskId: string, mode: Mode, updatedPrompt?: string): void {
     this.post('/project/redo-prompt', {
       projectDir: baseDir,

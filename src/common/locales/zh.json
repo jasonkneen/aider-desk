@@ -511,7 +511,8 @@
     "group": "分组",
     "scrollToBottom": "滚动到底部",
     "messageBar": "消息栏",
-    "exportNotAvailableWithVirtualized": "使用虚拟化消息渲染时无法导出为图片。请在 设置 -> 常规 -> 消息显示 中更改为标准渲染。"
+    "exportNotAvailableWithVirtualized": "使用虚拟化消息渲染时无法导出为图片。请在 设置 -> 常规 -> 消息显示 中更改为标准渲染。",
+    "execute": "执行"
   },
   "errors": {
     "frozenTitle": "AIDER冻结了?",
@@ -783,6 +784,9 @@
     "noChanges": "没有进行任何更改。内容相同。"
   },
   "promptField": {
+    "savePrompt": "保存提示",
+    "savePromptDescription": "保存提示而不执行",
+    "saveError": "保存提示失败: {{error}}",
     "placeholders": {
       "0": "更新 UserValidator 类以添加邮箱格式验证...",
       "1": "修复 DataProcessor.processBatch() 中的内存泄漏，通过关闭...",

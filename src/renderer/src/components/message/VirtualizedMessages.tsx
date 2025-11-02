@@ -2,6 +2,7 @@ import React, { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRe
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { IoPlayOutline } from 'react-icons/io5';
 
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
@@ -11,6 +12,7 @@ import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
 import { showInfoNotification } from '@/utils/notifications';
+import { Button } from '@/components/common/Button';
 
 export type VirtualizedMessagesRef = {
   exportToImage: () => void;
@@ -26,10 +28,11 @@ type Props = {
   removeMessage: (message: Message) => void;
   redoLastUserPrompt: () => void;
   editLastUserMessage: (content: string) => void;
+  processing: boolean;
 };
 
 export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
-  ({ baseDir, messages, allFiles = [], renderMarkdown, removeMessage, redoLastUserPrompt, editLastUserMessage }, ref) => {
+  ({ baseDir, messages, allFiles = [], renderMarkdown, removeMessage, redoLastUserPrompt, editLastUserMessage, processing }, ref) => {
     const { t } = useTranslation();
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const [scrollingPaused, setScrollingPaused] = useState(false);
@@ -201,6 +204,14 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
               className="bg-bg-primary-light border border-border-default shadow-lg hover:bg-bg-secondary transition-colors duration-200"
               aria-label={t('messages.scrollToBottom')}
             />
+          </div>
+        )}
+        {!processing && lastUserMessageIndex === processedMessages.length - 1 && (
+          <div className="flex justify-center align-center py-4 px-6">
+            <Button variant="outline" color="primary" size="xs" onClick={redoLastUserPrompt}>
+              <IoPlayOutline className="mr-1 w-4 h-4" />
+              {t('messages.execute')}
+            </Button>
           </div>
         )}
       </div>

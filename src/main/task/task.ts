@@ -396,6 +396,34 @@ export class Task {
     }
   }
 
+  public async savePromptOnly(prompt: string): Promise<void> {
+    logger.info('Saving prompt without execution:', {
+      baseDir: this.project.baseDir,
+      prompt,
+    });
+
+    await this.project.addToInputHistory(prompt);
+
+    const promptContext: PromptContext = {
+      id: uuidv4(),
+    };
+
+    // Add user message to context
+    this.addUserMessage(promptContext.id, prompt);
+
+    // Add to context manager
+    this.contextManager.addContextMessage({
+      id: promptContext.id,
+      role: MessageRole.User,
+      content: prompt,
+      promptContext,
+    });
+
+    await this.saveTask({
+      name: this.task.name || this.getTaskNameFromPrompt(prompt),
+    });
+  }
+
   public async runPromptInAider(prompt: string, promptContext: PromptContext, mode?: Mode): Promise<ResponseCompletedData[]> {
     await this.aiderManager.waitForStart();
 

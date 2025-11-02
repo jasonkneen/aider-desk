@@ -555,7 +555,8 @@
     "group": "Group",
     "scrollToBottom": "Scroll to bottom",
     "messageBar": "Message Bar",
-    "exportNotAvailableWithVirtualized": "Export to image is not available when using virtualized message rendering. Change to standard rendering in Settings -> General -> Message Display."
+    "exportNotAvailableWithVirtualized": "Export to image is not available when using virtualized message rendering. Change to standard rendering in Settings -> General -> Message Display.",
+    "execute": "Execute"
   },
   "errors": {
     "frozenTitle": "AIDER FROZEN?",
@@ -812,6 +813,9 @@
     "noChanges": "No changes have been made. Content is identical."
   },
   "promptField": {
+    "savePrompt": "Save Prompt",
+    "savePromptDescription": "Save prompt without executing",
+    "saveError": "Failed to save prompt: {{error}}",
     "placeholders": {
       "0": "Update the UserValidator class to add email format validation...",
       "1": "Fix the memory leak in DataProcessor.processBatch() by closing...",

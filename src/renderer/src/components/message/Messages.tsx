@@ -2,6 +2,7 @@ import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } f
 import { toPng } from 'html-to-image';
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
+import { IoPlayOutline } from 'react-icons/io5';
 
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
@@ -10,6 +11,7 @@ import { isGroupMessage, isUserMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
+import { Button } from '@/components/common/Button';
 
 export type MessagesRef = {
   exportToImage: () => void;
@@ -25,10 +27,11 @@ type Props = {
   removeMessage: (message: Message) => void;
   redoLastUserPrompt: () => void;
   editLastUserMessage: (content: string) => void;
+  processing: boolean;
 };
 
 export const Messages = forwardRef<MessagesRef, Props>(
-  ({ baseDir, messages, allFiles = [], renderMarkdown, removeMessage, redoLastUserPrompt, editLastUserMessage }, ref) => {
+  ({ baseDir, messages, allFiles = [], renderMarkdown, removeMessage, redoLastUserPrompt, editLastUserMessage, processing }, ref) => {
     const { t } = useTranslation();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -135,6 +138,14 @@ export const Messages = forwardRef<MessagesRef, Props>(
           );
         })}
         <div ref={messagesEndRef} />
+        {!processing && lastUserMessageIndex === processedMessages.length - 1 && (
+          <div className="flex justify-center align-center py-4 px-6">
+            <Button variant="outline" color="primary" size="xs" onClick={redoLastUserPrompt}>
+              <IoPlayOutline className="mr-1 w-4 h-4" />
+              {t('messages.execute')}
+            </Button>
+          </div>
+        )}
       </div>
     );
   },
