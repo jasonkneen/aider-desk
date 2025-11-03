@@ -280,6 +280,8 @@ src/
         ModelLibrary/
           providers/
             AnthropicParameters.tsx
+            AzureAdvancedSettings.tsx
+            AzureModelOverrides.tsx
             AzureParameters.tsx
             BedrockParameters.tsx
             CerebrasParameters.tsx
@@ -1534,12 +1536,6 @@ File: src/common/locales/en.json
     "baseUrl": "Base URL",
     "modelName": "Model Name",
     "baseUrlPlaceholder": "e.g. http://localhost:8080/v1",
-    "reasoningEffort": "Reasoning Effort",
-    "reasoningEffortNone": "None",
-    "reasoningEffortMinimal": "Minimal",
-    "reasoningEffortLow": "Low",
-    "reasoningEffortMedium": "Medium",
-    "reasoningEffortHigh": "High",
     "useWebSearch": "Use Web Search",
     "useWebSearchTooltip": "When enabled, the model will use OpenAI's web search tool to access current information from the internet."
   },
@@ -1860,7 +1856,8 @@ File: src/common/locales/en.json
     "group": "Group",
     "scrollToBottom": "Scroll to bottom",
     "messageBar": "Message Bar",
-    "exportNotAvailableWithVirtualized": "Export to image is not available when using virtualized message rendering. Change to standard rendering in Settings -> General -> Message Display."
+    "exportNotAvailableWithVirtualized": "Export to image is not available when using virtualized message rendering. Change to standard rendering in Settings -> General -> Message Display.",
+    "execute": "Execute"
   },
   "errors": {
     "frozenTitle": "AIDER FROZEN?",
@@ -2117,6 +2114,9 @@ File: src/common/locales/en.json
     "noChanges": "No changes have been made. Content is identical."
   },
   "promptField": {
+    "savePrompt": "Save Prompt",
+    "savePromptDescription": "Save prompt without executing",
+    "saveError": "Failed to save prompt: {{error}}",
     "placeholders": {
       "0": "Update the UserValidator class to add email format validation...",
       "1": "Fix the memory leak in DataProcessor.processBatch() by closing...",
@@ -2182,9 +2182,10 @@ File: src/common/locales/en.json
     "worktree": "Use git worktree to make isolated changes for this task"
   },
   "reasoningEffort": {
-    "label": "Reasoning",
+    "label": "Reasoning effort",
     "tooltip": "Reasoning effort determines how much the model will think before taking action. High reasoning effort means the model will think more before taking action, but will also take longer to respond.",
     "none": "None",
+    "minimal": "Minimal",
     "low": "Low",
     "medium": "Medium",
     "high": "High",
@@ -2304,7 +2305,8 @@ File: src/common/locales/en.json
     "exportAsMarkdown": "Export as markdown",
     "exportAsImage": "Export as image",
     "copyTaskId": "Copy task ID",
-    "taskIdCopied": "Task ID {{taskId}} copied to clipboard"
+    "taskIdCopied": "Task ID {{taskId}} copied to clipboard",
+    "duplicateTask": "Duplicate Task"
   },
   "worktree": {
     "merge": "Merge",
@@ -2585,12 +2587,6 @@ File: src/common/locales/zh.json
     "baseUrl": "基础 URL",
     "modelName": "模型",
     "baseUrlPlaceholder": "例如 http://localhost:8080/v1",
-    "reasoningEffort": "推理努力",
-    "reasoningEffortNone": "无",
-    "reasoningEffortMinimal": "最小",
-    "reasoningEffortLow": "低",
-    "reasoningEffortMedium": "中",
-    "reasoningEffortHigh": "高",
     "useWebSearch": "使用网络搜索",
     "useWebSearchTooltip": "启用后，模型将使用 OpenAI 的网络搜索工具来访问互联网上的当前信息。"
   },
@@ -2868,7 +2864,8 @@ File: src/common/locales/zh.json
     "group": "分组",
     "scrollToBottom": "滚动到底部",
     "messageBar": "消息栏",
-    "exportNotAvailableWithVirtualized": "使用虚拟化消息渲染时无法导出为图片。请在 设置 -> 常规 -> 消息显示 中更改为标准渲染。"
+    "exportNotAvailableWithVirtualized": "使用虚拟化消息渲染时无法导出为图片。请在 设置 -> 常规 -> 消息显示 中更改为标准渲染。",
+    "execute": "执行"
   },
   "errors": {
     "frozenTitle": "AIDER冻结了?",
@@ -3140,6 +3137,9 @@ File: src/common/locales/zh.json
     "noChanges": "没有进行任何更改。内容相同。"
   },
   "promptField": {
+    "savePrompt": "保存提示",
+    "savePromptDescription": "保存提示而不执行",
+    "saveError": "保存提示失败: {{error}}",
     "placeholders": {
       "0": "更新 UserValidator 类以添加邮箱格式验证...",
       "1": "修复 DataProcessor.processBatch() 中的内存泄漏，通过关闭...",
@@ -3205,9 +3205,10 @@ File: src/common/locales/zh.json
     "worktree": "使用 git 工作树为此任务进行隔离的更改"
   },
   "reasoningEffort": {
-    "label": "推理",
+    "label": "推理工作量",
     "tooltip": "推理工作量决定模型在采取行动前的思考程度。高推理工作量意味着模型会在采取行动前思考更多，但响应时间也会更长。",
     "none": "无",
+    "minimal": "最小",
     "low": "低",
     "medium": "中",
     "high": "高",
@@ -3364,7 +3365,8 @@ File: src/common/locales/zh.json
     "exportAsMarkdown": "导出为 Markdown",
     "exportAsImage": "导出为图片",
     "copyTaskId": "复制任务 ID",
-    "taskIdCopied": "任务 ID {{taskId}} 已复制到剪贴板"
+    "taskIdCopied": "任务 ID {{taskId}} 已复制到剪贴板",
+    "duplicateTask": "复制任务"
   },
   "worktree": {
     "merge": "合并",
@@ -3470,6 +3472,7 @@ export interface AzureProvider extends LlmProviderBase {
   apiKey: string;
   resourceName: string;
   apiVersion?: string;
+  reasoningEffort?: ReasoningEffort;
 }
 export const isAzureProvider = (provider: LlmProviderBase): provider is AzureProvider
 ⋮----
@@ -3605,7 +3608,6 @@ export type LlmProvider =
 // Aider with Power Search
 ⋮----
 // TODO: move to providers.ts
-⋮----
 export const getDefaultProviderParams = <T extends LlmProvider>(providerName: LlmProviderName): T =>
 ⋮----
 region: 'us-east-1', // Default region
@@ -3678,6 +3680,7 @@ export interface ApplicationAPI {
   restartProject: (baseDir: string) => void;
   restartTask: (baseDir: string, taskId: string) => void;
   runPrompt: (baseDir: string, taskId: string, prompt: string, mode?: Mode) => void;
+  savePrompt: (baseDir: string, taskId: string, prompt: string) => Promise<void>;
   redoLastUserPrompt: (baseDir: string, taskId: string, mode: Mode, updatedPrompt?: string) => void;
   answerQuestion: (baseDir: string, taskId: string, answer: string) => void;
   loadInputHistory: (baseDir: string) => Promise<string[]>;
@@ -3719,6 +3722,7 @@ export interface ApplicationAPI {
   createNewTask: (baseDir: string) => Promise<TaskData>;
   updateTask: (baseDir: string, id: string, updates: Partial<TaskData>) => Promise<boolean>;
   deleteTask: (baseDir: string, id: string) => Promise<boolean>;
+  duplicateTask: (baseDir: string, taskId: string) => Promise<TaskData>;
   getTasks: (baseDir: string) => Promise<TaskData[]>;
   loadTask: (baseDir: string, taskId: string) => Promise<TaskStateData>;
   exportTaskToMarkdown: (baseDir: string, taskId: string) => Promise<void>;
@@ -5772,11 +5776,12 @@ export const getAnthropicCacheControl = (): CacheControl =>
 File: src/main/models/providers/azure.ts
 ================
 import { createAzure } from '@ai-sdk/azure';
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { AZURE_DEFAULT_API_VERSION, AzureProvider } from '@common/agent';
+import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, ReasoningEffort } from '@common/types';
+import { AzureProvider, isAzureProvider, LlmProvider } from '@common/agent';
+import { type OpenAIChatLanguageModelOptions } from '@ai-sdk/openai';
 ⋮----
 import type { LanguageModelUsage } from 'ai';
-import type { LanguageModelV2 } from '@ai-sdk/provider';
+import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 ⋮----
 import logger from '@/logger';
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
@@ -5816,6 +5821,18 @@ export const getAzureUsageReport = (
 // Calculate sentTokens after deducting cached tokens
 ⋮----
 // Calculate cost internally with already deducted sentTokens
+⋮----
+export const getAzureProviderOptions = (llmProvider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined =>
+⋮----
+// Extract reasoningEffort from model overrides or provider config
+⋮----
+// Map ReasoningEffort enum to AI SDK format
+⋮----
+export const getAzureProviderParameters = (llmProvider: LlmProvider, model: Model): Record<string, unknown> =>
+⋮----
+// Extract reasoningEffort from model overrides or provider config
+⋮----
+// not supported by Azure with reasoning models
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -6769,6 +6786,12 @@ getProviderOptions(llmProvider: LlmProvider, modelId: string): Record<string, Re
 ⋮----
 // Look up the actual Model object from providerModels
 ⋮----
+getProviderParameters(llmProvider: LlmProvider, modelId: string): Record<string, unknown>
+⋮----
+// Find the provider profile for this LLM provider
+⋮----
+// Look up the actual Model object from providerModels
+⋮----
 /**
    * Returns provider-specific tools for the given provider and model
    */
@@ -6858,6 +6881,11 @@ export interface LlmProviderStrategy {
    * Returns provider-specific tools that should be available to the agent
    */
   getProviderTools?: (provider: LlmProvider, model: Model) => ToolSet | Promise<ToolSet>;
+
+  /**
+   * Returns provider-specific parameters for the given model
+   */
+  getProviderParameters?: (provider: LlmProvider, model: Model) => Record<string, unknown>;
 }
 ⋮----
 // === LLM Creation and Usage Functions ===
@@ -6894,6 +6922,10 @@ export interface LlmProviderStrategy {
 ⋮----
 /**
    * Returns provider-specific tools that should be available to the agent
+   */
+⋮----
+/**
+   * Returns provider-specific parameters for the given model
    */
 ⋮----
 export type LlmProviderRegistry = Record<LlmProviderName, LlmProviderStrategy>;
@@ -7084,6 +7116,8 @@ public async deleteTask(taskId: string): Promise<void>
 ⋮----
 // Delete the task directory
 ⋮----
+public async duplicateTask(taskId: string): Promise<TaskData>
+⋮----
 async getTasks(): Promise<TaskData[]>
 ⋮----
 forEachTask(callback: (task: Task) => void)
@@ -7246,6 +7280,8 @@ registerRoutes(router: Router): void
 // List tasks
 ⋮----
 // Delete session
+⋮----
+// Duplicate task
 ⋮----
 // Restart task
 ⋮----
@@ -8208,6 +8244,12 @@ public async runPrompt(prompt: string, mode?: Mode): Promise<ResponseCompletedDa
 ⋮----
 // Generate promptContext for this run
 ⋮----
+public async savePromptOnly(prompt: string): Promise<void>
+⋮----
+// Add user message to context
+⋮----
+// Add to context manager
+⋮----
 public async runPromptInAider(prompt: string, promptContext: PromptContext, mode?: Mode): Promise<ResponseCompletedData[]>
 ⋮----
 // add messages to session
@@ -8508,6 +8550,18 @@ public async applyUncommittedChanges(): Promise<void>
 public async revertLastMerge(): Promise<void>
 ⋮----
 // Clear merge state after successful revert
+⋮----
+public async duplicateFrom(sourceTask: Task): Promise<void>
+⋮----
+// Copy basic task data
+⋮----
+// Copy context files
+⋮----
+// Copy messages
+⋮----
+// Copy todos
+⋮----
+// Copy worktree if exists
 
 ================
 File: src/main/telemetry/index.ts
@@ -9680,6 +9734,8 @@ applyEdits(baseDir: string, taskId: string, edits: FileEdit[]): void
 ⋮----
 async runPrompt(baseDir: string, taskId: string, prompt: string, mode?: Mode): Promise<ResponseCompletedData[]>
 ⋮----
+async savePrompt(baseDir: string, taskId: string, prompt: string): Promise<void>
+⋮----
 answerQuestion(baseDir: string, taskId: string, answer: string): void
 ⋮----
 runCommand(baseDir: string, taskId: string, command: string): void
@@ -9739,6 +9795,8 @@ async updateTask(baseDir: string, id: string, updates: Partial<TaskData>): Promi
 // Delegate to Task.updateTask method which handles worktree logic
 ⋮----
 async deleteTask(baseDir: string, id: string): Promise<void>
+⋮----
+async duplicateTask(baseDir: string, taskId: string): Promise<TaskData>
 ⋮----
 async getTasks(baseDir: string): Promise<TaskData[]>
 ⋮----
@@ -10490,6 +10548,7 @@ stopProject(baseDir: string): void
 restartProject(baseDir: string): void
 restartTask(baseDir: string, taskId: string): void
 runPrompt(baseDir: string, taskId: string, prompt: string, mode?: Mode): void
+savePrompt(baseDir: string, taskId: string, prompt: string): Promise<void>
 redoLastUserPrompt(baseDir: string, taskId: string, mode: Mode, updatedPrompt?: string): void
 answerQuestion(baseDir: string, taskId: string, answer: string): void
 loadInputHistory(baseDir: string): Promise<string[]>
@@ -10527,6 +10586,7 @@ reloadMcpServers(mcpServers: Record<string, McpServerConfig>, force = false): Pr
 createNewTask(baseDir: string): Promise<TaskData>
 updateTask(baseDir: string, id: string, updates: Partial<TaskData>): Promise<boolean>
 deleteTask(baseDir: string, id: string): Promise<boolean>
+duplicateTask(baseDir: string, taskId: string): Promise<TaskData>
 getTasks(baseDir: string): Promise<TaskData[]>
 loadTask(baseDir: string, id: string): Promise<TaskStateData>
 exportTaskToMarkdown(baseDir: string, taskId: string): Promise<void>
@@ -12036,6 +12096,7 @@ import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } f
 import { toPng } from 'html-to-image';
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
+import { IoPlayOutline } from 'react-icons/io5';
 ⋮----
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
@@ -12044,6 +12105,7 @@ import { isGroupMessage, isUserMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
+import { Button } from '@/components/common/Button';
 ⋮----
 export type MessagesRef = {
   exportToImage: () => void;
@@ -12059,6 +12121,7 @@ type Props = {
   removeMessage: (message: Message) => void;
   redoLastUserPrompt: () => void;
   editLastUserMessage: (content: string) => void;
+  processing: boolean;
 };
 ⋮----
 // Group messages by promptContext.group.id
@@ -12445,6 +12508,7 @@ import React, { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRe
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { IoPlayOutline } from 'react-icons/io5';
 ⋮----
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
@@ -12454,6 +12518,7 @@ import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
 import { showInfoNotification } from '@/utils/notifications';
+import { Button } from '@/components/common/Button';
 ⋮----
 export type VirtualizedMessagesRef = {
   exportToImage: () => void;
@@ -12469,6 +12534,7 @@ type Props = {
   removeMessage: (message: Message) => void;
   redoLastUserPrompt: () => void;
   editLastUserMessage: (content: string) => void;
+  processing: boolean;
 };
 ⋮----
 // Group messages by promptContext.group.id
@@ -12531,6 +12597,47 @@ const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 label=
 ⋮----
 ? t('settings.agent.envVarFoundPlaceholder',
+
+================
+File: src/renderer/src/components/ModelLibrary/providers/AzureAdvancedSettings.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { AzureProvider } from '@common/agent';
+import { ReasoningEffort } from '@common/types';
+⋮----
+import { Select, Option } from '@/components/common/Select';
+⋮----
+type Props = {
+  provider: AzureProvider;
+  onChange: (updated: AzureProvider) => void;
+};
+⋮----
+export const AzureAdvancedSettings = (
+⋮----
+const handleReasoningEffortChange = (value: string) =>
+⋮----
+<Select label=
+
+================
+File: src/renderer/src/components/ModelLibrary/providers/AzureModelOverrides.tsx
+================
+import { getDefaultProviderParams, AzureProvider } from '@common/agent';
+⋮----
+import { AzureAdvancedSettings } from './AzureAdvancedSettings';
+⋮----
+type Props = {
+  overrides: Partial<AzureProvider>;
+  onChange: (overrides: Record<string, unknown>) => void;
+};
+⋮----
+export const AzureModelOverrides = (
+⋮----
+// Convert overrides to AzureProvider format for AdvancedSettings
+⋮----
+// Convert AzureProvider back to overrides format
+const handleProviderChange = (updatedProvider: AzureProvider) =>
+⋮----
+// Remove undefined values
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/AzureParameters.tsx
@@ -13297,6 +13404,7 @@ import { GeminiModelOverrides } from './providers/GeminiModelOverrides';
 import { VertexAiModelOverrides } from './providers/VertexAiModelOverrides';
 import { OpenAiModelOverrides } from './providers/OpenAiModelOverrides';
 import { RequestyModelOverrides } from './providers/RequestyModelOverrides';
+import { AzureModelOverrides } from './providers/AzureModelOverrides';
 ⋮----
 import { Button } from '@/components/common/Button';
 import { Accordion } from '@/components/common/Accordion';
@@ -13968,8 +14076,6 @@ const initProject = async () =>
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
-const handleTaskSelect = (taskId: string) =>
-⋮----
 const handleToggleCollapse = () =>
 ⋮----
 // Task will be automatically updated via the existing handleTaskUpdated listener
@@ -13979,6 +14085,10 @@ const handleToggleCollapse = () =>
 // Task will be automatically removed via the existing handleTaskDeleted listener
 ⋮----
 // eslint-disable-next-line no-console
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// Optionally switch to the new task
 ⋮----
 // eslint-disable-next-line no-console
 
@@ -14098,7 +14208,7 @@ import { CgSpinner } from 'react-icons/cg';
 import { MdImage } from 'react-icons/md';
 import { clsx } from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BiCopy } from 'react-icons/bi';
+import { BiCopy, BiDuplicate } from 'react-icons/bi';
 ⋮----
 import { useTask } from '@/contexts/TaskContext';
 import { Input } from '@/components/common/Input';
@@ -14107,11 +14217,12 @@ import { Button } from '@/components/common/Button';
 import { useClickOutside } from '@/hooks/useClickOutside';
 ⋮----
 type TaskMenuButtonProps = {
-  onEdit: (e: MouseEvent) => void;
-  onDelete: (e: MouseEvent) => void;
-  onExportToMarkdown?: (e: MouseEvent) => void;
-  onExportToImage?: (e: MouseEvent) => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  onExportToMarkdown?: () => void;
+  onExportToImage?: () => void;
   onCopyTaskId?: () => void;
+  onDuplicateTask?: () => void;
 };
 ⋮----
 const handleMenuClick = () =>
@@ -14124,7 +14235,9 @@ const handleExportToMarkdownClick = (e: MouseEvent) =>
 ⋮----
 const handleExportToImageClick = (e: MouseEvent) =>
 ⋮----
-const handleCopyTaskIdClick = () =>
+const handleCopyTaskIdClick = (e: MouseEvent) =>
+⋮----
+const handleDuplicateTaskClick = (e: MouseEvent) =>
 ⋮----
 const handleTaskClick = (taskId: string) =>
 ⋮----
@@ -14243,6 +14356,8 @@ const runPrompt = (prompt: string) =>
 ⋮----
 // This submission is an edit of a previous message
 setEditingMessageIndex(null); // Clear editing state
+⋮----
+const handleSavePrompt = async (prompt: string) =>
 ⋮----
 const handleEditLastUserMessage = (content?: string) =>
 ⋮----
@@ -14565,13 +14680,14 @@ import { EditorView, keymap } from '@codemirror/view';
 import { vim } from '@replit/codemirror-vim';
 import { Mode, PromptBehavior, QuestionData, SuggestionMode } from '@common/types';
 import { githubDarkInit } from '@uiw/codemirror-theme-github';
-import CodeMirror, { Prec, type ReactCodeMirrorRef, Annotation } from '@uiw/react-codemirror';
+import CodeMirror, { Annotation, Prec, type ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { useDebounce } from '@reactuses/core';
+import { useDebounce, useLocalStorage } from '@reactuses/core';
 import { useTranslation } from 'react-i18next';
 import { BiSend } from 'react-icons/bi';
-import { MdPlaylistRemove, MdStop } from 'react-icons/md';
+import { MdPlaylistRemove, MdSave, MdStop } from 'react-icons/md';
 import { VscTerminal } from 'react-icons/vsc';
+import { clsx } from 'clsx';
 ⋮----
 import { AgentSelector } from '@/components/AgentSelector';
 import { InputHistoryMenu } from '@/components/PromptField/InputHistoryMenu';
@@ -14580,6 +14696,7 @@ import { showErrorNotification } from '@/utils/notifications';
 import { Button } from '@/components/common/Button';
 import { useCustomCommands } from '@/hooks/useCustomCommands';
 import { useApi } from '@/contexts/ApiContext';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
 ⋮----
 const isPathLike = (input: string): boolean =>
 ⋮----
@@ -14601,6 +14718,7 @@ type Props = {
   mode: Mode;
   onModeChanged: (mode: Mode) => void;
   runPrompt: (prompt: string) => void;
+  savePrompt: (prompt: string) => Promise<void>;
   showFileDialog: (readOnly: boolean) => void;
   addFiles?: (filePaths: string[], readOnly?: boolean) => void;
   clearMessages: () => void;
@@ -14648,31 +14766,13 @@ const handleSubmit = () =>
 ⋮----
 // Check if it's a custom command
 ⋮----
+const handleSavePrompt = async () =>
+⋮----
 const getAutocompleteDetailLabel = (item: string): [string | null, boolean] =>
 ⋮----
 // Check if it's a custom command
 ⋮----
-placeholder=
-⋮----
-promptBehavior.useVimBindings ? vim() : keymap.of([]),
-⋮----
-EditorView.domEventHandlers({
 paste(event)
-⋮----
-paste(event)
-⋮----
-autocompletion({
-                  override: question || historyMenuVisible ? [] : [completionSource],
-                  activateOnTyping:
-                    promptBehavior.suggestionMode === SuggestionMode.Automatically || promptBehavior.suggestionMode === SuggestionMode.MentionAtSign,
-                  activateOnTypingDelay: promptBehavior.suggestionDelay,
-                  aboveCursor: true,
-                  icons: false,
-                  selectOnOpen: false,
-                  addToOptions: [
-                    {
-render: (completion) =>
-Prec.high(keymapExtension),
 ⋮----
 onClose=
 
@@ -18755,7 +18855,7 @@ File: package.json
   "dependencies": {
     "@ai-sdk/amazon-bedrock": "^3.0.30",
     "@ai-sdk/anthropic": "^2.0.23",
-    "@ai-sdk/azure": "^2.0.42",
+    "@ai-sdk/azure": "^2.0.60",
     "@ai-sdk/cerebras": "^1.0.21",
     "@ai-sdk/deepseek": "^1.0.20",
     "@ai-sdk/google": "^2.0.17",
@@ -18799,7 +18899,7 @@ File: package.json
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/xterm": "^5.5.0",
-    "ai": "^5.0.60",
+    "ai": "^5.0.86",
     "axios": "^1.8.3",
     "babel-plugin-react-compiler": "^19.1.0-rc.3",
     "better-sqlite3": "^12.0.0",
