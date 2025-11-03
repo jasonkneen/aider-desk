@@ -19,7 +19,19 @@ export const FileReadToolMessage = ({ message, onRemove, compact = false }: Prop
   const { t } = useTranslation();
 
   const filePath = message.args.filePath as string;
+  const withLines = (message.args.withLines as boolean) ?? false;
+  const lineOffset = (message.args.lineOffset as number) ?? 0;
+  const lineLimit = (message.args.lineLimit as number) ?? 1000;
   const content = message.content && JSON.parse(message.content);
+  const codeBlockContent =
+    typeof content === 'string'
+      ? withLines
+        ? content
+            .split('\n')
+            .map((line) => line.replace(/^\d+\|/, ''))
+            .join('\n')
+        : content
+      : '';
   const language = getLanguageFromPath(filePath);
 
   const isError = typeof content === 'string' && content.startsWith('Error: ');
@@ -31,7 +43,7 @@ export const FileReadToolMessage = ({ message, onRemove, compact = false }: Prop
         <RiFileTextLine className="w-4 h-4" />
       </div>
       <div className="text-xs text-text-primary flex flex-wrap gap-1">
-        <span>{t('toolMessage.power.fileRead')}</span>
+        <span>{t('toolMessage.power.fileRead.title')}</span>
         <span>
           <CodeInline className="bg-bg-primary-light">{filePath.split(/[/\\]/).pop()}</CodeInline>
         </span>
@@ -56,10 +68,29 @@ export const FileReadToolMessage = ({ message, onRemove, compact = false }: Prop
 
   const renderContent = () => (
     <div className="px-3 text-xs text-text-tertiary bg-bg-secondary">
-      {!isError && !isDenied && content && (
-        <CodeBlock baseDir="" language={language} file={filePath} isComplete={true}>
-          {content}
-        </CodeBlock>
+      {!isError && !isDenied && codeBlockContent && (
+        <>
+          {/* File content - filter out line numbers if present */}
+          <CodeBlock baseDir="" language={language} file={filePath} isComplete={true}>
+            {codeBlockContent}
+          </CodeBlock>
+
+          {/* Parameter information */}
+          <div className="mb-2 p-2 bg-bg-primary-light rounded text-2xs">
+            <div className="font-mono space-y-1">
+              <div>
+                <span className="text-text-muted">{t('toolMessage.power.fileRead.withLines')}:</span>{' '}
+                <span className="text-text-primary">{withLines.toString()}</span>
+              </div>
+              <div>
+                <span className="text-text-muted">{t('toolMessage.power.fileRead.lineOffset')}:</span> <span className="text-text-primary">{lineOffset}</span>
+              </div>
+              <div>
+                <span className="text-text-muted">{t('toolMessage.power.fileRead.lineLimit')}:</span> <span className="text-text-primary">{lineLimit}</span>
+              </div>
+            </div>
+          </div>
+        </>
       )}
       {isDenied && (
         <div className="text-warning">

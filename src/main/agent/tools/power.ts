@@ -151,14 +151,24 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
     description: POWER_TOOL_DESCRIPTIONS[TOOL_FILE_READ],
     inputSchema: z.object({
       filePath: z.string().describe('The path to the file to be read (relative to the task root or absolute if outside of task directory).'),
+      withLines: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe('Whether to return the file content with line numbers in format "lineNumber|content". Default: false.'),
+      lineOffset: z.number().int().min(0).optional().default(0).describe('The starting line number (0-based) to begin reading from. Default: 0.'),
+      lineLimit: z.number().int().min(1).optional().default(1000).describe('The maximum number of lines to read. Default: 1000.'),
     }),
-    execute: async ({ filePath }, { toolCallId }) => {
+    execute: async ({ filePath, withLines, lineOffset, lineLimit }, { toolCallId }) => {
       task.addToolMessage(
         toolCallId,
         TOOL_GROUP_NAME,
         TOOL_FILE_READ,
         {
           filePath,
+          withLines,
+          lineOffset,
+          lineLimit,
         },
         undefined,
         undefined,
@@ -180,7 +190,27 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         if (isBinary(absolutePath, fileContentBuffer)) {
           return 'Error: Binary files cannot be read.';
         }
-        return fileContentBuffer.toString('utf8');
+        const fileContent = fileContentBuffer.toString('utf8');
+        const lines = fileContent.split('\n');
+        const totalLines = lines.length;
+
+        // Apply line offset and limit
+        const startIndex = Math.max(0, lineOffset);
+        const endIndex = Math.min(totalLines, startIndex + lineLimit);
+        let limitedLines = lines.slice(startIndex, endIndex);
+
+        if (withLines) {
+          // Format with line numbers
+          limitedLines = limitedLines.map((line, index) => `${startIndex + index + 1}|${line}`);
+        }
+
+        // Add truncation indicator if file was limited
+        if (endIndex < totalLines) {
+          limitedLines.push('...');
+          limitedLines.push(`Total lines in the file: ${totalLines}`);
+        }
+
+        return limitedLines.join('\n');
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') {

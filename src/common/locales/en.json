@@ -732,7 +732,12 @@
       "noChanges": "Aider did not make any changes."
     },
     "power": {
-      "fileRead": "Read",
+      "fileRead": {
+        "title": "Read",
+        "withLines": "With lines",
+        "lineOffset": "Line offset",
+        "lineLimit": "Line limit"
+      },
       "fileWrite": {
         "overwrite": "Rewrite",
         "append": "Append to",

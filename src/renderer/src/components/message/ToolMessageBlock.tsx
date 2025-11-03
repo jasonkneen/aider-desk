@@ -77,7 +77,7 @@ export const ToolMessageBlock = ({ message, onRemove, compact = false }: Props) 
           case POWER_TOOL_FILE_READ:
             return (
               <div className="flex flex-wrap gap-1">
-                <span>{t('toolMessage.power.fileRead')}</span>
+                <span>{t('toolMessage.power.fileRead.title')}</span>
                 <span>
                   <CodeInline className="bg-bg-primary-light">{(message.args.filePath as string).split(/[/\\\\]/).pop()}</CodeInline>
                 </span>
