@@ -314,7 +314,7 @@
   },
   "select": {
     "placeholder": "选择选项",
-    "loadingSessions": "正在加载会话..."
+    "loadingTasks": "正在加载任务..."
   },
   "settings": {
     "title": "设置",
@@ -454,7 +454,7 @@
     },
     "aiderRestartConfirm": {
       "title": "需要重启",
-      "message": "对 Aider 选项或环境变量的更改需要重新启动 Aider 会话才能生效。您想现在重新启动吗？",
+      "message": "对 Aider 选项或环境变量的更改需要重新启动 Aider 任务才能生效。您想现在重新启动吗？",
       "restartNow": "立即重启",
       "later": "稍后处理"
     },
@@ -516,7 +516,7 @@
   },
   "errors": {
     "frozenTitle": "AIDER冻结了?",
-    "frozenMessage": "Aider进程似乎已冻结。您想重启会话吗?"
+    "frozenMessage": "Aider进程似乎已冻结。您想重启任务吗?"
   },
   "dialogs": {
     "confirm": "确认",
@@ -658,15 +658,6 @@
   "autocompletion": {
     "placeholder": "输入以搜索..."
   },
-  "session": {
-    "edit": "编辑会话",
-    "save": "保存会话",
-    "name": "会话名称",
-    "namePlaceholder": "输入会话名称",
-    "loadSettings": "加载设置",
-    "loadMessages": "从该会话加载消息",
-    "loadFiles": "从该会话加载上下文文件"
-  },
   "costInfo": {
     "files": "文件",
     "repoMap": "仓库地图",
@@ -676,7 +667,7 @@
     "agent": "代理",
     "aider": "Aider",
     "total": "全部的",
-    "restartSession": "重启会话",
+    "restartAider": "重启Aider",
     "tokenUsage": "{{usedTokens}} / {{maxTokens}}",
     "contextCompactingThreshold": "自动压缩上下文阈值",
     "contextCompactingThresholdOff": "关闭",

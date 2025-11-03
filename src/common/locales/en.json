@@ -459,7 +459,7 @@
     },
     "aiderRestartConfirm": {
       "title": "Restart Required",
-      "message": "Changes to Aider options or environment variables require a restart of the Aider session to take effect. Would you like to restart now?",
+      "message": "Changes to Aider options or environment variables require a restart of the Aider task to take effect. Would you like to restart now?",
       "restartNow": "Restart now",
       "later": "I'll do it later"
     },
@@ -560,7 +560,7 @@
   },
   "errors": {
     "frozenTitle": "AIDER FROZEN?",
-    "frozenMessage": "Aider process seems to be frozen. Would you like to restart the session?"
+    "frozenMessage": "Aider process seems to be frozen. Would you like to restart the task?"
   },
   "dialogs": {
     "confirm": "Confirm",
@@ -683,15 +683,6 @@
   "autocompletion": {
     "placeholder": "Type to search..."
   },
-  "session": {
-    "edit": "Edit Session",
-    "save": "Save Session",
-    "name": "Session Name",
-    "namePlaceholder": "Enter session name",
-    "loadSettings": "Load Settings",
-    "loadMessages": "Load messages from this session",
-    "loadFiles": "Load context files from this session"
-  },
   "costInfo": {
     "files": "Files",
     "repoMap": "Repo map",
@@ -701,7 +692,7 @@
     "agent": "Agent",
     "aider": "Aider",
     "total": "Total",
-    "restartSession": "Restart session",
+    "restartAider": "Restart Aider proces",
     "tokenUsage": "{{usedTokens}} of {{maxTokens}}",
     "contextCompactingThreshold": "Auto-compact threshold",
     "contextCompactingThresholdOff": "Off",
