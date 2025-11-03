@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState, Activity } from 'react';
 import { FaChevronDown } from 'react-icons/fa';
 import { clsx } from 'clsx';
 import { useTranslation } from 'react-i18next';
@@ -81,18 +81,20 @@ export const Accordion = ({
             : 'max-h-0 opacity-0',
         )}
       >
-        {children}
-        {showCollapseButton && isOpen && (
-          <div className="my-2 flex justify-center">
-            <button
-              onClick={handleOpenChange}
-              className="flex items-center gap-1.5 px-2 py-1 bg-bg-tertiary-strong hover:bg-bg-fourth rounded opacity-80 hover:opacity-100 transition-colors text-xs"
-            >
-              <FaChevronDown className="w-2 h-2 rotate-180" />
-              {t('common.close')}
-            </button>
-          </div>
-        )}
+        <Activity mode={isOpen ? 'visible' : 'hidden'}>
+          {children}
+          {showCollapseButton && isOpen && (
+            <div className="my-2 flex justify-center">
+              <button
+                onClick={handleOpenChange}
+                className="flex items-center gap-1.5 px-2 py-1 bg-bg-tertiary-strong hover:bg-bg-fourth rounded opacity-80 hover:opacity-100 transition-colors text-xs"
+              >
+                <FaChevronDown className="w-2 h-2 rotate-180" />
+                {t('common.close')}
+              </button>
+            </div>
+          )}
+        </Activity>
       </div>
     </div>
   );

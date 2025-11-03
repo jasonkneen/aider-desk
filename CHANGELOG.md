@@ -1,5 +1,9 @@
 # Changelog
 
+## [UNRELEASED]
+
+- improved performance of loading large number of messages
+
 ## [0.38.0]
 
 - performance improvements related to rendered messages

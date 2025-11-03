@@ -69,7 +69,7 @@ export const ExpandableMessageBlock = forwardRef<ExpandableMessageBlockRef, Prop
           buttonClassName="p-3 rounded-b-none"
         >
           <div className="relative">
-            {isExpanded || isInitialAutoExpand ? content : null}
+            {content}
             {/* Gradient overlay for initial auto-expand */}
             {isInitialAutoExpand && (
               <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-bg-secondary via-bg-secondary to-transparent pointer-events-none"></div>
