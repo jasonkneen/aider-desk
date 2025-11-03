@@ -250,7 +250,7 @@ When prompted for approval, you can choose:
 - **Yes** - Approve this specific operation
 - **No** - Deny this operation
 - **Always** - Auto-approve this tool for all future uses
-- **Always for This Run** - Auto-approve for the current session
+- **Always for This Run** - Auto-approve for the current task
 
 ### Security Best Practices
 

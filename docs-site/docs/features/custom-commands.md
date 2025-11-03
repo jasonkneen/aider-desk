@@ -51,7 +51,7 @@ Any line starting with `!` will be treated as a shell command.
 *   `arguments` (array of objects, optional): An array defining the expected arguments for the command. Each argument object can have:
     *   `description` (string, **required**): A description of what the argument represents.
     *   `required` (boolean, optional): Set to `true` if the argument is mandatory, `false` otherwise. Defaults to `true`.
-*   `includeContext` (boolean, optional): Determines whether the current conversation context (chat history and context files) should be included when the command is run. Defaults to `true`. If set to `false`, the agent will receive an empty list of messages. This is useful for commands that should operate independently of the current chat session.
+*   `includeContext` (boolean, optional): Determines whether the current conversation context (chat history and context files) should be included when the command is run. Defaults to `true`. If set to `false`, the agent will receive an empty list of messages. This is useful for commands that should operate independently of the current task.
 
 ### Command Template:
 

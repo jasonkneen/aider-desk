@@ -13,7 +13,7 @@ The settings are organized into the following tabs:
 
 This tab contains settings related to the user interface and general application behavior.
 - **Appearance**: Configure the application's language, zoom level, and theme (Dark/Light).
-- **Start Up**: Choose what AiderDesk should do on launch: start with an empty session or load the last used session.
+- **Start Up**: Choose what AiderDesk should do on launch: start with an empty task or load the last used task.
 - **Notifications**: Enable or disable system notifications.
 - **Prompt Behavior**: Customize autocompletion, command confirmation, and key bindings for the prompt field. See [Prompt Behavior](./prompt-behavior.md) for more details.
 

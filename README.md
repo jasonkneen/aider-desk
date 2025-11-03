@@ -32,7 +32,7 @@ AiderDesk is packed with features designed for modern software development:
 * **🧩 Extensible via MCP**: Connect to Model Context Protocol (MCP) servers to grant the Agent access to external tools like web search, documentation lookups, and more.
 * **✍️ Custom Commands**: Define and execute your own commands to automate tasks and extend AiderDesk's capabilities. [Learn more](https://aiderdesk.hotovo.com/docs/core-features/custom-commands)
 * **📄 Smart Context Management**: Automatically manage context via IDE plugins or manually control context using the integrated project file browser.
-* **💾 Robust Session Management**: Save and load entire work sessions (chat history, context files) to easily switch between tasks or resume later.
+* **💾 Advanced Task Management**: Organize work with comprehensive task system including cost tracking, todo lists, and Git worktree integration for better project organization.
 * **🔄 Flexible Model Switching**: Change AI models on the fly while retaining your conversation and context.
 * **💬 Multiple Chat Modes**: Tailor the AI interaction for different needs (e.g., coding, asking questions).
 * **🔍 Integrated Diff Viewer**: Review AI-generated code changes with a clear side-by-side comparison.
@@ -94,19 +94,15 @@ Keep the AI focused on the relevant code with flexible context management option
 
 ---
 
-### 💾 Session Management
+### 💾 Advanced Task Management
 
-Never lose your work. Save and load complete sessions, including chat history and context files, per project.
+Organize your work with a comprehensive task management system that goes beyond simple session saving. Tasks include chat history, context files, cost tracking, todo lists, and optional Git worktree isolation.
 
-<div align="center">
-  <a href="https://youtu.be/eFCod0fOhjI">
-    <img src="https://img.youtube.com/vi/eFCod0fOhjI/0.jpg" alt="Sessions Demo Video" width=400>
-  </a>
-</div>
-
-- **Preserve State**: Save messages and context files as a named session.
-- **Resume Seamlessly**: Load a session to restore your exact workspace.
-- **Manage Multiple Tasks**: Easily switch between different features, bug fixes, or experiments within the same project.
+- **Complete Work Organization**: Each task captures the full state including messages, files, costs, and todos.
+- **Flexible Working Modes**: Choose between local development or isolated Git worktrees for safe experimentation.
+- **Smart Cost Tracking**: Monitor Aider and Agent costs per-task for better budget management.
+- **Built-in Todo System**: Break down complex work with integrated todo lists that agents can manage automatically.
+- **Seamless Migration**: Automatically converts previous sessions to the new task format without data loss.
 
 ---
 

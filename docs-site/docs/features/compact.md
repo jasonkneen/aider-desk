@@ -18,11 +18,11 @@ When you run `/compact`, AiderDesk analyzes the entire conversation history in t
 -   A log of errors encountered and their resolutions.
 -   The current work being performed and the next logical step.
 
-After the summary is generated, the conversation history in the current session is replaced with this summary, effectively "compacting" it.
+After the summary is generated, the conversation history in the current task is replaced with this summary, effectively "compacting" it.
 
 ## Why It's Useful
 
--   **Improved Context Management**: For lengthy sessions, the AI's context window can become full. Compacting the conversation helps keep the most relevant information available to the AI, preventing it from "forgetting" earlier details.
+-   **Improved Context Management**: For lengthy tasks, the AI's context window can become full. Compacting the conversation helps keep the most relevant information available to the AI, preventing it from "forgetting" earlier details.
 -   **Faster Responses**: With a more concise context, the AI can process information more quickly, potentially leading to faster response times.
 -   **Cost Efficiency**: By reducing the amount of historical data sent to the model, it can help manage token usage, which might lead to more cost-efficient interactions with certain LLM providers.
 

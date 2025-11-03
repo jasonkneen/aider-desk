@@ -279,12 +279,12 @@ Pastes an image from clipboard into the project.
   }
   ```
 
-### Session Management
+### Task Management
 
-#### Save Session
-Saves the current conversation session.
+#### Save Task
+Saves the current conversation task.
 
-- **Endpoint**: `POST /api/project/session/save`
+- **Endpoint**: `POST /api/project/task/save`
 - **Request Body**:
   ```json
   {
@@ -295,20 +295,20 @@ Saves the current conversation session.
 - **Response**: `200 OK`
   ```json
   {
-    "message": "Session saved"
+    "message": "Task saved"
   }
   ```
 
-#### List Sessions
-Lists all saved sessions for a project.
+#### List Tasks
+Lists all saved tasks for a project.
 
-- **Endpoint**: `GET /api/project/sessions?projectDir=/path/to/project`
-- **Response**: `200 OK` (returns sessions array)
+- **Endpoint**: `GET /api/project/tasks?projectDir=/path/to/project`
+- **Response**: `200 OK` (returns tasks array)
 
-#### Load Session Messages
-Loads messages from a saved session.
+#### Load Task Messages
+Loads messages from a saved task.
 
-- **Endpoint**: `POST /api/project/session/load-messages`
+- **Endpoint**: `POST /api/project/task/load-messages`
 - **Request Body**:
   ```json
   {
@@ -319,7 +319,7 @@ Loads messages from a saved session.
 - **Response**: `200 OK`
   ```json
   {
-    "message": "Session messages loaded"
+    "message": "Task messages loaded"
   }
   ```
 

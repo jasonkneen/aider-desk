@@ -32,7 +32,7 @@ const sidebars: SidebarsConfig = {
         'features/commands-reference',
         'features/ide-integration',
         'features/reviewing-code-changes',
-        'features/session-management',
+        'features/tasks',
         'features/git-worktrees',
         'features/custom-commands',
         'features/web-scraping',

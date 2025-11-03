@@ -1,19 +1,19 @@
 ---
-title: "Task Management"
-sidebar_label: "Task Management"
+title: "Todo Management"
+sidebar_label: "Todo Management"
 ---
 
-# Task Management with the TODO List
+# Todo Management in Agent Mode
 
-AiderDesk includes a task management system designed to help the agent track and complete complex, multi-step tasks. This feature is primarily used in **Agent Mode**.
+AiderDesk includes a todo management system designed to help the agent track and complete complex, multi-step tasks. This feature is integrated into the broader **Task Management** system and is primarily used in **Agent Mode**.
 
 ## How It Works
 
-When the agent is given a high-level goal, it can use its "Todo" tools to break the goal down into a checklist of smaller, manageable tasks. This list is saved to a `todos.json` file inside your project's `.aider-desk` directory, making it persistent across sessions.
+When the agent is given a high-level goal, it can use its "Todo" tools to break the goal down into a checklist of smaller, manageable subtasks. This list is saved to a `todos.json` file within each task's directory, making it persistent across task sessions and integrated with the overall task state.
 
 ## The TODO Window
 
-A floating window will appear in the main chat view whenever there are active to-do items. This window provides a real-time view of the agent's plan and progress.
+A floating todo window will appear in the main chat view whenever there are active todo items within the current task. This window provides a real-time view of the agent's plan and progress for the specific task you're working on.
 
 From this window, you can:
 - **View all tasks** and their completion status.
@@ -31,4 +31,4 @@ The agent interacts with the to-do list via a set of dedicated tools:
 - **`update_item_completion`**: Marks a specific task as complete or incomplete.
 - **`clear_items`**: Clears all items from the list, typically when starting a completely new task.
 
-This feature provides transparency into the agent's process and allows for a collaborative workflow where you can monitor and adjust the agent's plan as it works.
+This todo system provides transparency into the agent's process and allows for a collaborative workflow where you can monitor and adjust the agent's plan as it works. The todos are saved as part of the task data, ensuring they persist alongside your conversation history and context files.

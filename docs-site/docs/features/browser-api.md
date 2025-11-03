@@ -146,27 +146,27 @@ Executes a custom command.
 await api.runCustomCommand('/path/to/project', 'format-code', ['src/'], 'code');
 ```
 
-### Session Management
+### Task Management
 
-#### `saveSession(baseDir: string, name: string): Promise<boolean>`
-Saves the current session.
+#### `saveTask(baseDir: string, name: string): Promise<boolean>`
+Saves the current task.
 
 ```javascript
-const success = await api.saveSession('/path/to/project', 'feature-login');
+const success = await api.saveTask('/path/to/project', 'feature-login');
 ```
 
-#### `listSessions(baseDir: string): Promise<SessionData[]>`
-Lists all saved sessions.
+#### `listTasks(baseDir: string): Promise<TaskData[]>`
+Lists all saved tasks.
 
 ```javascript
-const sessions = await api.listSessions('/path/to/project');
+const tasks = await api.listTasks('/path/to/project');
 ```
 
-#### `loadSessionMessages(baseDir: string, name: string): Promise<void>`
-Loads session messages.
+#### `loadTaskMessages(baseDir: string, name: string): Promise<void>`
+Loads task messages.
 
 ```javascript
-await api.loadSessionMessages('/path/to/project', 'feature-login');
+await api.loadTaskMessages('/path/to/project', 'feature-login');
 ```
 
 ### Settings and Configuration
