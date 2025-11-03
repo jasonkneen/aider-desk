@@ -24,6 +24,7 @@ AiderDesk is packed with features designed for modern software development:
 
 * **🖥️ Intuitive GUI**: A clean, visual interface replacing command-line interactions.
 * **📂 Multi-Project Management**: Seamlessly organize, switch between, and manage multiple codebases.
+* **🌿 Git Worktrees**: Isolated development environments using Git worktrees for safe, parallel feature development and experimentation.
 * **🔌 Effortless IDE Integration**: Automatically sync context files with your active editor in:
   * IntelliJ IDEA ([Plugin](https://plugins.jetbrains.com/plugin/26313-aiderdesk-connector) | [GitHub](https://github.com/hotovo/aider-desk-connector-intellij-plugin))
   * VSCode ([Extension](https://marketplace.visualstudio.com/items?itemName=hotovo-sk.aider-desk-connector) | [GitHub](https://github.com/hotovo/aider-desk-connector-vscode-extension))
@@ -42,6 +43,39 @@ AiderDesk is packed with features designed for modern software development:
 * **🌐 Versatile REST API**: Integrate AiderDesk with external tools and workflows.
 * **📨 Structured Communication**: View prompts, AI responses, agent thoughts, and tool outputs in an organized format.
 * **📋 Easy Sharing**: Copy code snippets or entire conversations effortlessly.
+
+---
+
+### 🌿 Git Worktrees: Isolated Development Environments
+
+AiderDesk's Git Worktrees feature provides professional-grade isolation for your development work, enabling safe experimentation and parallel development without affecting your main project branch.
+
+<div align="center">
+  <img src="https://img.youtube.com/vi/placeholder-worktree-demo/0.jpg" alt="Git Worktrees Demo Video" width=400> <!-- TODO: Add actual video ID -->
+</div>
+
+#### Key Benefits:
+
+- **🔒 Complete Isolation**: Work on features in separate environments without risking your main codebase
+- **🔄 Flexible Integration**: Choose between standard merge, squash & merge, or uncommitted changes only
+- **⚡ Parallel Development**: Work on multiple features simultaneously in isolated worktrees
+- **🛡️ Safety Features**: Built-in conflict detection, merge revert, and state preservation
+- **🤖 AI Integration**: AI assistance works seamlessly within isolated worktree environments
+
+#### Workflow Overview:
+
+1. **Create Worktree Task**: Start a new task in worktree mode for isolated development
+2. **Work Safely**: All file edits, commits, and AI interactions happen in the isolated environment
+3. **Integrate When Ready**: Choose your preferred merge strategy when work is complete
+4. **Revert if Needed**: Built-in revert functionality to undo merges if issues arise
+
+#### Merge Options:
+
+- **Standard Merge**: Preserves commit history with fast-forward merge
+- **Squash & Merge**: Creates a single clean commit with AI-generated message
+- **Uncommitted Only**: Transfers work-in-progress changes without merging commits
+
+[**Learn more about Git Worktrees →**](https://aiderdesk.hotovo.com/docs/features/git-worktrees)
 
 ---
 
