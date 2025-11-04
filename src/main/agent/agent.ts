@@ -832,7 +832,7 @@ export class Agent {
 
         // Check for 'stop' with trailing tool message
         const lastMessage = responseMessages[responseMessages.length - 1];
-        if (finishReason === 'stop' && lastMessage?.role === 'tool' && retryCount < MAX_RETRIES) {
+        if (finishReason === 'stop' && lastMessage?.role === 'tool') {
           logger.debug('Finish reason is "stop" but last message is a tool call. Retrying...');
           retryCount++;
           continue;

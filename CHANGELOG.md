@@ -4,6 +4,7 @@
 
 - improved performance of loading large number of messages
 - enhanced file read tool with line number display and partial file reading capabilities
+- improved agentic flow for providers that stop right after the tool call
 
 ## [0.38.0]
 
