@@ -1760,7 +1760,7 @@ File: src/common/locales/en.json
     },
     "aiderRestartConfirm": {
       "title": "Restart Required",
-      "message": "Changes to Aider options or environment variables require a restart of the Aider session to take effect. Would you like to restart now?",
+      "message": "Changes to Aider options or environment variables require a restart of the Aider task to take effect. Would you like to restart now?",
       "restartNow": "Restart now",
       "later": "I'll do it later"
     },
@@ -1861,7 +1861,7 @@ File: src/common/locales/en.json
   },
   "errors": {
     "frozenTitle": "AIDER FROZEN?",
-    "frozenMessage": "Aider process seems to be frozen. Would you like to restart the session?"
+    "frozenMessage": "Aider process seems to be frozen. Would you like to restart the task?"
   },
   "dialogs": {
     "confirm": "Confirm",
@@ -1984,15 +1984,6 @@ File: src/common/locales/en.json
   "autocompletion": {
     "placeholder": "Type to search..."
   },
-  "session": {
-    "edit": "Edit Session",
-    "save": "Save Session",
-    "name": "Session Name",
-    "namePlaceholder": "Enter session name",
-    "loadSettings": "Load Settings",
-    "loadMessages": "Load messages from this session",
-    "loadFiles": "Load context files from this session"
-  },
   "costInfo": {
     "files": "Files",
     "repoMap": "Repo map",
@@ -2002,7 +1993,7 @@ File: src/common/locales/en.json
     "agent": "Agent",
     "aider": "Aider",
     "total": "Total",
-    "restartSession": "Restart session",
+    "restartAider": "Restart Aider proces",
     "tokenUsage": "{{usedTokens}} of {{maxTokens}}",
     "contextCompactingThreshold": "Auto-compact threshold",
     "contextCompactingThresholdOff": "Off",
@@ -2042,7 +2033,12 @@ File: src/common/locales/en.json
       "noChanges": "Aider did not make any changes."
     },
     "power": {
-      "fileRead": "Read",
+      "fileRead": {
+        "title": "Read",
+        "withLines": "With lines",
+        "lineOffset": "Line offset",
+        "lineLimit": "Line limit"
+      },
       "fileWrite": {
         "overwrite": "Rewrite",
         "append": "Append to",
@@ -2667,7 +2663,7 @@ File: src/common/locales/zh.json
   },
   "select": {
     "placeholder": "选择选项",
-    "loadingSessions": "正在加载会话..."
+    "loadingTasks": "正在加载任务..."
   },
   "settings": {
     "title": "设置",
@@ -2807,7 +2803,7 @@ File: src/common/locales/zh.json
     },
     "aiderRestartConfirm": {
       "title": "需要重启",
-      "message": "对 Aider 选项或环境变量的更改需要重新启动 Aider 会话才能生效。您想现在重新启动吗？",
+      "message": "对 Aider 选项或环境变量的更改需要重新启动 Aider 任务才能生效。您想现在重新启动吗？",
       "restartNow": "立即重启",
       "later": "稍后处理"
     },
@@ -2869,7 +2865,7 @@ File: src/common/locales/zh.json
   },
   "errors": {
     "frozenTitle": "AIDER冻结了?",
-    "frozenMessage": "Aider进程似乎已冻结。您想重启会话吗?"
+    "frozenMessage": "Aider进程似乎已冻结。您想重启任务吗?"
   },
   "dialogs": {
     "confirm": "确认",
@@ -3011,15 +3007,6 @@ File: src/common/locales/zh.json
   "autocompletion": {
     "placeholder": "输入以搜索..."
   },
-  "session": {
-    "edit": "编辑会话",
-    "save": "保存会话",
-    "name": "会话名称",
-    "namePlaceholder": "输入会话名称",
-    "loadSettings": "加载设置",
-    "loadMessages": "从该会话加载消息",
-    "loadFiles": "从该会话加载上下文文件"
-  },
   "costInfo": {
     "files": "文件",
     "repoMap": "仓库地图",
@@ -3029,7 +3016,7 @@ File: src/common/locales/zh.json
     "agent": "代理",
     "aider": "Aider",
     "total": "全部的",
-    "restartSession": "重启会话",
+    "restartAider": "重启Aider",
     "tokenUsage": "{{usedTokens}} / {{maxTokens}}",
     "contextCompactingThreshold": "自动压缩上下文阈值",
     "contextCompactingThresholdOff": "关闭",
@@ -3069,7 +3056,12 @@ File: src/common/locales/zh.json
       "noChanges": "Aider 未进行任何更改。"
     },
     "power": {
-      "fileRead": "读取文件",
+      "fileRead": {
+        "title": "读取文件",
+        "withLines": "带行号",
+        "lineOffset": "行偏移",
+        "lineLimit": "行限制"
+      },
       "fileWrite": {
         "overwrite": "覆盖文件",
         "append": "追加到文件",
@@ -4662,6 +4654,12 @@ const sanitize = (str: string) =>
 // Remove leading backslash
 ⋮----
 // Remove escaped newlines, quotes, tabs, etc. only when they have double backslashes
+⋮----
+// Apply line offset and limit
+⋮----
+// Format with line numbers
+⋮----
+// Add truncation indicator if file was limited
 ⋮----
 const addToGit = async () =>
 ⋮----
@@ -10892,7 +10890,7 @@ export const createTokens = (hunks: HunkData[], language: string) =>
 ================
 File: src/renderer/src/components/common/Accordion.tsx
 ================
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState, Activity } from 'react';
 import { FaChevronDown } from 'react-icons/fa';
 import { clsx } from 'clsx';
 import { useTranslation } from 'react-i18next';
@@ -11817,6 +11815,10 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
 };
+⋮----
+{/* File content - filter out line numbers if present */}
+⋮----
+{/* Parameter information */}
 
 ================
 File: src/renderer/src/components/message/FileWriteToolMessage.tsx
@@ -18824,7 +18826,7 @@ File: package.json
 ================
 {
   "name": "aider-desk",
-  "version": "0.38.0-dev",
+  "version": "0.39.0-dev",
   "description": "Aider desktop application wrapper",
   "main": "./out/main/index.js",
   "author": "Hotovo",
@@ -18933,7 +18935,6 @@ File: package.json
     "patch-package": "^8.0.0",
     "posthog-node": "^4.18.0",
     "prismjs": "^1.29.0",
-    "react-compiler-runtime": "^19.1.0-rc.2",
     "react-complex-tree": "^2.4.5",
     "react-country-flag": "^3.1.0",
     "react-datepicker": "^8.4.0",
@@ -18981,8 +18982,8 @@ File: package.json
     "@types/node": "^20.14.8",
     "@types/object-hash": "^3.0.6",
     "@types/prismjs": "^1.26.5",
-    "@types/react": "^19.1.13",
-    "@types/react-dom": "^19.1.9",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
     "@types/react-resizable": "^3.0.8",
     "@types/refractor": "^3.4.1",
     "@types/socket.io": "^3.0.1",
@@ -19008,8 +19009,8 @@ File: package.json
     "lint-staged": "^15.4.1",
     "node-fetch": "^3.3.2",
     "prettier": "^3.3.2",
-    "react": "19.1.1",
-    "react-dom": "19.1.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "sass-embedded": "^1.89.0",
     "tailwind-scrollbar": "^3.1.0",
     "tailwindcss": "^3.4.14",
