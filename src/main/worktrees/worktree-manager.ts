@@ -1,5 +1,5 @@
 import path, { join } from 'path';
-import { mkdir } from 'fs/promises';
+import { mkdir, rm } from 'fs/promises';
 
 import { execWithShellPath, withLock } from '@/utils';
 import { AIDER_DESK_TASKS_DIR } from '@/constants';
@@ -33,6 +33,7 @@ export class WorktreeManager {
   private async initializeWorktree(projectPath: string, taskId: string): Promise<void> {
     const worktreePath = this.getWorktreePath(projectPath, taskId);
     try {
+      await rm(worktreePath, { recursive: true, force: true });
       await mkdir(worktreePath, { recursive: true });
     } catch (error) {
       logger.error('Failed to create worktree directory:', error);
