@@ -220,8 +220,8 @@ class PromptExecutor:
 
       current_reflection = 0
       while coder.reflected_message and not self.is_prompt_interrupted(prompt_context.id):
-        if current_reflection >= self.connector.coder.max_reflections:
-          coder.io.tool_warning(f"Only {str(self.connector.coder.max_reflections)} reflections allowed, stopping.")
+        if current_reflection >= 5:
+          coder.io.tool_warning(f"Only 5 reflections allowed, stopping.")
           break
 
         reflection_prompt = coder.reflected_message
