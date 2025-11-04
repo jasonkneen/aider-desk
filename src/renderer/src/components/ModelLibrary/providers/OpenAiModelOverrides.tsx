@@ -1,16 +1,18 @@
-import { getDefaultProviderParams, OpenAiProvider } from '@common/agent';
+import { getDefaultProviderParams, LlmProvider, OpenAiProvider } from '@common/agent';
 
 import { OpenAiAdvancedSettings } from './OpenAiAdvancedSettings';
 
 type Props = {
+  provider: LlmProvider;
   overrides: Partial<OpenAiProvider>;
   onChange: (overrides: Record<string, unknown>) => void;
 };
 
-export const OpenAiModelOverrides = ({ overrides, onChange }: Props) => {
+export const OpenAiModelOverrides = ({ provider, overrides, onChange }: Props) => {
   // Convert overrides to OpenAiProvider format for AdvancedSettings
-  const provider: OpenAiProvider = {
+  const fullProvider: OpenAiProvider = {
     ...getDefaultProviderParams('openai'),
+    ...(provider as OpenAiProvider),
     ...overrides,
   };
 
@@ -29,7 +31,7 @@ export const OpenAiModelOverrides = ({ overrides, onChange }: Props) => {
 
   return (
     <div className="space-y-4">
-      <OpenAiAdvancedSettings provider={provider} onChange={handleProviderChange} />
+      <OpenAiAdvancedSettings provider={fullProvider} onChange={handleProviderChange} />
     </div>
   );
 };

@@ -13,6 +13,7 @@ import { Button } from '@/components/common/Button';
 import { Accordion } from '@/components/common/Accordion';
 
 type ProviderOverridesProps = {
+  provider: LlmProvider;
   overrides: Record<string, unknown>;
   onChange: (overrides: Record<string, unknown>) => void;
 };
@@ -68,7 +69,7 @@ export const ModelParameterOverrides = ({ provider, overrides, onChange, classNa
         className="border border-bg-tertiary rounded-lg"
       >
         <div className="space-y-3 p-3 pb-4">
-          {OverridesComponent && <OverridesComponent overrides={overrides || {}} onChange={handleProviderOverrideChange} />}
+          {OverridesComponent && <OverridesComponent provider={provider} overrides={overrides || {}} onChange={handleProviderOverrideChange} />}
         </div>
       </Accordion>
     </div>

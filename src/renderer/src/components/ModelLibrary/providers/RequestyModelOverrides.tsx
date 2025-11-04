@@ -1,16 +1,18 @@
-import { getDefaultProviderParams, RequestyProvider } from '@common/agent';
+import { getDefaultProviderParams, LlmProvider, RequestyProvider } from '@common/agent';
 
 import { RequestyAdvancedSettings } from './RequestyAdvancedSettings';
 
 type Props = {
+  provider: LlmProvider;
   overrides: Partial<RequestyProvider>;
   onChange: (overrides: Record<string, unknown>) => void;
 };
 
-export const RequestyModelOverrides = ({ overrides, onChange }: Props) => {
+export const RequestyModelOverrides = ({ provider, overrides, onChange }: Props) => {
   // Convert overrides to RequestyProvider format for AdvancedSettings
-  const provider: RequestyProvider = {
+  const fullProvider: RequestyProvider = {
     ...getDefaultProviderParams('requesty'),
+    ...(provider as RequestyProvider),
     ...overrides,
   };
 
@@ -29,7 +31,7 @@ export const RequestyModelOverrides = ({ overrides, onChange }: Props) => {
 
   return (
     <div className="space-y-4">
-      <RequestyAdvancedSettings provider={provider} onChange={handleProviderChange} />
+      <RequestyAdvancedSettings provider={fullProvider} onChange={handleProviderChange} />
     </div>
   );
 };

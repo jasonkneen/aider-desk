@@ -1,16 +1,18 @@
-import { getDefaultProviderParams, OpenRouterProvider } from '@common/agent';
+import { getDefaultProviderParams, LlmProvider, OpenRouterProvider } from '@common/agent';
 
 import { OpenRouterAdvancedSettings } from './OpenRouterAdvancedSettings';
 
 type Props = {
+  provider: LlmProvider;
   overrides: Partial<OpenRouterProvider>;
   onChange: (overrides: Record<string, unknown>) => void;
 };
 
-export const OpenRouterModelOverrides = ({ overrides, onChange }: Props) => {
+export const OpenRouterModelOverrides = ({ provider, overrides, onChange }: Props) => {
   // Convert overrides to OpenRouterProvider format for AdvancedSettings
-  const provider: OpenRouterProvider = {
+  const fullProvider: OpenRouterProvider = {
     ...getDefaultProviderParams('openrouter'),
+    ...(provider as OpenRouterProvider),
     ...overrides,
   };
 
@@ -35,7 +37,7 @@ export const OpenRouterModelOverrides = ({ overrides, onChange }: Props) => {
 
   return (
     <div className="space-y-4">
-      <OpenRouterAdvancedSettings provider={provider} onChange={handleProviderChange} />
+      <OpenRouterAdvancedSettings provider={fullProvider} onChange={handleProviderChange} />
     </div>
   );
 };

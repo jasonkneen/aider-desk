@@ -1,16 +1,18 @@
-import { getDefaultProviderParams, GeminiProvider } from '@common/agent';
+import { getDefaultProviderParams, GeminiProvider, LlmProvider } from '@common/agent';
 
 import { GeminiAdvancedSettings } from './GeminiAdvancedSettings';
 
 type Props = {
+  provider: LlmProvider;
   overrides: Partial<GeminiProvider>;
   onChange: (overrides: Record<string, unknown>) => void;
 };
 
-export const GeminiModelOverrides = ({ overrides, onChange }: Props) => {
+export const GeminiModelOverrides = ({ provider, overrides, onChange }: Props) => {
   // Convert overrides to GeminiProvider format for AdvancedSettings
-  const provider: GeminiProvider = {
+  const fullProvider: GeminiProvider = {
     ...getDefaultProviderParams('gemini'),
+    ...(provider as GeminiProvider),
     ...overrides,
   };
 
@@ -30,7 +32,7 @@ export const GeminiModelOverrides = ({ overrides, onChange }: Props) => {
 
   return (
     <div className="space-y-4">
-      <GeminiAdvancedSettings provider={provider} onChange={handleProviderChange} />
+      <GeminiAdvancedSettings provider={fullProvider} onChange={handleProviderChange} />
     </div>
   );
 };

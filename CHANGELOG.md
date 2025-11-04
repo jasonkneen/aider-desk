@@ -6,6 +6,7 @@
 - enhanced file read tool with line number display and partial file reading capabilities
 - improved agentic flow for providers that stop right after the tool call
 - fixed occasional white screen error when using compacting
+- provider overrides now currently show the current state of the provider settings
 
 ## [0.38.0]
 

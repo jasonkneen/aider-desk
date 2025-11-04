@@ -1,16 +1,18 @@
-import { getDefaultProviderParams, VertexAiProvider } from '@common/agent';
+import { getDefaultProviderParams, LlmProvider, VertexAiProvider } from '@common/agent';
 
 import { VertexAiAdvancedSettings } from './VertexAiAdvancedSettings';
 
 type Props = {
+  provider: LlmProvider;
   overrides: Partial<VertexAiProvider>;
   onChange: (overrides: Record<string, unknown>) => void;
 };
 
-export const VertexAiModelOverrides = ({ overrides, onChange }: Props) => {
+export const VertexAiModelOverrides = ({ provider, overrides, onChange }: Props) => {
   // Convert overrides to VertexAiProvider format for AdvancedSettings
-  const provider: VertexAiProvider = {
+  const fullProvider: VertexAiProvider = {
     ...getDefaultProviderParams('vertex-ai'),
+    ...(provider as VertexAiProvider),
     ...overrides,
   };
 
@@ -29,7 +31,7 @@ export const VertexAiModelOverrides = ({ overrides, onChange }: Props) => {
 
   return (
     <div className="space-y-4">
-      <VertexAiAdvancedSettings provider={provider} onChange={handleProviderChange} />
+      <VertexAiAdvancedSettings provider={fullProvider} onChange={handleProviderChange} />
     </div>
   );
 };

@@ -1,16 +1,18 @@
-import { getDefaultProviderParams, AzureProvider } from '@common/agent';
+import { getDefaultProviderParams, AzureProvider, LlmProvider } from '@common/agent';
 
 import { AzureAdvancedSettings } from './AzureAdvancedSettings';
 
 type Props = {
+  provider: LlmProvider;
   overrides: Partial<AzureProvider>;
   onChange: (overrides: Record<string, unknown>) => void;
 };
 
-export const AzureModelOverrides = ({ overrides, onChange }: Props) => {
+export const AzureModelOverrides = ({ provider, overrides, onChange }: Props) => {
   // Convert overrides to AzureProvider format for AdvancedSettings
-  const provider: AzureProvider = {
+  const fullProvider: AzureProvider = {
     ...getDefaultProviderParams('azure'),
+    ...(provider as AzureProvider),
     ...overrides,
   };
 
@@ -28,7 +30,7 @@ export const AzureModelOverrides = ({ overrides, onChange }: Props) => {
 
   return (
     <div className="space-y-4">
-      <AzureAdvancedSettings provider={provider} onChange={handleProviderChange} />
+      <AzureAdvancedSettings provider={fullProvider} onChange={handleProviderChange} />
     </div>
   );
 };
