@@ -41,12 +41,12 @@ export const SemanticSearchToolMessage = ({ message, onRemove, compact = false }
       {!content && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light" />}
       {content &&
         (isError ? (
-          <span className="text-left">
+          <span className="text-left flex-shrink-0">
             <StyledTooltip id={`semantic-search-error-tooltip-${message.id}`} maxWidth={600} />
             <RiErrorWarningFill className="w-3 h-3 text-error" data-tooltip-id={`semantic-search-error-tooltip-${message.id}`} data-tooltip-content={content} />
           </span>
         ) : isDenied ? (
-          <span className="text-left">
+          <span className="text-left flex-shrink-0">
             <StyledTooltip id={`semantic-search-denied-tooltip-${message.id}`} maxWidth={600} />
             <RiCloseCircleFill
               className="w-3 h-3 text-warning"
@@ -55,7 +55,7 @@ export const SemanticSearchToolMessage = ({ message, onRemove, compact = false }
             />
           </span>
         ) : (
-          <RiCheckboxCircleFill className="w-3 h-3 text-success" />
+          <RiCheckboxCircleFill className="w-3 h-3 text-success flex-shrink-0" />
         ))}
     </div>
   );
