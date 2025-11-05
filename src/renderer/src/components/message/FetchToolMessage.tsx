@@ -32,7 +32,7 @@ export const FetchToolMessage = ({ message, onRemove, compact = false }: Props) 
           <CodeInline className="bg-bg-primary-light">{url}</CodeInline>
         </span>
       </div>
-      {!content && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light" />}
+      {!content && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light flex-shrink-0" />}
       {content &&
         (isError ? (
           <span className="text-left flex-shrink-0">

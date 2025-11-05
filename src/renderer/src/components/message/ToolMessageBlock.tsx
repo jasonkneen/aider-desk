@@ -198,7 +198,7 @@ export const ToolMessageBlock = ({ message, onRemove, compact = false }: Props) 
           <div className={`text-xs text-text-primary whitespace-pre ${isExecuting ? 'animate-pulse' : ''} flex items-center gap-1`}>
             {getToolLabel(message)}
           </div>
-          {isExecuting && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light" />}
+          {isExecuting && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light flex-shrink-0" />}
           {!isExecuting && parsedResult?.isError === true && <VscError className="text-error" />}
         </div>
       </div>

@@ -32,7 +32,7 @@ export const SubagentToolMessage = ({ message, onRemove, compact = false }: Prop
       </div>
       <div className={`text-xs text-text-primary flex items-center gap-1 ${isExecuting ? 'animate-pulse' : ''}`}>
         <span>{getToolName()}</span>
-        {isExecuting && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light" />}
+        {isExecuting && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light flex-shrink-0" />}
       </div>
     </div>
   );

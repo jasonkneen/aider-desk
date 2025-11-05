@@ -49,7 +49,7 @@ export const FileEditToolMessage = ({ message, onRemove, compact = false }: Prop
           <CodeInline className="bg-bg-primary-light">{filePath.split(/[/\\]/).pop()}</CodeInline>
         </span>
       </div>
-      {!content && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light" />}
+      {!content && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light flex-shrink-0" />}
       {content &&
         (content.startsWith('Successfully') ? (
           <RiCheckboxCircleFill className="w-3 h-3 text-success flex-shrink-0" />
