@@ -92,6 +92,7 @@ export class Task {
       id: taskId,
       baseDir: project.baseDir,
       name: '',
+      archived: false,
       aiderTotalCost: 0,
       agentTotalCost: 0,
     };

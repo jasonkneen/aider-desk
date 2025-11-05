@@ -1001,7 +1001,12 @@
     "exportAsImage": "Export as image",
     "copyTaskId": "Copy task ID",
     "taskIdCopied": "Task ID {{taskId}} copied to clipboard",
-    "duplicateTask": "Duplicate Task"
+    "duplicateTask": "Duplicate Task",
+    "archiveTask": "Archive Task",
+    "unarchiveTask": "Unarchive Task",
+    "showArchived": "Show archived",
+    "hideArchived": "Hide archived",
+    "archived": "Archived"
   },
   "worktree": {
     "merge": "Merge",

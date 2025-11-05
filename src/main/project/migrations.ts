@@ -125,6 +125,7 @@ const migrateSessionFile = async (project: Project, sessionsDirPath: string, tas
       id: taskId,
       baseDir: project.baseDir,
       name,
+      archived: false,
       createdAt: (await fs.stat(sessionFilePath)).mtime.toISOString(),
       updatedAt: (await fs.stat(sessionFilePath)).mtime.toISOString(),
       agentTotalCost: 0,

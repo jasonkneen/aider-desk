@@ -6,7 +6,7 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'onChange'> & 
   checked: boolean;
   onChange: (checked: boolean) => void;
   className?: string;
-  size?: 'sm' | 'md';
+  size?: 'xs' | 'sm' | 'md';
   tooltip?: string;
   tooltipId?: string;
 };
@@ -19,6 +19,7 @@ export const Checkbox = ({ label, checked, onChange, className = '', size = 'sm'
       className={clsx(
         'flex items-center cursor-pointer',
         {
+          'text-2xs': size === 'xs',
           'text-xs': size === 'sm',
           'text-sm': size === 'md',
         },
@@ -49,6 +50,7 @@ export const Checkbox = ({ label, checked, onChange, className = '', size = 'sm'
           {checked && (
             <svg
               className={clsx('text-text-primary', {
+                'w-2.5 h-2.5': size === 'xs',
                 'w-3 h-3': size === 'sm',
                 'w-4 h-4': size === 'md',
               })}

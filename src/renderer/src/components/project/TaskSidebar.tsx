@@ -9,12 +9,13 @@ import { CgSpinner } from 'react-icons/cg';
 import { MdImage } from 'react-icons/md';
 import { clsx } from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BiCopy, BiDuplicate } from 'react-icons/bi';
+import { BiCopy, BiDuplicate, BiArchive, BiArchiveIn } from 'react-icons/bi';
 
 import { useTask } from '@/contexts/TaskContext';
 import { Input } from '@/components/common/Input';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { Button } from '@/components/common/Button';
+import { IconButton } from '@/components/common/IconButton';
 import { useClickOutside } from '@/hooks/useClickOutside';
 
 export const COLLAPSED_WIDTH = 44;
@@ -27,9 +28,20 @@ type TaskMenuButtonProps = {
   onExportToImage?: () => void;
   onCopyTaskId?: () => void;
   onDuplicateTask?: () => void;
+  onArchiveTask?: () => void;
+  onUnarchiveTask?: () => void;
 };
 
-const TaskMenuButton = ({ onEdit, onDelete, onExportToMarkdown, onExportToImage, onCopyTaskId, onDuplicateTask }: TaskMenuButtonProps) => {
+const TaskMenuButton = ({
+  onEdit,
+  onDelete,
+  onExportToMarkdown,
+  onExportToImage,
+  onCopyTaskId,
+  onDuplicateTask,
+  onArchiveTask,
+  onUnarchiveTask,
+}: TaskMenuButtonProps) => {
   const { t } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -76,6 +88,18 @@ const TaskMenuButton = ({ onEdit, onDelete, onExportToMarkdown, onExportToImage,
   const handleDuplicateTaskClick = (e: MouseEvent) => {
     e.stopPropagation();
     onDuplicateTask?.();
+    setIsMenuOpen(false);
+  };
+
+  const handleArchiveTaskClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    onArchiveTask?.();
+    setIsMenuOpen(false);
+  };
+
+  const handleUnarchiveTaskClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    onUnarchiveTask?.();
     setIsMenuOpen(false);
   };
 
@@ -141,6 +165,24 @@ const TaskMenuButton = ({ onEdit, onDelete, onExportToMarkdown, onExportToImage,
                 <span className="whitespace-nowrap">{t('taskSidebar.duplicateTask')}</span>
               </li>
             )}
+            {onArchiveTask && (
+              <li
+                className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
+                onClick={handleArchiveTaskClick}
+              >
+                <BiArchive className="w-4 h-4" />
+                <span className="whitespace-nowrap">{t('taskSidebar.archiveTask')}</span>
+              </li>
+            )}
+            {onUnarchiveTask && (
+              <li
+                className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
+                onClick={handleUnarchiveTaskClick}
+              >
+                <BiArchiveIn className="w-4 h-4" />
+                <span className="whitespace-nowrap">{t('taskSidebar.unarchiveTask')}</span>
+              </li>
+            )}
             <li
               className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
               onClick={handleDeleteClick}
@@ -195,8 +237,12 @@ const TaskSidebarComponent = ({
   const [deleteConfirmTaskId, setDeleteConfirmTaskId] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTaskName, setEditTaskName] = useState<string>('');
+  const [showArchived, setShowArchived] = useState<boolean>(false);
 
-  const sortedTasks = tasks.filter((task) => task.createdAt && task.updatedAt).sort((a, b) => b.updatedAt!.localeCompare(a.updatedAt!));
+  const sortedTasks = tasks
+    .filter((task) => task.createdAt && task.updatedAt)
+    .filter((task) => showArchived || !task.archived)
+    .sort((a, b) => b.updatedAt!.localeCompare(a.updatedAt!));
 
   const handleTaskClick = (taskId: string) => {
     onTaskSelect(taskId);
@@ -262,6 +308,28 @@ const TaskSidebarComponent = ({
     }
   };
 
+  const handleArchiveTask = async (taskId: string) => {
+    try {
+      if (updateTask) {
+        await updateTask(baseDir, taskId, { archived: true });
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to archive task:', error);
+    }
+  };
+
+  const handleUnarchiveTask = async (taskId: string) => {
+    try {
+      if (updateTask) {
+        await updateTask(baseDir, taskId, { archived: false });
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to unarchive task:', error);
+    }
+  };
+
   const renderTaskStateIcon = (taskId: string, isCollapsed: boolean = false) => {
     const taskState = getTaskState(taskId, false);
     const iconSize = isCollapsed ? 'w-3.5 h-3.5' : 'w-4 h-4';
@@ -282,8 +350,18 @@ const TaskSidebarComponent = ({
         onClick={() => handleTaskClick(task.id)}
       >
         <div className="flex-1 min-w-0">
-          <div className="text-xs font-medium text-text-primary truncate">{task.name}</div>
-          <div className="text-2xs text-text-muted truncate">{formatDate(task.updatedAt!)}</div>
+          <div
+            className={clsx(
+              'text-xs font-medium truncate transition-colors',
+              task.archived && activeTaskId !== task.id ? 'text-text-muted group-hover:text-text-primary' : 'text-text-primary',
+            )}
+          >
+            {task.name}
+          </div>
+          <div className="text-3xs text-text-muted truncate">
+            {formatDate(task.updatedAt!)}
+            {task.archived && ` • ${t('taskSidebar.archived')}`}
+          </div>
         </div>
 
         <div className="flex items-center pl-2">{renderTaskStateIcon(task.id, false)}</div>
@@ -295,6 +373,8 @@ const TaskSidebarComponent = ({
           onExportToImage={onExportToImage ? () => onExportToImage(task.id) : undefined}
           onCopyTaskId={onCopyTaskId ? () => onCopyTaskId(task.id) : undefined}
           onDuplicateTask={onDuplicateTask ? () => onDuplicateTask(task.id) : undefined}
+          onArchiveTask={task.archived ? undefined : () => handleArchiveTask(task.id)}
+          onUnarchiveTask={task.archived ? () => handleUnarchiveTask(task.id) : undefined}
         />
       </div>
 
@@ -363,16 +443,33 @@ const TaskSidebarComponent = ({
               className="flex items-center justify-between w-full ml-2"
             >
               <h3 className="text-sm font-semibold uppercase h-5">{t('taskSidebar.title')}</h3>
-              {createNewTask && (
-                <button
-                  data-tooltip-id="task-sidebar-tooltip"
-                  data-tooltip-content={t('taskSidebar.createTask')}
-                  className="p-1 rounded-md hover:bg-bg-tertiary transition-colors"
-                  onClick={handleCreateTask}
-                >
-                  <HiPlus className="w-5 h-5 text-text-primary" />
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                <div className="flex justify-end">
+                  <IconButton
+                    onClick={() => setShowArchived(!showArchived)}
+                    tooltip={showArchived ? t('taskSidebar.hideArchived') : t('taskSidebar.showArchived')}
+                    tooltipId="task-sidebar-tooltip"
+                    className="p-1.5 hover:bg-bg-tertiary rounded-md group"
+                    icon={
+                      showArchived ? (
+                        <BiArchiveIn className="w-4 h-4 text-text-primary" />
+                      ) : (
+                        <BiArchive className="w-4 h-4 text-text-dark group-hover:text-text-muted" />
+                      )
+                    }
+                  />
+                </div>
+                {createNewTask && (
+                  <button
+                    data-tooltip-id="task-sidebar-tooltip"
+                    data-tooltip-content={t('taskSidebar.createTask')}
+                    className="p-1 rounded-md hover:bg-bg-tertiary transition-colors"
+                    onClick={handleCreateTask}
+                  >
+                    <HiPlus className="w-5 h-5 text-text-primary" />
+                  </button>
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

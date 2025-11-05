@@ -1009,7 +1009,12 @@
     "exportAsImage": "导出为图片",
     "copyTaskId": "复制任务 ID",
     "taskIdCopied": "任务 ID {{taskId}} 已复制到剪贴板",
-    "duplicateTask": "复制任务"
+    "duplicateTask": "复制任务",
+    "archiveTask": "归档任务",
+    "unarchiveTask": "取消归档任务",
+    "showArchived": "显示已归档",
+    "hideArchived": "隐藏已归档",
+    "archived": "已归档"
   },
   "worktree": {
     "merge": "合并",

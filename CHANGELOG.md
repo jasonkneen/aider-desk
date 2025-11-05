@@ -7,6 +7,7 @@
 - improved agentic flow for providers that stop right after the tool call
 - fixed occasional white screen error when using compacting
 - provider overrides now currently show the current state of the provider settings
+- added archive/unarchive task actions
 
 ## [0.38.0]
 
