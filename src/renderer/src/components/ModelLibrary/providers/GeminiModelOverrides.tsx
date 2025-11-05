@@ -1,5 +1,7 @@
 import { getDefaultProviderParams, GeminiProvider, LlmProvider } from '@common/agent';
 
+import { DisableStreaming } from '../DisableStreaming';
+
 import { GeminiAdvancedSettings } from './GeminiAdvancedSettings';
 
 type Props = {
@@ -22,6 +24,7 @@ export const GeminiModelOverrides = ({ provider, overrides, onChange }: Props) =
       thinkingBudget: updatedProvider.thinkingBudget,
       includeThoughts: updatedProvider.includeThoughts,
       useSearchGrounding: updatedProvider.useSearchGrounding,
+      disableStreaming: updatedProvider.disableStreaming,
     };
 
     // Remove undefined values
@@ -30,9 +33,16 @@ export const GeminiModelOverrides = ({ provider, overrides, onChange }: Props) =
     onChange(cleanedOverrides);
   };
 
+  // Handle disable streaming change separately
+  const handleDisableStreamingChange = (disableStreaming: boolean) => {
+    const updatedProvider = { ...fullProvider, disableStreaming };
+    handleProviderChange(updatedProvider);
+  };
+
   return (
     <div className="space-y-4">
       <GeminiAdvancedSettings provider={fullProvider} onChange={handleProviderChange} />
+      <DisableStreaming checked={fullProvider.disableStreaming ?? false} onChange={handleDisableStreamingChange} />
     </div>
   );
 };

@@ -8,6 +8,7 @@ import { VertexAiModelOverrides } from './providers/VertexAiModelOverrides';
 import { OpenAiModelOverrides } from './providers/OpenAiModelOverrides';
 import { RequestyModelOverrides } from './providers/RequestyModelOverrides';
 import { AzureModelOverrides } from './providers/AzureModelOverrides';
+import { DefaultModelOverrides } from './providers/DefaultModelOverrides';
 
 import { Button } from '@/components/common/Button';
 import { Accordion } from '@/components/common/Accordion';
@@ -25,6 +26,16 @@ const PROVIDER_OVERRIDES_MAP: Partial<Record<LlmProviderName, ComponentType<Prov
   openai: OpenAiModelOverrides,
   requesty: RequestyModelOverrides,
   azure: AzureModelOverrides,
+  // Providers without specific overrides use DefaultModelOverrides
+  anthropic: DefaultModelOverrides,
+  bedrock: DefaultModelOverrides,
+  cerebras: DefaultModelOverrides,
+  deepseek: DefaultModelOverrides,
+  groq: DefaultModelOverrides,
+  lmstudio: DefaultModelOverrides,
+  ollama: DefaultModelOverrides,
+  'openai-compatible': DefaultModelOverrides,
+  'zai-plan': DefaultModelOverrides,
 };
 
 type Props = {
@@ -47,10 +58,6 @@ export const ModelParameterOverrides = ({ provider, overrides, onChange, classNa
 
   const hasOverrides = Object.keys(overrides).length > 0;
   const OverridesComponent = PROVIDER_OVERRIDES_MAP[provider.name];
-
-  if (!OverridesComponent) {
-    return null;
-  }
 
   return (
     <div className={`space-y-2 ${className}`}>

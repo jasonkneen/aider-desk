@@ -568,6 +568,35 @@ export class ModelManager {
     return strategy.getCacheControl(profile, llmProvider);
   }
 
+  isStreamingDisabled(llmProvider: LlmProvider, modelId: string): boolean {
+    const providers = this.store.getProviders();
+    const providerProfile = providers.find((p) => p.provider.name === llmProvider.name);
+
+    if (!providerProfile) {
+      logger.warn(`Provider profile not found for ${llmProvider.name}, using streaming`, {
+        modelId,
+        providerName: llmProvider.name,
+      });
+      return false;
+    }
+
+    const models = this.providerModels[providerProfile.id] || [];
+    const modelObj = models.find((m) => m.id === modelId);
+
+    if (!modelObj) {
+      logger.warn(`Model ${modelId} not found in provider ${providerProfile.id}, using provider settings for streaming`, {
+        modelId,
+        providerId: providerProfile.id,
+        streamingDisabled: llmProvider.disableStreaming,
+      });
+      return llmProvider.disableStreaming ?? false;
+    }
+
+    return typeof modelObj.providerOverrides?.disableStreaming === 'boolean'
+      ? modelObj.providerOverrides.disableStreaming
+      : (llmProvider.disableStreaming ?? false);
+  }
+
   getProviderOptions(llmProvider: LlmProvider, modelId: string): Record<string, Record<string, JSONValue>> | undefined {
     const strategy = this.providerRegistry[llmProvider.name];
     if (!strategy?.getProviderOptions) {

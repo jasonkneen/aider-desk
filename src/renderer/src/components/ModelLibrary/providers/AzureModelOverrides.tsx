@@ -1,5 +1,7 @@
 import { getDefaultProviderParams, AzureProvider, LlmProvider } from '@common/agent';
 
+import { DisableStreaming } from '../DisableStreaming';
+
 import { AzureAdvancedSettings } from './AzureAdvancedSettings';
 
 type Props = {
@@ -20,6 +22,7 @@ export const AzureModelOverrides = ({ provider, overrides, onChange }: Props) =>
   const handleProviderChange = (updatedProvider: AzureProvider) => {
     const newOverrides = {
       reasoningEffort: updatedProvider.reasoningEffort,
+      disableStreaming: updatedProvider.disableStreaming,
     };
 
     // Remove undefined values
@@ -28,9 +31,16 @@ export const AzureModelOverrides = ({ provider, overrides, onChange }: Props) =>
     onChange(cleanedOverrides);
   };
 
+  // Handle disable streaming change separately
+  const handleDisableStreamingChange = (disableStreaming: boolean) => {
+    const updatedProvider = { ...fullProvider, disableStreaming };
+    handleProviderChange(updatedProvider);
+  };
+
   return (
     <div className="space-y-4">
       <AzureAdvancedSettings provider={fullProvider} onChange={handleProviderChange} />
+      <DisableStreaming checked={fullProvider.disableStreaming ?? false} onChange={handleDisableStreamingChange} />
     </div>
   );
 };

@@ -1,5 +1,7 @@
 import { getDefaultProviderParams, LlmProvider, VertexAiProvider } from '@common/agent';
 
+import { DisableStreaming } from '../DisableStreaming';
+
 import { VertexAiAdvancedSettings } from './VertexAiAdvancedSettings';
 
 type Props = {
@@ -21,6 +23,7 @@ export const VertexAiModelOverrides = ({ provider, overrides, onChange }: Props)
     const newOverrides = {
       thinkingBudget: updatedProvider.thinkingBudget,
       includeThoughts: updatedProvider.includeThoughts,
+      disableStreaming: updatedProvider.disableStreaming,
     };
 
     // Remove undefined values
@@ -29,9 +32,16 @@ export const VertexAiModelOverrides = ({ provider, overrides, onChange }: Props)
     onChange(cleanedOverrides);
   };
 
+  // Handle disable streaming change separately
+  const handleDisableStreamingChange = (disableStreaming: boolean) => {
+    const updatedProvider = { ...fullProvider, disableStreaming };
+    handleProviderChange(updatedProvider);
+  };
+
   return (
     <div className="space-y-4">
       <VertexAiAdvancedSettings provider={fullProvider} onChange={handleProviderChange} />
+      <DisableStreaming checked={fullProvider.disableStreaming ?? false} onChange={handleDisableStreamingChange} />
     </div>
   );
 };

@@ -39,6 +39,7 @@ export type LlmProviderName =
 
 export interface LlmProviderBase {
   name: LlmProviderName;
+  disableStreaming?: boolean;
 }
 
 export interface OllamaProvider extends LlmProviderBase {
@@ -362,6 +363,7 @@ export const getDefaultProviderParams = <T extends LlmProvider>(providerName: Ll
 
   const baseConfig: LlmProviderBase = {
     name: providerName,
+    disableStreaming: false,
   };
 
   switch (providerName) {

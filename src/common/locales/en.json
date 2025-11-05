@@ -228,7 +228,9 @@
       "title": "Provider Overrides",
       "resetToDefaults": "Clear overrides",
       "overridesProviderParameters": "Overrides some provider parameters"
-    }
+    },
+    "disableStreaming": "Disable streaming",
+    "disableStreamingInfo": "Disables response streaming. Use this when the provider or model does not support streaming responses."
   },
   "openai": {
     "apiKey": "API Key",

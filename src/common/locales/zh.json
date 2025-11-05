@@ -227,7 +227,9 @@
       "title": "提供商覆盖",
       "resetToDefaults": "清除覆盖",
       "overridesProviderParameters": "覆盖一些提供商参数"
-    }
+    },
+    "disableStreaming": "禁用流式传输",
+    "disableStreamingInfo": "禁用响应流式传输。当提供商或模型不支持流式传输时使用此选项。"
   },
   "openai": {
     "apiKey": "API 密钥",

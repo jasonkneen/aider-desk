@@ -681,6 +681,24 @@ export class Agent {
         let responseMessages: ContextMessage[] = [];
         let currentTextResponse = '';
 
+        const onStepFinish = (stepResult: StepResult<typeof toolSet>) => {
+          finishReason = stepResult.finishReason;
+
+          if (finishReason === 'error') {
+            logger.error('Error during prompt:', { stepResult });
+            return;
+          }
+
+          if (effectiveAbortSignal?.aborted) {
+            logger.info('Prompt aborted by user');
+            return;
+          }
+
+          responseMessages = this.processStep(currentResponseId, stepResult, task, profile, provider, promptContext, abortSignal);
+          currentResponseId = uuidv4();
+          hasReasoning = false;
+        };
+
         await this.compactMessagesIfNeeded(
           task,
           profile,
@@ -693,57 +711,95 @@ export class Agent {
           effectiveAbortSignal,
         );
 
-        const result = streamText({
-          providerOptions,
-          model: wrapLanguageModel({
+        if (this.modelManager.isStreamingDisabled(provider.provider, profile.model)) {
+          logger.debug('Streaming disabled, using generateText');
+          await generateText({
             model,
-            middleware: extractReasoningMiddleware({
-              tagName: 'think',
+            system: systemPrompt,
+            messages: optimizeMessages(profile, initialUserRequestMessageIndex, messages, cacheControl, settings),
+            tools: toolSet,
+            abortSignal: effectiveAbortSignal,
+            maxOutputTokens: profile.maxTokens,
+            maxRetries: 5,
+            temperature: profile.temperature,
+            ...providerParameters,
+            onStepFinish,
+            experimental_repairToolCall: repairToolCall,
+          });
+        } else {
+          logger.debug('Streaming enabled, using streamText');
+          const result = streamText({
+            providerOptions,
+            model: wrapLanguageModel({
+              model,
+              middleware: extractReasoningMiddleware({
+                tagName: 'think',
+              }),
             }),
-          }),
-          system: systemPrompt,
-          messages: optimizeMessages(profile, initialUserRequestMessageIndex, messages, cacheControl, settings),
-          tools: toolSet,
-          abortSignal: effectiveAbortSignal,
-          maxOutputTokens: profile.maxTokens,
-          maxRetries: 5,
-          temperature: profile.temperature,
-          experimental_telemetry: {
-            isEnabled: true,
-          },
-          ...providerParameters,
-          onError: ({ error }) => {
-            if (effectiveAbortSignal?.aborted) {
-              return;
-            }
-
-            logger.error('Error during prompt:', { error });
-            iterationError = error;
-            if (typeof error === 'string') {
-              task.addLogMessage('error', error, false, promptContext);
-              // @ts-expect-error checking keys in error
-            } else if (APICallError.isInstance(error) || ('message' in error && 'responseBody' in error)) {
-              task.addLogMessage('error', `${error.message}: ${error.responseBody}`, false, promptContext);
-            } else if (error instanceof Error) {
-              task.addLogMessage('error', error.message, false, promptContext);
-            } else {
-              task.addLogMessage('error', JSON.stringify(error), false, promptContext);
-            }
-          },
-          onChunk: ({ chunk }) => {
-            if (chunk.type === 'text-delta') {
-              if (hasReasoning) {
-                task.processResponseMessage({
-                  id: currentResponseId,
-                  action: 'response',
-                  content: ANSWER_RESPONSE_START_TAG,
-                  finished: false,
-                  promptContext,
-                });
-                hasReasoning = false;
+            system: systemPrompt,
+            messages: optimizeMessages(profile, initialUserRequestMessageIndex, messages, cacheControl, settings),
+            tools: toolSet,
+            abortSignal: effectiveAbortSignal,
+            maxOutputTokens: profile.maxTokens,
+            maxRetries: 5,
+            temperature: profile.temperature,
+            experimental_telemetry: {
+              isEnabled: true,
+            },
+            ...providerParameters,
+            onError: ({ error }) => {
+              if (effectiveAbortSignal?.aborted) {
+                return;
               }
 
-              if (chunk.text?.trim() || currentTextResponse.trim()) {
+              logger.error('Error during prompt:', { error });
+              iterationError = error;
+              if (typeof error === 'string') {
+                task.addLogMessage('error', error, false, promptContext);
+                // @ts-expect-error checking keys in error
+              } else if (APICallError.isInstance(error) || ('message' in error && 'responseBody' in error)) {
+                task.addLogMessage('error', `${error.message}: ${error.responseBody}`, false, promptContext);
+              } else if (error instanceof Error) {
+                task.addLogMessage('error', error.message, false, promptContext);
+              } else {
+                task.addLogMessage('error', JSON.stringify(error), false, promptContext);
+              }
+            },
+            onChunk: ({ chunk }) => {
+              if (chunk.type === 'text-delta') {
+                if (hasReasoning) {
+                  task.processResponseMessage({
+                    id: currentResponseId,
+                    action: 'response',
+                    content: ANSWER_RESPONSE_START_TAG,
+                    finished: false,
+                    promptContext,
+                  });
+                  hasReasoning = false;
+                }
+
+                if (chunk.text?.trim() || currentTextResponse.trim()) {
+                  task.processResponseMessage({
+                    id: currentResponseId,
+                    action: 'response',
+                    content: chunk.text,
+                    finished: false,
+                    promptContext,
+                  });
+                  currentTextResponse += chunk.text;
+                }
+              } else if (chunk.type === 'reasoning-delta') {
+                if (!hasReasoning) {
+                  task.processResponseMessage({
+                    id: currentResponseId,
+                    action: 'response',
+                    content: THINKING_RESPONSE_STAR_TAG,
+                    finished: false,
+                    promptContext,
+                  });
+                  hasReasoning = true;
+                }
+
                 task.processResponseMessage({
                   id: currentResponseId,
                   action: 'response',
@@ -751,59 +807,20 @@ export class Agent {
                   finished: false,
                   promptContext,
                 });
-                currentTextResponse += chunk.text;
+              } else if (chunk.type === 'tool-input-start') {
+                task.addLogMessage('loading', 'Preparing tool...', false, promptContext);
+              } else if (chunk.type === 'tool-call') {
+                task.addLogMessage('loading', 'Executing tool...', false, promptContext);
+              } else if (chunk.type === 'tool-result') {
+                task.addLogMessage('loading', undefined, false, promptContext);
               }
-            } else if (chunk.type === 'reasoning-delta') {
-              if (!hasReasoning) {
-                task.processResponseMessage({
-                  id: currentResponseId,
-                  action: 'response',
-                  content: THINKING_RESPONSE_STAR_TAG,
-                  finished: false,
-                  promptContext,
-                });
-                hasReasoning = true;
-              }
+            },
+            onStepFinish,
+            experimental_repairToolCall: repairToolCall,
+          });
 
-              task.processResponseMessage({
-                id: currentResponseId,
-                action: 'response',
-                content: chunk.text,
-                finished: false,
-                promptContext,
-              });
-            } else if (chunk.type === 'tool-input-start') {
-              task.addLogMessage('loading', 'Preparing tool...', false, promptContext);
-            } else if (chunk.type === 'tool-call') {
-              task.addLogMessage('loading', 'Executing tool...', false, promptContext);
-            } else if (chunk.type === 'tool-result') {
-              task.addLogMessage('loading', undefined, false, promptContext);
-            }
-          },
-          onStepFinish: (stepResult) => {
-            finishReason = stepResult.finishReason;
-
-            if (finishReason === 'error') {
-              logger.error('Error during prompt:', { stepResult });
-              return;
-            }
-
-            if (effectiveAbortSignal?.aborted) {
-              logger.info('Prompt aborted by user');
-              return;
-            }
-
-            responseMessages = this.processStep<typeof toolSet>(currentResponseId, stepResult, task, profile, provider, promptContext, abortSignal);
-            currentResponseId = uuidv4();
-            hasReasoning = false;
-          },
-          onFinish: ({ finishReason }) => {
-            logger.info(`onFinish prompt finished. Reason: ${finishReason}`);
-          },
-          experimental_repairToolCall: repairToolCall,
-        });
-
-        await result.consumeStream();
+          await result.consumeStream();
+        }
 
         if (effectiveAbortSignal?.aborted) {
           logger.info('Prompt aborted by user');

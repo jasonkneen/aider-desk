@@ -1,5 +1,7 @@
 import { getDefaultProviderParams, LlmProvider, OpenRouterProvider } from '@common/agent';
 
+import { DisableStreaming } from '../DisableStreaming';
+
 import { OpenRouterAdvancedSettings } from './OpenRouterAdvancedSettings';
 
 type Props = {
@@ -27,6 +29,7 @@ export const OpenRouterModelOverrides = ({ provider, overrides, onChange }: Prop
       dataCollection: updatedProvider.dataCollection,
       sort: updatedProvider.sort,
       requireParameters: updatedProvider.requireParameters,
+      disableStreaming: updatedProvider.disableStreaming,
     };
 
     // Remove undefined values
@@ -35,9 +38,16 @@ export const OpenRouterModelOverrides = ({ provider, overrides, onChange }: Prop
     onChange(cleanedOverrides);
   };
 
+  // Handle disable streaming change separately
+  const handleDisableStreamingChange = (disableStreaming: boolean) => {
+    const updatedProvider = { ...fullProvider, disableStreaming };
+    handleProviderChange(updatedProvider);
+  };
+
   return (
     <div className="space-y-4">
       <OpenRouterAdvancedSettings provider={fullProvider} onChange={handleProviderChange} />
+      <DisableStreaming checked={fullProvider.disableStreaming ?? false} onChange={handleDisableStreamingChange} />
     </div>
   );
 };

@@ -1,5 +1,7 @@
 import { getDefaultProviderParams, LlmProvider, OpenAiProvider } from '@common/agent';
 
+import { DisableStreaming } from '../DisableStreaming';
+
 import { OpenAiAdvancedSettings } from './OpenAiAdvancedSettings';
 
 type Props = {
@@ -21,6 +23,7 @@ export const OpenAiModelOverrides = ({ provider, overrides, onChange }: Props) =
     const newOverrides = {
       reasoningEffort: updatedProvider.reasoningEffort,
       useWebSearch: updatedProvider.useWebSearch,
+      disableStreaming: updatedProvider.disableStreaming,
     };
 
     // Remove undefined values
@@ -29,9 +32,16 @@ export const OpenAiModelOverrides = ({ provider, overrides, onChange }: Props) =
     onChange(cleanedOverrides);
   };
 
+  // Handle disable streaming change separately
+  const handleDisableStreamingChange = (disableStreaming: boolean) => {
+    const updatedProvider = { ...fullProvider, disableStreaming };
+    handleProviderChange(updatedProvider);
+  };
+
   return (
     <div className="space-y-4">
       <OpenAiAdvancedSettings provider={fullProvider} onChange={handleProviderChange} />
+      <DisableStreaming checked={fullProvider.disableStreaming ?? false} onChange={handleDisableStreamingChange} />
     </div>
   );
 };

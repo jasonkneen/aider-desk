@@ -5,6 +5,8 @@ import { ComponentType, ReactNode, useEffect, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { FaPlus, FaTrash } from 'react-icons/fa';
 
+import { DisableStreaming } from './DisableStreaming';
+
 import {
   AnthropicParameters,
   AzureParameters,
@@ -109,6 +111,12 @@ export const ProviderProfileForm = ({ provider, editProfile, providers, onSave, 
 
   const removeHeader = (id: string) => {
     setHeaders(headers.filter((h) => h.id !== id));
+  };
+
+  const handleDisableStreamingChange = (disableStreaming: boolean) => {
+    if (parameters) {
+      setParameters({ ...parameters, disableStreaming });
+    }
   };
 
   const validateForm = (): boolean => {
@@ -224,6 +232,14 @@ export const ProviderProfileForm = ({ provider, editProfile, providers, onSave, 
             </div>,
           )}
         </div>
+
+        {/* Disable streaming checkbox */}
+        {parameters && (
+          <div className="mt-4 mx-2">
+            <DisableStreaming checked={parameters.disableStreaming ?? false} onChange={handleDisableStreamingChange} />
+          </div>
+        )}
+
         <div className="flex justify-end space-x-4 mt-8">
           <Button onClick={onCancel} variant="text">
             {t('common.cancel')}
