@@ -57,7 +57,11 @@ export const ThinkingAnswerBlock = ({ thinking, answer, baseDir = '', allFiles =
       {/* Answer section - only show if we have an answer or we're streaming */}
       {answer && parsedAnswer && (
         <div className="overflow-hidden relative">
-          <div className={clsx('p-3 text-xs text-text-primary bg-bg-secondary', !renderMarkdown && 'whitespace-pre-wrap break-words')}>{parsedAnswer}</div>
+          <div
+            className={clsx('text-xs text-text-primary bg-bg-secondary', !renderMarkdown && 'whitespace-pre-wrap break-words', parsedThinking ? 'p-3' : 'p-0')}
+          >
+            {parsedAnswer}
+          </div>
         </div>
       )}
     </div>
