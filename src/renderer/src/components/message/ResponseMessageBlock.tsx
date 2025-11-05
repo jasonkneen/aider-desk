@@ -20,7 +20,7 @@ export const ResponseMessageBlock = ({ baseDir, message, allFiles, renderMarkdow
 
   const parsedContent = useParsedContent(baseDir, message.content, allFiles, renderMarkdown, !compact);
 
-  if (!parsedContent) {
+  if (!parsedContent || (Array.isArray(parsedContent) && parsedContent.length === 0)) {
     return null;
   }
 
