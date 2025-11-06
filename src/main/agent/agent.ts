@@ -944,6 +944,8 @@ export class Agent {
 
     const settings = this.store.getSettings();
     const model = this.modelManager.createLlm(provider, agentProfile.model, settings, '');
+    const providerOptions = this.modelManager.getProviderOptions(provider.provider, agentProfile.model);
+    const providerParameters = this.modelManager.getProviderParameters(provider.provider, agentProfile.model);
 
     logger.info('Generating text:', {
       providerId: provider.id,
@@ -956,6 +958,8 @@ export class Agent {
       model,
       system: systemPrompt,
       messages: [{ role: 'user', content: prompt }],
+      providerOptions,
+      ...providerParameters,
     });
 
     return result.text;

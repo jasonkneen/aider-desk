@@ -13,6 +13,7 @@
 - added search functionality to task sidebar
 - custom commands now working properly in Agent mode when used within browser
 - improved auto-scrolling while generating the response
+- added missing provider parameters when generating commit message
 
 ## [0.38.0]
 
