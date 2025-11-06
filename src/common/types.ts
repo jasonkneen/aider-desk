@@ -321,6 +321,13 @@ export interface SubagentConfig {
   description: string;
 }
 
+export interface BashToolSettings {
+  allowedPattern: string;
+  deniedPattern: string;
+}
+
+export type ToolSettings = BashToolSettings;
+
 export interface AgentProfile {
   id: string;
   name: string;
@@ -332,6 +339,7 @@ export interface AgentProfile {
   temperature: number; // 0-1 for controlling randomness/creativity
   enabledServers: string[];
   toolApprovals: Record<string, ToolApprovalState>;
+  toolSettings: Record<string, ToolSettings>;
   includeContextFiles: boolean;
   includeRepoMap: boolean;
   usePowerTools: boolean;

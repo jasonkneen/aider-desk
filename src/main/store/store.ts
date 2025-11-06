@@ -21,6 +21,7 @@ import { determineMainModel, determineWeakModel } from '@/utils';
 import logger from '@/logger';
 import { migrateProvidersV13toV14 } from '@/store/migrations/v13-to-v14';
 import { migrateSettingsV14toV15 } from '@/store/migrations/v14-to-v15';
+import { migrateSettingsV15toV16 } from '@/store/migrations/v15-to-v16';
 
 export const DEFAULT_SETTINGS: SettingsData = {
   language: 'en',
@@ -92,7 +93,7 @@ interface StoreSchema {
   userId?: string;
 }
 
-const CURRENT_SETTINGS_VERSION = 15;
+const CURRENT_SETTINGS_VERSION = 16;
 
 interface CustomStore<T> {
   get<K extends keyof T>(key: K): T[K] | undefined;
@@ -262,6 +263,11 @@ export class Store {
       if (settingsVersion === 14) {
         settings = migrateSettingsV14toV15(settings);
         settingsVersion = 15;
+      }
+
+      if (settingsVersion === 15) {
+        settings = migrateSettingsV15toV16(settings);
+        settingsVersion = 16;
       }
 
       this.store.set('settings', settings as SettingsData);

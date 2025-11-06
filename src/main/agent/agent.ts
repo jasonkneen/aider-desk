@@ -1044,12 +1044,14 @@ export class Agent {
     const usageReport: UsageReportData = this.modelManager.getUsageReport(task, provider, profile.model, usage, providerMetadata);
 
     // Process text/reasoning content
-    if (reasoningText || text?.trim()) {
+    if (reasoningText?.trim() || text?.trim()) {
       const message: ResponseMessage = {
         id: currentResponseId,
         action: 'response',
         content:
-          reasoningText && text ? `${THINKING_RESPONSE_STAR_TAG}${reasoningText.trim()}${ANSWER_RESPONSE_START_TAG}${text.trim()}` : reasoningText || text,
+          reasoningText?.trim() && text?.trim()
+            ? `${THINKING_RESPONSE_STAR_TAG}${reasoningText.trim()}${ANSWER_RESPONSE_START_TAG}${text.trim()}`
+            : reasoningText?.trim() || text,
         finished: true,
         // only send usage report if there are no tool results
         usageReport: toolResults?.length ? undefined : usageReport,

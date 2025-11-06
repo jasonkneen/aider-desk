@@ -15,6 +15,7 @@
 - improved auto-scrolling while generating the response
 - added missing provider parameters when generating commit message
 - moved auto approve to task level
+- added bash tool pattern settings for automatic approval and denial of commands
 
 ## [0.38.0]
 

@@ -19,7 +19,7 @@ export const BashToolMessage = ({ message, onRemove, compact = false }: Props) =
   const command = message.args.command as string;
   const content = message.content && JSON.parse(message.content);
   const isError = content && typeof content === 'object' && 'exitCode' in content && content.exitCode !== 0;
-  const isDenied = content && typeof content === 'string' && content.startsWith('Bash command execution denied by user.');
+  const isDenied = content && typeof content === 'string' && content.startsWith('Bash command execution denied by ');
 
   const title = (
     <div className="flex items-center gap-2 w-full text-left">

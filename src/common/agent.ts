@@ -237,6 +237,12 @@ export const DEFAULT_AGENT_PROFILE: AgentProfile = {
     // subagent tools
     [`${SUBAGENTS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${SUBAGENTS_TOOL_RUN_TASK}`]: ToolApprovalState.Always,
   },
+  toolSettings: {
+    [`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_BASH}`]: {
+      allowedPattern: 'ls .*;cat .*;git status;git show;git log',
+      deniedPattern: 'rm .*;del .*;chown .*;chgrp .*;chmod .*',
+    },
+  },
   includeContextFiles: true,
   includeRepoMap: false,
   usePowerTools: true,

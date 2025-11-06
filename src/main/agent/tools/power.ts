@@ -6,7 +6,7 @@ import { promisify } from 'util';
 import { tool, type ToolSet } from 'ai';
 import { z } from 'zod';
 import { glob } from 'glob';
-import { AgentProfile, FileWriteMode, PromptContext, ToolApprovalState } from '@common/types';
+import { AgentProfile, BashToolSettings, FileWriteMode, PromptContext, ToolApprovalState } from '@common/types';
 import {
   POWER_TOOL_BASH as TOOL_BASH,
   POWER_TOOL_DESCRIPTIONS,
@@ -487,11 +487,28 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         promptContext,
       );
 
-      const questionKey = `${TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TOOL_BASH}`;
+      const toolId = `${TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TOOL_BASH}`;
       const questionText = 'Approve executing bash command?';
       const questionSubject = `Command: ${command}\nWorking Directory: ${cwd || '.'}\nTimeout: ${timeout}ms`;
 
-      const [isApproved, userInput] = await approvalManager.handleApproval(questionKey, questionText, questionSubject);
+      // Pattern validation
+      const bashSettings = profile.toolSettings?.[toolId] as BashToolSettings;
+
+      logger.debug('Bash tool settings:', { bashSettings });
+      // Check denied patterns first
+      const deniedPatterns = bashSettings?.deniedPattern?.split(';').filter(Boolean) || [];
+      if (deniedPatterns.some((pattern) => new RegExp(pattern).test(command))) {
+        return `Bash command execution denied by settings. Command matches denied pattern: \`${bashSettings?.deniedPattern}\`. If the command is destructive, you must not try to workaround it, inform the user instead.`;
+      }
+
+      let approvedBySettings = false;
+      // Check allowed patterns - if matches, skip approval and execute directly
+      const allowedPatterns = bashSettings?.allowedPattern?.split(';').filter(Boolean) || [];
+      if (allowedPatterns.length > 0 && allowedPatterns.some((pattern) => new RegExp(pattern).test(command))) {
+        approvedBySettings = true;
+      }
+
+      const [isApproved, userInput] = approvedBySettings ? [true, undefined] : await approvalManager.handleApproval(toolId, questionText, questionSubject);
 
       if (!isApproved) {
         return `Bash command execution denied by user. Reason: ${userInput}`;

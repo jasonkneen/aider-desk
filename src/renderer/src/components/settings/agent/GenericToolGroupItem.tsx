@@ -1,8 +1,9 @@
-import { GenericTool, ToolApprovalState } from '@common/types';
+import { AgentProfile, GenericTool, ToolApprovalState } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
+import { POWER_TOOL_BASH, TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 
 import { GenericToolItem } from './GenericToolItem';
+import { BashToolItem } from './BashToolItem';
 
 import { Accordion } from '@/components/common/Accordion';
 import { Checkbox } from '@/components/common/Checkbox';
@@ -10,18 +11,19 @@ import { Checkbox } from '@/components/common/Checkbox';
 type Props = {
   name: string;
   tools: GenericTool[];
-  toolApprovals: Record<string, ToolApprovalState>;
+  profile: AgentProfile;
   onApprovalChange: (toolId: string, approval: ToolApprovalState) => void;
+  onProfileChange: (field: keyof AgentProfile, value: AgentProfile[keyof AgentProfile]) => void;
   enabled?: boolean;
   onEnabledChange?: (enabled: boolean) => void;
 };
 
-export const GenericToolGroupItem = ({ name, tools, toolApprovals, onApprovalChange, enabled, onEnabledChange }: Props) => {
+export const GenericToolGroupItem = ({ name, tools, profile, onApprovalChange, onProfileChange, enabled, onEnabledChange }: Props) => {
   const { t } = useTranslation();
 
   const renderTitle = () => {
     const enabledCount =
-      tools.length - tools.filter((tool) => toolApprovals[`${name}${TOOL_GROUP_NAME_SEPARATOR}${tool.name}`] === ToolApprovalState.Never).length;
+      tools.length - tools.filter((tool) => profile.toolApprovals[`${name}${TOOL_GROUP_NAME_SEPARATOR}${tool.name}`] === ToolApprovalState.Never).length;
 
     return (
       <div className="flex items-center justify-between w-full">
@@ -50,9 +52,13 @@ export const GenericToolGroupItem = ({ name, tools, toolApprovals, onApprovalCha
           <div>
             <div className="text-xs p-2 pt-1 rounded mt-1 space-y-2">
               <div className="text-xs text-text-muted-light ml-1">{t('mcp.tools')}</div>
-              {tools.map((tool) => (
-                <GenericToolItem key={tool.name} tool={tool} toolApprovals={toolApprovals} onApprovalChange={onApprovalChange} />
-              ))}
+              {tools.map((tool) => {
+                if (tool.name === POWER_TOOL_BASH) {
+                  return <BashToolItem key={tool.name} tool={tool} profile={profile} onApprovalChange={onApprovalChange} onProfileChange={onProfileChange} />;
+                }
+
+                return <GenericToolItem key={tool.name} tool={tool} profile={profile} onApprovalChange={onApprovalChange} />;
+              })}
             </div>
           </div>
         ) : (
