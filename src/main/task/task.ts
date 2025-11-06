@@ -331,7 +331,7 @@ export class Task {
         if (!(await fileExists(taskDir))) {
           return;
         }
-        await fs.rm(taskDir, { recursive: true });
+        await fs.rm(taskDir, { recursive: true, force: true });
       } catch (error) {
         logger.error('Failed to remove empty task folder', {
           baseDir: this.project.baseDir,
