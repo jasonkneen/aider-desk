@@ -1004,6 +1004,8 @@
     "copyTaskId": "Copy task ID",
     "taskIdCopied": "Task ID {{taskId}} copied to clipboard",
     "duplicateTask": "Duplicate Task",
+    "search": "Search tasks",
+    "searchPlaceholder": "Search tasks...",
     "archiveTask": "Archive Task",
     "unarchiveTask": "Unarchive Task",
     "showArchived": "Show archived",

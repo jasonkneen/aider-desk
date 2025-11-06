@@ -10,6 +10,7 @@
 - added archive/unarchive task actions
 - added option to disable streaming for provider or specific model
 - fixed issue with response getting stuck in Aider modes in some cases
+- added search functionality to task sidebar
 
 ## [0.38.0]
 

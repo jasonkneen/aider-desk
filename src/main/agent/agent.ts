@@ -778,7 +778,7 @@ export class Agent {
                   hasReasoning = false;
                 }
 
-                if (chunk.text?.trim() || currentTextResponse.trim()) {
+                if (chunk.text.trim() || currentTextResponse.trim()) {
                   task.processResponseMessage({
                     id: currentResponseId,
                     action: 'response',
@@ -788,7 +788,7 @@ export class Agent {
                   });
                   currentTextResponse += chunk.text;
                 }
-              } else if (chunk.type === 'reasoning-delta') {
+              } else if (chunk.type === 'reasoning-delta' && chunk.text.trim()) {
                 if (!hasReasoning) {
                   task.processResponseMessage({
                     id: currentResponseId,

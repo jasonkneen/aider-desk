@@ -1012,6 +1012,8 @@
     "copyTaskId": "复制任务 ID",
     "taskIdCopied": "任务 ID {{taskId}} 已复制到剪贴板",
     "duplicateTask": "复制任务",
+    "search": "搜索任务",
+    "searchPlaceholder": "搜索任务...",
     "archiveTask": "归档任务",
     "unarchiveTask": "取消归档任务",
     "showArchived": "显示已归档",

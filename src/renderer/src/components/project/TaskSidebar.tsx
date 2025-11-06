@@ -6,10 +6,12 @@ import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { FaEllipsisVertical } from 'react-icons/fa6';
 import { IoLogoMarkdown } from 'react-icons/io';
 import { CgSpinner } from 'react-icons/cg';
-import { MdImage } from 'react-icons/md';
+import { MdImage, MdOutlineSearch } from 'react-icons/md';
 import { clsx } from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BiCopy, BiDuplicate, BiArchive, BiArchiveIn } from 'react-icons/bi';
+import { HiXMark } from 'react-icons/hi2';
+import { useDebounce } from '@reactuses/core';
 
 import { useTask } from '@/contexts/TaskContext';
 import { Input } from '@/components/common/Input';
@@ -238,10 +240,20 @@ const TaskSidebarComponent = ({
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTaskName, setEditTaskName] = useState<string>('');
   const [showArchived, setShowArchived] = useState<boolean>(false);
+  const [isSearchVisible, setIsSearchVisible] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const debouncedSearchQuery = useDebounce(searchQuery, 50);
 
   const sortedTasks = tasks
     .filter((task) => task.createdAt && task.updatedAt)
     .filter((task) => showArchived || !task.archived)
+    .filter((task) => {
+      if (!debouncedSearchQuery.trim()) {
+        return true;
+      }
+      return task.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+    })
     .sort((a, b) => b.updatedAt!.localeCompare(a.updatedAt!));
 
   const handleTaskClick = (taskId: string) => {
@@ -306,6 +318,18 @@ const TaskSidebarComponent = ({
     if (createNewTask) {
       createNewTask();
     }
+  };
+
+  const handleSearchToggle = () => {
+    setIsSearchVisible(!isSearchVisible);
+    if (isSearchVisible) {
+      setSearchQuery('');
+    }
+  };
+
+  const handleSearchClose = () => {
+    setIsSearchVisible(false);
+    setSearchQuery('');
   };
 
   const handleArchiveTask = async (taskId: string) => {
@@ -428,23 +452,23 @@ const TaskSidebarComponent = ({
       transition={{ duration: 0.3, ease: 'easeInOut' }}
     >
       <StyledTooltip id="task-sidebar-tooltip" />
-      <div className="flex items-center justify-between bg-bg-primary-light p-2 border-b border-border-dark-light h-10">
-        <button className="p-1 rounded-md hover:bg-bg-tertiary transition-colors" onClick={onToggleCollapse}>
-          <RiMenuUnfold4Line className={clsx('w-5 h-5 text-text-primary transition-transform duration-300', isCollapsed && 'rotate-180')} />
-        </button>
+      <div className="bg-bg-primary-light border-b border-border-dark-light">
+        <div className="flex items-center justify-between p-2 h-10">
+          <button className="p-1 rounded-md hover:bg-bg-tertiary transition-colors" onClick={onToggleCollapse}>
+            <RiMenuUnfold4Line className={clsx('w-5 h-5 text-text-primary transition-transform duration-300', isCollapsed && 'rotate-180')} />
+          </button>
 
-        <AnimatePresence>
-          {!isCollapsed && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.2 }}
-              className="flex items-center justify-between w-full ml-2"
-            >
-              <h3 className="text-sm font-semibold uppercase h-5">{t('taskSidebar.title')}</h3>
-              <div className="flex items-center gap-2">
-                <div className="flex justify-end">
+          <AnimatePresence>
+            {!isCollapsed && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center justify-between w-full ml-2"
+              >
+                <h3 className="text-sm font-semibold uppercase h-5">{t('taskSidebar.title')}</h3>
+                <div className="flex items-center gap-1">
                   <IconButton
                     onClick={() => setShowArchived(!showArchived)}
                     tooltip={showArchived ? t('taskSidebar.hideArchived') : t('taskSidebar.showArchived')}
@@ -458,17 +482,55 @@ const TaskSidebarComponent = ({
                       )
                     }
                   />
-                </div>
-                {createNewTask && (
                   <button
                     data-tooltip-id="task-sidebar-tooltip"
-                    data-tooltip-content={t('taskSidebar.createTask')}
+                    data-tooltip-content={t('taskSidebar.search')}
                     className="p-1 rounded-md hover:bg-bg-tertiary transition-colors"
-                    onClick={handleCreateTask}
+                    onClick={handleSearchToggle}
                   >
-                    <HiPlus className="w-5 h-5 text-text-primary" />
+                    <MdOutlineSearch className="w-5 h-5 text-text-primary" />
                   </button>
-                )}
+                  {createNewTask && (
+                    <button
+                      data-tooltip-id="task-sidebar-tooltip"
+                      data-tooltip-content={t('taskSidebar.createTask')}
+                      className="p-1 rounded-md hover:bg-bg-tertiary transition-colors"
+                      onClick={handleCreateTask}
+                    >
+                      <HiPlus className="w-5 h-5 text-text-primary" />
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <AnimatePresence>
+          {!isCollapsed && isSearchVisible && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.05 }}
+              className="px-2 pb-2"
+            >
+              <div className="relative">
+                <Input
+                  ref={searchInputRef}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t('taskSidebar.searchPlaceholder')}
+                  size="sm"
+                  className="pr-8"
+                  autoFocus={true}
+                />
+                <button
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-md hover:bg-bg-tertiary transition-colors"
+                  onClick={handleSearchClose}
+                >
+                  <HiXMark className="w-4 h-4 text-text-muted hover:text-text-primary" />
+                </button>
               </div>
             </motion.div>
           )}
