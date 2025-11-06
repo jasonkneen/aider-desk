@@ -12,6 +12,7 @@
 - fixed issue with response getting stuck in Aider modes in some cases
 - added search functionality to task sidebar
 - custom commands now working properly in Agent mode when used within browser
+- improved auto-scrolling while generating the response
 
 ## [0.38.0]
 

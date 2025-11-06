@@ -1,4 +1,4 @@
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { toPng } from 'html-to-image';
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
 import { Button } from '@/components/common/Button';
+import { useScrollingPaused } from '@/hooks/useScrollingPaused';
 
 export type MessagesRef = {
   exportToImage: () => void;
@@ -35,17 +36,14 @@ export const Messages = forwardRef<MessagesRef, Props>(
     const { t } = useTranslation();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
-    const [scrollingPaused, setScrollingPaused] = useState(false);
 
     // Group messages by promptContext.group.id
     const processedMessages = groupMessagesByPromptContext(messages);
     const lastUserMessageIndex = processedMessages.findLastIndex(isUserMessage);
 
-    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-      const element = e.currentTarget;
-      const isAtBottom = element.scrollHeight - element.scrollTop < element.clientHeight + 20;
-      setScrollingPaused(!isAtBottom);
-    };
+    const { scrollingPaused, scrollToBottom, eventHandlers } = useScrollingPaused({
+      onAutoScroll: () => messagesEndRef.current?.scrollIntoView(),
+    });
 
     useEffect(() => {
       if (!scrollingPaused) {
@@ -75,11 +73,6 @@ export const Messages = forwardRef<MessagesRef, Props>(
       }
     };
 
-    const scrollToBottom = () => {
-      setScrollingPaused(false);
-      messagesEndRef.current?.scrollIntoView();
-    };
-
     useImperativeHandle(ref, () => ({
       exportToImage,
       container: messagesContainerRef.current,
@@ -94,7 +87,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
       scrollbar-track-bg-primary-light
       scrollbar-thumb-bg-tertiary
       hover:scrollbar-thumb-bg-fourth"
-        onScroll={handleScroll}
+        {...eventHandlers}
       >
         <StyledTooltip id="usage-info-tooltip" />
 

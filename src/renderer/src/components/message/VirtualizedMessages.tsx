@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef } from 'react';
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -13,6 +13,7 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
 import { showInfoNotification } from '@/utils/notifications';
 import { Button } from '@/components/common/Button';
+import { useScrollingPaused } from '@/hooks/useScrollingPaused';
 
 export type VirtualizedMessagesRef = {
   exportToImage: () => void;
@@ -35,7 +36,6 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
   ({ baseDir, messages, allFiles = [], renderMarkdown, removeMessage, redoLastUserPrompt, editLastUserMessage, processing }, ref) => {
     const { t } = useTranslation();
     const messagesContainerRef = useRef<HTMLDivElement>(null);
-    const [scrollingPaused, setScrollingPaused] = useState(false);
 
     // Group messages by promptContext.group.id
     const processedMessages = useMemo(() => groupMessagesByPromptContext(messages), [messages]);
@@ -55,49 +55,13 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
       },
     });
 
-    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-      const element = e.currentTarget;
-
-      // Check if content is smaller than scroll area (no scrollbar needed)
-      const contentSmallerThanArea = element.scrollHeight <= element.clientHeight;
-
-      // If content is smaller than area, never pause scrolling
-      if (contentSmallerThanArea) {
-        setScrollingPaused(false);
-      }
-    };
-
-    const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-      // Only pause when scrolling up (negative deltaY)
-      if (e.deltaY < 0) {
-        setScrollingPaused(true);
-      } else if (e.deltaY > 0) {
-        const element = e.currentTarget;
-        const isAtBottom = element.scrollHeight - element.scrollTop < element.clientHeight + e.deltaY + 20;
-
-        if (isAtBottom) {
-          setScrollingPaused(false);
+    const { scrollingPaused, scrollToBottom, eventHandlers } = useScrollingPaused({
+      onAutoScroll: () => {
+        if (processedMessages.length > 0) {
+          virtualizer.scrollToOffset(virtualizer.getTotalSize() + 100);
         }
-      }
-    };
-
-    const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-      const touch = e.touches[0];
-      const element = e.currentTarget;
-      element.dataset.touchStartY = touch.clientY.toString();
-    };
-
-    const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-      const touch = e.touches[0];
-      const element = e.currentTarget;
-      const touchStartY = element.dataset.touchStartY ? parseFloat(element.dataset.touchStartY) : touch.clientY;
-
-      // Detect swipe up (touch moving up, so current Y is less than start Y)
-      if (touch.clientY < touchStartY - 10) {
-        // 10px threshold to avoid accidental triggers
-        setScrollingPaused(true);
-      }
-    };
+      },
+    });
 
     useLayoutEffect(() => {
       if (!scrollingPaused && processedMessages.length > 0) {
@@ -110,15 +74,6 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
     const exportToImage = async () => {
       // Show notification that export is not available with virtualized rendering
       showInfoNotification(t('messages.exportNotAvailableWithVirtualized'));
-    };
-
-    const scrollToBottom = () => {
-      setScrollingPaused(false);
-      if (processedMessages.length > 0) {
-        virtualizer.scrollToIndex(processedMessages.length - 1, {
-          align: 'end',
-        });
-      }
     };
 
     useImperativeHandle(ref, () => ({
@@ -140,10 +95,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
             scrollbar-track-bg-primary-light
             scrollbar-thumb-bg-tertiary
             hover:scrollbar-thumb-bg-fourth"
-          onScroll={handleScroll}
-          onWheel={handleWheel}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
+          {...eventHandlers}
         >
           <div
             style={{
