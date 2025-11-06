@@ -286,6 +286,7 @@ src/
             BedrockParameters.tsx
             CerebrasParameters.tsx
             DeepseekParameters.tsx
+            DefaultModelOverrides.tsx
             GeminiAdvancedSettings.tsx
             GeminiModelOverrides.tsx
             GeminiParameters.tsx
@@ -308,6 +309,7 @@ src/
             VertexAiModelOverrides.tsx
             VertexAIParameters.tsx
             ZaiPlanParameters.tsx
+          DisableStreaming.tsx
           index.ts
           ModelDialog.tsx
           ModelLibrary.tsx
@@ -1529,7 +1531,9 @@ File: src/common/locales/en.json
       "title": "Provider Overrides",
       "resetToDefaults": "Clear overrides",
       "overridesProviderParameters": "Overrides some provider parameters"
-    }
+    },
+    "disableStreaming": "Disable streaming",
+    "disableStreamingInfo": "Disables response streaming. Use this when the provider or model does not support streaming responses."
   },
   "openai": {
     "apiKey": "API Key",
@@ -2302,7 +2306,12 @@ File: src/common/locales/en.json
     "exportAsImage": "Export as image",
     "copyTaskId": "Copy task ID",
     "taskIdCopied": "Task ID {{taskId}} copied to clipboard",
-    "duplicateTask": "Duplicate Task"
+    "duplicateTask": "Duplicate Task",
+    "archiveTask": "Archive Task",
+    "unarchiveTask": "Unarchive Task",
+    "showArchived": "Show archived",
+    "hideArchived": "Hide archived",
+    "archived": "Archived"
   },
   "worktree": {
     "merge": "Merge",
@@ -2576,7 +2585,9 @@ File: src/common/locales/zh.json
       "title": "提供商覆盖",
       "resetToDefaults": "清除覆盖",
       "overridesProviderParameters": "覆盖一些提供商参数"
-    }
+    },
+    "disableStreaming": "禁用流式传输",
+    "disableStreamingInfo": "禁用响应流式传输。当提供商或模型不支持流式传输时使用此选项。"
   },
   "openai": {
     "apiKey": "API 密钥",
@@ -3358,7 +3369,12 @@ File: src/common/locales/zh.json
     "exportAsImage": "导出为图片",
     "copyTaskId": "复制任务 ID",
     "taskIdCopied": "任务 ID {{taskId}} 已复制到剪贴板",
-    "duplicateTask": "复制任务"
+    "duplicateTask": "复制任务",
+    "archiveTask": "归档任务",
+    "unarchiveTask": "取消归档任务",
+    "showArchived": "显示已归档",
+    "hideArchived": "隐藏已归档",
+    "archived": "已归档"
   },
   "worktree": {
     "merge": "合并",
@@ -3444,6 +3460,7 @@ export type LlmProviderName =
 ⋮----
 export interface LlmProviderBase {
   name: LlmProviderName;
+  disableStreaming?: boolean;
 }
 ⋮----
 export interface OllamaProvider extends LlmProviderBase {
@@ -4951,6 +4968,8 @@ error: error.message, // Pass the validation error message
 // Ensure args are stringified for the AI SDK tool call format
 ⋮----
 : null; // Return null if the LLM couldn't repair the call
+⋮----
+const onStepFinish = (stepResult: StepResult<typeof toolSet>) =>
 ⋮----
 // @ts-expect-error checking keys in error
 ⋮----
@@ -6777,6 +6796,8 @@ getUsageReport(task: Task, provider: ProviderProfile, model: string | Model, usa
 // Fallback to creating a minimal Model object if not found
 ⋮----
 getCacheControl(profile: AgentProfile, llmProvider: LlmProvider): CacheControl
+⋮----
+isStreamingDisabled(llmProvider: LlmProvider, modelId: string): boolean
 ⋮----
 getProviderOptions(llmProvider: LlmProvider, modelId: string): Record<string, Record<string, JSONValue>> | undefined
 ⋮----
@@ -9244,7 +9265,7 @@ File: src/main/worktrees/types.ts
 File: src/main/worktrees/worktree-manager.ts
 ================
 import path, { join } from 'path';
-import { mkdir } from 'fs/promises';
+import { mkdir, rm } from 'fs/promises';
 ⋮----
 import { execWithShellPath, withLock } from '@/utils';
 import { AIDER_DESK_TASKS_DIR } from '@/constants';
@@ -10983,7 +11004,7 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'onChange'> & 
   checked: boolean;
   onChange: (checked: boolean) => void;
   className?: string;
-  size?: 'sm' | 'md';
+  size?: 'xs' | 'sm' | 'md';
   tooltip?: string;
   tooltipId?: string;
 };
@@ -12227,7 +12248,7 @@ const renderHeader = () => (
       </div>
       <div className={`text-xs text-text-primary flex items-center gap-1 ${isExecuting ? 'animate-pulse' : ''}`}>
         <span>{getToolName()}</span>
-        {isExecuting && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light" />}
+        {isExecuting && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light flex-shrink-0" />}
       </div>
     </div>
   );
@@ -12623,11 +12644,14 @@ const handleReasoningEffortChange = (value: string) =>
 ================
 File: src/renderer/src/components/ModelLibrary/providers/AzureModelOverrides.tsx
 ================
-import { getDefaultProviderParams, AzureProvider } from '@common/agent';
+import { getDefaultProviderParams, AzureProvider, LlmProvider } from '@common/agent';
+⋮----
+import { DisableStreaming } from '../DisableStreaming';
 ⋮----
 import { AzureAdvancedSettings } from './AzureAdvancedSettings';
 ⋮----
 type Props = {
+  provider: LlmProvider;
   overrides: Partial<AzureProvider>;
   onChange: (overrides: Record<string, unknown>) => void;
 };
@@ -12640,6 +12664,9 @@ export const AzureModelOverrides = (
 const handleProviderChange = (updatedProvider: AzureProvider) =>
 ⋮----
 // Remove undefined values
+⋮----
+// Handle disable streaming change separately
+const handleDisableStreamingChange = (disableStreaming: boolean) =>
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/AzureParameters.tsx
@@ -12747,6 +12774,28 @@ label=
 ? t('settings.agent.envVarFoundPlaceholder',
 
 ================
+File: src/renderer/src/components/ModelLibrary/providers/DefaultModelOverrides.tsx
+================
+import { getDefaultProviderParams, LlmProvider } from '@common/agent';
+⋮----
+import { DisableStreaming } from '../DisableStreaming';
+⋮----
+type Props = {
+  provider: LlmProvider;
+  overrides: Record<string, unknown>;
+  onChange: (overrides: Record<string, unknown>) => void;
+};
+⋮----
+export const DefaultModelOverrides = (
+⋮----
+// Convert overrides to LlmProvider format
+⋮----
+// Convert back to overrides format
+const handleDisableStreamingChange = (disableStreaming: boolean) =>
+⋮----
+// Remove undefined values
+
+================
 File: src/renderer/src/components/ModelLibrary/providers/GeminiAdvancedSettings.tsx
 ================
 import { useTranslation } from 'react-i18next';
@@ -12774,11 +12823,14 @@ label=
 ================
 File: src/renderer/src/components/ModelLibrary/providers/GeminiModelOverrides.tsx
 ================
-import { getDefaultProviderParams, GeminiProvider } from '@common/agent';
+import { getDefaultProviderParams, GeminiProvider, LlmProvider } from '@common/agent';
+⋮----
+import { DisableStreaming } from '../DisableStreaming';
 ⋮----
 import { GeminiAdvancedSettings } from './GeminiAdvancedSettings';
 ⋮----
 type Props = {
+  provider: LlmProvider;
   overrides: Partial<GeminiProvider>;
   onChange: (overrides: Record<string, unknown>) => void;
 };
@@ -12791,6 +12843,9 @@ export const GeminiModelOverrides = (
 const handleProviderChange = (updatedProvider: GeminiProvider) =>
 ⋮----
 // Remove undefined values
+⋮----
+// Handle disable streaming change separately
+const handleDisableStreamingChange = (disableStreaming: boolean) =>
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/GeminiParameters.tsx
@@ -12941,11 +12996,14 @@ placeholder=
 ================
 File: src/renderer/src/components/ModelLibrary/providers/OpenAiModelOverrides.tsx
 ================
-import { getDefaultProviderParams, OpenAiProvider } from '@common/agent';
+import { getDefaultProviderParams, LlmProvider, OpenAiProvider } from '@common/agent';
+⋮----
+import { DisableStreaming } from '../DisableStreaming';
 ⋮----
 import { OpenAiAdvancedSettings } from './OpenAiAdvancedSettings';
 ⋮----
 type Props = {
+  provider: LlmProvider;
   overrides: Partial<OpenAiProvider>;
   onChange: (overrides: Record<string, unknown>) => void;
 };
@@ -12958,6 +13016,9 @@ export const OpenAiModelOverrides = (
 const handleProviderChange = (updatedProvider: OpenAiProvider) =>
 ⋮----
 // Remove undefined values
+⋮----
+// Handle disable streaming change separately
+const handleDisableStreamingChange = (disableStreaming: boolean) =>
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/OpenAiParameters.tsx
@@ -13038,11 +13099,14 @@ href="https://openrouter.ai/docs/features/provider-routing#provider-sorting"
 ================
 File: src/renderer/src/components/ModelLibrary/providers/OpenRouterModelOverrides.tsx
 ================
-import { getDefaultProviderParams, OpenRouterProvider } from '@common/agent';
+import { getDefaultProviderParams, LlmProvider, OpenRouterProvider } from '@common/agent';
+⋮----
+import { DisableStreaming } from '../DisableStreaming';
 ⋮----
 import { OpenRouterAdvancedSettings } from './OpenRouterAdvancedSettings';
 ⋮----
 type Props = {
+  provider: LlmProvider;
   overrides: Partial<OpenRouterProvider>;
   onChange: (overrides: Record<string, unknown>) => void;
 };
@@ -13055,6 +13119,9 @@ export const OpenRouterModelOverrides = (
 const handleProviderChange = (updatedProvider: OpenRouterProvider) =>
 ⋮----
 // Remove undefined values
+⋮----
+// Handle disable streaming change separately
+const handleDisableStreamingChange = (disableStreaming: boolean) =>
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/OpenRouterParameters.tsx
@@ -13152,11 +13219,14 @@ const handleReasoningEffortChange = (value: string) =>
 ================
 File: src/renderer/src/components/ModelLibrary/providers/RequestyModelOverrides.tsx
 ================
-import { getDefaultProviderParams, RequestyProvider } from '@common/agent';
+import { getDefaultProviderParams, LlmProvider, RequestyProvider } from '@common/agent';
+⋮----
+import { DisableStreaming } from '../DisableStreaming';
 ⋮----
 import { RequestyAdvancedSettings } from './RequestyAdvancedSettings';
 ⋮----
 type Props = {
+  provider: LlmProvider;
   overrides: Partial<RequestyProvider>;
   onChange: (overrides: Record<string, unknown>) => void;
 };
@@ -13169,6 +13239,9 @@ export const RequestyModelOverrides = (
 const handleProviderChange = (updatedProvider: RequestyProvider) =>
 ⋮----
 // Remove undefined values
+⋮----
+// Handle disable streaming change separately
+const handleDisableStreamingChange = (disableStreaming: boolean) =>
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/RequestyParameters.tsx
@@ -13221,11 +13294,14 @@ label=
 ================
 File: src/renderer/src/components/ModelLibrary/providers/VertexAiModelOverrides.tsx
 ================
-import { getDefaultProviderParams, VertexAiProvider } from '@common/agent';
+import { getDefaultProviderParams, LlmProvider, VertexAiProvider } from '@common/agent';
+⋮----
+import { DisableStreaming } from '../DisableStreaming';
 ⋮----
 import { VertexAiAdvancedSettings } from './VertexAiAdvancedSettings';
 ⋮----
 type Props = {
+  provider: LlmProvider;
   overrides: Partial<VertexAiProvider>;
   onChange: (overrides: Record<string, unknown>) => void;
 };
@@ -13238,6 +13314,9 @@ export const VertexAiModelOverrides = (
 const handleProviderChange = (updatedProvider: VertexAiProvider) =>
 ⋮----
 // Remove undefined values
+⋮----
+// Handle disable streaming change separately
+const handleDisableStreamingChange = (disableStreaming: boolean) =>
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/VertexAIParameters.tsx
@@ -13287,6 +13366,21 @@ const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 label=
 ⋮----
 ? t('settings.agent.envVarFoundPlaceholder',
+
+================
+File: src/renderer/src/components/ModelLibrary/DisableStreaming.tsx
+================
+import { useTranslation } from 'react-i18next';
+⋮----
+import { Checkbox } from '@/components/common/Checkbox';
+import { InfoIcon } from '@/components/common/InfoIcon';
+⋮----
+type Props = {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+};
+⋮----
+<Checkbox label=
 
 ================
 File: src/renderer/src/components/ModelLibrary/index.ts
@@ -13407,14 +13501,18 @@ import { VertexAiModelOverrides } from './providers/VertexAiModelOverrides';
 import { OpenAiModelOverrides } from './providers/OpenAiModelOverrides';
 import { RequestyModelOverrides } from './providers/RequestyModelOverrides';
 import { AzureModelOverrides } from './providers/AzureModelOverrides';
+import { DefaultModelOverrides } from './providers/DefaultModelOverrides';
 ⋮----
 import { Button } from '@/components/common/Button';
 import { Accordion } from '@/components/common/Accordion';
 ⋮----
 type ProviderOverridesProps = {
+  provider: LlmProvider;
   overrides: Record<string, unknown>;
   onChange: (overrides: Record<string, unknown>) => void;
 };
+⋮----
+// Providers without specific overrides use DefaultModelOverrides
 ⋮----
 type Props = {
   provider: LlmProvider;
@@ -13569,6 +13667,8 @@ import { ComponentType, ReactNode, useEffect, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { FaPlus, FaTrash } from 'react-icons/fa';
 ⋮----
+import { DisableStreaming } from './DisableStreaming';
+⋮----
 import {
   AnthropicParameters,
   AzureParameters,
@@ -13621,6 +13721,8 @@ const addHeader = () =>
 ⋮----
 const removeHeader = (id: string) =>
 ⋮----
+const handleDisableStreamingChange = (disableStreaming: boolean) =>
+⋮----
 const validateForm = (): boolean =>
 ⋮----
 // Check for duplicate IDs
@@ -13642,6 +13744,8 @@ const renderSectionAccordion = (title: ReactNode, children: ReactNode, open?: bo
 placeholder=
 ⋮----
 onChange=
+⋮----
+{/* Disable streaming checkbox */}
 
 ================
 File: src/renderer/src/components/ModelLibrary/ProviderSelection.tsx
@@ -14210,12 +14314,13 @@ import { CgSpinner } from 'react-icons/cg';
 import { MdImage } from 'react-icons/md';
 import { clsx } from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BiCopy, BiDuplicate } from 'react-icons/bi';
+import { BiCopy, BiDuplicate, BiArchive, BiArchiveIn } from 'react-icons/bi';
 ⋮----
 import { useTask } from '@/contexts/TaskContext';
 import { Input } from '@/components/common/Input';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { Button } from '@/components/common/Button';
+import { IconButton } from '@/components/common/IconButton';
 import { useClickOutside } from '@/hooks/useClickOutside';
 ⋮----
 type TaskMenuButtonProps = {
@@ -14225,6 +14330,8 @@ type TaskMenuButtonProps = {
   onExportToImage?: () => void;
   onCopyTaskId?: () => void;
   onDuplicateTask?: () => void;
+  onArchiveTask?: () => void;
+  onUnarchiveTask?: () => void;
 };
 ⋮----
 const handleMenuClick = () =>
@@ -14240,6 +14347,10 @@ const handleExportToImageClick = (e: MouseEvent) =>
 const handleCopyTaskIdClick = (e: MouseEvent) =>
 ⋮----
 const handleDuplicateTaskClick = (e: MouseEvent) =>
+⋮----
+const handleArchiveTaskClick = (e: MouseEvent) =>
+⋮----
+const handleUnarchiveTaskClick = (e: MouseEvent) =>
 ⋮----
 const handleTaskClick = (taskId: string) =>
 ⋮----
@@ -14258,6 +14369,14 @@ const handleCancelEdit = () =>
 const handleEditKeyDown = (e: KeyboardEvent<HTMLInputElement>) =>
 ⋮----
 const handleCreateTask = () =>
+⋮----
+const handleArchiveTask = async (taskId: string) =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+const handleUnarchiveTask = async (taskId: string) =>
+⋮----
+// eslint-disable-next-line no-console
 ⋮----
 
 ⋮----
