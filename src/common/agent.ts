@@ -245,7 +245,6 @@ export const DEFAULT_AGENT_PROFILE: AgentProfile = {
   useSubagents: true,
   customInstructions: '',
   enabledServers: [],
-  autoApprove: false,
   subagent: {
     enabled: false,
     systemPrompt: '',
@@ -326,7 +325,6 @@ export const INIT_PROJECT_AGENTS_PROFILE: AgentProfile = {
   useAiderTools: false,
   useTodoTools: false,
   useSubagents: false,
-  autoApprove: true,
   toolApprovals: {
     ...DEFAULT_AGENT_PROFILE.toolApprovals,
     [`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_FILE_EDIT}`]: ToolApprovalState.Never,
@@ -347,7 +345,6 @@ export const COMPACT_CONVERSATION_AGENT_PROFILE: AgentProfile = {
   useAiderTools: false,
   useTodoTools: false,
   useSubagents: false,
-  autoApprove: true,
   toolApprovals: {
     ...DEFAULT_AGENT_PROFILE.toolApprovals,
     [`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_FILE_EDIT}`]: ToolApprovalState.Never,

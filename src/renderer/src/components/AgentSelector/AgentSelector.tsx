@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MdCheck, MdDoneAll, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap } from 'react-icons/md';
+import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap } from 'react-icons/md';
 import { RiToolsFill } from 'react-icons/ri';
 import { clsx } from 'clsx';
 import { AgentProfile, ToolApprovalState } from '@common/types';
@@ -17,7 +17,6 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { Accordion } from '@/components/common/Accordion';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
-import { Checkbox } from '@/components/common/Checkbox';
 import { SettingsDialog } from '@/components/settings/SettingsDialog';
 import { useApi } from '@/contexts/ApiContext';
 
@@ -54,15 +53,6 @@ export const AgentSelector = ({ isActive }: Props) => {
 
   useClickOutside(selectorRef, () => setSelectorVisible(false));
 
-  useHotkeys(
-    'alt+y',
-    () => handleToggleProfileSetting('autoApprove', !activeProfile?.autoApprove),
-    {
-      enabled: isActive,
-      enableOnContentEditable: true,
-    },
-    [handleToggleProfileSetting],
-  );
   useHotkeys(
     'alt+t',
     () => handleToggleProfileSetting('useTodoTools', !activeProfile?.useTodoTools),
@@ -204,7 +194,7 @@ export const AgentSelector = ({ isActive }: Props) => {
         <RiToolsFill className="w-3.5 h-3.5" />
         <span className="text-2xs truncate max-w-[250px] -mb-0.5">{activeProfile.name}</span>
         <span className="text-2xs font-mono text-text-muted">({enabledToolsCount ?? '...'})</span>
-        {activeProfile.autoApprove && <MdDoneAll className="w-3.5 h-3.5 text-agent-auto-approve opacity-70" />}
+
         {activeProfile.useAiderTools && <MdOutlineHdrAuto className="w-3.5 h-3.5 text-agent-aider-tools opacity-90" />}
         {activeProfile.usePowerTools && <MdFlashOn className="w-3.5 h-3.5 text-agent-power-tools opacity-70" />}
         {activeProfile.useTodoTools && <MdOutlineChecklist className="w-3.5 h-3.5 text-agent-todo-tools opacity-70" />}
@@ -278,60 +268,50 @@ export const AgentSelector = ({ isActive }: Props) => {
 
           {/* Quick Settings */}
           <div className="px-3 py-2">
-            <div className="flex items-center justify-between gap-1">
-              <Checkbox
-                label={t('settings.agent.autoApprove')}
-                checked={activeProfile.autoApprove ?? false}
-                onChange={(isChecked) => handleToggleProfileSetting('autoApprove', isChecked)}
-                size="sm"
-                tooltip={`${t('settings.agent.autoApprove')} (Alt + Y)`}
+            <div className="flex items-center justify-end gap-1">
+              <IconButton
+                icon={
+                  <MdOutlineHdrAuto className={clsx('w-3.5 h-3.5', activeProfile.useAiderTools ? 'text-agent-aider-tools' : 'text-text-muted opacity-50')} />
+                }
+                onClick={() => handleToggleProfileSetting('useAiderTools', !activeProfile.useAiderTools)}
+                className="p-1.5 hover:bg-bg-secondary rounded-md"
+                tooltip={t('settings.agent.useAiderTools')}
                 tooltipId="agent-selector-tooltip"
               />
-              <div className="flex items-center">
-                <IconButton
-                  icon={
-                    <MdOutlineHdrAuto className={clsx('w-3.5 h-3.5', activeProfile.useAiderTools ? 'text-agent-aider-tools' : 'text-text-muted opacity-50')} />
-                  }
-                  onClick={() => handleToggleProfileSetting('useAiderTools', !activeProfile.useAiderTools)}
-                  className="p-1.5 hover:bg-bg-secondary rounded-md"
-                  tooltip={t('settings.agent.useAiderTools')}
-                  tooltipId="agent-selector-tooltip"
-                />
-                <IconButton
-                  icon={<MdFlashOn className={clsx('w-3.5 h-3.5', activeProfile.usePowerTools ? 'text-agent-power-tools' : 'text-text-muted opacity-50')} />}
-                  onClick={() => handleToggleProfileSetting('usePowerTools', !activeProfile.usePowerTools)}
-                  className="p-1.5 hover:bg-bg-secondary rounded-md"
-                  tooltip={t('settings.agent.usePowerTools')}
-                  tooltipId="agent-selector-tooltip"
-                />
-                <IconButton
-                  icon={
-                    <MdOutlineChecklist className={clsx('w-3.5 h-3.5', activeProfile.useTodoTools ? 'text-agent-todo-tools' : 'text-text-muted opacity-50')} />
-                  }
-                  onClick={() => handleToggleProfileSetting('useTodoTools', !activeProfile.useTodoTools)}
-                  className="p-1.5 hover:bg-bg-secondary rounded-md"
-                  tooltip={`${t('settings.agent.useTodoTools')} (Alt + T)`}
-                  tooltipId="agent-selector-tooltip"
-                />
-                <IconButton
-                  icon={
-                    <MdOutlineFileCopy
-                      className={clsx('w-3.5 h-3.5', activeProfile.includeContextFiles ? 'text-agent-context-files' : 'text-text-muted opacity-50')}
-                    />
-                  }
-                  onClick={() => handleToggleProfileSetting('includeContextFiles', !activeProfile.includeContextFiles)}
-                  className="p-1.5 hover:bg-bg-secondary rounded-md"
-                  tooltip={`${t('settings.agent.includeContextFiles')} (Alt + F)`}
-                  tooltipId="agent-selector-tooltip"
-                />
-                <IconButton
-                  icon={<MdOutlineMap className={clsx('w-3.5 h-3.5', activeProfile.includeRepoMap ? 'text-agent-repo-map' : 'text-text-muted opacity-50')} />}
-                  onClick={() => handleToggleProfileSetting('includeRepoMap', !activeProfile.includeRepoMap)}
-                  className="p-1.5 hover:bg-bg-secondary rounded-md"
-                  tooltip={`${t('settings.agent.includeRepoMap')} (Alt + R)`}
-                  tooltipId="agent-selector-tooltip"
-                />
-              </div>
+              <IconButton
+                icon={<MdFlashOn className={clsx('w-3.5 h-3.5', activeProfile.usePowerTools ? 'text-agent-power-tools' : 'text-text-muted opacity-50')} />}
+                onClick={() => handleToggleProfileSetting('usePowerTools', !activeProfile.usePowerTools)}
+                className="p-1.5 hover:bg-bg-secondary rounded-md"
+                tooltip={t('settings.agent.usePowerTools')}
+                tooltipId="agent-selector-tooltip"
+              />
+              <IconButton
+                icon={
+                  <MdOutlineChecklist className={clsx('w-3.5 h-3.5', activeProfile.useTodoTools ? 'text-agent-todo-tools' : 'text-text-muted opacity-50')} />
+                }
+                onClick={() => handleToggleProfileSetting('useTodoTools', !activeProfile.useTodoTools)}
+                className="p-1.5 hover:bg-bg-secondary rounded-md"
+                tooltip={`${t('settings.agent.useTodoTools')} (Alt + T)`}
+                tooltipId="agent-selector-tooltip"
+              />
+              <IconButton
+                icon={
+                  <MdOutlineFileCopy
+                    className={clsx('w-3.5 h-3.5', activeProfile.includeContextFiles ? 'text-agent-context-files' : 'text-text-muted opacity-50')}
+                  />
+                }
+                onClick={() => handleToggleProfileSetting('includeContextFiles', !activeProfile.includeContextFiles)}
+                className="p-1.5 hover:bg-bg-secondary rounded-md"
+                tooltip={`${t('settings.agent.includeContextFiles')} (Alt + F)`}
+                tooltipId="agent-selector-tooltip"
+              />
+              <IconButton
+                icon={<MdOutlineMap className={clsx('w-3.5 h-3.5', activeProfile.includeRepoMap ? 'text-agent-repo-map' : 'text-text-muted opacity-50')} />}
+                onClick={() => handleToggleProfileSetting('includeRepoMap', !activeProfile.includeRepoMap)}
+                className="p-1.5 hover:bg-bg-secondary rounded-md"
+                tooltip={`${t('settings.agent.includeRepoMap')} (Alt + R)`}
+                tooltipId="agent-selector-tooltip"
+              />
             </div>
           </div>
         </div>

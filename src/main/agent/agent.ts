@@ -498,7 +498,7 @@ export class Agent {
       return [];
     }
 
-    this.telemetryManager.captureAgentRun(profile);
+    this.telemetryManager.captureAgentRun(profile, task.task);
 
     logger.debug('runAgent', {
       profile,
@@ -984,7 +984,7 @@ export class Agent {
       const lastUserIndex = messages.map((m) => m.role).lastIndexOf('user');
       const userRequestMessageIndex = lastUserIndex >= 0 ? lastUserIndex : 0;
 
-      const optimizedMessages = optimizeMessages(profile, userRequestMessageIndex, messages, cacheControl, settings);
+      const optimizedMessages = optimizeMessages(profile, userRequestMessageIndex, messages, cacheControl, settings, task.task);
 
       // Format tools for the prompt
       const toolDefinitions = Object.entries(toolSet).map(([name, tool]) => ({

@@ -453,6 +453,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
               ref={promptFieldRef}
               baseDir={project.baseDir}
               taskId={task.id}
+              task={task}
               inputHistory={inputHistory}
               processing={processing}
               mode={projectSettings.currentMode}

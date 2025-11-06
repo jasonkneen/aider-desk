@@ -1623,18 +1623,13 @@ ${error.stderr}`,
     try {
       if (mode === 'agent') {
         // Agent mode logic
-        let profile = getActiveAgentProfile(this.store.getSettings(), this.store.getProjectSettings(this.project.baseDir));
+        const profile = getActiveAgentProfile(this.store.getSettings(), this.store.getProjectSettings(this.project.baseDir));
         if (!profile) {
           this.addLogMessage('error', 'No active Agent profile found');
           return;
         }
 
-        // Override profile's autoApprove if command specifies it
-        if (command.autoApprove === true) {
-          profile = { ...profile, autoApprove: true };
-        }
-
-        const systemPrompt = await getSystemPrompt(this, profile);
+        const systemPrompt = await getSystemPrompt(this, profile, command.autoApprove ?? this.task.autoApprove);
 
         const messages = command.includeContext === false ? [] : undefined;
         const contextFiles = command.includeContext === false ? [] : undefined;

@@ -74,7 +74,6 @@ export const createSubagentsToolset = (
         useTodoTools: false, // Disable todo tools for simplicity,
         useSubagents: false, // Disable nested subagents
         isSubagent: true,
-        autoApprove: mainAgentProfile.autoApprove,
       };
 
       // Create promptContext with working group

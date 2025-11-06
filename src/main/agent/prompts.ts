@@ -29,8 +29,8 @@ import {
 import { AIDER_DESK_PROJECT_RULES_DIR } from '@/constants';
 import { Task } from '@/task';
 
-export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, additionalInstructions?: string) => {
-  const { useAiderTools, usePowerTools, useTodoTools, useSubagents, autoApprove } = agentProfile;
+export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, autoApprove = task.task.autoApprove, additionalInstructions?: string) => {
+  const { useAiderTools, usePowerTools, useTodoTools, useSubagents } = agentProfile;
   const rulesFilesXml = getRulesContent(task.getProjectDir());
   const customInstructions = [agentProfile.customInstructions, additionalInstructions].filter(Boolean).join('\n\n').trim();
 

@@ -1,5 +1,5 @@
 import { PostHog } from 'posthog-node';
-import { AgentProfile, Mode, SettingsData } from '@common/types';
+import { AgentProfile, Mode, SettingsData, TaskData } from '@common/types';
 import { app } from 'electron';
 
 import { Store } from '@/store';
@@ -104,7 +104,7 @@ export class TelemetryManager {
     });
   }
 
-  captureAgentRun(profile: AgentProfile) {
+  captureAgentRun(profile: AgentProfile, task?: TaskData) {
     if (!this.store.getSettings().telemetryEnabled) {
       return;
     }
@@ -120,7 +120,7 @@ export class TelemetryManager {
         useTodoTools: profile.useTodoTools,
         includeContextFiles: profile.includeContextFiles,
         includeRepoMap: profile.includeRepoMap,
-        autoApprove: profile.autoApprove,
+        autoApprove: task?.autoApprove ?? false,
         enabledMcpServersCount: profile.enabledServers.length,
         totalMcpServersCount: Object.keys(this.store.getSettings().mcpServers).length,
       },

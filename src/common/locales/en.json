@@ -814,6 +814,8 @@
     "savePrompt": "Save Prompt",
     "savePromptDescription": "Save prompt without executing",
     "saveError": "Failed to save prompt: {{error}}",
+    "autoApprove": "Auto Approve",
+    "autoApproveTooltip": "When enabled, automatically approve tool executions without asking for confirmation",
     "placeholders": {
       "0": "Update the UserValidator class to add email format validation...",
       "1": "Fix the memory leak in DataProcessor.processBatch() by closing...",

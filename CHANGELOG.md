@@ -14,6 +14,7 @@
 - custom commands now working properly in Agent mode when used within browser
 - improved auto-scrolling while generating the response
 - added missing provider parameters when generating commit message
+- moved auto approve to task level
 
 ## [0.38.0]
 

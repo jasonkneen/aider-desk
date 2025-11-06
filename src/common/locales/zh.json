@@ -785,6 +785,8 @@
     "savePrompt": "保存提示",
     "savePromptDescription": "保存提示而不执行",
     "saveError": "保存提示失败: {{error}}",
+    "autoApprove": "自动批准",
+    "autoApproveTooltip": "启用后，自动批准工具执行而无需请求确认",
     "placeholders": {
       "0": "更新 UserValidator 类以添加邮箱格式验证...",
       "1": "修复 DataProcessor.processBatch() 中的内存泄漏，通过关闭...",

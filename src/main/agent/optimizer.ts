@@ -1,4 +1,4 @@
-import { type AgentProfile, InvocationMode, type SettingsData } from '@common/types';
+import { type AgentProfile, InvocationMode, type SettingsData, type TaskData } from '@common/types';
 import { isSubagentEnabled } from '@common/agent';
 import { cloneDeep } from 'lodash';
 import { type ModelMessage, type ToolContent, type ToolResultPart, type UserModelMessage } from 'ai';
@@ -25,6 +25,7 @@ export const optimizeMessages = (
   messages: ModelMessage[],
   cacheControl: CacheControl,
   settings: SettingsData,
+  _task?: TaskData,
 ) => {
   if (messages.length === 0) {
     return [];
@@ -32,7 +33,7 @@ export const optimizeMessages = (
 
   let optimizedMessages = cloneDeep(messages);
 
-  optimizedMessages = addImportantReminders(profile, userRequestMessageIndex, optimizedMessages, settings);
+  optimizedMessages = addImportantReminders(profile, userRequestMessageIndex, optimizedMessages, settings, _task);
   optimizedMessages = convertImageToolResults(optimizedMessages);
   optimizedMessages = removeDoubleToolCalls(optimizedMessages);
   optimizedMessages = optimizeAiderMessages(optimizedMessages);
@@ -61,7 +62,13 @@ export const optimizeMessages = (
   return optimizedMessages;
 };
 
-const addImportantReminders = (profile: AgentProfile, userRequestMessageIndex: number, messages: ModelMessage[], settings: SettingsData): ModelMessage[] => {
+const addImportantReminders = (
+  profile: AgentProfile,
+  userRequestMessageIndex: number,
+  messages: ModelMessage[],
+  settings: SettingsData,
+  task?: TaskData,
+): ModelMessage[] => {
   const userRequestMessage = messages[userRequestMessageIndex] as UserModelMessage;
   const reminders: string[] = [];
 
@@ -84,7 +91,7 @@ const addImportantReminders = (profile: AgentProfile, userRequestMessageIndex: n
     }
   }
 
-  if (!profile.autoApprove && !profile.isSubagent) {
+  if (!task?.autoApprove && !profile.isSubagent) {
     reminders.push('Before making any complex changes, present the plan and wait for my approval.');
   }
 

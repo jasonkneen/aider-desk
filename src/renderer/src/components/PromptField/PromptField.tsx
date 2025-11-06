@@ -9,7 +9,7 @@ import {
 } from '@codemirror/autocomplete';
 import { EditorView, keymap } from '@codemirror/view';
 import { vim } from '@replit/codemirror-vim';
-import { Mode, PromptBehavior, QuestionData, SuggestionMode } from '@common/types';
+import { Mode, PromptBehavior, QuestionData, SuggestionMode, TaskData } from '@common/types';
 import { githubDarkInit } from '@uiw/codemirror-theme-github';
 import CodeMirror, { Annotation, Prec, type ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
@@ -28,6 +28,7 @@ import { Button } from '@/components/common/Button';
 import { useCustomCommands } from '@/hooks/useCustomCommands';
 import { useApi } from '@/contexts/ApiContext';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Checkbox } from '@/components/common/Checkbox';
 
 const External = Annotation.define<boolean>();
 
@@ -89,6 +90,7 @@ export interface PromptFieldRef {
 type Props = {
   baseDir: string;
   taskId: string;
+  task?: TaskData;
   processing: boolean;
   isActive: boolean;
   words?: string[];
@@ -123,6 +125,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
     {
       baseDir,
       taskId,
+      task,
       processing = false,
       isActive = false,
       words = [],
@@ -916,7 +919,22 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
           </div>
           <div className="relative w-full flex items-center gap-1.5">
             <ModeSelector mode={mode} onModeChange={onModeChanged} />
-            {mode === 'agent' && <AgentSelector isActive={isActive} />}
+            {mode === 'agent' && (
+              <>
+                <AgentSelector isActive={isActive} />
+                <Checkbox
+                  label={t('promptField.autoApprove')}
+                  checked={task?.autoApprove ?? false}
+                  onChange={(isChecked) => {
+                    void api.updateTask(baseDir, taskId, { autoApprove: isChecked });
+                  }}
+                  className="ml-1"
+                  size="xs"
+                  tooltip={t('promptField.autoApproveTooltip')}
+                  tooltipId="prompt-field-tooltip"
+                />
+              </>
+            )}
             <div className="flex-grow" />
             {toggleTerminal && (
               <Button

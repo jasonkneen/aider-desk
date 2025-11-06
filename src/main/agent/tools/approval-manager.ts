@@ -11,7 +11,7 @@ export class ApprovalManager {
   ) {}
 
   public async handleApproval(key: string, text: string, subject?: string): Promise<[boolean, string | undefined]> {
-    if (this.profile.autoApprove) {
+    if (this.task.task.autoApprove) {
       return [true, undefined]; // Auto-approve
     }
 

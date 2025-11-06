@@ -339,7 +339,6 @@ export interface AgentProfile {
   useTodoTools: boolean;
   useSubagents: boolean;
   customInstructions: string;
-  autoApprove: boolean;
   subagent: SubagentConfig;
   isSubagent?: boolean; // flag to indicate if this profile is being used as a subagent
 }
@@ -605,6 +604,7 @@ export const TaskDataSchema = z.object({
   lastMergeState: MergeStateSchema.optional(),
   aiderTotalCost: z.number(),
   agentTotalCost: z.number(),
+  autoApprove: z.boolean().optional(),
 });
 
 export type TaskData = z.infer<typeof TaskDataSchema>;
