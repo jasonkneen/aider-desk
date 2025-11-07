@@ -50,7 +50,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
   const { isMobile } = useResponsive();
   const api = useApi();
   const { models } = useModelProviders();
-  const { getTaskState, clearSession, restartTask, setMessages, setTodoItems, setAiderModelsData, answerQuestion, interruptResponse } = useTask();
+  const { getTaskState, clearSession, restartTask, setMessages, setTodoItems, setAiderModelsData, answerQuestion, interruptResponse, updateTask } = useTask();
 
   const taskState = getTaskState(task.id);
   const aiderModelsData = taskState?.aiderModelsData || null;
@@ -106,24 +106,6 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
       <CgSpinner className="animate-spin w-8 h-8" />
       <div className="mt-2 text-xs text-center text-text-primary">{message}</div>
     </div>
-  );
-
-  const handleWorkingModeChange = useCallback(
-    async (newWorkingMode: WorkingMode) => {
-      if (!task) {
-        return;
-      }
-
-      try {
-        await api.updateTask(project.baseDir, task.id, {
-          workingMode: newWorkingMode,
-        });
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to update working mode:', error);
-      }
-    },
-    [task, project.baseDir, api],
   );
 
   const handleOpenModelSelector = useCallback(() => {
@@ -336,6 +318,18 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
     promptFieldRef.current?.appendText(output);
   };
 
+  const handleWorkingModeChange = (newWorkingMode: WorkingMode) => {
+    updateTask(task.id, {
+      workingMode: newWorkingMode,
+    });
+  };
+
+  const handleAutoApproveChanged = (autoApprove: boolean) => {
+    updateTask(task.id, {
+      autoApprove,
+    });
+  };
+
   if (!projectSettings || !settings) {
     return renderLoading(t('common.loadingProjectSettings'));
   }
@@ -480,6 +474,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
               toggleTerminal={api.isTerminalSupported() ? toggleTerminal : undefined}
               terminalVisible={terminalVisible}
               scrollToBottom={handleScrollToBottom}
+              onAutoApproveChanged={handleAutoApproveChanged}
             />
           </div>
         </div>

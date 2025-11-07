@@ -16,7 +16,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 import { useDebounce, useLocalStorage } from '@reactuses/core';
 import { useTranslation } from 'react-i18next';
 import { BiSend } from 'react-icons/bi';
-import { MdPlaylistRemove, MdSave, MdStop } from 'react-icons/md';
+import { MdDoneAll, MdPlaylistRemove, MdSave, MdStop } from 'react-icons/md';
 import { VscTerminal } from 'react-icons/vsc';
 import { clsx } from 'clsx';
 
@@ -28,7 +28,7 @@ import { Button } from '@/components/common/Button';
 import { useCustomCommands } from '@/hooks/useCustomCommands';
 import { useApi } from '@/contexts/ApiContext';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
-import { Checkbox } from '@/components/common/Checkbox';
+import { IconButton } from '@/components/common/IconButton';
 
 const External = Annotation.define<boolean>();
 
@@ -90,7 +90,7 @@ export interface PromptFieldRef {
 type Props = {
   baseDir: string;
   taskId: string;
-  task?: TaskData;
+  task: TaskData;
   processing: boolean;
   isActive: boolean;
   words?: string[];
@@ -118,6 +118,7 @@ type Props = {
   toggleTerminal?: () => void;
   terminalVisible?: boolean;
   scrollToBottom?: () => void;
+  onAutoApproveChanged?: (autoApprove: boolean) => void;
 };
 
 export const PromptField = forwardRef<PromptFieldRef, Props>(
@@ -153,6 +154,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
       toggleTerminal,
       terminalVisible = false,
       scrollToBottom,
+      onAutoApproveChanged,
     }: Props,
     ref,
   ) => {
@@ -922,17 +924,29 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
             {mode === 'agent' && (
               <>
                 <AgentSelector isActive={isActive} />
-                <Checkbox
-                  label={t('promptField.autoApprove')}
-                  checked={task?.autoApprove ?? false}
-                  onChange={(isChecked) => {
-                    void api.updateTask(baseDir, taskId, { autoApprove: isChecked });
+                <div
+                  className="flex items-center ml-1 group"
+                  data-tooltip-id="prompt-field-tooltip"
+                  data-tooltip-content={t('promptField.autoApproveTooltip')}
+                  data-tooltip-delay-show={800}
+                  onClick={() => {
+                    const newValue = !task?.autoApprove;
+                    onAutoApproveChanged?.(newValue);
                   }}
-                  className="ml-1"
-                  size="xs"
-                  tooltip={t('promptField.autoApproveTooltip')}
-                  tooltipId="prompt-field-tooltip"
-                />
+                >
+                  <IconButton
+                    icon={
+                      <MdDoneAll
+                        className={`w-3.5 h-3.5 ${task?.autoApprove ? 'text-agent-auto-approve' : 'text-text-muted group-hover:text-text-tertiary'}`}
+                      />
+                    }
+                  />
+                  <div
+                    className={`cursor-pointer text-2xs ml-1 focus:outline-none ${task?.autoApprove ? 'text-text-primary' : 'text-text-muted group-hover:text-text-tertiary'}`}
+                  >
+                    {t('promptField.autoApprove')}
+                  </div>
+                </div>
               </>
             )}
             <div className="flex-grow" />

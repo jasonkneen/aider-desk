@@ -1,4 +1,4 @@
-import React, { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, ReactNode, startTransition, useCallback, useContext, useEffect, useState } from 'react';
 import {
   AutocompletionData,
   ClearTaskData,
@@ -71,9 +71,9 @@ const processingResponseMessageMap = new Map<string, ResponseMessage>();
 interface TaskContextType {
   getTaskState: (taskId: string, loadIfNotLoaded?: boolean) => TaskState | null;
   clearSession: (taskId: string, messagesOnly: boolean) => void;
+  updateTask: (taskId: string, updates: Partial<TaskData>) => void;
   restartTask: (taskId: string) => void;
   setMessages: (taskId: string, updateMessages: (prevState: Message[]) => Message[]) => void;
-  // TODO: add listeners for todo items and remove
   setTodoItems: (taskId: string, updateTodoItems: (prev: TodoItem[]) => TodoItem[]) => void;
   setAiderModelsData: (taskId: string, modelsData: ModelsData | null) => void;
   answerQuestion: (taskId: string, answer: string) => void;
@@ -283,6 +283,16 @@ export const TaskProvider: React.FC<{
       updateTaskState(taskId, {
         processing: false,
         question: null,
+      });
+    },
+    [api, baseDir, updateTaskState],
+  );
+
+  const updateTask = useCallback(
+    (taskId: string, updates: Partial<TaskData>) => {
+      updateTaskState(taskId, updates);
+      startTransition(async () => {
+        await api.updateTask(baseDir, taskId, updates);
       });
     },
     [api, baseDir, updateTaskState],
@@ -726,13 +736,14 @@ export const TaskProvider: React.FC<{
     return () => {
       unsubscribes.forEach((unsubscribe) => unsubscribe());
     };
-  }, [baseDir, tasks, api, updateTaskState, t, clearSession, setQuestion, setTodoItems, setMessages]);
+  }, [baseDir, tasks, api, updateTaskState, t, clearSession, setQuestion, setTodoItems, setMessages, updateTask]);
 
   return (
     <TaskContext.Provider
       value={{
         getTaskState,
         clearSession,
+        updateTask,
         restartTask,
         setTodoItems,
         setMessages,
