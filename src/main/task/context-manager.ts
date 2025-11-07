@@ -208,6 +208,14 @@ export class ContextManager {
     return [...this.messages];
   }
 
+  clearContextFiles(save = true) {
+    logger.debug('Clearing task context files', { taskId: this.taskId });
+    this.files = [];
+    if (save) {
+      this.autosave();
+    }
+  }
+
   clearMessages(save = true) {
     logger.debug('Clearing task messages', { taskId: this.taskId });
     this.messages = [];

@@ -791,6 +791,11 @@ export class Task {
       void this.project.addToInputHistory(`/${command}`);
     }
 
+    if (command.trim() === 'drop' || command.trim() === 'reset') {
+      this.contextManager.clearContextFiles();
+      this.sendContextFilesUpdated();
+    }
+
     if (command.trim() === 'reset') {
       this.contextManager.clearMessages();
       this.eventManager.sendClearTask(this.project.baseDir, this.taskId, true, false);

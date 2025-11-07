@@ -17,6 +17,7 @@
 - moved auto approve to task level
 - added bash tool pattern settings for automatic approval and denial of commands
 - added copy button to subagent prompt
+- dropping the files clears them immediately instead of waiting for event from Aider
 
 ## [0.38.0]
 
