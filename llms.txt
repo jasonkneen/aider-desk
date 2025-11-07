@@ -147,6 +147,7 @@ src/
         v12-to-v13.ts
         v13-to-v14.ts
         v14-to-v15.ts
+        v15-to-v16.ts
         v2-to-v3.ts
         v3-to-v4.ts
         v4-to-v5.ts
@@ -353,6 +354,7 @@ src/
             AgentProfileItem.tsx
             AgentRules.tsx
             AgentSettings.tsx
+            BashToolItem.tsx
             GenericToolGroupItem.tsx
             GenericToolItem.tsx
             McpServerForm.tsx
@@ -422,6 +424,7 @@ src/
         useParsedContent.ts
         useRequestyModels.ts
         useResponsive.ts
+        useScrollingPaused.ts
         useSearchText.tsx
         useVersions.ts
       i18n/
@@ -1678,6 +1681,12 @@ File: src/common/locales/en.json
       "autoApprove": "Auto approve",
       "selectOrCreateProfile": "Select or create new agent profile",
       "newProfileName": "New Profile",
+      "bashToolAllowedPattern": "Allowed patterns",
+      "bashToolDeniedPattern": "Denied patterns",
+      "bashToolAllowedPatternPlaceholder": "e.g. 'ls .*;cat .*'",
+      "bashToolDeniedPatternPlaceholder": "e.g. 'rm .*'",
+      "bashToolAllowedPatternTooltip": "Commands that match these Regex patterns separated by ; can be executed without approval",
+      "bashToolDeniedPatternTooltip": "Commands that match these Regex patterns separated by ; will always be denied execution",
       "envVarPlaceholder": "{{envVar}}",
       "envVarFoundPlaceholder": "Found in: {{source}}",
       "createNewProfile": "Create New",
@@ -2117,6 +2126,8 @@ File: src/common/locales/en.json
     "savePrompt": "Save Prompt",
     "savePromptDescription": "Save prompt without executing",
     "saveError": "Failed to save prompt: {{error}}",
+    "autoApprove": "Auto Approve",
+    "autoApproveTooltip": "When enabled, automatically approve tool executions without asking for confirmation",
     "placeholders": {
       "0": "Update the UserValidator class to add email format validation...",
       "1": "Fix the memory leak in DataProcessor.processBatch() by closing...",
@@ -2307,6 +2318,8 @@ File: src/common/locales/en.json
     "copyTaskId": "Copy task ID",
     "taskIdCopied": "Task ID {{taskId}} copied to clipboard",
     "duplicateTask": "Duplicate Task",
+    "search": "Search tasks",
+    "searchPlaceholder": "Search tasks...",
     "archiveTask": "Archive Task",
     "unarchiveTask": "Unarchive Task",
     "showArchived": "Show archived",
@@ -2730,6 +2743,12 @@ File: src/common/locales/zh.json
       "autoApprove": "自动批准",
       "selectOrCreateProfile": "选择或创建新的代理配置",
       "newProfileName": "新配置",
+      "bashToolAllowedPattern": "始终允许的模式",
+      "bashToolDeniedPattern": "拒绝的模式",
+      "bashToolAllowedPatternPlaceholder": "例如: 'ls .*;cat .*'",
+      "bashToolDeniedPatternPlaceholder": "例如: 'rm .*'",
+      "bashToolAllowedPatternTooltip": "匹配这些用 ; 分隔的正则表达式模式的命令无需批准即可执行",
+      "bashToolDeniedPatternTooltip": "匹配这些用 ; 分隔的正则表达式模式的命令将始终被拒绝执行",
       "envVarPlaceholder": "{{envVar}}",
       "envVarFoundPlaceholder": "找到于: {{source}}",
       "createNewProfile": "创建新配置",
@@ -3143,6 +3162,8 @@ File: src/common/locales/zh.json
     "savePrompt": "保存提示",
     "savePromptDescription": "保存提示而不执行",
     "saveError": "保存提示失败: {{error}}",
+    "autoApprove": "自动批准",
+    "autoApproveTooltip": "启用后，自动批准工具执行而无需请求确认",
     "placeholders": {
       "0": "更新 UserValidator 类以添加邮箱格式验证...",
       "1": "修复 DataProcessor.processBatch() 中的内存泄漏，通过关闭...",
@@ -3370,6 +3391,8 @@ File: src/common/locales/zh.json
     "copyTaskId": "复制任务 ID",
     "taskIdCopied": "任务 ID {{taskId}} 已复制到剪贴板",
     "duplicateTask": "复制任务",
+    "search": "搜索任务",
+    "searchPlaceholder": "搜索任务...",
     "archiveTask": "归档任务",
     "unarchiveTask": "取消归档任务",
     "showArchived": "显示已归档",
@@ -4127,6 +4150,13 @@ export interface SubagentConfig {
   description: string;
 }
 ⋮----
+export interface BashToolSettings {
+  allowedPattern: string;
+  deniedPattern: string;
+}
+⋮----
+export type ToolSettings = BashToolSettings;
+⋮----
 export interface AgentProfile {
   id: string;
   name: string;
@@ -4138,6 +4168,7 @@ export interface AgentProfile {
   temperature: number; // 0-1 for controlling randomness/creativity
   enabledServers: string[];
   toolApprovals: Record<string, ToolApprovalState>;
+  toolSettings: Record<string, ToolSettings>;
   includeContextFiles: boolean;
   includeRepoMap: boolean;
   usePowerTools: boolean;
@@ -4145,7 +4176,6 @@ export interface AgentProfile {
   useTodoTools: boolean;
   useSubagents: boolean;
   customInstructions: string;
-  autoApprove: boolean;
   subagent: SubagentConfig;
   isSubagent?: boolean; // flag to indicate if this profile is being used as a subagent
 }
@@ -4633,7 +4663,7 @@ import { promisify } from 'util';
 import { tool, type ToolSet } from 'ai';
 import { z } from 'zod';
 import { glob } from 'glob';
-import { AgentProfile, FileWriteMode, PromptContext, ToolApprovalState } from '@common/types';
+import { AgentProfile, BashToolSettings, FileWriteMode, PromptContext, ToolApprovalState } from '@common/types';
 import {
   POWER_TOOL_BASH as TOOL_BASH,
   POWER_TOOL_DESCRIPTIONS,
@@ -4693,6 +4723,12 @@ absolute: false, // Keep paths relative to cwd for easier processing
 // Filter out ignored files in batch
 ⋮----
 const searchRegex = new RegExp(searchTerm, caseSensitive ? undefined : 'i'); // Simpler for line-by-line test
+⋮----
+// Pattern validation
+⋮----
+// Check denied patterns first
+⋮----
+// Check allowed patterns - if matches, skip approval and execute directly
 ⋮----
 // Use parameter maxTokens if provided, otherwise use the default
 ⋮----
@@ -5139,7 +5175,7 @@ private compareServerConfig(config: McpServerConfig, otherConfig: McpServerConfi
 ================
 File: src/main/agent/optimizer.ts
 ================
-import { type AgentProfile, InvocationMode, type SettingsData } from '@common/types';
+import { type AgentProfile, InvocationMode, type SettingsData, type TaskData } from '@common/types';
 import { isSubagentEnabled } from '@common/agent';
 import { cloneDeep } from 'lodash';
 import { type ModelMessage, type ToolContent, type ToolResultPart, type UserModelMessage } from 'ai';
@@ -5166,9 +5202,16 @@ export const optimizeMessages = (
   messages: ModelMessage[],
   cacheControl: CacheControl,
   settings: SettingsData,
+  _task?: TaskData,
 ) =>
 ⋮----
-const addImportantReminders = (profile: AgentProfile, userRequestMessageIndex: number, messages: ModelMessage[], settings: SettingsData): ModelMessage[] =>
+const addImportantReminders = (
+  profile: AgentProfile,
+  userRequestMessageIndex: number,
+  messages: ModelMessage[],
+  settings: SettingsData,
+  task?: TaskData,
+): ModelMessage[] =>
 ⋮----
 // Add reminder about automatic subagents
 ⋮----
@@ -5268,7 +5311,7 @@ import {
 import { AIDER_DESK_PROJECT_RULES_DIR } from '@/constants';
 import { Task } from '@/task';
 ⋮----
-export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, additionalInstructions?: string) =>
+export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, autoApprove = task.task.autoApprove, additionalInstructions?: string) =>
 ⋮----
 // Check individual power tool permissions
 ⋮----
@@ -7668,6 +7711,17 @@ export const migrateSettingsV14toV15 = (settings: any): SettingsData =>
 // Remove the old models structure
 
 ================
+File: src/main/store/migrations/v15-to-v16.ts
+================
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { SettingsData } from '@common/types';
+import { DEFAULT_AGENT_PROFILE } from '@common/agent';
+⋮----
+export const migrateSettingsV15toV16 = (settings: any): SettingsData =>
+⋮----
+// Ensure toolSettings from DEFAULT_AGENT_PROFILE are included in existing agent profiles
+
+================
 File: src/main/store/migrations/v2-to-v3.ts
 ================
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -7775,6 +7829,7 @@ import { determineMainModel, determineWeakModel } from '@/utils';
 import logger from '@/logger';
 import { migrateProvidersV13toV14 } from '@/store/migrations/v13-to-v14';
 import { migrateSettingsV14toV15 } from '@/store/migrations/v14-to-v15';
+import { migrateSettingsV15toV16 } from '@/store/migrations/v15-to-v16';
 ⋮----
 export const getDefaultProjectSettings = (store: Store, providerModels: Model[], baseDir: string): ProjectSettings =>
 ⋮----
@@ -8526,8 +8581,6 @@ public async runCustomCommand(commandName: string, args: string[], mode: Mode = 
 ⋮----
 // Agent mode logic
 ⋮----
-// Override profile's autoApprove if command specifies it
-⋮----
 // All other modes (code, ask, architect)
 ⋮----
 // Clear loading message after execution completes (success or failure)
@@ -8620,7 +8673,7 @@ import logger from '@/logger';
 File: src/main/telemetry/telemetry-manager.ts
 ================
 import { PostHog } from 'posthog-node';
-import { AgentProfile, Mode, SettingsData } from '@common/types';
+import { AgentProfile, Mode, SettingsData, TaskData } from '@common/types';
 import { app } from 'electron';
 ⋮----
 import { Store } from '@/store';
@@ -8643,7 +8696,7 @@ captureProjectClosed(closedProjectsCount: number)
 ⋮----
 captureRunPrompt(mode?: Mode)
 ⋮----
-captureAgentRun(profile: AgentProfile)
+captureAgentRun(profile: AgentProfile, task?: TaskData)
 ⋮----
 captureCustomCommand(commandName: string, argsCount: number, mode: Mode)
 ⋮----
@@ -10716,7 +10769,7 @@ File: src/renderer/src/components/AgentSelector/AgentSelector.tsx
 ================
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MdCheck, MdDoneAll, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap } from 'react-icons/md';
+import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap } from 'react-icons/md';
 import { RiToolsFill } from 'react-icons/ri';
 import { clsx } from 'clsx';
 import { AgentProfile, ToolApprovalState } from '@common/types';
@@ -10733,7 +10786,6 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { Accordion } from '@/components/common/Accordion';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
-import { Checkbox } from '@/components/common/Checkbox';
 import { SettingsDialog } from '@/components/settings/SettingsDialog';
 import { useApi } from '@/contexts/ApiContext';
 ⋮----
@@ -10762,10 +10814,6 @@ const handleOpenAgentProfiles = () =>
 <span className="text-xs flex-1 font-medium text-text-secondary text-left px-1 uppercase">
 ⋮----
 {/* Quick Settings */}
-⋮----
-label=
-⋮----
-onChange=
 
 ================
 File: src/renderer/src/components/AgentSelector/index.ts
@@ -12115,7 +12163,7 @@ type Props = {
 ================
 File: src/renderer/src/components/message/Messages.tsx
 ================
-import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { toPng } from 'html-to-image';
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
@@ -12129,6 +12177,7 @@ import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
 import { Button } from '@/components/common/Button';
+import { useScrollingPaused } from '@/hooks/useScrollingPaused';
 ⋮----
 export type MessagesRef = {
   exportToImage: () => void;
@@ -12149,13 +12198,9 @@ type Props = {
 ⋮----
 // Group messages by promptContext.group.id
 ⋮----
-const handleScroll = (e: React.UIEvent<HTMLDivElement>) =>
-⋮----
 const exportToImage = async () =>
 ⋮----
 // eslint-disable-next-line no-console
-⋮----
-const scrollToBottom = () =>
 ⋮----
 tooltip=
 ⋮----
@@ -12527,7 +12572,7 @@ export const groupMessagesByPromptContext = (messages: Message[]): Message[] =>
 ================
 File: src/renderer/src/components/message/VirtualizedMessages.tsx
 ================
-import React, { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef } from 'react';
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -12542,6 +12587,7 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
 import { showInfoNotification } from '@/utils/notifications';
 import { Button } from '@/components/common/Button';
+import { useScrollingPaused } from '@/hooks/useScrollingPaused';
 ⋮----
 export type VirtualizedMessagesRef = {
   exportToImage: () => void;
@@ -12566,24 +12612,6 @@ type Props = {
 ⋮----
 estimateSize: () => 44, // Initial estimate, will be measured
 ⋮----
-const handleScroll = (e: React.UIEvent<HTMLDivElement>) =>
-⋮----
-// Check if content is smaller than scroll area (no scrollbar needed)
-⋮----
-// If content is smaller than area, never pause scrolling
-⋮----
-const handleWheel = (e: React.WheelEvent<HTMLDivElement>) =>
-⋮----
-// Only pause when scrolling up (negative deltaY)
-⋮----
-const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) =>
-⋮----
-const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) =>
-⋮----
-// Detect swipe up (touch moving up, so current Y is less than start Y)
-⋮----
-// 10px threshold to avoid accidental triggers
-⋮----
 // Scroll to the last item when new messages arrive
 ⋮----
 // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -12591,8 +12619,6 @@ const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) =>
 const exportToImage = async () =>
 ⋮----
 // Show notification that export is not available with virtualized rendering
-⋮----
-const scrollToBottom = () =>
 ⋮----
 tooltip=
 ⋮----
@@ -14311,10 +14337,12 @@ import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { FaEllipsisVertical } from 'react-icons/fa6';
 import { IoLogoMarkdown } from 'react-icons/io';
 import { CgSpinner } from 'react-icons/cg';
-import { MdImage } from 'react-icons/md';
+import { MdImage, MdOutlineSearch } from 'react-icons/md';
 import { clsx } from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BiCopy, BiDuplicate, BiArchive, BiArchiveIn } from 'react-icons/bi';
+import { HiXMark } from 'react-icons/hi2';
+import { useDebounce } from '@reactuses/core';
 ⋮----
 import { useTask } from '@/contexts/TaskContext';
 import { Input } from '@/components/common/Input';
@@ -14370,6 +14398,10 @@ const handleEditKeyDown = (e: KeyboardEvent<HTMLInputElement>) =>
 ⋮----
 const handleCreateTask = () =>
 ⋮----
+const handleSearchToggle = () =>
+⋮----
+const handleSearchClose = () =>
+⋮----
 const handleArchiveTask = async (taskId: string) =>
 ⋮----
 // eslint-disable-next-line no-console
@@ -14381,6 +14413,9 @@ const handleUnarchiveTask = async (taskId: string) =>
 
 ⋮----
 className=
+⋮----
+onChange=
+placeholder=
 ⋮----
 // Custom comparison function for React.memo
 ⋮----
@@ -14799,7 +14834,7 @@ import {
 } from '@codemirror/autocomplete';
 import { EditorView, keymap } from '@codemirror/view';
 import { vim } from '@replit/codemirror-vim';
-import { Mode, PromptBehavior, QuestionData, SuggestionMode } from '@common/types';
+import { Mode, PromptBehavior, QuestionData, SuggestionMode, TaskData } from '@common/types';
 import { githubDarkInit } from '@uiw/codemirror-theme-github';
 import CodeMirror, { Annotation, Prec, type ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
@@ -14818,6 +14853,7 @@ import { Button } from '@/components/common/Button';
 import { useCustomCommands } from '@/hooks/useCustomCommands';
 import { useApi } from '@/contexts/ApiContext';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Checkbox } from '@/components/common/Checkbox';
 ⋮----
 const isPathLike = (input: string): boolean =>
 ⋮----
@@ -14830,6 +14866,7 @@ export interface PromptFieldRef {
 type Props = {
   baseDir: string;
   taskId: string;
+  task?: TaskData;
   processing: boolean;
   isActive: boolean;
   words?: string[];
@@ -14894,6 +14931,10 @@ const getAutocompleteDetailLabel = (item: string): [string | null, boolean] =>
 // Check if it's a custom command
 ⋮----
 paste(event)
+⋮----
+label=
+⋮----
+tooltip=
 ⋮----
 onClose=
 
@@ -15086,13 +15127,39 @@ onEdit=
 placeholder=
 
 ================
-File: src/renderer/src/components/settings/agent/GenericToolGroupItem.tsx
+File: src/renderer/src/components/settings/agent/BashToolItem.tsx
 ================
-import { GenericTool, ToolApprovalState } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
+import { AgentProfile, BashToolSettings, GenericTool, ToolApprovalState } from '@common/types';
+import { POWER_TOOL_BASH, POWER_TOOL_GROUP_NAME, TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 ⋮----
 import { GenericToolItem } from './GenericToolItem';
+⋮----
+import { Input } from '@/components/common/Input';
+import { InfoIcon } from '@/components/common/InfoIcon';
+⋮----
+type Props = {
+  tool: GenericTool;
+  profile: AgentProfile;
+  onApprovalChange?: (toolId: string, approval: ToolApprovalState) => void;
+  onProfileChange: (field: keyof AgentProfile, value: AgentProfile[keyof AgentProfile]) => void;
+};
+⋮----
+<span className="text-2xs">
+⋮----
+onProfileChange('toolSettings', updatedSettings);
+⋮----
+placeholder=
+
+================
+File: src/renderer/src/components/settings/agent/GenericToolGroupItem.tsx
+================
+import { AgentProfile, GenericTool, ToolApprovalState } from '@common/types';
+import { useTranslation } from 'react-i18next';
+import { POWER_TOOL_BASH, TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
+⋮----
+import { GenericToolItem } from './GenericToolItem';
+import { BashToolItem } from './BashToolItem';
 ⋮----
 import { Accordion } from '@/components/common/Accordion';
 import { Checkbox } from '@/components/common/Checkbox';
@@ -15100,8 +15167,9 @@ import { Checkbox } from '@/components/common/Checkbox';
 type Props = {
   name: string;
   tools: GenericTool[];
-  toolApprovals: Record<string, ToolApprovalState>;
+  profile: AgentProfile;
   onApprovalChange: (toolId: string, approval: ToolApprovalState) => void;
+  onProfileChange: (field: keyof AgentProfile, value: AgentProfile[keyof AgentProfile]) => void;
   enabled?: boolean;
   onEnabledChange?: (enabled: boolean) => void;
 };
@@ -15112,7 +15180,8 @@ type Props = {
 File: src/renderer/src/components/settings/agent/GenericToolItem.tsx
 ================
 import { useTranslation } from 'react-i18next';
-import { GenericTool, ToolApprovalState } from '@common/types';
+import { ReactNode } from 'react';
+import { AgentProfile, GenericTool, ToolApprovalState } from '@common/types';
 import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 ⋮----
 import { Select } from '@/components/common/Select';
@@ -15120,8 +15189,9 @@ import { InfoIcon } from '@/components/common/InfoIcon';
 ⋮----
 type Props = {
   tool: GenericTool;
-  toolApprovals?: Record<string, ToolApprovalState>;
+  profile: AgentProfile;
   onApprovalChange?: (toolId: string, approval: ToolApprovalState) => void;
+  renderToolSettings?: () => ReactNode;
 };
 ⋮----
 // Default to 'Always' if approvals are not being managed in this context
@@ -16507,6 +16577,41 @@ import { debounce } from 'lodash';
 export const useResponsive = () =>
 ⋮----
 const checkScreenSize = () =>
+
+================
+File: src/renderer/src/hooks/useScrollingPaused.ts
+================
+import { useCallback, useState } from 'react';
+⋮----
+interface UseScrollingPausedOptions {
+  onAutoScroll: () => void;
+  threshold?: number;
+  bottomThreshold?: number;
+}
+⋮----
+interface UseScrollingPausedReturn {
+  scrollingPaused: boolean;
+  setScrollingPaused: (paused: boolean) => void;
+  scrollToBottom: () => void;
+  eventHandlers: {
+    onScroll: (e: React.UIEvent<HTMLDivElement>) => void;
+    onWheel: (e: React.WheelEvent<HTMLDivElement>) => void;
+    onTouchStart: (e: React.TouchEvent<HTMLDivElement>) => void;
+    onTouchMove: (e: React.TouchEvent<HTMLDivElement>) => void;
+  };
+}
+⋮----
+export const useScrollingPaused = (
+⋮----
+// Check if content is smaller than scroll area (no scrollbar needed)
+⋮----
+// If content is smaller than area, never pause scrolling
+⋮----
+// Only pause when scrolling up (negative deltaY)
+⋮----
+// Detect swipe up (touch moving up, so current Y is less than start Y)
+⋮----
+// threshold to avoid accidental triggers
 
 ================
 File: src/renderer/src/hooks/useSearchText.tsx
