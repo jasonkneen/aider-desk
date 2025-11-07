@@ -16,6 +16,7 @@
 - added missing provider parameters when generating commit message
 - moved auto approve to task level
 - added bash tool pattern settings for automatic approval and denial of commands
+- added copy button to subagent prompt
 
 ## [0.38.0]
 

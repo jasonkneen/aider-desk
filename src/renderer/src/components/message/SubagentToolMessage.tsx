@@ -4,6 +4,7 @@ import { CgSpinner } from 'react-icons/cg';
 
 import { ToolMessage } from '@/types/message';
 import { MessageBar } from '@/components/message/MessageBar';
+import { CopyMessageButton } from '@/components/message/CopyMessageButton';
 
 type Props = {
   message: ToolMessage;
@@ -46,10 +47,13 @@ export const SubagentToolMessage = ({ message, onRemove, compact = false }: Prop
       {renderHeader()}
 
       <div className="text-xs text-text-tertiary">
-        <div className="mb-2">
-          <pre className="whitespace-pre-wrap bg-bg-primary-light p-2 rounded text-text-tertiary text-2xs max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth">
+        <div className="mb-2 relative">
+          <pre className="whitespace-pre-wrap bg-bg-primary-light p-2 pr-5 rounded text-text-tertiary text-2xs max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth">
             {promptText}
           </pre>
+          <div className="absolute top-2 right-3">
+            <CopyMessageButton content={promptText} alwaysShow={true} className="opacity-50 hover:opacity-100 transition-opacity" />
+          </div>
         </div>
       </div>
 
