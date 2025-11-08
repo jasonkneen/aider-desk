@@ -156,6 +156,17 @@ export class WorktreeManager {
     return await withLock(`worktree-remove-${projectDir}-${worktree.path}`, async () => {
       try {
         await execWithShellPath(`git worktree remove "${worktree.path}" --force`, { cwd: projectDir });
+
+        // Clean up the branch if it's a task branch (starts with "task-" or looks like generated from task name)
+        if (worktree.baseBranch) {
+          try {
+            await execWithShellPath(`git branch -D ${worktree.baseBranch}`, { cwd: projectDir });
+            logger.info(`Deleted task branch: ${worktree.baseBranch}`);
+          } catch (error) {
+            // Branch might not exist or be protected, don't fail the removal
+            logger.debug(`Could not delete branch ${worktree.baseBranch}:`, error);
+          }
+        }
       } catch (error: unknown) {
         const err = error as Error & { stderr?: string; stdout?: string };
         const errorMessage = err.stderr || err.stdout || err.message || String(err);

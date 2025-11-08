@@ -20,6 +20,7 @@
 - dropping the files clears them immediately instead of waiting for event from Aider
 - fixed provider options handling with multiple OpenAI Compatible providers
 - added reasoning effort support for OpenAI compatible provider
+- creating task branch when using worktree
 
 ## [0.38.0]
 

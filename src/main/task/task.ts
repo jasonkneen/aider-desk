@@ -39,7 +39,7 @@ import type { SimpleGit } from 'simple-git';
 
 import { getAllFiles } from '@/utils/file-system';
 import { getCompactConversationPrompt, getGenerateCommitMessagePrompt, getInitProjectPrompt, getSystemPrompt } from '@/agent/prompts';
-import { AIDER_DESK_TASKS_DIR, AIDER_DESK_TODOS_FILE } from '@/constants';
+import { AIDER_DESK_TASKS_DIR, AIDER_DESK_TODOS_FILE, WORKTREE_BRANCH_PREFIX } from '@/constants';
 import { Agent, McpManager } from '@/agent';
 import { Connector } from '@/connector';
 import { DataManager } from '@/data-manager';
@@ -128,6 +128,31 @@ export class Task {
     this.git = simpleGit(this.getTaskDir());
   }
 
+  /**
+   * Generate a branch name from task name (first 7 words, separated by '-')
+   */
+  private generateBranchName(): string {
+    // Split into words, filter out empty strings, and take first 7
+    const words = this.task.name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+      .split(/\s+/)
+      .filter((word) => word.length > 0)
+      .slice(0, 7);
+
+    // Join with hyphens and ensure it's a valid branch name
+    const branchName = words.join('-');
+
+    // Ensure branch name doesn't start with a dot or dash, and replace consecutive dashes
+    const cleanBranchName = branchName
+      .replace(/^[.-]+/, '') // Remove leading dots or dashes
+      .replace(/-+/g, '-') // Replace multiple dashes with single dash
+      .replace(/-$/, ''); // Remove trailing dash
+
+    // If result is empty, use taskId
+    return `${WORKTREE_BRANCH_PREFIX}${cleanBranchName || this.taskId}`;
+  }
+
   public async saveTask(updates?: Partial<TaskData>) {
     logger.debug('Saving task data', {
       baseDir: this.project.baseDir,
@@ -182,7 +207,8 @@ export class Task {
         this.task.worktree = existingWorktree;
       } else {
         // Create a default worktree for this task
-        this.task.worktree = await this.worktreeManager.createWorktree(this.project.baseDir, this.taskId);
+        const branchName = this.generateBranchName();
+        this.task.worktree = await this.worktreeManager.createWorktree(this.project.baseDir, this.taskId, branchName);
       }
     } else if (workingMode === 'local') {
       // Check if worktree exists and set worktreeEnabled accordingly
@@ -1697,7 +1723,8 @@ ${error.stderr}`,
     const currentWorktree = await this.worktreeManager.getTaskWorktree(this.project.baseDir, this.taskId);
     if (mode === 'worktree') {
       if (!currentWorktree) {
-        this.task.worktree = await this.worktreeManager.createWorktree(this.project.baseDir, this.taskId);
+        const branchName = this.generateBranchName();
+        this.task.worktree = await this.worktreeManager.createWorktree(this.project.baseDir, this.taskId, branchName);
       }
       this.task.workingMode = mode;
     } else if (mode === 'local') {
