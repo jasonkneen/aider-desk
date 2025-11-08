@@ -12277,6 +12277,7 @@ import { CgSpinner } from 'react-icons/cg';
 ⋮----
 import { ToolMessage } from '@/types/message';
 import { MessageBar } from '@/components/message/MessageBar';
+import { CopyMessageButton } from '@/components/message/CopyMessageButton';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -14484,8 +14485,6 @@ const renderLoading = (message: string) => (
     </div>
   );
 ⋮----
-// eslint-disable-next-line no-console
-⋮----
 const handleAddFiles = (filePaths: string[], readOnly = false) =>
 ⋮----
 const showFileDialog = (readOnly: boolean) =>
@@ -14554,6 +14553,10 @@ const handleClearAllTodos = async () =>
 const handleTerminalViewResize = () =>
 ⋮----
 const handleCopyTerminalOutput = (output: string) =>
+⋮----
+const handleWorkingModeChange = (newWorkingMode: WorkingMode) =>
+⋮----
+const handleAutoApproveChanged = (autoApprove: boolean) =>
 ⋮----
 if (node?.container)
 setSearchContainer(node.container);
@@ -14841,7 +14844,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 import { useDebounce, useLocalStorage } from '@reactuses/core';
 import { useTranslation } from 'react-i18next';
 import { BiSend } from 'react-icons/bi';
-import { MdPlaylistRemove, MdSave, MdStop } from 'react-icons/md';
+import { MdDoneAll, MdPlaylistRemove, MdSave, MdStop } from 'react-icons/md';
 import { VscTerminal } from 'react-icons/vsc';
 import { clsx } from 'clsx';
 ⋮----
@@ -14853,7 +14856,7 @@ import { Button } from '@/components/common/Button';
 import { useCustomCommands } from '@/hooks/useCustomCommands';
 import { useApi } from '@/contexts/ApiContext';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
-import { Checkbox } from '@/components/common/Checkbox';
+import { IconButton } from '@/components/common/IconButton';
 ⋮----
 const isPathLike = (input: string): boolean =>
 ⋮----
@@ -14866,7 +14869,7 @@ export interface PromptFieldRef {
 type Props = {
   baseDir: string;
   taskId: string;
-  task?: TaskData;
+  task: TaskData;
   processing: boolean;
   isActive: boolean;
   words?: string[];
@@ -14894,6 +14897,7 @@ type Props = {
   toggleTerminal?: () => void;
   terminalVisible?: boolean;
   scrollToBottom?: () => void;
+  onAutoApproveChanged?: (autoApprove: boolean) => void;
 };
 ⋮----
 const completionSource = async (context: CompletionContext): Promise<CompletionResult | null> =>
@@ -14931,10 +14935,6 @@ const getAutocompleteDetailLabel = (item: string): [string | null, boolean] =>
 // Check if it's a custom command
 ⋮----
 paste(event)
-⋮----
-label=
-⋮----
-tooltip=
 ⋮----
 onClose=
 
@@ -16271,7 +16271,7 @@ export const useSettings = () =>
 ================
 File: src/renderer/src/contexts/TaskContext.tsx
 ================
-import React, { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, ReactNode, startTransition, useCallback, useContext, useEffect, useState } from 'react';
 import {
   AutocompletionData,
   ClearTaskData,
@@ -16326,16 +16326,14 @@ interface TaskState {
 interface TaskContextType {
   getTaskState: (taskId: string, loadIfNotLoaded?: boolean) => TaskState | null;
   clearSession: (taskId: string, messagesOnly: boolean) => void;
+  updateTask: (taskId: string, updates: Partial<TaskData>) => void;
   restartTask: (taskId: string) => void;
   setMessages: (taskId: string, updateMessages: (prevState: Message[]) => Message[]) => void;
-  // TODO: add listeners for todo items and remove
   setTodoItems: (taskId: string, updateTodoItems: (prev: TodoItem[]) => TodoItem[]) => void;
   setAiderModelsData: (taskId: string, modelsData: ModelsData | null) => void;
   answerQuestion: (taskId: string, answer: string) => void;
   interruptResponse: (taskId: string) => void;
 }
-⋮----
-// TODO: add listeners for todo items and remove
 ⋮----
 export const TaskProvider: React.FC<{
   baseDir: string;
