@@ -40,7 +40,7 @@ export const createPowerToolset = (task: Task, profile: AgentProfile, promptCont
   const fileEditTool = tool({
     description: POWER_TOOL_DESCRIPTIONS[TOOL_FILE_EDIT],
     inputSchema: z.object({
-      filePath: z.string().describe('The path to the file to be edited (relative to the task root).'),
+      filePath: z.string().describe('The path to the file to be edited (relative to the <WorkingDirectory>).'),
       searchTerm: z.string().describe(
         `The string or regular expression to find in the file.
 *EXACTLY MATCH* the existing file content, character for character, including all comments, docstrings, etc.
@@ -150,7 +150,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
   const fileReadTool = tool({
     description: POWER_TOOL_DESCRIPTIONS[TOOL_FILE_READ],
     inputSchema: z.object({
-      filePath: z.string().describe('The path to the file to be read (relative to the task root or absolute if outside of task directory).'),
+      filePath: z.string().describe('The path to the file to be read (relative to the <WorkingDirectory> or absolute if outside of the directory).'),
       withLines: z
         .boolean()
         .optional()
@@ -224,10 +224,10 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
   const fileWriteTool = tool({
     description: POWER_TOOL_DESCRIPTIONS[TOOL_FILE_WRITE],
     inputSchema: z.object({
-      filePath: z.string().describe('The path to the file to be written (relative to the task root).'),
+      filePath: z.string().describe('The path to the file to be written (relative to the <WorkingDirectory>).'),
       content: z.string().describe('The content to write to the file. Do not use escape characters \\ in the string like \\n or \\" and others.'),
       mode: z
-        .nativeEnum(FileWriteMode)
+        .enum(FileWriteMode)
         .optional()
         .default(FileWriteMode.CreateOnly)
         .describe(
@@ -310,7 +310,10 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
     description: POWER_TOOL_DESCRIPTIONS[TOOL_GLOB],
     inputSchema: z.object({
       pattern: z.string().describe('The glob pattern to search for (e.g., src/**/*.ts, *.md).'),
-      cwd: z.string().optional().describe('The current working directory from which to apply the glob pattern (relative to task root). Default: task root.'),
+      cwd: z
+        .string()
+        .optional()
+        .describe('The current working directory from which to apply the glob pattern (relative to <WorkingDirectory>). Default: <WorkingDirectory>.'),
       ignore: z.array(z.string()).optional().describe('An array of glob patterns to ignore.'),
     }),
     execute: async ({ pattern, cwd, ignore }, { toolCallId }) => {
@@ -469,7 +472,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
     description: POWER_TOOL_DESCRIPTIONS[TOOL_BASH],
     inputSchema: z.object({
       command: z.string().describe('The shell command to execute (e.g., ls -la, npm install).'),
-      cwd: z.string().optional().describe('The working directory for the command (relative to task root). Default: task root.'),
+      cwd: z.string().optional().describe('The working directory for the command (relative to <WorkingDirectory>). Default: <WorkingDirectory>.'),
       timeout: z.number().int().min(0).optional().default(60000).describe('Timeout for the command execution in milliseconds. Default: 60000 ms.'),
     }),
     execute: async ({ command, cwd, timeout }, { toolCallId }) => {

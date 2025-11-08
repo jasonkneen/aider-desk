@@ -131,6 +131,7 @@ export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, au
     <Guideline id="assess-need">Determine the information required.</Guideline>
     <Guideline id="select-tool">Choose the single most appropriate tool for each sub-task.</Guideline>
     <Guideline id="specify-path"><ProjectDir>${task.getTaskDir()}</ProjectDir></Guideline>
+    <Guideline id="file-path">Work on files within the <ProjectDir>. Make sure to use the current <ProjectDir> in your tool calls.</Guideline>
     <Guideline id="handle-errors">Report errors immediately and suggest recovery steps.</Guideline>
     <Guideline id="avoid-loops">Do not repeat the same tool with the same arguments consecutively.</Guideline>
     <Guideline id="minimize-confirmation">Do not ask for confirmation when using tools; the app handles it.</Guideline>
