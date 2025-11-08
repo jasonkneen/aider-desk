@@ -147,6 +147,7 @@ export interface OpenAiCompatibleProvider extends LlmProviderBase {
   name: 'openai-compatible';
   apiKey: string;
   baseUrl?: string;
+  reasoningEffort?: ReasoningEffort;
 }
 export const isOpenAiCompatibleProvider = (provider: LlmProviderBase): provider is OpenAiCompatibleProvider => provider.name === 'openai-compatible';
 
@@ -442,6 +443,7 @@ export const getDefaultProviderParams = <T extends LlmProvider>(providerName: Ll
         name: 'openai-compatible',
         apiKey: '',
         baseUrl: '',
+        reasoningEffort: ReasoningEffort.None,
       } satisfies OpenAiCompatibleProvider;
       break;
     case 'ollama':

@@ -31,7 +31,7 @@ import {
   wrapLanguageModel,
 } from 'ai';
 import { delay, extractServerNameToolName } from '@common/utils';
-import { LlmProvider, LlmProviderName } from '@common/agent';
+import { LlmProviderName } from '@common/agent';
 import { countTokens } from 'gpt-tokenizer/model/gpt-4o';
 import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.js';
 // @ts-expect-error istextorbinary is not typed properly
@@ -262,7 +262,7 @@ export class Agent {
   private async getAvailableTools(
     task: Task,
     profile: AgentProfile,
-    llmProvider: LlmProvider,
+    provider: ProviderProfile,
     messages?: ContextMessage[],
     resultMessages?: ContextMessage[],
     abortSignal?: AbortSignal,
@@ -298,7 +298,7 @@ export class Agent {
         }
 
         acc[normalizedToolId] = this.convertMpcToolToAiSdkTool(
-          llmProvider.name,
+          provider.provider.name,
           mcpConnector.serverName,
           task,
           profile,
@@ -337,7 +337,7 @@ export class Agent {
     Object.assign(toolSet, helperTools);
 
     // Add provider-specific tools
-    const providerTools = await this.modelManager.getProviderTools(profile.provider, profile.model);
+    const providerTools = await this.modelManager.getProviderTools(provider, profile.model);
     Object.assign(toolSet, providerTools);
 
     return toolSet;
@@ -517,8 +517,8 @@ export class Agent {
     const effectiveAbortSignal = abortSignal || this.abortController?.signal;
 
     const cacheControl = this.modelManager.getCacheControl(profile, provider.provider);
-    const providerOptions = this.modelManager.getProviderOptions(provider.provider, profile.model);
-    const providerParameters = this.modelManager.getProviderParameters(provider.provider, profile.model);
+    const providerOptions = this.modelManager.getProviderOptions(provider, profile.model);
+    const providerParameters = this.modelManager.getProviderParameters(provider, profile.model);
 
     const userRequestMessage: ContextUserMessage = {
       id: promptContext?.id || uuidv4(),
@@ -541,7 +541,7 @@ export class Agent {
       task.addLogMessage('error', `Error reinitializing MCP clients: ${error}`, false, promptContext);
     }
 
-    const toolSet = await this.getAvailableTools(task, profile, provider.provider, contextMessages, resultMessages, effectiveAbortSignal, promptContext);
+    const toolSet = await this.getAvailableTools(task, profile, provider, contextMessages, resultMessages, effectiveAbortSignal, promptContext);
 
     logger.info(`Running prompt with ${Object.keys(toolSet).length} tools.`);
     logger.debug('Tools:', {
@@ -711,7 +711,7 @@ export class Agent {
           effectiveAbortSignal,
         );
 
-        if (this.modelManager.isStreamingDisabled(provider.provider, profile.model)) {
+        if (this.modelManager.isStreamingDisabled(provider, profile.model)) {
           logger.debug('Streaming disabled, using generateText');
           await generateText({
             model,
@@ -944,8 +944,8 @@ export class Agent {
 
     const settings = this.store.getSettings();
     const model = this.modelManager.createLlm(provider, agentProfile.model, settings, '');
-    const providerOptions = this.modelManager.getProviderOptions(provider.provider, agentProfile.model);
-    const providerParameters = this.modelManager.getProviderParameters(provider.provider, agentProfile.model);
+    const providerOptions = this.modelManager.getProviderOptions(provider, agentProfile.model);
+    const providerParameters = this.modelManager.getProviderParameters(provider, agentProfile.model);
 
     logger.info('Generating text:', {
       providerId: provider.id,
@@ -976,7 +976,7 @@ export class Agent {
       }
 
       const messages = await this.prepareMessages(task, profile, task.getContextMessages(), task.getContextFiles());
-      const toolSet = await this.getAvailableTools(task, profile, provider.provider);
+      const toolSet = await this.getAvailableTools(task, profile, provider);
       const systemPrompt = await getSystemPrompt(task, profile);
 
       const cacheControl = this.modelManager.getCacheControl(profile, provider.provider);
@@ -995,7 +995,10 @@ export class Agent {
       const toolDefinitionsString = `Available tools: ${JSON.stringify(toolDefinitions, null, 2)}`;
 
       // Add tool definitions and system prompt to the beginning
-      optimizedMessages.unshift({ role: 'system', content: toolDefinitionsString });
+      optimizedMessages.unshift({
+        role: 'system',
+        content: toolDefinitionsString,
+      });
       optimizedMessages.unshift({ role: 'system', content: systemPrompt });
 
       const chatMessages = optimizedMessages.map((msg) => ({

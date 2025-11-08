@@ -8,6 +8,7 @@ import { VertexAiModelOverrides } from './providers/VertexAiModelOverrides';
 import { OpenAiModelOverrides } from './providers/OpenAiModelOverrides';
 import { RequestyModelOverrides } from './providers/RequestyModelOverrides';
 import { AzureModelOverrides } from './providers/AzureModelOverrides';
+import { OpenAiCompatibleModelOverrides } from './providers/OpenAiCompatibleModelOverrides';
 import { DefaultModelOverrides } from './providers/DefaultModelOverrides';
 
 import { Button } from '@/components/common/Button';
@@ -26,6 +27,7 @@ const PROVIDER_OVERRIDES_MAP: Partial<Record<LlmProviderName, ComponentType<Prov
   openai: OpenAiModelOverrides,
   requesty: RequestyModelOverrides,
   azure: AzureModelOverrides,
+  'openai-compatible': OpenAiCompatibleModelOverrides,
   // Providers without specific overrides use DefaultModelOverrides
   anthropic: DefaultModelOverrides,
   bedrock: DefaultModelOverrides,
@@ -34,7 +36,6 @@ const PROVIDER_OVERRIDES_MAP: Partial<Record<LlmProviderName, ComponentType<Prov
   groq: DefaultModelOverrides,
   lmstudio: DefaultModelOverrides,
   ollama: DefaultModelOverrides,
-  'openai-compatible': DefaultModelOverrides,
   'zai-plan': DefaultModelOverrides,
 };
 

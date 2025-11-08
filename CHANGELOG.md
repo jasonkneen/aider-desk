@@ -18,6 +18,8 @@
 - added bash tool pattern settings for automatic approval and denial of commands
 - added copy button to subagent prompt
 - dropping the files clears them immediately instead of waiting for event from Aider
+- fixed provider options handling with multiple OpenAI Compatible providers
+- added reasoning effort support for OpenAI compatible provider
 
 ## [0.38.0]
 

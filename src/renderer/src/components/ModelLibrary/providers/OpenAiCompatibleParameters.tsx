@@ -2,6 +2,8 @@ import { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { OpenAiCompatibleProvider } from '@common/agent';
 
+import { OpenAiCompatibleAdvancedSettings } from './OpenAiCompatibleAdvancedSettings';
+
 import { Input } from '@/components/common/Input';
 import { useEffectiveEnvironmentVariable } from '@/hooks/useEffectiveEnvironmentVariable';
 
@@ -47,6 +49,7 @@ export const OpenAiCompatibleParameters = ({ provider, onChange }: Props) => {
             : t('settings.agent.envVarPlaceholder', { envVar: 'OPENAI_API_KEY' })
         }
       />
+      <OpenAiCompatibleAdvancedSettings provider={provider} onChange={onChange} />
     </div>
   );
 };

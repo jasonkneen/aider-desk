@@ -502,21 +502,21 @@ export class ModelManager {
     return providerModels.find((m) => m.id === modelId);
   }
 
-  createLlm(profile: ProviderProfile, model: string | Model, settings: SettingsData, projectDir: string): LanguageModelV2 {
-    const strategy = this.providerRegistry[profile.provider.name];
+  createLlm(provider: ProviderProfile, model: string | Model, settings: SettingsData, projectDir: string): LanguageModelV2 {
+    const strategy = this.providerRegistry[provider.provider.name];
     if (!strategy) {
-      throw new Error(`Unsupported LLM provider: ${profile.provider.name}`);
+      throw new Error(`Unsupported LLM provider: ${provider.provider.name}`);
     }
 
     // Resolve Model object if string is provided
     let modelObj: Model | undefined;
     if (typeof model === 'string') {
-      modelObj = this.getModel(profile.id, model);
+      modelObj = this.getModel(provider.id, model);
       if (!modelObj) {
         // Fallback to creating a minimal Model object if not found
         modelObj = {
           id: model,
-          providerId: profile.id,
+          providerId: provider.id,
         };
       }
     } else {
@@ -527,7 +527,7 @@ export class ModelManager {
       throw new Error(`Model not found: ${model}`);
     }
 
-    return strategy.createLlm(profile, modelObj, settings, projectDir);
+    return strategy.createLlm(provider, modelObj, settings, projectDir);
   }
 
   getUsageReport(task: Task, provider: ProviderProfile, model: string | Model, usage: LanguageModelUsage, providerMetadata?: unknown): UsageReportData {
@@ -568,25 +568,15 @@ export class ModelManager {
     return strategy.getCacheControl(profile, llmProvider);
   }
 
-  isStreamingDisabled(llmProvider: LlmProvider, modelId: string): boolean {
-    const providers = this.store.getProviders();
-    const providerProfile = providers.find((p) => p.provider.name === llmProvider.name);
-
-    if (!providerProfile) {
-      logger.warn(`Provider profile not found for ${llmProvider.name}, using streaming`, {
-        modelId,
-        providerName: llmProvider.name,
-      });
-      return false;
-    }
-
-    const models = this.providerModels[providerProfile.id] || [];
+  isStreamingDisabled(provider: ProviderProfile, modelId: string): boolean {
+    const llmProvider = provider.provider;
+    const models = this.providerModels[provider.id] || [];
     const modelObj = models.find((m) => m.id === modelId);
 
     if (!modelObj) {
-      logger.warn(`Model ${modelId} not found in provider ${providerProfile.id}, using provider settings for streaming`, {
+      logger.warn(`Model ${modelId} not found in provider ${provider.id}, using provider settings for streaming`, {
         modelId,
-        providerId: providerProfile.id,
+        providerId: provider.id,
         streamingDisabled: llmProvider.disableStreaming,
       });
       return llmProvider.disableStreaming ?? false;
@@ -597,92 +587,62 @@ export class ModelManager {
       : (llmProvider.disableStreaming ?? false);
   }
 
-  getProviderOptions(llmProvider: LlmProvider, modelId: string): Record<string, Record<string, JSONValue>> | undefined {
+  getProviderOptions(provider: ProviderProfile, modelId: string): Record<string, Record<string, JSONValue>> | undefined {
+    const llmProvider = provider.provider;
     const strategy = this.providerRegistry[llmProvider.name];
     if (!strategy?.getProviderOptions) {
       return undefined;
     }
 
-    // Find the provider profile for this LLM provider
-    const providers = this.store.getProviders();
-    const providerProfile = providers.find((p) => p.provider.name === llmProvider.name);
-
-    if (!providerProfile) {
-      logger.warn(`Provider profile not found for ${llmProvider.name}, using fallback without model overrides`, {
-        modelId,
-        providerName: llmProvider.name,
-      });
-      const fallbackModel: Model = {
-        id: modelId,
-        providerId: '',
-      };
-      return strategy.getProviderOptions(llmProvider, fallbackModel);
-    }
-
     // Look up the actual Model object from providerModels
-    const models = this.providerModels[providerProfile.id] || [];
+    const models = this.providerModels[provider.id] || [];
     const modelObj = models.find((m) => m.id === modelId);
 
     if (!modelObj) {
-      logger.warn(`Model ${modelId} not found in provider ${providerProfile.id}, using fallback without model overrides`, {
+      logger.warn(`Model ${modelId} not found in provider ${provider.id}, using fallback without model overrides`, {
         modelId,
-        providerId: providerProfile.id,
+        providerId: provider.id,
         availableModels: models.map((m) => m.id),
       });
       const fallbackModel: Model = {
         id: modelId,
-        providerId: providerProfile.id,
+        providerId: provider.id,
       };
       return strategy.getProviderOptions(llmProvider, fallbackModel);
     }
 
-    logger.debug(`Found model object for ${modelId} in provider ${providerProfile.id}`, {
+    logger.debug(`Found model object for ${modelId} in provider ${provider.id}`, {
       hasProviderOverrides: !!modelObj.providerOverrides,
     });
 
     return strategy.getProviderOptions(llmProvider, modelObj);
   }
 
-  getProviderParameters(llmProvider: LlmProvider, modelId: string): Record<string, unknown> {
+  getProviderParameters(provider: ProviderProfile, modelId: string): Record<string, unknown> {
+    const llmProvider = provider.provider;
     const strategy = this.providerRegistry[llmProvider.name];
     if (!strategy?.getProviderParameters) {
       return {};
     }
 
-    // Find the provider profile for this LLM provider
-    const providers = this.store.getProviders();
-    const providerProfile = providers.find((p) => p.provider.name === llmProvider.name);
-
-    if (!providerProfile) {
-      logger.warn(`Provider profile not found for ${llmProvider.name}, using fallback without model overrides`, {
-        modelId,
-        providerName: llmProvider.name,
-      });
-      const fallbackModel: Model = {
-        id: modelId,
-        providerId: '',
-      };
-      return strategy.getProviderParameters(llmProvider, fallbackModel);
-    }
-
     // Look up the actual Model object from providerModels
-    const models = this.providerModels[providerProfile.id] || [];
+    const models = this.providerModels[provider.id] || [];
     const modelObj = models.find((m) => m.id === modelId);
 
     if (!modelObj) {
-      logger.warn(`Model ${modelId} not found in provider ${providerProfile.id}, using fallback without model overrides`, {
+      logger.warn(`Model ${modelId} not found in provider ${provider.id}, using fallback without model overrides`, {
         modelId,
-        providerId: providerProfile.id,
+        providerId: provider.id,
         availableModels: models.map((m) => m.id),
       });
       const fallbackModel: Model = {
         id: modelId,
-        providerId: providerProfile.id,
+        providerId: provider.id,
       };
       return strategy.getProviderParameters(llmProvider, fallbackModel);
     }
 
-    logger.debug(`Found model object for ${modelId} in provider ${providerProfile.id}`, {
+    logger.debug(`Found model object for ${modelId} in provider ${provider.id}`, {
       hasProviderOverrides: !!modelObj.providerOverrides,
     });
 
@@ -692,21 +652,15 @@ export class ModelManager {
   /**
    * Returns provider-specific tools for the given provider and model
    */
-  async getProviderTools(providerId: string, modelId: string): Promise<ToolSet> {
-    const providers = this.store.getProviders();
-    const providerProfile = providers.find((p) => p.id === providerId);
-    if (!providerProfile) {
-      logger.warn(`Provider profile not found for ${providerId}`);
-      return {};
-    }
-    const llmProvider = providerProfile.provider;
+  async getProviderTools(provider: ProviderProfile, modelId: string): Promise<ToolSet> {
+    const llmProvider = provider.provider;
     const strategy = this.providerRegistry[llmProvider.name];
     if (!strategy?.getProviderTools) {
       return {};
     }
 
     // Resolve Model object
-    const modelObj = this.getModel(providerProfile.id, modelId);
+    const modelObj = this.getModel(provider.id, modelId);
     if (!modelObj) {
       logger.warn(`Model ${modelId} not found in provider ${llmProvider.name}`);
       return {};
