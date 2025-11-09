@@ -27,6 +27,7 @@ export type LlmProviderName =
   | 'cerebras'
   | 'deepseek'
   | 'gemini'
+  | 'gpustack'
   | 'groq'
   | 'lmstudio'
   | 'ollama'
@@ -54,6 +55,7 @@ export const AVAILABLE_PROVIDERS: LlmProviderName[] = [
   'cerebras',
   'deepseek',
   'gemini',
+  'gpustack',
   'groq',
   'lmstudio',
   'ollama',
@@ -153,6 +155,14 @@ export const isOpenAiCompatibleProvider = (provider: LlmProviderBase): provider 
 
 export const isOllamaProvider = (provider: LlmProviderBase): provider is OllamaProvider => provider.name === 'ollama';
 
+export interface GpustackProvider extends LlmProviderBase {
+  name: 'gpustack';
+  apiKey?: string;
+  baseUrl?: string;
+  reasoningEffort?: ReasoningEffort;
+}
+export const isGpustackProvider = (provider: LlmProviderBase): provider is GpustackProvider => provider.name === 'gpustack';
+
 export interface OpenRouterProvider extends LlmProviderBase {
   name: 'openrouter';
   apiKey: string;
@@ -192,6 +202,7 @@ export type LlmProvider =
   | BedrockProvider
   | DeepseekProvider
   | GroqProvider
+  | GpustackProvider
   | CerebrasProvider
   | OpenAiCompatibleProvider
   | OllamaProvider
@@ -418,6 +429,13 @@ export const getDefaultProviderParams = <T extends LlmProvider>(providerName: Ll
         apiKey: '',
       } satisfies GroqProvider;
       break;
+    case 'gpustack':
+      provider = {
+        name: 'gpustack',
+        apiKey: '',
+        baseUrl: 'http://localhost',
+      } satisfies GpustackProvider;
+      break;
     case 'cerebras':
       provider = {
         name: 'cerebras',
@@ -449,7 +467,7 @@ export const getDefaultProviderParams = <T extends LlmProvider>(providerName: Ll
     case 'ollama':
       provider = {
         name: 'ollama',
-        baseUrl: '',
+        baseUrl: 'http://localhost:11434/api',
       } satisfies OllamaProvider;
       break;
     case 'openrouter':
@@ -469,7 +487,7 @@ export const getDefaultProviderParams = <T extends LlmProvider>(providerName: Ll
     case 'lmstudio':
       provider = {
         name: 'lmstudio',
-        baseUrl: '',
+        baseUrl: 'http://localhost:1234/v1',
       } satisfies LmStudioProvider;
       break;
     case 'requesty':

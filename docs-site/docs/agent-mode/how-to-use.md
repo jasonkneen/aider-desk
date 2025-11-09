@@ -71,26 +71,4 @@ To do this:
 
 The model you choose will now be set for the current agent profile and it will be added to the top of the selector list for future use.
 
-## Provider Prefixes
-
-When entering a custom model, you must include the correct prefix for the provider. AiderDesk uses a unified prefix system across all modes (Agent, Code, Ask, Architect, Context):
-
-| Provider | Model Prefix |
-|----------|--------------|
-| Anthropic | `anthropic/` |
-| OpenAI | `openai/` |
-| Azure | `azure/` |
-| Gemini | `gemini/` |
-| Vertex AI | `vertex_ai/` |
-| Deepseek | `deepseek/` |
-| Groq | `groq/` |
-| Bedrock | `bedrock/` |
-| OpenAI Compatible | `openai-compatible/` |
-| Ollama | `ollama/` |
-| LM Studio | `lmstudio/` |
-| OpenRouter | `openrouter/` |
-| Requesty | `requesty/` |
-
-**Note**: All modes use the same prefixes. Configure providers in the **Model Library** (top bar icon) for unified experience across all modes.
-
 For advanced model management, including multiple profiles per provider and custom model configuration, see the [Model Library](../features/model-library.md).

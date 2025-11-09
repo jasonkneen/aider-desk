@@ -291,6 +291,12 @@
     "baseUrl": "Base URL",
     "baseUrlPlaceholder": "e.g. http://localhost:1234/v1"
   },
+  "gpustack": {
+    "name": "GPUStack",
+    "baseUrl": "Base URL",
+    "baseUrlPlaceholder": "http://localhost",
+    "apiKey": "API Key"
+  },
   "zaiPlan": {
     "apiKey": "API Key"
   },
@@ -307,6 +313,7 @@
     "deepseek": "Deepseek",
     "gemini": "Gemini",
     "groq": "Groq",
+    "gpustack": "GPUStack",
     "lmstudio": "LM Studio",
     "ollama": "Ollama",
     "openai": "OpenAI",

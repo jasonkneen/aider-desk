@@ -21,6 +21,7 @@
 - fixed provider options handling with multiple OpenAI Compatible providers
 - added reasoning effort support for OpenAI compatible provider
 - creating task branch when using worktree
+- added support for GPUStack provider
 
 ## [0.38.0]
 

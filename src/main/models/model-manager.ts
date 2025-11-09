@@ -10,6 +10,7 @@ import { bedrockProviderStrategy } from './providers/bedrock';
 import { cerebrasProviderStrategy } from './providers/cerebras';
 import { deepseekProviderStrategy } from './providers/deepseek';
 import { geminiProviderStrategy } from './providers/gemini';
+import { gpustackProviderStrategy } from './providers/gpustack';
 import { groqProviderStrategy } from './providers/groq';
 import { lmStudioProviderStrategy } from './providers/lm-studio';
 import { ollamaProviderStrategy } from './providers/ollama';
@@ -70,6 +71,7 @@ export class ModelManager {
     cerebras: cerebrasProviderStrategy,
     deepseek: deepseekProviderStrategy,
     gemini: geminiProviderStrategy,
+    gpustack: gpustackProviderStrategy,
     groq: groqProviderStrategy,
     lmstudio: lmStudioProviderStrategy,
     ollama: ollamaProviderStrategy,

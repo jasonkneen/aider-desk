@@ -4,6 +4,7 @@ import { ComponentType } from 'react';
 
 import { OpenRouterModelOverrides } from './providers/OpenRouterModelOverrides';
 import { GeminiModelOverrides } from './providers/GeminiModelOverrides';
+import { GpustackModelOverrides } from './providers/GpustackModelOverrides';
 import { VertexAiModelOverrides } from './providers/VertexAiModelOverrides';
 import { OpenAiModelOverrides } from './providers/OpenAiModelOverrides';
 import { RequestyModelOverrides } from './providers/RequestyModelOverrides';
@@ -23,6 +24,7 @@ type ProviderOverridesProps = {
 const PROVIDER_OVERRIDES_MAP: Partial<Record<LlmProviderName, ComponentType<ProviderOverridesProps>>> = {
   openrouter: OpenRouterModelOverrides,
   gemini: GeminiModelOverrides,
+  gpustack: GpustackModelOverrides,
   'vertex-ai': VertexAiModelOverrides,
   openai: OpenAiModelOverrides,
   requesty: RequestyModelOverrides,

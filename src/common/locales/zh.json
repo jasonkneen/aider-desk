@@ -247,6 +247,12 @@
     "baseUrl": "基础 URL",
     "baseUrlPlaceholder": "例如 http://localhost:1234/v1"
   },
+  "gpustack": {
+    "name": "GPUStack",
+    "baseUrl": "基础 URL",
+    "baseUrlPlaceholder": "http://localhost",
+    "apiKey": "API 密钥"
+  },
   "zaiPlan": {
     "apiKey": "API 密钥"
   },
@@ -304,6 +310,7 @@
     "deepseek": "Deepseek",
     "gemini": "Gemini",
     "groq": "Groq",
+    "gpustack": "GPUStack",
     "lmstudio": "LM Studio",
     "ollama": "Ollama",
     "openai": "OpenAI",

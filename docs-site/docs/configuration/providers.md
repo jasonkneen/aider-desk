@@ -15,6 +15,7 @@ AiderDesk supports multiple Large Language Model (LLM) providers to power your A
 - [Gemini](#gemini)
 - [Vertex AI](#vertex-ai)
 - [Deepseek](#deepseek)
+- [GPUStack](#gpustack)
 - [Groq](#groq)
 - [Bedrock](#bedrock)
 - [OpenAI Compatible](#openai-compatible)
@@ -133,6 +134,42 @@ Google's Gemini models offer versatile AI capabilities with advanced features li
 3. Enter the API key in the Model Library Gemini configuration
 4. Configure optional parameters based on your needs
 5. Or set appropriate environment variables
+
+---
+
+## GPUStack
+
+GPUStack is an OpenAI-compatible GPU inference platform that provides optimized performance for running large language models on local or remote GPU infrastructure.
+
+### Configuration Parameters
+
+- **Base URL**: Your GPUStack server URL
+  - Environment variable: `GPUSTACK_API_BASE`
+  - Example: `http://localhost:8000` (default GPUStack installation)
+- **API Key**: Optional GPUStack API key for authentication
+  - Environment variable: `GPUSTACK_API_KEY`
+  - Get your API key from your GPUStack server administration panel
+
+### Setup
+
+1. Install and configure GPUStack on your server or local machine
+2. Access your GPUStack administration panel
+3. (Optional) Create an API key for your application
+4. Enter the base URL and optional API key in the Model Library GPUStack configuration
+5. Or set the `GPUSTACK_API_BASE` and `GPUSTACK_API_KEY` environment variables
+
+### Advanced Features
+
+- **Model Discovery**: Automatically discovers available models from your GPUStack instance
+- **Context Length Detection**: Automatically extracts maximum context length from model metadata
+- **OpenAI Compatibility**: Uses the OpenAI-compatible `/v1-openai` API endpoint
+
+### Important Notes
+
+- **OpenAI Compatible**: GPUStack uses the OpenAI API format, ensuring compatibility with existing tools
+- **Performance Optimization**: Optimized for GPU inference with automatic batching and quantization
+- **Local Deployment**: Can be deployed on-premises for data privacy and security
+- **Model Support**: Supports a wide range of open-source models like Llama, Mistral, and more
 
 ---
 
@@ -381,6 +418,7 @@ AiderDesk now uses a unified model prefix system across all modes (Agent, Code, 
 | Gemini | `gemini/` |
 | Vertex AI | `vertex_ai/` |
 | Deepseek | `deepseek/` |
+| GPUStack | `openai/` |
 | Groq | `groq/` |
 | Bedrock | `bedrock/` |
 | OpenAI Compatible | `openai-compatible/` |

@@ -4,6 +4,7 @@ export { BedrockIcon } from './BedrockIcon';
 export { CerebrasIcon } from './CerebrasIcon';
 export { DeepseekIcon } from './DeepseekIcon';
 export { GeminiIcon } from './GeminiIcon';
+export { GpustackIcon } from './GpustackIcon';
 export { GroqIcon } from './GroqIcon';
 export { LmStudioIcon } from './LmStudioIcon';
 export { OllamaIcon } from './OllamaIcon';
