@@ -1,6 +1,6 @@
 import { InputHistoryData, ProjectData, ProjectStartMode, TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { startTransition, useCallback, useEffect, useOptimistic, useRef, useState } from 'react';
 import { useLocalStorage } from '@reactuses/core';
 import { CgSpinner } from 'react-icons/cg';
 
@@ -28,9 +28,10 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [tasksLoading, setTasksLoading] = useState(true);
   const [tasks, setTasks] = useState<TaskData[]>([]);
+  const [optimisticTasks, setOptimisticTasks] = useOptimistic(tasks);
   const [isCollapsed, setIsCollapsed] = useLocalStorage(`task-sidebar-collapsed-${project.baseDir}`, false);
   const taskViewRef = useRef<TaskViewRef>(null);
-  const activeTask = activeTaskId ? tasks.find((task) => task.id === activeTaskId) : null;
+  const activeTask = activeTaskId ? optimisticTasks.find((task) => task.id === activeTaskId) : null;
 
   const createNewTask = useCallback(async () => {
     if (activeTask && !activeTask.createdAt) {
@@ -166,36 +167,46 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
   };
 
   const handleUpdateTask = useCallback(
-    async (baseDir: string, taskId: string, updates: Partial<TaskData>): Promise<boolean> => {
-      try {
-        await api.updateTask(baseDir, taskId, updates);
-        // Task will be automatically updated via the existing handleTaskUpdated listener
-        return true;
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to update task:', error);
-        return false;
-      }
+    async (taskId: string, updates: Partial<TaskData>, useOptimistic = true) => {
+      startTransition(async () => {
+        try {
+          if (useOptimistic) {
+            setOptimisticTasks((prev) =>
+              prev.map((task) =>
+                task.id === taskId
+                  ? {
+                      ...task,
+                      ...updates,
+                    }
+                  : task,
+              ),
+            );
+          }
+          await api.updateTask(project.baseDir, taskId, updates);
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error('Failed to update task:', error);
+        }
+      });
     },
-    [api],
+    [api, project.baseDir, setOptimisticTasks],
   );
 
   const handleDeleteTask = useCallback(
-    async (baseDir: string, taskId: string): Promise<boolean> => {
+    async (taskId: string) => {
       try {
-        await api.deleteTask(baseDir, taskId);
+        setOptimisticTasks((prev) => prev.filter((task) => task.id !== taskId));
+        await api.deleteTask(project.baseDir, taskId);
         if (activeTaskId === taskId) {
           await createNewTask();
         }
         // Task will be automatically removed via the existing handleTaskDeleted listener
-        return true;
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Failed to delete task:', error);
-        return false;
       }
     },
-    [activeTaskId, api, createNewTask],
+    [activeTaskId, api, createNewTask, project.baseDir, setOptimisticTasks],
   );
 
   const handleExportTaskToImage = useCallback(() => {
@@ -260,9 +271,8 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
         {starting && renderLoading()}
 
         <TaskSidebar
-          baseDir={project.baseDir}
           loading={tasksLoading}
-          tasks={tasks}
+          tasks={optimisticTasks}
           activeTaskId={activeTaskId}
           onTaskSelect={handleTaskSelect}
           createNewTask={createNewTask}
@@ -283,7 +293,17 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
             left: isCollapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH,
           }}
         >
-          {activeTask && <TaskView key={activeTask.id} ref={taskViewRef} project={project} task={activeTask} inputHistory={inputHistory} isActive={isActive} />}
+          {activeTask && (
+            <TaskView
+              key={activeTask.id}
+              ref={taskViewRef}
+              project={project}
+              task={activeTask}
+              updateTask={(updates, useOptimistic) => handleUpdateTask(activeTask.id, updates, useOptimistic)}
+              inputHistory={inputHistory}
+              isActive={isActive}
+            />
+          )}
         </div>
       </div>
     </TaskProvider>

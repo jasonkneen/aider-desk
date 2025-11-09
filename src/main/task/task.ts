@@ -1701,6 +1701,9 @@ ${error.stderr}`,
     }
 
     this.task.updatedAt = new Date().toISOString();
+    for (const key of Object.keys(updates)) {
+      this.task[key] = updates[key];
+    }
 
     if (!this.task.createdAt) {
       // if this task is new empty task update should not trigger save

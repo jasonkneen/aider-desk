@@ -858,7 +858,8 @@
   },
   "workingMode": {
     "local": "本地",
-    "worktree": "工作树"
+    "worktree": "工作树",
+    "switching": "切换中..."
   },
   "workingModeTooltip": {
     "local": "在此任务中直接在本地项目目录中进行更改",

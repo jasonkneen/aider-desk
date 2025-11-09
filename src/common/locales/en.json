@@ -887,7 +887,8 @@
   },
   "workingMode": {
     "local": "Local",
-    "worktree": "Worktree"
+    "worktree": "Worktree",
+    "switching": "Switching..."
   },
   "workingModeTooltip": {
     "local": "Make changes directly in the local project directory for this task",

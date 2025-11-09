@@ -1,4 +1,4 @@
-import { Mode, Model, ModelsData, ProjectData, TaskData, TodoItem, WorkingMode } from '@common/types';
+import { Mode, Model, ModelsData, ProjectData, TaskData, TodoItem } from '@common/types';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CgSpinner } from 'react-icons/cg';
@@ -39,18 +39,19 @@ export type TaskViewRef = {
 type Props = {
   project: ProjectData;
   task: TaskData;
+  updateTask: (updates: Partial<TaskData>, useOptimistic?: boolean) => void;
   inputHistory: string[];
   isActive?: boolean;
 };
 
-export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHistory, isActive = false }, ref) => {
+export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateTask, inputHistory, isActive = false }, ref) => {
   const { t } = useTranslation();
   const { settings } = useSettings();
   const { projectSettings, saveProjectSettings } = useProjectSettings();
   const { isMobile } = useResponsive();
   const api = useApi();
   const { models } = useModelProviders();
-  const { getTaskState, clearSession, restartTask, setMessages, setTodoItems, setAiderModelsData, answerQuestion, interruptResponse, updateTask } = useTask();
+  const { getTaskState, clearSession, restartTask, setMessages, setTodoItems, setAiderModelsData, answerQuestion, interruptResponse } = useTask();
 
   const taskState = getTaskState(task.id);
   const aiderModelsData = taskState?.aiderModelsData || null;
@@ -318,14 +319,8 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
     promptFieldRef.current?.appendText(output);
   };
 
-  const handleWorkingModeChange = (newWorkingMode: WorkingMode) => {
-    updateTask(task.id, {
-      workingMode: newWorkingMode,
-    });
-  };
-
   const handleAutoApproveChanged = (autoApprove: boolean) => {
-    updateTask(task.id, {
+    updateTask({
       autoApprove,
     });
   };
@@ -347,7 +342,6 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, inputHi
           onModelsChange={handleModelChange}
           runCommand={runCommand}
           onToggleSidebar={() => setShowSidebar(!showSidebar)}
-          onWorkingModeChange={handleWorkingModeChange}
         />
         <div className="flex-grow overflow-y-hidden relative flex flex-col">
           {renderSearchInput()}

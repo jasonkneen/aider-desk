@@ -200,7 +200,6 @@ const TaskMenuButton = ({
 };
 
 type Props = {
-  baseDir: string;
   loading: boolean;
   tasks: TaskData[];
   activeTaskId: string | null;
@@ -209,8 +208,8 @@ type Props = {
   className?: string;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
-  updateTask?: (baseDir: string, taskId: string, updates: Partial<TaskData>) => Promise<boolean>;
-  deleteTask?: (baseDir: string, taskId: string) => Promise<boolean>;
+  updateTask?: (taskId: string, updates: Partial<TaskData>) => Promise<void>;
+  deleteTask?: (taskId: string) => Promise<void>;
   onExportToMarkdown?: (taskId: string) => void;
   onExportToImage?: (taskId: string) => void;
   onCopyTaskId?: (taskId: string) => void;
@@ -218,7 +217,6 @@ type Props = {
 };
 
 const TaskSidebarComponent = ({
-  baseDir,
   loading,
   tasks,
   activeTaskId,
@@ -268,7 +266,7 @@ const TaskSidebarComponent = ({
   const handleConfirmDelete = async (taskId: string) => {
     try {
       if (deleteTask) {
-        await deleteTask(baseDir, taskId);
+        await deleteTask(taskId);
       }
       setDeleteConfirmTaskId(null);
     } catch (error) {
@@ -290,7 +288,9 @@ const TaskSidebarComponent = ({
   const handleConfirmEdit = async (taskId: string) => {
     try {
       if (updateTask && editTaskName.trim()) {
-        await updateTask(baseDir, taskId, { name: editTaskName.trim() });
+        await updateTask(taskId, {
+          name: editTaskName.trim(),
+        });
       }
       setEditingTaskId(null);
       setEditTaskName('');
@@ -335,7 +335,7 @@ const TaskSidebarComponent = ({
   const handleArchiveTask = async (taskId: string) => {
     try {
       if (updateTask) {
-        await updateTask(baseDir, taskId, { archived: true });
+        await updateTask(taskId, { archived: true });
       }
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -346,7 +346,7 @@ const TaskSidebarComponent = ({
   const handleUnarchiveTask = async (taskId: string) => {
     try {
       if (updateTask) {
-        await updateTask(baseDir, taskId, { archived: false });
+        await updateTask(taskId, { archived: false });
       }
     } catch (error) {
       // eslint-disable-next-line no-console
@@ -599,7 +599,6 @@ const TaskSidebarComponent = ({
 const arePropsEqual = (prevProps: Props, nextProps: Props): boolean => {
   // Compare primitive props
   if (
-    prevProps.baseDir !== nextProps.baseDir ||
     prevProps.loading !== nextProps.loading ||
     prevProps.activeTaskId !== nextProps.activeTaskId ||
     prevProps.isCollapsed !== nextProps.isCollapsed ||

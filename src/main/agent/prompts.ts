@@ -94,7 +94,7 @@ export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, au
       <Substep letter="a">Explicitly reason about all potentially affected/related files: dependencies, importers, imports, related modules, types, configs, tests, and usage examples.</Substep>
       <Substep letter="b">Use tools (search, grep, dependency analysis where available) to locate related files throughout <WorkingDirectory>.</Substep>
       <Substep letter="c">List all identified relevant files explicitly before proceeding.</Substep>
-      <Substep letter="d" autoApprove="${autoApprove}">${autoApprove ? 'User confirmation is not required as auto-approve is enabled.' : 'Await explicit user confirmation before proceeding.'}</Substep>
+      <Substep letter="d" autoApprove="${autoApprove}">${autoApprove ? 'IMPORTANT: User confirmation is not required as auto-approve is enabled. You can proceed.' : 'Await explicit user confirmation before proceeding.'}</Substep>
     </Step>
     <Step number="4" title="Develop Implementation Plan">
       <Instruction>Using the confirmed file list, create a comprehensive multi-file change plan.${

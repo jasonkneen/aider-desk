@@ -1,4 +1,4 @@
-import React, { createContext, ReactNode, startTransition, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import {
   AutocompletionData,
   ClearTaskData,
@@ -71,7 +71,6 @@ const processingResponseMessageMap = new Map<string, ResponseMessage>();
 interface TaskContextType {
   getTaskState: (taskId: string, loadIfNotLoaded?: boolean) => TaskState | null;
   clearSession: (taskId: string, messagesOnly: boolean) => void;
-  updateTask: (taskId: string, updates: Partial<TaskData>) => void;
   restartTask: (taskId: string) => void;
   setMessages: (taskId: string, updateMessages: (prevState: Message[]) => Message[]) => void;
   setTodoItems: (taskId: string, updateTodoItems: (prev: TodoItem[]) => TodoItem[]) => void;
@@ -283,16 +282,6 @@ export const TaskProvider: React.FC<{
       updateTaskState(taskId, {
         processing: false,
         question: null,
-      });
-    },
-    [api, baseDir, updateTaskState],
-  );
-
-  const updateTask = useCallback(
-    (taskId: string, updates: Partial<TaskData>) => {
-      updateTaskState(taskId, updates);
-      startTransition(async () => {
-        await api.updateTask(baseDir, taskId, updates);
       });
     },
     [api, baseDir, updateTaskState],
@@ -736,14 +725,13 @@ export const TaskProvider: React.FC<{
     return () => {
       unsubscribes.forEach((unsubscribe) => unsubscribe());
     };
-  }, [baseDir, tasks, api, updateTaskState, t, clearSession, setQuestion, setTodoItems, setMessages, updateTask]);
+  }, [baseDir, tasks, api, updateTaskState, t, clearSession, setQuestion, setTodoItems, setMessages]);
 
   return (
     <TaskContext.Provider
       value={{
         getTaskState,
         clearSession,
-        updateTask,
         restartTask,
         setTodoItems,
         setMessages,
