@@ -330,7 +330,7 @@ export class Task {
     return normalizedPath;
   }
 
-  public async close(clearContext = false) {
+  public async close(clearContext = false, cleanupEmptyTask = true) {
     logger.info('Closing task...', {
       baseDir: this.project.baseDir,
       taskId: this.taskId,
@@ -341,7 +341,9 @@ export class Task {
     this.interruptResponse(false);
 
     await this.aiderManager.kill();
-    await this.cleanUpEmptyTask();
+    if (cleanupEmptyTask) {
+      await this.cleanUpEmptyTask();
+    }
     this.initialized = false;
   }
 
@@ -1681,7 +1683,7 @@ ${error.stderr}`,
     }
 
     this.interruptResponse(false);
-    await this.close();
+    await this.close(false, false);
     await this.init();
     if (this.task.createdAt) {
       await this.saveTask({
