@@ -111,7 +111,7 @@ export const CostInfo = ({
                 onClick={restartTask}
                 data-tooltip-id="restart-project-tooltip"
                 className="p-0.5 hover:bg-bg-tertiary rounded-md text-text-muted hover:text-text-tertiary transition-colors"
-                data-tooltip-content={t('costInfo.restartSession')}
+                data-tooltip-content={t('costInfo.restartTask')}
               >
                 <MdOutlineRefresh className="w-4 h-4" />
               </button>

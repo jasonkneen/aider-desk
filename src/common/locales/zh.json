@@ -682,7 +682,7 @@
     "agent": "代理",
     "aider": "Aider",
     "total": "全部的",
-    "restartAider": "重启Aider",
+    "restartTask": "重启任务",
     "tokenUsage": "{{usedTokens}} / {{maxTokens}}",
     "contextCompactingThreshold": "自动压缩上下文阈值",
     "contextCompactingThresholdOff": "关闭",

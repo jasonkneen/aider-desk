@@ -707,7 +707,7 @@
     "agent": "Agent",
     "aider": "Aider",
     "total": "Total",
-    "restartAider": "Restart Aider proces",
+    "restartTask": "Restart task",
     "tokenUsage": "{{usedTokens}} of {{maxTokens}}",
     "contextCompactingThreshold": "Auto-compact threshold",
     "contextCompactingThresholdOff": "Off",
