@@ -124,8 +124,6 @@ export interface RunCommandMessage extends Message {
 export interface UpdateAutocompletionMessage extends Message {
   action: 'update-autocompletion';
   words: string[];
-  allFiles: string[];
-  models: string[];
 }
 
 export const isUpdateAutocompletionMessage = (message: Message): message is UpdateAutocompletionMessage => {

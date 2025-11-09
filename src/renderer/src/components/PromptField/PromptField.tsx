@@ -93,6 +93,7 @@ type Props = {
   task: TaskData;
   processing: boolean;
   isActive: boolean;
+  allFiles?: string[];
   words?: string[];
   inputHistory?: string[];
   openModelSelector?: (model?: string) => void;
@@ -129,6 +130,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
       task,
       processing = false,
       isActive = false,
+      allFiles = [],
       words = [],
       inputHistory = [],
       mode,
@@ -232,7 +234,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
 
       return {
         from: word.from,
-        options: words.map((w) => ({ label: w, type: 'text' })),
+        options: [...words, ...allFiles].map((w) => ({ label: w, type: 'text' })),
       };
     };
 

@@ -4,8 +4,7 @@ import path from 'path';
 import { CustomCommand, ProjectStartMode, SettingsData, TaskData } from '@common/types';
 import { fileExists } from '@common/utils';
 import { v4 as uuidv4 } from 'uuid';
-
-const INTERNAL_TASK_ID = 'internal';
+import { isEqual } from 'lodash';
 
 import { getAllFiles } from '@/utils/file-system';
 import { McpManager } from '@/agent';
@@ -21,11 +20,14 @@ import { Task } from '@/task';
 import { migrateSessionsToTasks } from '@/project/migrations';
 import { WorktreeManager } from '@/worktrees';
 
+const INTERNAL_TASK_ID = 'internal';
+
 export class Project {
   private readonly customCommandManager: CustomCommandManager;
   private readonly tasksLoadingPromise: Promise<void> | null = null;
   private readonly tasks = new Map<string, Task>();
 
+  private autocompletionAllFiles: string[] | null = null;
   private connectors: Connector[] = [];
   private inputHistoryFile = '.aider.input.history';
 
@@ -235,26 +237,19 @@ export class Project {
     this.eventManager.sendInputHistoryUpdated(this.baseDir, INTERNAL_TASK_ID, history);
   }
 
-  public async updateAutocompletionData(taskId: string, words: string[], models: string[]) {
-    this.eventManager.sendUpdateAutocompletion(this.baseDir, taskId, words, await getAllFiles(this.baseDir), models);
-  }
-
-  public async getAddableFiles(searchRegex?: string): Promise<string[]> {
-    let files = await getAllFiles(this.baseDir);
-
-    if (searchRegex) {
-      try {
-        const regex = new RegExp(searchRegex, 'i');
-        files = files.filter((file) => regex.test(file));
-      } catch (error) {
-        logger.error('Invalid regex for getAddableFiles', {
-          searchRegex,
-          error,
-        });
-      }
+  public async updateAutocompletionData(taskId: string, words: string[]) {
+    const task = this.tasks.get(taskId);
+    if (!task) {
+      return;
     }
 
-    return files;
+    this.eventManager.sendUpdateAutocompletion(this.baseDir, taskId, words);
+
+    const allFiles = await getAllFiles(task.getTaskDir());
+    if (!this.autocompletionAllFiles || !isEqual(this.autocompletionAllFiles, allFiles)) {
+      this.eventManager.sendUpdateAutocompletion(this.baseDir, taskId, words, allFiles);
+    }
+    this.autocompletionAllFiles = allFiles;
   }
 
   public getCustomCommands() {

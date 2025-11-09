@@ -132,9 +132,8 @@ export interface CustomCommandsUpdatedData {
 export interface AutocompletionData {
   baseDir: string;
   taskId: string;
-  words: string[];
-  allFiles: string[];
-  models: string[];
+  words?: string[];
+  allFiles?: string[];
 }
 
 export interface SessionData {

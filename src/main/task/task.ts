@@ -953,7 +953,7 @@ export class Task {
 
   public async getAddableFiles(searchRegex?: string): Promise<string[]> {
     const contextFilePaths = new Set(this.getContextFiles().map((file) => file.path));
-    let files = (await getAllFiles(this.project.baseDir)).filter((file) => !contextFilePaths.has(file));
+    let files = (await getAllFiles(this.getTaskDir())).filter((file) => !contextFilePaths.has(file));
 
     if (searchRegex) {
       try {

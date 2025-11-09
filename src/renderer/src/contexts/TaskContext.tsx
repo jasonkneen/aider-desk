@@ -1,4 +1,4 @@
-import React, { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, ReactNode, startTransition, useCallback, useContext, useEffect, useState } from 'react';
 import {
   AutocompletionData,
   ClearTaskData,
@@ -91,11 +91,13 @@ export const TaskProvider: React.FC<{
   const [taskStateMap, setTaskStateMap] = useState<Map<string, TaskState>>(new Map());
 
   const updateTaskState = useCallback((taskId: string, updates: Partial<TaskState>) => {
-    setTaskStateMap((prev) => {
-      const newMap = new Map(prev);
-      const current = newMap.get(taskId) || EMPTY_TASK_STATE;
-      newMap.set(taskId, { ...current, ...updates });
-      return newMap;
+    startTransition(() => {
+      setTaskStateMap((prev) => {
+        const newMap = new Map(prev);
+        const current = newMap.get(taskId) || EMPTY_TASK_STATE;
+        newMap.set(taskId, { ...current, ...updates });
+        return newMap;
+      });
     });
   }, []);
 
@@ -626,8 +628,12 @@ export const TaskProvider: React.FC<{
       };
 
       const handleUpdateAutocompletion = ({ allFiles, words }: AutocompletionData) => {
-        setAllFiles(allFiles);
-        setAutocompletionWords([...words, ...allFiles]);
+        if (allFiles) {
+          setAllFiles(allFiles);
+        }
+        if (words) {
+          setAutocompletionWords(words);
+        }
       };
 
       const handleTokensInfo = (data: TokensInfoData) => {

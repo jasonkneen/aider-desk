@@ -111,13 +111,12 @@ export class EventManager {
   }
 
   // Autocompletion events
-  sendUpdateAutocompletion(baseDir: string, taskId: string, words: string[], allFiles: string[], models: string[]): void {
+  sendUpdateAutocompletion(baseDir: string, taskId: string, words?: string[], allFiles?: string[]): void {
     const data: AutocompletionData = {
       baseDir,
       taskId,
       words,
       allFiles,
-      models,
     };
     this.sendToMainWindow('update-autocompletion', data);
     this.broadcastToEventConnectors('update-autocompletion', data);

@@ -22,6 +22,7 @@
 - added reasoning effort support for OpenAI compatible provider
 - creating task branch when using worktree
 - added support for GPUStack provider
+- optimized autocompletion and all files loading
 
 ## [0.38.0]
 

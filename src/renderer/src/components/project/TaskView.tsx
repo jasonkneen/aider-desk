@@ -450,6 +450,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
               savePrompt={handleSavePrompt}
               editLastUserMessage={handleEditLastUserMessage}
               isActive={isActive}
+              allFiles={allFiles}
               words={autocompletionWords}
               clearMessages={clearMessages}
               scrapeWeb={scrapeWeb}

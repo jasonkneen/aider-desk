@@ -1052,13 +1052,6 @@ class Connector:
         else:
           relative_path = file_path
         rel_fnames.append(relative_path)
-      all_models = sorted(set(models.fuzzy_match_models("") + [model_settings.name for model_settings in models.MODEL_SETTINGS]))
-
-      await self.send_action({
-        "action": "update-autocompletion",
-        "words": [],
-        "models": all_models
-      })
 
       # Run tokenization in a separate thread
       if len(rel_fnames) > 0:
@@ -1079,7 +1072,6 @@ class Connector:
             await self.send_action({
               "action": "update-autocompletion",
               "words": tokenized_words,
-              "models": all_models
             })
           except asyncio.CancelledError:
             # Task was cancelled, do nothing.
@@ -1095,8 +1087,6 @@ class Connector:
       await self.send_action({
         "action": "update-autocompletion",
         "words": [],
-        "allFiles": [],
-        "models": sorted(set(models.fuzzy_match_models("") + [model_settings.name for model_settings in models.MODEL_SETTINGS]))
       })
 
   async def send_repo_map(self):
