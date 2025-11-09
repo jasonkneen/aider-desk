@@ -19,7 +19,6 @@ export * from './ZaiPlanParameters';
 export * from './OpenAiAdvancedSettings';
 export * from './OpenAiCompatibleAdvancedSettings';
 export * from './GeminiAdvancedSettings';
-export * from './GpustackAdvancedSettings';
 export * from './VertexAiAdvancedSettings';
 export * from './RequestyAdvancedSettings';
 
@@ -27,6 +26,5 @@ export * from './RequestyAdvancedSettings';
 export * from './OpenAiModelOverrides';
 export * from './OpenAiCompatibleModelOverrides';
 export * from './GeminiModelOverrides';
-export * from './GpustackModelOverrides';
 export * from './VertexAiModelOverrides';
 export * from './RequestyModelOverrides';

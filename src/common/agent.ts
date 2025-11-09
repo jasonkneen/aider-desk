@@ -159,7 +159,6 @@ export interface GpustackProvider extends LlmProviderBase {
   name: 'gpustack';
   apiKey?: string;
   baseUrl?: string;
-  reasoningEffort?: ReasoningEffort;
 }
 export const isGpustackProvider = (provider: LlmProviderBase): provider is GpustackProvider => provider.name === 'gpustack';
 

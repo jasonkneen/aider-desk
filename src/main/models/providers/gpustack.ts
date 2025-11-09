@@ -1,9 +1,9 @@
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, ReasoningEffort } from '@common/types';
-import { isGpustackProvider, GpustackProvider, LlmProvider } from '@common/agent';
+import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { GpustackProvider, isGpustackProvider } from '@common/agent';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 
 import type { LanguageModelUsage } from 'ai';
-import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
@@ -153,36 +153,6 @@ const getGpustackUsageReport = (task: Task, provider: ProviderProfile, model: Mo
   };
 };
 
-// === Configuration Helper Functions ===
-const getGpustackProviderOptions = (provider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined => {
-  if (!isGpustackProvider(provider)) {
-    return undefined;
-  }
-
-  const gpustackProvider = provider as GpustackProvider;
-
-  // Extract reasoningEffort from model overrides or provider config
-  const providerOverrides = model.providerOverrides as Partial<GpustackProvider> | undefined;
-  const reasoningEffort = providerOverrides?.reasoningEffort ?? gpustackProvider.reasoningEffort;
-
-  // Map ReasoningEffort enum to AI SDK format
-  const mappedReasoningEffort =
-    reasoningEffort === undefined || reasoningEffort === ReasoningEffort.None
-      ? undefined
-      : (reasoningEffort.toLowerCase() as 'minimal' | 'low' | 'medium' | 'high');
-
-  if (mappedReasoningEffort) {
-    logger.debug('Using reasoning effort for GPUStack:', { mappedReasoningEffort });
-    return {
-      [provider.name]: {
-        reasoningEffort: mappedReasoningEffort,
-      },
-    } satisfies SharedV2ProviderOptions;
-  }
-
-  return undefined;
-};
-
 // === Complete Strategy Implementation ===
 export const gpustackProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
@@ -193,7 +163,4 @@ export const gpustackProviderStrategy: LlmProviderStrategy = {
   loadModels: loadGpustackModels,
   hasEnvVars: hasGpustackEnvVars,
   getAiderMapping: getGpustackAiderMapping,
-
-  // Configuration helper functions
-  getProviderOptions: getGpustackProviderOptions,
 };
