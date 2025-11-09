@@ -296,6 +296,8 @@ src/
             LmStudioParameters.tsx
             OllamaParameters.tsx
             OpenAiAdvancedSettings.tsx
+            OpenAiCompatibleAdvancedSettings.tsx
+            OpenAiCompatibleModelOverrides.tsx
             OpenAiCompatibleParameters.tsx
             OpenAiModelOverrides.tsx
             OpenAiParameters.tsx
@@ -3573,6 +3575,7 @@ export interface OpenAiCompatibleProvider extends LlmProviderBase {
   name: 'openai-compatible';
   apiKey: string;
   baseUrl?: string;
+  reasoningEffort?: ReasoningEffort;
 }
 export const isOpenAiCompatibleProvider = (provider: LlmProviderBase): provider is OpenAiCompatibleProvider
 ⋮----
@@ -4848,7 +4851,7 @@ import {
   wrapLanguageModel,
 } from 'ai';
 import { delay, extractServerNameToolName } from '@common/utils';
-import { LlmProvider, LlmProviderName } from '@common/agent';
+import { LlmProviderName } from '@common/agent';
 import { countTokens } from 'gpt-tokenizer/model/gpt-4o';
 import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.js';
 // @ts-expect-error istextorbinary is not typed properly
@@ -4911,7 +4914,7 @@ private async getWorkingFilesMessages(contextFiles: ContextFile[]): Promise<Mode
 private async getAvailableTools(
     task: Task,
     profile: AgentProfile,
-    llmProvider: LlmProvider,
+    provider: ProviderProfile,
     messages?: ContextMessage[],
     resultMessages?: ContextMessage[],
     abortSignal?: AbortSignal,
@@ -6256,47 +6259,56 @@ export const getOllamaUsageReport = (task: Task, provider: ProviderProfile, mode
 ================
 File: src/main/models/providers/openai-compatible.ts
 ================
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { isOpenAiCompatibleProvider, OpenAiCompatibleProvider } from '@common/agent';
+import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, ReasoningEffort } from '@common/types';
+import { isOpenAiCompatibleProvider, OpenAiCompatibleProvider, LlmProvider } from '@common/agent';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 ⋮----
 import type { LanguageModelUsage } from 'ai';
-import type { LanguageModelV2 } from '@ai-sdk/provider';
+import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { Task } from '@/task/task';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 ⋮----
-export const loadOpenaiCompatibleModels = async (
+const loadOpenaiCompatibleModels = async (
   profile: ProviderProfile,
   modelsInfo: Record<string, ModelInfo>,
   settings: SettingsData,
 ): Promise<LoadModelsResponse> =>
 ⋮----
-export const hasOpenAiCompatibleEnvVars = (settings: SettingsData): boolean =>
+const hasOpenAiCompatibleEnvVars = (settings: SettingsData): boolean =>
 ⋮----
-export const getOpenAiCompatibleAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
+const getOpenAiCompatibleAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
 // Use openai prefix for OpenAI-compatible providers
 ⋮----
 // === LLM Creation Functions ===
-export const createOpenAiCompatibleLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
+const createOpenAiCompatibleLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 // Use createOpenAICompatible to get a provider instance, then get the model
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateOpenAiCompatibleCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
+const calculateOpenAiCompatibleCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
-export const getOpenAiCompatibleUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
+const getOpenAiCompatibleUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
 // Calculate cost internally (no caching for OpenAI Compatible)
+⋮----
+// === Configuration Helper Functions ===
+const getOpenAiCompatibleProviderOptions = (provider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined =>
+⋮----
+// Extract reasoningEffort from model overrides or provider config
+⋮----
+// Map ReasoningEffort enum to AI SDK format
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
 // Core LLM functions
 ⋮----
 // Model discovery functions
+⋮----
+// Configuration helper functions
 
 ================
 File: src/main/models/providers/openai.ts
@@ -6826,7 +6838,7 @@ private getProviderAiderMapping(provider: ProviderProfile, modelId: string): Aid
 ⋮----
 getModel(providerId: string, modelId: string): Model | undefined
 ⋮----
-createLlm(profile: ProviderProfile, model: string | Model, settings: SettingsData, projectDir: string): LanguageModelV2
+createLlm(provider: ProviderProfile, model: string | Model, settings: SettingsData, projectDir: string): LanguageModelV2
 ⋮----
 // Resolve Model object if string is provided
 ⋮----
@@ -6840,24 +6852,20 @@ getUsageReport(task: Task, provider: ProviderProfile, model: string | Model, usa
 ⋮----
 getCacheControl(profile: AgentProfile, llmProvider: LlmProvider): CacheControl
 ⋮----
-isStreamingDisabled(llmProvider: LlmProvider, modelId: string): boolean
+isStreamingDisabled(provider: ProviderProfile, modelId: string): boolean
 ⋮----
-getProviderOptions(llmProvider: LlmProvider, modelId: string): Record<string, Record<string, JSONValue>> | undefined
-⋮----
-// Find the provider profile for this LLM provider
+getProviderOptions(provider: ProviderProfile, modelId: string): Record<string, Record<string, JSONValue>> | undefined
 ⋮----
 // Look up the actual Model object from providerModels
 ⋮----
-getProviderParameters(llmProvider: LlmProvider, modelId: string): Record<string, unknown>
-⋮----
-// Find the provider profile for this LLM provider
+getProviderParameters(provider: ProviderProfile, modelId: string): Record<string, unknown>
 ⋮----
 // Look up the actual Model object from providerModels
 ⋮----
 /**
    * Returns provider-specific tools for the given provider and model
    */
-async getProviderTools(providerId: string, modelId: string): Promise<ToolSet>
+async getProviderTools(provider: ProviderProfile, modelId: string): Promise<ToolSet>
 ⋮----
 // Resolve Model object
 
@@ -8120,6 +8128,8 @@ getContextFiles(): ContextFile[]
 setContextMessages(contextMessages: ContextMessage[], save = true)
 ⋮----
 getContextMessages(): ContextMessage[]
+⋮----
+clearContextFiles(save = true)
 ⋮----
 clearMessages(save = true)
 ⋮----
@@ -12998,11 +13008,61 @@ const handleUseWebSearchChange = (checked: boolean) =>
 <Select label=
 
 ================
+File: src/renderer/src/components/ModelLibrary/providers/OpenAiCompatibleAdvancedSettings.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { OpenAiCompatibleProvider } from '@common/agent';
+import { ReasoningEffort } from '@common/types';
+⋮----
+import { Select, Option } from '@/components/common/Select';
+import { InfoIcon } from '@/components/common/InfoIcon';
+⋮----
+type Props = {
+  provider: OpenAiCompatibleProvider;
+  onChange: (updated: OpenAiCompatibleProvider) => void;
+};
+⋮----
+export const OpenAiCompatibleAdvancedSettings = (
+⋮----
+const handleReasoningEffortChange = (value: string) =>
+⋮----
+<span>
+
+================
+File: src/renderer/src/components/ModelLibrary/providers/OpenAiCompatibleModelOverrides.tsx
+================
+import { getDefaultProviderParams, LlmProvider, OpenAiCompatibleProvider } from '@common/agent';
+⋮----
+import { DisableStreaming } from '../DisableStreaming';
+⋮----
+import { OpenAiCompatibleAdvancedSettings } from './OpenAiCompatibleAdvancedSettings';
+⋮----
+type Props = {
+  provider: LlmProvider;
+  overrides: Partial<OpenAiCompatibleProvider>;
+  onChange: (overrides: Record<string, unknown>) => void;
+};
+⋮----
+export const OpenAiCompatibleModelOverrides = (
+⋮----
+// Convert overrides to OpenAiCompatibleProvider format for AdvancedSettings
+⋮----
+// Convert OpenAiCompatibleProvider back to overrides format
+const handleProviderChange = (updatedProvider: OpenAiCompatibleProvider) =>
+⋮----
+// Remove undefined values
+⋮----
+// Handle disable streaming change separately
+const handleDisableStreamingChange = (disableStreaming: boolean) =>
+
+================
 File: src/renderer/src/components/ModelLibrary/providers/OpenAiCompatibleParameters.tsx
 ================
 import { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { OpenAiCompatibleProvider } from '@common/agent';
+⋮----
+import { OpenAiCompatibleAdvancedSettings } from './OpenAiCompatibleAdvancedSettings';
 ⋮----
 import { Input } from '@/components/common/Input';
 import { useEffectiveEnvironmentVariable } from '@/hooks/useEffectiveEnvironmentVariable';
@@ -13528,6 +13588,7 @@ import { VertexAiModelOverrides } from './providers/VertexAiModelOverrides';
 import { OpenAiModelOverrides } from './providers/OpenAiModelOverrides';
 import { RequestyModelOverrides } from './providers/RequestyModelOverrides';
 import { AzureModelOverrides } from './providers/AzureModelOverrides';
+import { OpenAiCompatibleModelOverrides } from './providers/OpenAiCompatibleModelOverrides';
 import { DefaultModelOverrides } from './providers/DefaultModelOverrides';
 ⋮----
 import { Button } from '@/components/common/Button';
