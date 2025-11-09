@@ -196,10 +196,9 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
         // Handle @-based file suggestions (exclusive)
         const atPos = text.lastIndexOf('@');
         if (atPos >= 0 && (atPos === 0 || /\s/.test(text[atPos - 1]))) {
-          const files = await api.getAddableFiles(baseDir, taskId);
           return {
             from: atPos + 1,
-            options: files.map((file) => ({ label: file, type: 'file' })),
+            options: allFiles.map((file) => ({ label: file, type: 'file' })),
             validFor: /^\S*$/,
           };
         }
