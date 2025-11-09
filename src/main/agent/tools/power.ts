@@ -645,7 +645,11 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         logger.error('Error executing search command:', error);
-        return `Error: ${errorMessage}`;
+        task.addLogMessage(
+          'error',
+          `Semantic search failed with error:\n\n${errorMessage}\n\nPlease, consider reporting an issue at https://github.com/hotovo/aider-desk/issues. Thank you.`,
+        );
+        return errorMessage;
       }
     },
   });
