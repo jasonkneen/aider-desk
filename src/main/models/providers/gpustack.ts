@@ -39,7 +39,7 @@ const loadGpustackModels = async (profile: ProviderProfile, modelsInfo: Record<s
   }
 
   try {
-    const response = await fetch(`${effectiveBaseUrl}/v1-openai/models`, {
+    const response = await fetch(`${effectiveBaseUrl}/v1/models`, {
       headers: { Authorization: `Bearer ${effectiveApiKey}` },
     });
     if (!response.ok) {
