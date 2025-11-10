@@ -1,5 +1,9 @@
 # Changelog
 
+## [UNRELEASED]
+
+- added support for MiniMax provider
+
 ## [0.39.0]
 
 - improved performance of loading large number of messages

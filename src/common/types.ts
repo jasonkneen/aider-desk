@@ -6,6 +6,7 @@ import {
   GroqProvider,
   LlmProvider,
   LmStudioProvider,
+  MinimaxProvider,
   OllamaProvider,
   OpenAiCompatibleProvider,
   OpenAiProvider,
@@ -428,6 +429,7 @@ export interface SettingsData {
     deepseek?: DeepseekProvider;
     ollama?: OllamaProvider;
     lmstudio?: LmStudioProvider;
+    minimax?: MinimaxProvider;
     'openai-compatible'?: OpenAiCompatibleProvider;
     openrouter?: OpenRouterProvider;
     requesty?: RequestyProvider;
@@ -686,8 +688,4 @@ export interface TerminalExitData {
   taskId: string;
   exitCode: number;
   signal?: number;
-}
-
-export interface Test {
-  propertyA: string;
 }

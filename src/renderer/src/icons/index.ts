@@ -7,6 +7,7 @@ export { GeminiIcon } from './GeminiIcon';
 export { GpustackIcon } from './GpustackIcon';
 export { GroqIcon } from './GroqIcon';
 export { LmStudioIcon } from './LmStudioIcon';
+export { MinimaxIcon } from './MinimaxIcon';
 export { OllamaIcon } from './OllamaIcon';
 export { OpenAiIcon } from './OpenAiIcon';
 export { OpenAiCompatibleIcon } from './OpenAiCompatibleIcon';

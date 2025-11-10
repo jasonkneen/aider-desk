@@ -13,6 +13,7 @@ import { geminiProviderStrategy } from './providers/gemini';
 import { gpustackProviderStrategy } from './providers/gpustack';
 import { groqProviderStrategy } from './providers/groq';
 import { lmStudioProviderStrategy } from './providers/lm-studio';
+import { minimaxProviderStrategy } from './providers/minimax';
 import { ollamaProviderStrategy } from './providers/ollama';
 import { openaiProviderStrategy } from './providers/openai';
 import { openaiCompatibleProviderStrategy } from './providers/openai-compatible';
@@ -74,6 +75,7 @@ export class ModelManager {
     gpustack: gpustackProviderStrategy,
     groq: groqProviderStrategy,
     lmstudio: lmStudioProviderStrategy,
+    minimax: minimaxProviderStrategy,
     ollama: ollamaProviderStrategy,
     openai: openaiProviderStrategy,
     'openai-compatible': openaiCompatibleProviderStrategy,

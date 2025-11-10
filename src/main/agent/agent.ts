@@ -501,6 +501,7 @@ export class Agent {
     this.telemetryManager.captureAgentRun(profile, task.task);
 
     logger.debug('runAgent', {
+      taskId: task.taskId,
       profile,
       prompt,
       promptContext,
@@ -512,6 +513,9 @@ export class Agent {
     // Create new abort controller for this run only if abortSignal is not provided
     const shouldCreateAbortController = !abortSignal;
     if (shouldCreateAbortController) {
+      logger.debug('Creating new abort controller for Agent run', {
+        taskId: task.taskId,
+      });
       this.abortController = new AbortController();
     }
     const effectiveAbortSignal = abortSignal || this.abortController?.signal;
@@ -1026,7 +1030,7 @@ export class Agent {
 
   private processStep<TOOLS extends ToolSet>(
     currentResponseId: string,
-    { reasoningText, text, toolCalls, toolResults, finishReason, usage, providerMetadata, response }: StepResult<TOOLS>,
+    { reasoningText, text, toolCalls, toolResults, finishReason, usage, providerMetadata, response, reasoning }: StepResult<TOOLS>,
     task: Task,
     profile: AgentProfile,
     provider: ProviderProfile,
@@ -1041,6 +1045,8 @@ export class Agent {
       usage,
       providerMetadata,
       promptContext,
+      reasoning,
+      responseBody: response.body,
     });
 
     const messages: ContextMessage[] = [];

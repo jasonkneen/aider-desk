@@ -30,6 +30,7 @@ export type LlmProviderName =
   | 'gpustack'
   | 'groq'
   | 'lmstudio'
+  | 'minimax'
   | 'ollama'
   | 'openai'
   | 'openai-compatible'
@@ -58,6 +59,7 @@ export const AVAILABLE_PROVIDERS: LlmProviderName[] = [
   'gpustack',
   'groq',
   'lmstudio',
+  'minimax',
   'ollama',
   'openai',
   'openai-compatible',
@@ -191,6 +193,12 @@ export interface ZaiPlanProvider extends LlmProviderBase {
 }
 export const isZaiPlanProvider = (provider: LlmProviderBase): provider is ZaiPlanProvider => provider.name === 'zai-plan';
 
+export interface MinimaxProvider extends LlmProviderBase {
+  name: 'minimax';
+  apiKey: string;
+}
+export const isMinimaxProvider = (provider: LlmProviderBase): provider is MinimaxProvider => provider.name === 'minimax';
+
 export type LlmProvider =
   | OpenAiProvider
   | AnthropicProvider
@@ -207,7 +215,8 @@ export type LlmProvider =
   | OllamaProvider
   | OpenRouterProvider
   | RequestyProvider
-  | ZaiPlanProvider;
+  | ZaiPlanProvider
+  | MinimaxProvider;
 
 export const DEFAULT_PROVIDER_MODEL: Partial<Record<LlmProviderName, string>> = {
   anthropic: 'claude-sonnet-4-20250514',
@@ -502,6 +511,12 @@ export const getDefaultProviderParams = <T extends LlmProvider>(providerName: Ll
         name: 'zai-plan',
         apiKey: '',
       } satisfies ZaiPlanProvider;
+      break;
+    case 'minimax':
+      provider = {
+        name: 'minimax',
+        apiKey: '',
+      } satisfies MinimaxProvider;
       break;
     default:
       // For any other provider, create a base structure. This might need more specific handling if new providers are added.
