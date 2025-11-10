@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { createWriteStream, existsSync, mkdirSync, unlinkSync, renameSync, rmdirSync } from 'fs';
+import { createWriteStream, existsSync, mkdirSync, unlinkSync, renameSync, rmSync } from 'fs';
 import { join } from 'path';
 import fs from 'fs';
 import { pipeline } from 'stream';
@@ -9,12 +9,12 @@ import AdmZip from 'adm-zip';
 
 const streamPipeline = promisify(pipeline);
 
-const PROBE_VERSION = 'v0.6.0-rc128';
+const PROBE_VERSION = 'v0.6.0-rc161';
 const BASE_URL = `https://github.com/probelabs/probe/releases/download/${PROBE_VERSION}`;
 const RESOURCES_DIR = './resources';
 
 const TARGET_PLATFORMS = [
-    { platform: 'linux', arch: 'x64', filename: `probe-${PROBE_VERSION}-x86_64-unknown-linux-gnu.tar.gz`, extractSubdir: 'linux', probeExeName: 'probe', sourceExeName: 'probe' },
+    { platform: 'linux', arch: 'x64', filename: `probe-${PROBE_VERSION}-x86_64-unknown-linux-musl.tar.gz`, extractSubdir: 'linux', probeExeName: 'probe', sourceExeName: 'probe' },
     { platform: 'darwin', arch: 'x64', filename: `probe-${PROBE_VERSION}-x86_64-apple-darwin.tar.gz`, extractSubdir: 'macos-x64', probeExeName: 'probe', sourceExeName: 'probe' },
     { platform: 'darwin', arch: 'arm64', filename: `probe-${PROBE_VERSION}-aarch64-apple-darwin.tar.gz`, extractSubdir: 'macos-arm64', probeExeName: 'probe', sourceExeName: 'probe' },
     { platform: 'win32', arch: 'x64', filename: `probe-${PROBE_VERSION}-x86_64-pc-windows-msvc.zip`, extractSubdir: 'win', probeExeName: 'probe.exe', sourceExeName: 'probe.exe' }
@@ -69,7 +69,7 @@ async function downloadAndExtractProbeForPlatform(target) {
                 renameSync(probeInExtractedDir, probeDestinationPath);
                 console.log(`Moved ${sourceExeName} to ${probeDestinationPath}`);
                 // Clean up the extracted directory
-                rmdirSync(join(extractPath, extractedDirName), { recursive: true });
+                rmSync(join(extractPath, extractedDirName), { recursive: true });
             } else if (existsSync(probeAtTopLevel)) {
                  // If not found in extractedDir, check the top level (for older releases or different structures)
                  if (existsSync(probeDestinationPath)) {
@@ -96,7 +96,7 @@ async function downloadAndExtractProbeForPlatform(target) {
                 renameSync(probeExePath, probeDestinationPath);
                 console.log(`Renamed ${sourceExeName} to ${probeExeName}`);
                 // Clean up the extracted directory
-                rmdirSync(join(extractPath, extractedDirName), { recursive: true });
+                rmSync(join(extractPath, extractedDirName), { recursive: true });
             }
         }
 
