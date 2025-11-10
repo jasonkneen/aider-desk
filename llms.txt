@@ -103,6 +103,7 @@ src/
         cerebras.ts
         deepseek.ts
         gemini.ts
+        gpustack.ts
         groq.ts
         lm-studio.ts
         ollama.ts
@@ -291,6 +292,7 @@ src/
             GeminiAdvancedSettings.tsx
             GeminiModelOverrides.tsx
             GeminiParameters.tsx
+            GpustackParameters.tsx
             GroqParameters.tsx
             index.ts
             LmStudioParameters.tsx
@@ -438,6 +440,8 @@ src/
         CerebrasIcon.tsx
         DeepseekIcon.tsx
         GeminiIcon.tsx
+        gpustack.png
+        GpustackIcon.tsx
         GroqIcon.tsx
         index.ts
         LmStudioIcon.tsx
@@ -957,8 +961,6 @@ relative_path = os.path.relpath(file_path, self.task_dir)
 relative_path = os.path.relpath(file_path, self.base_dir)
 ⋮----
 relative_path = file_path
-⋮----
-all_models = sorted(set(models.fuzzy_match_models("") + [model_settings.name for model_settings in models.MODEL_SETTINGS]))
 ⋮----
 # Run tokenization in a separate thread
 ⋮----
@@ -1599,6 +1601,12 @@ File: src/common/locales/en.json
     "baseUrl": "Base URL",
     "baseUrlPlaceholder": "e.g. http://localhost:1234/v1"
   },
+  "gpustack": {
+    "name": "GPUStack",
+    "baseUrl": "Base URL",
+    "baseUrlPlaceholder": "http://localhost",
+    "apiKey": "API Key"
+  },
   "zaiPlan": {
     "apiKey": "API Key"
   },
@@ -1615,6 +1623,7 @@ File: src/common/locales/en.json
     "deepseek": "Deepseek",
     "gemini": "Gemini",
     "groq": "Groq",
+    "gpustack": "GPUStack",
     "lmstudio": "LM Studio",
     "ollama": "Ollama",
     "openai": "OpenAI",
@@ -2008,7 +2017,7 @@ File: src/common/locales/en.json
     "agent": "Agent",
     "aider": "Aider",
     "total": "Total",
-    "restartAider": "Restart Aider proces",
+    "restartTask": "Restart task",
     "tokenUsage": "{{usedTokens}} of {{maxTokens}}",
     "contextCompactingThreshold": "Auto-compact threshold",
     "contextCompactingThresholdOff": "Off",
@@ -2188,7 +2197,8 @@ File: src/common/locales/en.json
   },
   "workingMode": {
     "local": "Local",
-    "worktree": "Worktree"
+    "worktree": "Worktree",
+    "switching": "Switching..."
   },
   "workingModeTooltip": {
     "local": "Make changes directly in the local project directory for this task",
@@ -2620,6 +2630,12 @@ File: src/common/locales/zh.json
     "baseUrl": "基础 URL",
     "baseUrlPlaceholder": "例如 http://localhost:1234/v1"
   },
+  "gpustack": {
+    "name": "GPUStack",
+    "baseUrl": "基础 URL",
+    "baseUrlPlaceholder": "http://localhost",
+    "apiKey": "API 密钥"
+  },
   "zaiPlan": {
     "apiKey": "API 密钥"
   },
@@ -2677,6 +2693,7 @@ File: src/common/locales/zh.json
     "deepseek": "Deepseek",
     "gemini": "Gemini",
     "groq": "Groq",
+    "gpustack": "GPUStack",
     "lmstudio": "LM Studio",
     "ollama": "Ollama",
     "openai": "OpenAI",
@@ -3048,7 +3065,7 @@ File: src/common/locales/zh.json
     "agent": "代理",
     "aider": "Aider",
     "total": "全部的",
-    "restartAider": "重启Aider",
+    "restartTask": "重启任务",
     "tokenUsage": "{{usedTokens}} / {{maxTokens}}",
     "contextCompactingThreshold": "自动压缩上下文阈值",
     "contextCompactingThresholdOff": "关闭",
@@ -3224,7 +3241,8 @@ File: src/common/locales/zh.json
   },
   "workingMode": {
     "local": "本地",
-    "worktree": "工作树"
+    "worktree": "工作树",
+    "switching": "切换中..."
   },
   "workingModeTooltip": {
     "local": "在此任务中直接在本地项目目录中进行更改",
@@ -3473,6 +3491,7 @@ export type LlmProviderName =
   | 'cerebras'
   | 'deepseek'
   | 'gemini'
+  | 'gpustack'
   | 'groq'
   | 'lmstudio'
   | 'ollama'
@@ -3581,6 +3600,13 @@ export const isOpenAiCompatibleProvider = (provider: LlmProviderBase): provider 
 ⋮----
 export const isOllamaProvider = (provider: LlmProviderBase): provider is OllamaProvider
 ⋮----
+export interface GpustackProvider extends LlmProviderBase {
+  name: 'gpustack';
+  apiKey?: string;
+  baseUrl?: string;
+}
+export const isGpustackProvider = (provider: LlmProviderBase): provider is GpustackProvider
+⋮----
 export interface OpenRouterProvider extends LlmProviderBase {
   name: 'openrouter';
   apiKey: string;
@@ -3623,6 +3649,7 @@ export type LlmProvider =
   | BedrockProvider
   | DeepseekProvider
   | GroqProvider
+  | GpustackProvider
   | CerebrasProvider
   | OpenAiCompatibleProvider
   | OllamaProvider
@@ -3977,9 +4004,8 @@ export interface CustomCommandsUpdatedData {
 export interface AutocompletionData {
   baseDir: string;
   taskId: string;
-  words: string[];
-  allFiles: string[];
-  models: string[];
+  words?: string[];
+  allFiles?: string[];
 }
 ⋮----
 export interface SessionData {
@@ -5686,7 +5712,7 @@ sendAskQuestion(questionData: QuestionData): void
 sendQuestionAnswered(baseDir: string, taskId: string, question: QuestionData, answer: string, userInput?: string): void
 ⋮----
 // Autocompletion events
-sendUpdateAutocompletion(baseDir: string, taskId: string, words: string[], allFiles: string[], models: string[]): void
+sendUpdateAutocompletion(baseDir: string, taskId: string, words?: string[], allFiles?: string[]): void
 ⋮----
 // Aider models events
 sendUpdateAiderModels(_baseDir: string, _taskId: string, modelsData: ModelsData): void
@@ -6109,6 +6135,56 @@ export const getGeminiProviderOptions = (llmProvider: LlmProvider, model: Model)
 export const getGeminiProviderTools = (provider: LlmProvider, model: Model): ToolSet =>
 ⋮----
 // Check for model-specific overrides
+⋮----
+// === Complete Strategy Implementation ===
+⋮----
+// Core LLM functions
+⋮----
+// Model discovery functions
+
+================
+File: src/main/models/providers/gpustack.ts
+================
+import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { GpustackProvider, isGpustackProvider } from '@common/agent';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+⋮----
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
+⋮----
+import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
+import logger from '@/logger';
+import { Task } from '@/task/task';
+import { getEffectiveEnvironmentVariable } from '@/utils';
+⋮----
+interface GpustackModelResponse {
+  items: Array<{
+    name: string;
+    meta?: {
+      max_model_len?: number;
+    };
+  }>;
+}
+⋮----
+const loadGpustackModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>, settings: SettingsData): Promise<LoadModelsResponse> =>
+⋮----
+// Extract max_model_len from meta if available
+⋮----
+const hasGpustackEnvVars = (settings: SettingsData): boolean =>
+⋮----
+const getGpustackAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
+⋮----
+// Use openai prefix for GPUStack providers (compatible with OpenAI format)
+⋮----
+// === LLM Creation Functions ===
+const createGpustackLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
+⋮----
+// Use createOpenAICompatible to get a provider instance, then get the model
+// GPUStack uses /v1-openai prefix for OpenAI compatibility
+⋮----
+const getGpustackUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
+⋮----
+// Cost is always 0 for GPUStack
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -6718,6 +6794,7 @@ import { bedrockProviderStrategy } from './providers/bedrock';
 import { cerebrasProviderStrategy } from './providers/cerebras';
 import { deepseekProviderStrategy } from './providers/deepseek';
 import { geminiProviderStrategy } from './providers/gemini';
+import { gpustackProviderStrategy } from './providers/gpustack';
 import { groqProviderStrategy } from './providers/groq';
 import { lmStudioProviderStrategy } from './providers/lm-studio';
 import { ollamaProviderStrategy } from './providers/ollama';
@@ -7116,6 +7193,7 @@ import path from 'path';
 import { CustomCommand, ProjectStartMode, SettingsData, TaskData } from '@common/types';
 import { fileExists } from '@common/utils';
 import { v4 as uuidv4 } from 'uuid';
+import { isEqual } from 'lodash';
 ⋮----
 import { getAllFiles } from '@/utils/file-system';
 import { McpManager } from '@/agent';
@@ -7172,9 +7250,7 @@ public async addToInputHistory(message: string)
 ⋮----
 private async sendInputHistoryUpdatedEvent()
 ⋮----
-public async updateAutocompletionData(taskId: string, words: string[], models: string[])
-⋮----
-public async getAddableFiles(searchRegex?: string): Promise<string[]>
+public async updateAutocompletionData(taskId: string, words: string[])
 ⋮----
 public getCustomCommands()
 ⋮----
@@ -8256,7 +8332,7 @@ import type { SimpleGit } from 'simple-git';
 ⋮----
 import { getAllFiles } from '@/utils/file-system';
 import { getCompactConversationPrompt, getGenerateCommitMessagePrompt, getInitProjectPrompt, getSystemPrompt } from '@/agent/prompts';
-import { AIDER_DESK_TASKS_DIR, AIDER_DESK_TODOS_FILE } from '@/constants';
+import { AIDER_DESK_TASKS_DIR, AIDER_DESK_TODOS_FILE, WORKTREE_BRANCH_PREFIX } from '@/constants';
 import { Agent, McpManager } from '@/agent';
 import { Connector } from '@/connector';
 import { DataManager } from '@/data-manager';
@@ -8290,6 +8366,25 @@ constructor(
 ⋮----
 private async loadTaskData()
 ⋮----
+/**
+   * Generate a branch name from task name (first 7 words, separated by '-')
+   */
+private generateBranchName(): string
+⋮----
+// Split into words, filter out empty strings, and take first 7
+⋮----
+.replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
+⋮----
+// Join with hyphens and ensure it's a valid branch name
+⋮----
+// Ensure branch name doesn't start with a dot or dash, and replace consecutive dashes
+⋮----
+.replace(/^[.-]+/, '') // Remove leading dots or dashes
+.replace(/-+/g, '-') // Replace multiple dashes with single dash
+.replace(/-$/, ''); // Remove trailing dash
+⋮----
+// If result is empty, use taskId
+⋮----
 public async saveTask(updates?: Partial<TaskData>)
 ⋮----
 public async init()
@@ -8316,7 +8411,7 @@ public getTaskDir()
 ⋮----
 private normalizeFilePath(filePath: string): string
 ⋮----
-public async close(clearContext = false)
+public async close(clearContext = false, cleanupEmptyTask = true)
 ⋮----
 private async cleanUpEmptyTask()
 ⋮----
@@ -9410,6 +9505,10 @@ actualBaseBranch = branch; // Use the newly created branch name
 ⋮----
 async removeWorktree(projectDir: string, worktree: Worktree): Promise<void>
 ⋮----
+// Clean up the branch if it's a task branch (starts with "task-" or looks like generated from task name)
+⋮----
+// Branch might not exist or be protected, don't fail the removal
+⋮----
 // If the worktree is not found, that's okay - it might have been manually deleted
 ⋮----
 // For other errors, still throw
@@ -10194,8 +10293,6 @@ export interface RunCommandMessage extends Message {
 export interface UpdateAutocompletionMessage extends Message {
   action: 'update-autocompletion';
   words: string[];
-  allFiles: string[];
-  models: string[];
 }
 ⋮----
 export const isUpdateAutocompletionMessage = (message: Message): message is UpdateAutocompletionMessage =>
@@ -12910,6 +13007,29 @@ label=
 ? t('settings.agent.envVarFoundPlaceholder',
 
 ================
+File: src/renderer/src/components/ModelLibrary/providers/GpustackParameters.tsx
+================
+import { ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import { GpustackProvider } from '@common/agent';
+⋮----
+import { Input } from '@/components/common/Input';
+import { useEffectiveEnvironmentVariable } from '@/hooks/useEffectiveEnvironmentVariable';
+⋮----
+type Props = {
+  provider: GpustackProvider;
+  onChange: (updated: GpustackProvider) => void;
+};
+⋮----
+const handleBaseUrlChange = (e: ChangeEvent<HTMLInputElement>) =>
+⋮----
+const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
+⋮----
+label=
+⋮----
+placeholder=
+
+================
 File: src/renderer/src/components/ModelLibrary/providers/GroqParameters.tsx
 ================
 import { ChangeEvent } from 'react';
@@ -13709,6 +13829,7 @@ import {
   CerebrasIcon,
   DeepseekIcon,
   GeminiIcon,
+  GpustackIcon,
   GroqIcon,
   LmStudioIcon,
   OllamaIcon,
@@ -13763,6 +13884,7 @@ import {
   BedrockParameters,
   DeepseekParameters,
   GeminiParameters,
+  GpustackParameters,
   GroqParameters,
   LmStudioParameters,
   OllamaParameters,
@@ -13853,6 +13975,7 @@ import {
   CerebrasIcon,
   DeepseekIcon,
   GeminiIcon,
+  GpustackIcon,
   GroqIcon,
   LmStudioIcon,
   OllamaIcon,
@@ -14215,7 +14338,7 @@ File: src/renderer/src/components/project/ProjectView.tsx
 ================
 import { InputHistoryData, ProjectData, ProjectStartMode, TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { startTransition, useCallback, useEffect, useOptimistic, useRef, useState } from 'react';
 import { useLocalStorage } from '@reactuses/core';
 import { CgSpinner } from 'react-icons/cg';
 ⋮----
@@ -14272,8 +14395,6 @@ const initProject = async () =>
 ⋮----
 const handleToggleCollapse = () =>
 ⋮----
-// Task will be automatically updated via the existing handleTaskUpdated listener
-⋮----
 // eslint-disable-next-line no-console
 ⋮----
 // Task will be automatically removed via the existing handleTaskDeleted listener
@@ -14285,6 +14406,8 @@ const handleToggleCollapse = () =>
 // Optionally switch to the new task
 ⋮----
 // eslint-disable-next-line no-console
+⋮----
+updateTask=
 
 ================
 File: src/renderer/src/components/project/SidebarContent.tsx
@@ -14331,7 +14454,7 @@ export const SidebarContent = ({
 ================
 File: src/renderer/src/components/project/TaskBar.tsx
 ================
-import { EditFormat, Mode, Model, ModelsData, RawModelInfo, TaskData, WorkingMode } from '@common/types';
+import { EditFormat, Mode, Model, ModelsData, RawModelInfo, TaskData } from '@common/types';
 import React, { ReactNode, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { BsCodeSlash, BsFilter, BsLayoutSidebar } from 'react-icons/bs';
 import { CgTerminal } from 'react-icons/cg';
@@ -14367,7 +14490,6 @@ type Props = {
   onModelsChange?: (modelsData: ModelsData | null) => void;
   runCommand: (command: string) => void;
   onToggleSidebar: () => void;
-  onWorkingModeChange: (mode: WorkingMode) => void;
 };
 ⋮----
 // optimistic update
@@ -14494,7 +14616,7 @@ placeholder=
 ================
 File: src/renderer/src/components/project/TaskView.tsx
 ================
-import { Mode, Model, ModelsData, ProjectData, TaskData, TodoItem, WorkingMode } from '@common/types';
+import { Mode, Model, ModelsData, ProjectData, TaskData, TodoItem } from '@common/types';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CgSpinner } from 'react-icons/cg';
@@ -14535,6 +14657,7 @@ export type TaskViewRef = {
 type Props = {
   project: ProjectData;
   task: TaskData;
+  updateTask: (updates: Partial<TaskData>, useOptimistic?: boolean) => void;
   inputHistory: string[];
   isActive?: boolean;
 };
@@ -14614,8 +14737,6 @@ const handleClearAllTodos = async () =>
 const handleTerminalViewResize = () =>
 ⋮----
 const handleCopyTerminalOutput = (output: string) =>
-⋮----
-const handleWorkingModeChange = (newWorkingMode: WorkingMode) =>
 ⋮----
 const handleAutoApproveChanged = (autoApprove: boolean) =>
 ⋮----
@@ -14933,6 +15054,7 @@ type Props = {
   task: TaskData;
   processing: boolean;
   isActive: boolean;
+  allFiles?: string[];
   words?: string[];
   inputHistory?: string[];
   openModelSelector?: (model?: string) => void;
@@ -15003,23 +15125,29 @@ onClose=
 File: src/renderer/src/components/PromptField/TaskWorkingMode.tsx
 ================
 import { TaskData, WorkingMode } from '@common/types';
+import { useState } from 'react';
 import { AiFillFolderOpen } from 'react-icons/ai';
 import { IoGitBranch } from 'react-icons/io5';
+import { useTranslation } from 'react-i18next';
 ⋮----
 import { ItemConfig, ItemSelector } from '@/components/common/ItemSelector';
 import { useResponsive } from '@/hooks/useResponsive';
 import { WorktreeMergeButton } from '@/components/project/WorktreeMergeButton';
 import { WorktreeRevertButton } from '@/components/project/WorktreeRevertButton';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type Props = {
   task: TaskData;
-  onWorkingModeChange: (mode: WorkingMode) => void;
   onMerge: () => void;
   onSquash: () => void;
   onOnlyUncommitted: () => void;
   onRevert: () => void;
   isMerging: boolean;
 };
+⋮----
+const handleWorkingModeChanged = async (mode: WorkingMode) =>
+⋮----
+// eslint-disable-next-line no-console
 
 ================
 File: src/renderer/src/components/settings/agent/AgentProfileItem.tsx
@@ -16387,7 +16515,6 @@ interface TaskState {
 interface TaskContextType {
   getTaskState: (taskId: string, loadIfNotLoaded?: boolean) => TaskState | null;
   clearSession: (taskId: string, messagesOnly: boolean) => void;
-  updateTask: (taskId: string, updates: Partial<TaskData>) => void;
   restartTask: (taskId: string) => void;
   setMessages: (taskId: string, updateMessages: (prevState: Message[]) => Message[]) => void;
   setTodoItems: (taskId: string, updateTodoItems: (prev: TodoItem[]) => TodoItem[]) => void;
@@ -16885,6 +17012,33 @@ export const GeminiIcon = ({ width = 64, height = 64, className }: Props) => (
         </linearGradient>
       </defs>
     </svg>
+  </div>
+);
+
+================
+File: src/renderer/src/icons/GpustackIcon.tsx
+================
+import gpustackIcon from './gpustack.png';
+⋮----
+type Props = {
+  width?: number;
+  height?: number;
+  className?: string;
+};
+⋮----
+export const GpustackIcon = ({ width = 64, height = 64, className }: Props) => (
+  <div
+    aria-label="GPUStack"
+    className={`flex items-center justify-center rounded-md ${className || ''}`}
+    style={{
+      backgroundColor: 'white',
+      boxShadow: 'rgba(0, 0, 0, 0.1) 0px 0px 0px 1px inset',
+      color: 'rgb(255, 255, 255)',
+      height: `${height}px`,
+      width: `${width}px`,
+    }}
+  >
+    <img src={gpustackIcon} width={width} height={height} className={className} alt="GPUStack" />
   </div>
 );
 
