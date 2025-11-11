@@ -377,8 +377,9 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         .default(0)
         .describe('The number of lines of context to show before and after each matching line. Default: 0.'),
       caseSensitive: z.boolean().optional().default(false).describe('Whether the search should be case sensitive. Default: false.'),
+      maxResults: z.number().int().min(1).optional().default(50).describe('Maximum number of results to return. Default: 50.'),
     }),
-    execute: async ({ filePattern, searchTerm, contextLines, caseSensitive }, { toolCallId }) => {
+    execute: async ({ filePattern, searchTerm, contextLines, caseSensitive, maxResults }, { toolCallId }) => {
       task.addToolMessage(
         toolCallId,
         TOOL_GROUP_NAME,
@@ -388,6 +389,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
           searchTerm,
           contextLines,
           caseSensitive,
+          maxResults,
         },
         undefined,
         undefined,
@@ -434,8 +436,12 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
           const lines = fileContent.split('\n');
           const relativeFilePath = path.relative(task.getTaskDir(), absoluteFilePath);
 
-          lines.forEach((line, index) => {
+          for (let index = 0; index < lines.length; index++) {
+            const line = lines[index];
             if (searchRegex.test(line)) {
+              if (results.length >= maxResults) {
+                break;
+              }
               const matchResult: {
                 filePath: string;
                 lineNumber: number;
@@ -454,7 +460,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
               }
               results.push(matchResult);
             }
-          });
+          }
         }
 
         if (results.length === 0) {

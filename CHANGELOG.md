@@ -3,6 +3,7 @@
 ## [UNRELEASED]
 
 - added support for MiniMax provider
+- added maxResults parameter to grep tool with default 50
 
 ## [0.39.0]
 
