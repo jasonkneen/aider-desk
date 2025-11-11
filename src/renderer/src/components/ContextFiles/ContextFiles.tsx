@@ -7,7 +7,7 @@ import { BiCollapseVertical, BiExpandVertical } from 'react-icons/bi';
 import { LuFolderTree } from 'react-icons/lu';
 import { TbPencilOff } from 'react-icons/tb';
 import { useTranslation } from 'react-i18next';
-import { usePrevious } from '@reactuses/core';
+import { useLocalStorage, usePrevious } from '@reactuses/core';
 
 import { StyledTooltip } from '../common/StyledTooltip';
 
@@ -100,7 +100,7 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
   const prevContextFiles = usePrevious(contextFiles);
 
   const [newlyAddedFiles, setNewlyAddedFiles] = useState<string[]>([]);
-  const [showAllFiles, setShowAllFiles] = useState(false);
+  const [showAllFiles, setShowAllFiles] = useLocalStorage(`context-files-show-all-${baseDir}`, false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
 

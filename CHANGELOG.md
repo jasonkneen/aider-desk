@@ -5,6 +5,7 @@
 - added support for MiniMax provider
 - added maxResults parameter to grep tool with default 50
 - files are now correctly sent to the UI
+- "Show/Hide all files" now persist the state across the tasks per project
 
 ## [0.39.0]
 
