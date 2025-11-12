@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 export type Column<T> = {
   accessor?: keyof T;
-  header: string;
+  header: ReactNode;
   cell?: (value: T[keyof T] | null, row: T) => ReactNode;
   headerClassName?: string;
   cellClassName?: string;

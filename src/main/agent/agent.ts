@@ -31,7 +31,7 @@ import {
   wrapLanguageModel,
 } from 'ai';
 import { delay, extractServerNameToolName } from '@common/utils';
-import { LlmProviderName } from '@common/agent';
+import { DEFAULT_MODEL_TEMPERATURE, LlmProviderName } from '@common/agent';
 import { countTokens } from 'gpt-tokenizer/model/gpt-4o';
 import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.js';
 // @ts-expect-error istextorbinary is not typed properly
@@ -715,6 +715,19 @@ export class Agent {
           effectiveAbortSignal,
         );
 
+        // Get the model to use its temperature and max output tokens settings
+        const modelSettings = this.modelManager.getModel(profile.provider, profile.model);
+        const effectiveTemperature = profile.temperature ?? modelSettings?.temperature ?? DEFAULT_MODEL_TEMPERATURE;
+        const effectiveMaxOutputTokens = profile.maxTokens ?? modelSettings?.maxOutputTokens;
+
+        logger.debug('Parameters:', {
+          model: model.modelId,
+          temperature: effectiveTemperature,
+          maxOutputTokens: effectiveMaxOutputTokens,
+          minTimeBetweenToolCalls: profile.minTimeBetweenToolCalls,
+          ...providerParameters,
+        });
+
         if (this.modelManager.isStreamingDisabled(provider, profile.model)) {
           logger.debug('Streaming disabled, using generateText');
           await generateText({
@@ -723,9 +736,9 @@ export class Agent {
             messages: optimizeMessages(profile, initialUserRequestMessageIndex, messages, cacheControl, settings),
             tools: toolSet,
             abortSignal: effectiveAbortSignal,
-            maxOutputTokens: profile.maxTokens,
+            maxOutputTokens: effectiveMaxOutputTokens,
             maxRetries: 5,
-            temperature: profile.temperature,
+            temperature: effectiveTemperature,
             ...providerParameters,
             onStepFinish,
             experimental_repairToolCall: repairToolCall,
@@ -744,9 +757,9 @@ export class Agent {
             messages: optimizeMessages(profile, initialUserRequestMessageIndex, messages, cacheControl, settings),
             tools: toolSet,
             abortSignal: effectiveAbortSignal,
-            maxOutputTokens: profile.maxTokens,
+            maxOutputTokens: effectiveMaxOutputTokens,
             maxRetries: 5,
-            temperature: profile.temperature,
+            temperature: effectiveTemperature,
             experimental_telemetry: {
               isEnabled: true,
             },

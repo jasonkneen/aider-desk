@@ -113,7 +113,6 @@ export class TelemetryManager {
       event: 'agent-run',
       properties: {
         maxIterations: profile.maxIterations,
-        maxTokens: profile.maxTokens,
         customInstructionsDefined: profile.customInstructions.trim().length > 0,
         useAiderTools: profile.useAiderTools,
         usePowerTools: profile.usePowerTools,

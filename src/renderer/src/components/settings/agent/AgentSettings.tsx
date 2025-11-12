@@ -1,13 +1,14 @@
 import { AgentProfile, ContextMemoryMode, GenericTool, InvocationMode, McpServerConfig, SettingsData, ToolApprovalState } from '@common/types';
 import React, { ReactNode, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { FaPencilAlt, FaPlus, FaSyncAlt } from 'react-icons/fa';
-import { DEFAULT_AGENT_PROFILE } from '@common/agent';
+import { FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
+import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat } from 'react-icons/md';
+import { DEFAULT_AGENT_PROFILE, DEFAULT_MODEL_TEMPERATURE } from '@common/agent';
 import { BiTrash } from 'react-icons/bi';
 import { clsx } from 'clsx';
 import Sketch from '@uiw/react-color-sketch';
-import { DndContext, type DragEndEvent, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
-import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { closestCenter, DndContext, type DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import {
   AIDER_TOOL_ADD_CONTEXT_FILES,
   AIDER_TOOL_DESCRIPTIONS,
@@ -17,6 +18,7 @@ import {
   AIDER_TOOL_RUN_PROMPT,
   POWER_TOOL_BASH,
   POWER_TOOL_DESCRIPTIONS,
+  POWER_TOOL_FETCH,
   POWER_TOOL_FILE_EDIT,
   POWER_TOOL_FILE_READ,
   POWER_TOOL_FILE_WRITE,
@@ -24,7 +26,6 @@ import {
   POWER_TOOL_GREP,
   POWER_TOOL_GROUP_NAME,
   POWER_TOOL_SEMANTIC_SEARCH,
-  POWER_TOOL_FETCH,
   TODO_TOOL_CLEAR_ITEMS,
   TODO_TOOL_DESCRIPTIONS,
   TODO_TOOL_GET_ITEMS,
@@ -33,7 +34,6 @@ import {
   TODO_TOOL_UPDATE_ITEM_COMPLETION,
 } from '@common/tools';
 import { useTranslation } from 'react-i18next';
-import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat } from 'react-icons/md';
 import { FaArrowRightFromBracket } from 'react-icons/fa6';
 
 import { McpServer, McpServerForm } from './McpServerForm';
@@ -42,8 +42,9 @@ import { GenericToolGroupItem } from './GenericToolGroupItem';
 import { AgentRules } from './AgentRules';
 import { SortableAgentProfileItem } from './SortableAgentProfileItem';
 
-import { AgentModelSelector } from '@/components/AgentModelSelector';
+import { IconButton } from '@/components/common/IconButton';
 import { Button } from '@/components/common/Button';
+import { AgentModelSelector } from '@/components/AgentModelSelector';
 import { Slider } from '@/components/common/Slider';
 import { InfoIcon } from '@/components/common/InfoIcon';
 import { Accordion } from '@/components/common/Accordion';
@@ -144,22 +145,44 @@ const tools: Record<string, GenericTool[]> = {
 
 // Helper functions for accordion summaries
 const getRunSettingsSummary = (profile: AgentProfile) => {
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex items-center gap-1">
+  const settings: React.ReactNode[] = [];
+
+  // Always show max iterations
+  settings.push(
+    <div key="iterations" className="flex items-center gap-1">
+      <MdRepeat className="w-3 h-3 text-text-secondary" />
+      <span>{profile.maxIterations}</span>
+    </div>,
+  );
+
+  // Only show temperature if it's overridden
+  if (profile.temperature !== undefined) {
+    settings.push(
+      <div key="temperature" className="flex items-center gap-1">
         <MdThermostat className="w-3 h-3 text-text-secondary" />
         <span>{profile.temperature}</span>
-      </div>
-      <span>|</span>
-      <div className="flex items-center gap-1">
-        <MdRepeat className="w-3 h-3 text-text-secondary" />
-        <span>{profile.maxIterations}</span>
-      </div>
-      <span>|</span>
-      <div className="flex items-center gap-1">
+      </div>,
+    );
+  }
+
+  // Only show max tokens if it's overridden
+  if (profile.maxTokens !== undefined) {
+    settings.push(
+      <div key="tokens" className="flex items-center gap-1">
         <FaArrowRightFromBracket className="w-2.5 h-2.5 -rotate-90 text-text-secondary" />
         <span>{profile.maxTokens}</span>
-      </div>
+      </div>,
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      {settings.map((setting, index) => (
+        <React.Fragment key={index}>
+          {index > 0 && <span className="text-text-muted">|</span>}
+          {setting}
+        </React.Fragment>
+      ))}
     </div>
   );
 };
@@ -512,58 +535,111 @@ export const AgentSettings = ({ settings, setSettings, initialProfileId }: Props
 
             {renderSectionAccordion(
               t('settings.agent.runSettings'),
-              <div className="grid grid-cols-2 gap-x-6 gap-y-4">
-                <Slider
-                  label={
-                    <div className="flex items-center text-xs">
-                      <span>{t('settings.agent.temperature')}</span>
-                      <InfoIcon className="ml-1" tooltip={t('settings.agent.temperatureTooltip')} />
+              <div>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-4">
+                  <Slider
+                    label={
+                      <div className="flex items-center text-xs">
+                        <span>{t('settings.agent.maxIterations')}</span>
+                        <InfoIcon tooltip={t('settings.agent.computationalResources')} className="ml-1" />
+                      </div>
+                    }
+                    min={1}
+                    max={200}
+                    value={selectedProfile.maxIterations}
+                    onChange={(value) => handleProfileSettingChange('maxIterations', value)}
+                  />
+
+                  <Input
+                    label={
+                      <div className="flex items-center text-xs">
+                        <span>{t('settings.agent.minTimeBetweenToolCalls')}</span>
+                        <InfoIcon tooltip={t('settings.agent.rateLimiting')} className="ml-1" />
+                      </div>
+                    }
+                    type="number"
+                    min={0}
+                    max={60000}
+                    step={100}
+                    value={selectedProfile.minTimeBetweenToolCalls.toString()}
+                    onChange={(e) => handleProfileSettingChange('minTimeBetweenToolCalls', Number(e.target.value))}
+                  />
+
+                  {/* Temperature Column */}
+                  {selectedProfile.temperature === undefined ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center text-xs">
+                        <span>{t('settings.agent.temperature')}</span>
+                        <InfoIcon tooltip={t('settings.agent.temperatureTooltip')} className="ml-1" />
+                        <div className="flex items-center justify-end w-full">
+                          <Button variant="text" size="xs" onClick={() => handleProfileSettingChange('temperature', DEFAULT_MODEL_TEMPERATURE)}>
+                            {t('settings.agent.override')}
+                          </Button>
+                        </div>
+                      </div>
                     </div>
-                  }
-                  min={0}
-                  max={2}
-                  step={0.05}
-                  value={selectedProfile.temperature}
-                  onChange={(value) => handleProfileSettingChange('temperature', value)}
-                />
-                <Slider
-                  label={
-                    <div className="flex items-center text-xs">
-                      <span>{t('settings.agent.maxIterations')}</span>
-                      <InfoIcon className="ml-1" tooltip={t('settings.agent.computationalResources')} />
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Slider
+                          label={
+                            <div className="flex items-center text-xs">
+                              <span>{t('settings.agent.temperature')}</span>
+                              <InfoIcon tooltip={t('settings.agent.temperatureTooltip')} className="ml-2" />
+                            </div>
+                          }
+                          min={0}
+                          max={2}
+                          step={0.05}
+                          value={selectedProfile.temperature}
+                          className="flex-1"
+                          onChange={(value) => handleProfileSettingChange('temperature', value)}
+                        />
+                        <IconButton
+                          icon={<FaTimes className="w-3 h-3" />}
+                          onClick={() => handleProfileSettingChange('temperature', undefined)}
+                          tooltip={t('settings.agent.clearOverride')}
+                          className="p-1 hover:bg-bg-tertiary-emphasis hover:text-text-error rounded-sm mt-8"
+                        />
+                      </div>
                     </div>
-                  }
-                  min={1}
-                  max={200}
-                  value={selectedProfile.maxIterations}
-                  onChange={(value) => handleProfileSettingChange('maxIterations', value)}
-                />
-                <Input
-                  label={
+                  )}
+
+                  {/* Max Tokens Column */}
+                  <div className="space-y-2">
                     <div className="flex items-center text-xs">
-                      <span>{t('settings.agent.maxTokens')}</span>
-                      <InfoIcon className="ml-1" tooltip={t('settings.agent.tokensPerResponse')} />
+                      <span className="flex-shrink-0">{t('settings.agent.maxTokens')}</span>
+                      <InfoIcon tooltip={t('settings.agent.tokensPerResponse')} className="ml-1" />
+                      {selectedProfile.maxTokens === undefined && (
+                        <div className="flex items-center justify-end w-full">
+                          <Button variant="text" size="xs" onClick={() => handleProfileSettingChange('maxTokens', 32000)} className="justify-center">
+                            {t('settings.agent.override')}
+                          </Button>
+                        </div>
+                      )}
                     </div>
-                  }
-                  type="number"
-                  min={1}
-                  value={selectedProfile.maxTokens.toString()}
-                  onChange={(e) => handleProfileSettingChange('maxTokens', Number(e.target.value))}
-                />
-                <Input
-                  label={
-                    <div className="flex items-center text-xs">
-                      <span>{t('settings.agent.minTimeBetweenToolCalls')}</span>
-                      <InfoIcon className="ml-1" tooltip={t('settings.agent.rateLimiting')} />
-                    </div>
-                  }
-                  type="number"
-                  min={0}
-                  max={60000}
-                  step={100}
-                  value={selectedProfile.minTimeBetweenToolCalls.toString()}
-                  onChange={(e) => handleProfileSettingChange('minTimeBetweenToolCalls', Number(e.target.value))}
-                />
+                    {selectedProfile.maxTokens !== undefined && (
+                      <div className="flex items-center gap-2 w-full">
+                        <div className="flex-1">
+                          <Input
+                            type="number"
+                            min={0}
+                            max={60000}
+                            step={100}
+                            value={selectedProfile.maxTokens.toString()}
+                            onChange={(e) => handleProfileSettingChange('maxTokens', Number(e.target.value))}
+                          />
+                        </div>
+                        <IconButton
+                          icon={<FaTimes className="w-3 h-3" />}
+                          onClick={() => handleProfileSettingChange('maxTokens', undefined)}
+                          tooltip={t('settings.agent.clearOverride')}
+                          className="p-1 hover:bg-bg-tertiary-emphasis hover:text-text-error rounded-sm"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>,
               undefined,
               undefined,

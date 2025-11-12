@@ -6,6 +6,7 @@
 - added maxResults parameter to grep tool with default 50
 - files are now correctly sent to the UI
 - "Show/Hide all files" now persist the state across the tasks per project
+- enhanced model configuration with temperature and max tokens support at the model level, with optional agent profile overrides
 
 ## [0.39.0]
 

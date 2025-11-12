@@ -52,7 +52,7 @@ export const VirtualTable = <T extends object>({
     return columns.map((column, index) => ({
       id: (column.accessor as string) || `column-${index}`,
       accessorKey: column.accessor as string,
-      header: column.header,
+      header: () => column.header,
       cell: (info) => {
         const value = info.getValue() as T[keyof T] | null;
         const row = info.row.original;

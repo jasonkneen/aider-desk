@@ -218,6 +218,8 @@ export type LlmProvider =
   | ZaiPlanProvider
   | MinimaxProvider;
 
+export const DEFAULT_MODEL_TEMPERATURE = 0.5;
+
 export const DEFAULT_PROVIDER_MODEL: Partial<Record<LlmProviderName, string>> = {
   anthropic: 'claude-sonnet-4-20250514',
   cerebras: 'llama3.1-8b',
@@ -236,9 +238,7 @@ export const DEFAULT_AGENT_PROFILE: AgentProfile = {
   provider: 'anthropic',
   model: DEFAULT_PROVIDER_MODEL.anthropic!,
   maxIterations: 100,
-  maxTokens: 8192,
   minTimeBetweenToolCalls: 0,
-  temperature: 0.1,
   toolApprovals: {
     // aider tools
     [`${AIDER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${AIDER_TOOL_GET_CONTEXT_FILES}`]: ToolApprovalState.Always,
@@ -344,7 +344,6 @@ export const INIT_PROJECT_AGENTS_PROFILE: AgentProfile = {
   ...DEFAULT_AGENT_PROFILE,
   id: 'init',
   maxIterations: 50,
-  maxTokens: 5000,
   includeRepoMap: true,
   includeContextFiles: false,
   usePowerTools: true,
@@ -364,7 +363,6 @@ export const COMPACT_CONVERSATION_AGENT_PROFILE: AgentProfile = {
   ...DEFAULT_AGENT_PROFILE,
   id: 'compact',
   maxIterations: 5,
-  maxTokens: 8192,
   includeRepoMap: false,
   includeContextFiles: false,
   usePowerTools: false,

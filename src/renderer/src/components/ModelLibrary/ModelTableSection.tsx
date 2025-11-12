@@ -3,6 +3,8 @@ import { useDebounce } from '@reactuses/core';
 import { useTranslation } from 'react-i18next';
 import { FiEdit2, FiTrash2, FiPlus, FiEye, FiSliders, FiRefreshCw } from 'react-icons/fi';
 import { Model, ProviderProfile } from '@common/types';
+import { MdThermostat } from 'react-icons/md';
+import { DEFAULT_MODEL_TEMPERATURE } from '@common/agent';
 
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
@@ -10,6 +12,7 @@ import { Checkbox } from '@/components/common/Checkbox';
 import { Column } from '@/components/common/Table';
 import { VirtualTable } from '@/components/common/VirtualTable';
 import { IconButton } from '@/components/common/IconButton';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
 
 type Props = {
   models: Model[];
@@ -142,6 +145,17 @@ export const ModelTableSection = ({
       sort: (a, b) => (a.maxOutputTokens || 0) - (b.maxOutputTokens || 0),
     },
     {
+      accessor: 'temperature',
+      header: (
+        <MdThermostat className="w-4 h-4 text-text-secondary" data-tooltip-id="model-table-tooltip" data-tooltip-content={t('modelLibrary.temperature')} />
+      ),
+      align: 'center',
+      maxWidth: 50,
+      cellClassName: 'text-xs',
+      cell: (value) => (value as number | undefined) ?? DEFAULT_MODEL_TEMPERATURE,
+      sort: (a, b) => (a.temperature ?? DEFAULT_MODEL_TEMPERATURE) - (b.temperature ?? DEFAULT_MODEL_TEMPERATURE),
+    },
+    {
       header: '',
       cell: (_, row) => (
         <div className="flex items-center justify-end space-x-2">
@@ -166,6 +180,7 @@ export const ModelTableSection = ({
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
+      <StyledTooltip id="model-table-tooltip" />
       {/* Search and Info Header */}
       <div className="px-2 pt-2">
         <div className="flex items-center justify-between space-x-4 pr-4">

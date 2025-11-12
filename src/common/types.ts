@@ -334,9 +334,9 @@ export interface AgentProfile {
   provider: string;
   model: string;
   maxIterations: number;
-  maxTokens: number;
+  maxTokens?: number; // Optional: overrides model maxOutputTokens when set
   minTimeBetweenToolCalls: number; // in milliseconds
-  temperature: number; // 0-1 for controlling randomness/creativity
+  temperature?: number; // Optional: overrides model temperature when set
   enabledServers: string[];
   toolApprovals: Record<string, ToolApprovalState>;
   toolSettings: Record<string, ToolSettings>;
@@ -639,6 +639,7 @@ export interface Model {
   providerId: string;
   maxInputTokens?: number;
   maxOutputTokens?: number;
+  temperature?: number;
   inputCostPerToken?: number;
   outputCostPerToken?: number;
   cacheWriteInputTokenCost?: number;

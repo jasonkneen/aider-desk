@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Model, ProviderProfile } from '@common/types';
+import { DEFAULT_MODEL_TEMPERATURE } from '@common/agent';
 
 import { ModelParameterOverrides } from './ModelParameterOverrides';
 
@@ -8,6 +9,8 @@ import { Input } from '@/components/common/Input';
 import { Select } from '@/components/common/Select';
 import { Checkbox } from '@/components/common/Checkbox';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { Slider } from '@/components/common/Slider';
+import { InfoIcon } from '@/components/common/InfoIcon';
 
 type Props = {
   model?: Model;
@@ -21,6 +24,7 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
   const [formData, setFormData] = useState<Partial<Model>>({
     id: '',
     providerId: providers[0]?.id || '',
+    temperature: DEFAULT_MODEL_TEMPERATURE,
     ...model,
   });
 
@@ -35,6 +39,7 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
         providerId: model.providerId,
         maxInputTokens: model.maxInputTokens,
         maxOutputTokens: model.maxOutputTokens,
+        temperature: model.temperature ?? DEFAULT_MODEL_TEMPERATURE,
         inputCostPerToken: model.inputCostPerToken,
         outputCostPerToken: model.outputCostPerToken,
         cacheReadInputTokenCost: model.cacheReadInputTokenCost,
@@ -72,6 +77,10 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
       newErrors.maxOutputTokens = t('modelLibrary.errors.invalidTokenCount');
     }
 
+    if (formData.temperature && (formData.temperature < 0 || formData.temperature > 2)) {
+      newErrors.temperature = t('modelLibrary.errors.invalidTemperature');
+    }
+
     if (formData.inputCostPerToken && formData.inputCostPerToken < 0) {
       newErrors.inputCostPerToken = t('modelLibrary.errors.invalidCost');
     }
@@ -94,6 +103,7 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
       providerId: formData.providerId!,
       maxInputTokens: formData.maxInputTokens,
       maxOutputTokens: formData.maxOutputTokens,
+      temperature: formData.temperature,
       inputCostPerToken: formData.inputCostPerToken,
       outputCostPerToken: formData.outputCostPerToken,
       cacheReadInputTokenCost: formData.cacheReadInputTokenCost,
@@ -243,6 +253,23 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
               }}
             />
           </div>
+        </div>
+
+        <div className="space-y-2 grid grid-cols-2 gap-4">
+          <Slider
+            label={
+              <div className="flex items-center text-sm">
+                <span>{t('modelLibrary.temperature')}</span>
+                <InfoIcon tooltip={t('modelLibrary.temperatureTooltip')} className="ml-2" />
+              </div>
+            }
+            min={0}
+            max={2}
+            step={0.05}
+            value={formData.temperature ?? DEFAULT_MODEL_TEMPERATURE}
+            onChange={(value) => handleInputChange('temperature', value)}
+          />
+          {errors.temperature && <p className="text-error text-2xs mt-1">{errors.temperature}</p>}
         </div>
 
         {/* Advanced Settings - Provider Overrides */}
