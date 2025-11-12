@@ -34,8 +34,10 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
   const activeTask = activeTaskId ? optimisticTasks.find((task) => task.id === activeTaskId) : null;
 
   const createNewTask = useCallback(async () => {
-    if (activeTask && !activeTask.createdAt) {
+    const existingNewTask = tasks.find((task) => !task.createdAt);
+    if (existingNewTask) {
       // when there is active task and is new we don't need to create new one
+      setActiveTaskId(existingNewTask.id);
       return;
     }
 
@@ -47,23 +49,24 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
       // eslint-disable-next-line no-console
       console.error('Failed to create new task:', error);
     }
-  }, [activeTask, api, project.baseDir]);
+  }, [api, project.baseDir, tasks]);
 
   useEffect(() => {
     const handleStartupMode = async (tasks: TaskData[]) => {
       const mode = settings?.startupMode ?? ProjectStartMode.Empty;
+      const existingNewTask = tasks.find((task) => !task.createdAt);
       let startupTask: TaskData | null = null;
 
       switch (mode) {
         case ProjectStartMode.Empty: {
-          startupTask = await api.createNewTask(project.baseDir);
+          startupTask = existingNewTask || (await api.createNewTask(project.baseDir));
           break;
         }
         case ProjectStartMode.Last: {
           startupTask = tasks.filter((task) => task.createdAt && task.updatedAt).sort((a, b) => b.updatedAt!.localeCompare(a.updatedAt!))[0];
 
           if (!startupTask) {
-            startupTask = await api.createNewTask(project.baseDir);
+            startupTask = existingNewTask || (await api.createNewTask(project.baseDir));
           }
           break;
         }

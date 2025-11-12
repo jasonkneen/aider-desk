@@ -25,7 +25,7 @@ export const EXPANDED_WIDTH = 256;
 
 type TaskMenuButtonProps = {
   onEdit: () => void;
-  onDelete: () => void;
+  onDelete?: () => void;
   onExportToMarkdown?: () => void;
   onExportToImage?: () => void;
   onCopyTaskId?: () => void;
@@ -65,7 +65,7 @@ const TaskMenuButton = ({
 
   const handleDeleteClick = (e: MouseEvent) => {
     e.stopPropagation();
-    onDelete();
+    onDelete?.();
     setIsMenuOpen(false);
   };
 
@@ -185,13 +185,15 @@ const TaskMenuButton = ({
                 <span className="whitespace-nowrap">{t('taskSidebar.unarchiveTask')}</span>
               </li>
             )}
-            <li
-              className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
-              onClick={handleDeleteClick}
-            >
-              <HiOutlineTrash className="w-4 h-4 text-error" />
-              <span className="whitespace-nowrap">{t('taskSidebar.deleteTask')}</span>
-            </li>
+            {onDelete && (
+              <li
+                className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
+                onClick={handleDeleteClick}
+              >
+                <HiOutlineTrash className="w-4 h-4 text-error" />
+                <span className="whitespace-nowrap">{t('taskSidebar.deleteTask')}</span>
+              </li>
+            )}
           </ul>
         </div>
       )}
@@ -244,15 +246,25 @@ const TaskSidebarComponent = ({
   const debouncedSearchQuery = useDebounce(searchQuery, 50);
 
   const sortedTasks = tasks
-    .filter((task) => task.createdAt && task.updatedAt)
     .filter((task) => showArchived || !task.archived)
     .filter((task) => {
       if (!debouncedSearchQuery.trim()) {
         return true;
       }
-      return task.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
+      const searchText = debouncedSearchQuery.toLowerCase();
+      return task.name.toLowerCase().includes(searchText);
     })
-    .sort((a, b) => b.updatedAt!.localeCompare(a.updatedAt!));
+    .sort((a, b) => {
+      if (a.updatedAt && !b.updatedAt) {
+        return 1;
+      } else if (!a.updatedAt && b.updatedAt) {
+        return -1;
+      } else if (!a.updatedAt && !b.updatedAt) {
+        return 0;
+      } else {
+        return b.updatedAt!.localeCompare(a.updatedAt!);
+      }
+    });
 
   const handleTaskClick = (taskId: string) => {
     onTaskSelect(taskId);
@@ -380,10 +392,10 @@ const TaskSidebarComponent = ({
               task.archived && activeTaskId !== task.id ? 'text-text-muted group-hover:text-text-primary' : 'text-text-primary',
             )}
           >
-            {task.name}
+            {task.name || t('taskSidebar.untitled')}
           </div>
           <div className="text-3xs text-text-muted truncate">
-            {formatDate(task.updatedAt!)}
+            {formatDate(task.updatedAt || new Date().toISOString())}
             {task.archived && ` • ${t('taskSidebar.archived')}`}
           </div>
         </div>
@@ -392,12 +404,12 @@ const TaskSidebarComponent = ({
 
         <TaskMenuButton
           onEdit={() => handleEditClick(task.id, task.name)}
-          onDelete={() => handleDeleteClick(task.id)}
-          onExportToMarkdown={onExportToMarkdown ? () => onExportToMarkdown(task.id) : undefined}
-          onExportToImage={onExportToImage ? () => onExportToImage(task.id) : undefined}
-          onCopyTaskId={onCopyTaskId ? () => onCopyTaskId(task.id) : undefined}
-          onDuplicateTask={onDuplicateTask ? () => onDuplicateTask(task.id) : undefined}
-          onArchiveTask={task.archived ? undefined : () => handleArchiveTask(task.id)}
+          onDelete={task.createdAt ? () => handleDeleteClick(task.id) : undefined}
+          onExportToMarkdown={onExportToMarkdown && task.createdAt ? () => onExportToMarkdown(task.id) : undefined}
+          onExportToImage={onExportToImage && task.createdAt ? () => onExportToImage(task.id) : undefined}
+          onCopyTaskId={onCopyTaskId && task.createdAt ? () => onCopyTaskId(task.id) : undefined}
+          onDuplicateTask={onDuplicateTask && task.createdAt ? () => onDuplicateTask(task.id) : undefined}
+          onArchiveTask={task.archived || !task.createdAt ? undefined : () => handleArchiveTask(task.id)}
           onUnarchiveTask={task.archived ? () => handleUnarchiveTask(task.id) : undefined}
         />
       </div>

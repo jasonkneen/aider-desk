@@ -1032,6 +1032,7 @@
     "createTask": "创建新任务",
     "rename": "重命名",
     "taskNamePlaceholder": "输入任务名称...",
+    "untitled": "[未命名]",
     "exportAsMarkdown": "导出为 Markdown",
     "exportAsImage": "导出为图片",
     "copyTaskId": "复制任务 ID",

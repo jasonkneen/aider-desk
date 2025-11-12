@@ -1728,6 +1728,11 @@ ${error.stderr}`,
       this.task[key] = updates[key];
     }
 
+    // setting a name will also save the task
+    if (!this.task.createdAt && 'name' in updates) {
+      this.task.createdAt = new Date().toISOString();
+    }
+
     if (!this.task.createdAt) {
       // if this task is new empty task update should not trigger save
       this.eventManager.sendTaskUpdated(this.task);

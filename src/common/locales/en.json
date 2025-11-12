@@ -1024,6 +1024,7 @@
     "createTask": "Create new task",
     "rename": "Rename",
     "taskNamePlaceholder": "Enter task name...",
+    "untitled": "[Untitled]",
     "exportAsMarkdown": "Export as markdown",
     "exportAsImage": "Export as image",
     "copyTaskId": "Copy task ID",
