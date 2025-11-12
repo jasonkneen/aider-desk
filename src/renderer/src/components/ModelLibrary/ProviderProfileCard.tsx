@@ -106,7 +106,7 @@ export const ProviderProfileCard = ({ provider, error, isSelected, onToggleSelec
       >
         <div className="flex items-center space-x-3 flex-1 min-w-0">
           <div className="flex-shrink-0 relative">
-            <IconComponent width={24} height={24} />
+            {IconComponent && <IconComponent width={24} height={24} />}
             {error && (
               <div className="absolute -bottom-3 -right-3 bg-bg-secondary rounded-full p-0.5">
                 <StyledTooltip id={`provider-error-tooltip-${provider.id}`} content={error} />
