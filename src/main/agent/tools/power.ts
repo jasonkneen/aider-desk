@@ -31,10 +31,11 @@ import { PROBE_BINARY_PATH } from '@/constants';
 import { Task } from '@/task';
 import logger from '@/logger';
 import { filterIgnoredFiles, scrapeWeb } from '@/utils';
+import { isAbortError, isFileNotFoundError } from '@/utils/errors';
 
 const execAsync = promisify(exec);
 
-export const createPowerToolset = (task: Task, profile: AgentProfile, promptContext?: PromptContext): ToolSet => {
+export const createPowerToolset = (task: Task, profile: AgentProfile, promptContext?: PromptContext, abortSignal?: AbortSignal): ToolSet => {
   const approvalManager = new ApprovalManager(task, profile);
 
   const fileEditTool = tool({
@@ -108,7 +109,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
       const absolutePath = path.resolve(task.getTaskDir(), filePath);
       try {
-        const fileContent = await fs.readFile(absolutePath, 'utf8');
+        const fileContent = await fs.readFile(absolutePath, { encoding: 'utf8', signal: abortSignal });
         let modifiedContent: string;
 
         if (isRegex) {
@@ -135,11 +136,14 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
           return `Warning: Given 'searchTerm' was not found in the file. Content remains the same. ${improveInfo}`;
         }
 
-        await fs.writeFile(absolutePath, modifiedContent, 'utf8');
+        await fs.writeFile(absolutePath, modifiedContent, { encoding: 'utf8', signal: abortSignal });
         return `Successfully edited '${filePath}'.`;
       } catch (error) {
+        if (isAbortError(error)) {
+          return 'Operation was cancelled by user.';
+        }
         const errorMessage = error instanceof Error ? error.message : String(error);
-        if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') {
+        if (isFileNotFoundError(error)) {
           return `Error: File '${filePath}' not found.`;
         }
         return `Error editing file '${filePath}': ${errorMessage}`;
@@ -186,7 +190,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
       const absolutePath = path.resolve(task.getTaskDir(), filePath);
       try {
-        const fileContentBuffer = await fs.readFile(absolutePath);
+        const fileContentBuffer = await fs.readFile(absolutePath, { signal: abortSignal });
         if (isBinary(absolutePath, fileContentBuffer)) {
           return 'Error: Binary files cannot be read.';
         }
@@ -212,8 +216,11 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
         return limitedLines.join('\n');
       } catch (error) {
+        if (isAbortError(error)) {
+          return 'Operation was cancelled by user.';
+        }
         const errorMessage = error instanceof Error ? error.message : String(error);
-        if ((error as NodeJS.ErrnoException)?.code === 'ENOENT') {
+        if (isFileNotFoundError(error)) {
           return `Error: File '${filePath}' not found.`;
         }
         return `Error: Could not read file '${filePath}'. ${errorMessage}`;
@@ -281,7 +288,11 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
         if (mode === FileWriteMode.CreateOnly) {
           try {
-            await fs.writeFile(absolutePath, content, { flag: 'wx' });
+            await fs.writeFile(absolutePath, content, {
+              encoding: 'utf8',
+              flag: 'wx',
+              signal: abortSignal,
+            });
             await addToGit();
 
             return `Successfully created '${filePath}'.`;
@@ -295,7 +306,10 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
           await fs.appendFile(absolutePath, content, 'utf8');
           return `Successfully appended to '${filePath}'.`;
         } else {
-          await fs.writeFile(absolutePath, content, 'utf8');
+          await fs.writeFile(absolutePath, content, {
+            encoding: 'utf8',
+            signal: abortSignal,
+          });
           await addToGit();
           return `Successfully written to '${filePath}' (overwritten).`;
         }
@@ -347,6 +361,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
           ignore: ignore,
           nodir: false,
           absolute: false, // Keep paths relative to cwd for easier processing
+          signal: abortSignal,
         });
 
         // Convert to absolute paths for filtering, then back to relative
@@ -410,6 +425,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
           cwd: task.getTaskDir(),
           nodir: true,
           absolute: true,
+          signal: abortSignal,
         });
 
         if (files.length === 0) {
@@ -432,7 +448,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         const searchRegex = new RegExp(searchTerm, caseSensitive ? undefined : 'i'); // Simpler for line-by-line test
 
         for (const absoluteFilePath of filteredFiles) {
-          const fileContent = await fs.readFile(absoluteFilePath, 'utf8');
+          const fileContent = await fs.readFile(absoluteFilePath, { encoding: 'utf8', signal: abortSignal });
           const lines = fileContent.split('\n');
           const relativeFilePath = path.relative(task.getTaskDir(), absoluteFilePath);
 
@@ -468,6 +484,9 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         }
         return results;
       } catch (error) {
+        if (isAbortError(error)) {
+          return 'Operation was cancelled by user.';
+        }
         const errorMessage = error instanceof Error ? error.message : String(error);
         return `Error during grep: ${errorMessage}`;
       }
@@ -528,9 +547,13 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         const { stdout, stderr } = await execAsync(command, {
           cwd: absoluteCwd,
           timeout: timeout,
+          signal: abortSignal,
         });
         return { stdout, stderr, exitCode: 0 };
       } catch (error: unknown) {
+        if (isAbortError(error)) {
+          return 'Operation was cancelled by user.';
+        }
         const execError = error as {
           stdout?: string;
           stderr?: string;
@@ -581,8 +604,11 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
       }
 
       try {
-        return await scrapeWeb(url, timeout);
+        return await scrapeWeb(url, timeout, abortSignal);
       } catch (error) {
+        if (isAbortError(error)) {
+          return 'Operation was cancelled by user.';
+        }
         const errorMessage = error instanceof Error ? error.message : String(error);
         return `Error: ${errorMessage}`;
       }
@@ -649,6 +675,9 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
         return results;
       } catch (error: unknown) {
+        if (isAbortError(error)) {
+          return 'Operation was cancelled by user.';
+        }
         const errorMessage = error instanceof Error ? error.message : String(error);
         logger.error('Error executing search command:', error);
         task.addLogMessage(

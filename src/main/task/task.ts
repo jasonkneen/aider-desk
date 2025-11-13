@@ -68,6 +68,7 @@ export class Task {
   private currentPromptResponses: ResponseCompletedData[] = [];
   private runPromptResolves: ((value: ResponseCompletedData[]) => void)[] = [];
   private autocompletionAllFiles: string[] | null = null;
+  private agentRunResolves: (() => void)[] = [];
 
   private readonly taskDataPath: string;
   private readonly contextManager: ContextManager;
@@ -343,6 +344,7 @@ export class Task {
       this.eventManager.sendClearTask(this.project.baseDir, this.taskId, true, true);
     }
     this.interruptResponse(false);
+    this.resolveAgentRunPromises();
 
     await this.aiderManager.kill();
     if (cleanupEmptyTask) {
@@ -384,6 +386,28 @@ export class Task {
       await new Promise<void>((resolve) => {
         this.runPromptResolves.push(() => resolve());
       });
+    }
+  }
+
+  private async waitForCurrentAgentToFinish() {
+    if (this.agent.isRunning()) {
+      logger.warn('Agent is already running, waiting for current operation to complete...', {
+        baseDir: this.project.baseDir,
+        taskId: this.taskId,
+      });
+      await new Promise<void>((resolve) => {
+        this.agentRunResolves.push(resolve);
+      });
+      logger.info('Current agent operation completed, proceeding...');
+    }
+  }
+
+  private resolveAgentRunPromises() {
+    while (this.agentRunResolves.length) {
+      const resolve = this.agentRunResolves.shift();
+      if (resolve) {
+        resolve();
+      }
     }
   }
 
@@ -518,7 +542,9 @@ export class Task {
       startedAt: new Date().toISOString(),
     });
 
+    await this.waitForCurrentAgentToFinish();
     const agentMessages = await this.agent.runAgent(this, profile, prompt, promptContext, contextMessages, contextFiles, systemPrompt);
+    this.resolveAgentRunPromises();
     if (agentMessages.length > 0) {
       agentMessages.forEach((message) => this.contextManager.addContextMessage(message));
 
@@ -1091,7 +1117,11 @@ export class Task {
   }
 
   public interruptResponse(addMessage = true) {
-    logger.debug('Interrupting response:', { baseDir: this.project.baseDir });
+    logger.info('Interrupting response:', {
+      baseDir: this.project.baseDir,
+      taskId: this.taskId,
+      promptContext: this.currentPromptContext?.id,
+    });
 
     if (this.currentQuestion) {
       this.answerQuestion('n', 'Cancelled');
@@ -1236,6 +1266,7 @@ export class Task {
     contextMessages: ContextMessage[] = this.contextManager.getContextMessages(),
     promptContext?: PromptContext,
     abortSignal?: AbortSignal,
+    waitForAgentCompletion = true,
     logMessage = 'Compacting conversation...',
   ) {
     const userMessage = contextMessages[0];
@@ -1268,6 +1299,10 @@ export class Task {
         provider: profile.provider,
         model: profile.model,
       };
+
+      if (waitForAgentCompletion) {
+        await this.waitForCurrentAgentToFinish();
+      }
       const agentMessages = await this.agent.runAgent(
         this,
         compactConversationAgentProfile,
@@ -1278,6 +1313,9 @@ export class Task {
         undefined,
         abortSignal,
       );
+      if (waitForAgentCompletion) {
+        this.resolveAgentRunPromises();
+      }
 
       if (agentMessages.length > 0) {
         // Clear existing context and add the summary

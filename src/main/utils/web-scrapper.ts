@@ -2,14 +2,16 @@ import { BrowserWindow } from 'electron';
 import Turndown from 'turndown';
 import * as cheerio from 'cheerio';
 
+import { isAbortError } from '@/utils/errors';
+
 export class WebScraper {
   private window: BrowserWindow | null = null;
 
-  async scrape(url: string, timeout: number = 60000): Promise<string> {
-    return await this.scrapeWithBrowserWindow(url, timeout);
+  async scrape(url: string, timeout: number = 60000, abortSignal?: AbortSignal): Promise<string> {
+    return await this.scrapeWithBrowserWindow(url, timeout, abortSignal);
   }
 
-  private async scrapeWithBrowserWindow(url: string, timeout: number = 60000): Promise<string> {
+  private async scrapeWithBrowserWindow(url: string, timeout: number = 60000, abortSignal?: AbortSignal): Promise<string> {
     // Create hidden BrowserWindow for scraping
     this.window = new BrowserWindow({
       show: false,
@@ -28,22 +30,32 @@ export class WebScraper {
         setTimeout(() => reject(new Error(`Scraping timeout after ${timeout}ms`)), timeout);
       });
 
-      // Load the URL with timeout
-      await Promise.race([this.window.loadURL(url), timeoutPromise]);
+      // Create abort promise if signal is provided
+      const abortPromise = abortSignal
+        ? new Promise<never>((_, reject) => {
+            abortSignal.addEventListener('abort', () => {
+              reject(new Error('The operation was aborted'));
+            });
+          })
+        : new Promise<never>(() => {});
 
-      // Wait for page to load completely with timeout
-      await Promise.race([this.waitForPageLoad(), timeoutPromise]);
+      // Load the URL with timeout and abort signal
+      await Promise.race([this.window.loadURL(url), timeoutPromise, abortPromise]);
 
-      // Get page content with timeout
+      // Wait for page to load completely with timeout and abort signal
+      await Promise.race([this.waitForPageLoad(), timeoutPromise, abortPromise]);
+
+      // Get page content with timeout and abort signal
       const content = await Promise.race([
         this.window.webContents.executeJavaScript(`
           document.documentElement.outerHTML;
         `),
         timeoutPromise,
+        abortPromise,
       ]);
 
-      // Get content type from headers with timeout
-      const contentType = await Promise.race([this.getContentType(), timeoutPromise]);
+      // Get content type from headers with timeout and abort signal
+      const contentType = await Promise.race([this.getContentType(), timeoutPromise, abortPromise]);
 
       // If it's HTML, convert to markdown-like text
       if (contentType.includes('text/html') || this.looksLikeHTML(content)) {
@@ -51,6 +63,11 @@ export class WebScraper {
       }
 
       return content;
+    } catch (error) {
+      if (isAbortError(error)) {
+        return 'Operation was cancelled by user.';
+      }
+      return `Error: ${error instanceof Error ? error.message : String(error)}`;
     } finally {
       // Cleanup window
       await this.cleanupWindow();
@@ -131,7 +148,7 @@ export class WebScraper {
   }
 }
 
-export const scrapeWeb = async (url: string, timeout: number = 60000) => {
+export const scrapeWeb = async (url: string, timeout: number = 60000, abortSignal?: AbortSignal) => {
   const scraper = new WebScraper();
-  return await scraper.scrape(url, timeout);
+  return await scraper.scrape(url, timeout, abortSignal);
 };

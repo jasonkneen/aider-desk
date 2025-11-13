@@ -8,6 +8,7 @@
 - "Show/Hide all files" now persist the state across the tasks per project
 - enhanced model configuration with temperature and max tokens support at the model level, with optional agent profile overrides
 - improved new task handling in sidebar
+- better utilization of abort signals and improved the interruption handling
 
 ## [0.39.0]
 

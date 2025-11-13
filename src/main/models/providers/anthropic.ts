@@ -145,16 +145,13 @@ export const getAnthropicUsageReport = (
   usage: LanguageModelUsage,
   providerMetadata?: unknown,
 ): UsageReportData => {
-  const totalSentTokens = usage.inputTokens || 0;
+  const sentTokens = usage.inputTokens || 0;
   const receivedTokens = usage.outputTokens || 0;
 
   // Extract cache tokens from provider metadata
   const { anthropic } = (providerMetadata as AnthropicMetadata) || {};
   const cacheWriteTokens = anthropic?.cacheCreationInputTokens ?? 0;
   const cacheReadTokens = anthropic?.cacheReadInputTokens ?? usage?.cachedInputTokens ?? 0;
-
-  // Calculate sentTokens after deducting cached tokens
-  const sentTokens = totalSentTokens - cacheReadTokens;
 
   // Calculate cost internally with already deducted sentTokens
   const messageCost = calculateAnthropicCost(model, sentTokens, receivedTokens, cacheWriteTokens, cacheReadTokens);

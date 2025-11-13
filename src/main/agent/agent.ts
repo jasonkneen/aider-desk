@@ -62,7 +62,7 @@ import { createSubagentsToolset } from '@/agent/tools/subagents';
 const MAX_RETRIES = 3;
 
 export class Agent {
-  private abortController: AbortController | null = null;
+  private abortControllers: Map<string, AbortController> = new Map();
   private lastToolCallTime: number = 0;
 
   constructor(
@@ -318,7 +318,7 @@ export class Agent {
     }
 
     if (profile.usePowerTools) {
-      const powerTools = createPowerToolset(task, profile, promptContext);
+      const powerTools = createPowerToolset(task, profile, promptContext, abortSignal);
       Object.assign(toolSet, powerTools);
     }
 
@@ -512,13 +512,18 @@ export class Agent {
 
     // Create new abort controller for this run only if abortSignal is not provided
     const shouldCreateAbortController = !abortSignal;
+    let controllerId: string | null = null;
+
     if (shouldCreateAbortController) {
+      controllerId = uuidv4();
       logger.debug('Creating new abort controller for Agent run', {
         taskId: task.taskId,
+        controllerId: controllerId,
       });
-      this.abortController = new AbortController();
+      const newController = new AbortController();
+      this.abortControllers.set(controllerId, newController);
     }
-    const effectiveAbortSignal = abortSignal || this.abortController?.signal;
+    const effectiveAbortSignal = abortSignal || (controllerId ? this.abortControllers.get(controllerId)?.signal : undefined);
 
     const cacheControl = this.modelManager.getCacheControl(profile, provider.provider);
     const providerOptions = this.modelManager.getProviderOptions(provider, profile.model);
@@ -543,6 +548,11 @@ export class Agent {
     } catch (error) {
       logger.error('Error reinitializing MCP clients:', error);
       task.addLogMessage('error', `Error reinitializing MCP clients: ${error}`, false, promptContext);
+    }
+
+    if (effectiveAbortSignal?.aborted) {
+      logger.info('Prompt aborted by user (before Agent run)');
+      return resultMessages;
     }
 
     const toolSet = await this.getAvailableTools(task, profile, provider, contextMessages, resultMessages, effectiveAbortSignal, promptContext);
@@ -839,11 +849,6 @@ export class Agent {
           await result.consumeStream();
         }
 
-        if (effectiveAbortSignal?.aborted) {
-          logger.info('Prompt aborted by user');
-          break;
-        }
-
         if (iterationError) {
           logger.error('Error during prompt:', iterationError);
           if (iterationError instanceof APICallError && iterationError.isRetryable) {
@@ -857,6 +862,11 @@ export class Agent {
 
         messages.push(...responseMessages);
         resultMessages.push(...responseMessages);
+
+        if (effectiveAbortSignal?.aborted) {
+          logger.info('Prompt aborted by user (inside loop)');
+          break;
+        }
 
         if ((finishReason === 'unknown' || finishReason === 'other' || !finishReason) && retryCount < MAX_RETRIES) {
           logger.debug(`Finish reason is "${finishReason}". Retrying...`);
@@ -902,8 +912,12 @@ export class Agent {
       }
     } finally {
       // Clean up abort controller only if we created it
-      if (shouldCreateAbortController) {
-        this.abortController = null;
+      if (controllerId) {
+        this.abortControllers.delete(controllerId);
+        logger.debug('Cleaned up abort controller', {
+          taskId: task.taskId,
+          controllerId: controllerId,
+        });
       }
 
       // Always send a final "finished" message, regardless of whether there was text or tools
@@ -1031,14 +1045,17 @@ export class Agent {
   }
 
   interrupt() {
-    if (this.abortController) {
-      logger.info('Interrupting Agent run');
-      this.abortController.abort();
+    if (this.abortControllers.size > 0) {
+      logger.info(`Interrupting ${this.abortControllers.size} Agent run(s)`);
+      for (const [controllerId, controller] of this.abortControllers) {
+        controller.abort();
+        logger.debug('Aborted controller', { controllerId });
+      }
     }
   }
 
   isRunning() {
-    return !!this.abortController;
+    return this.abortControllers.size > 0;
   }
 
   private processStep<TOOLS extends ToolSet>(
@@ -1145,7 +1162,7 @@ export class Agent {
       logger.info(`Token usage ${totalTokens} exceeds threshold of ${contextCompactingThreshold}%. Compacting conversation.`);
       task.addLogMessage('info', 'Token usage exceeds threshold. Compacting conversation...', false, promptContext);
 
-      await task.compactConversation('agent', undefined, profile, [...contextMessages, ...resultMessages], promptContext, abortSignal);
+      await task.compactConversation('agent', undefined, profile, [...contextMessages, ...resultMessages], promptContext, abortSignal, false);
 
       // reload messages after compacting
       messages.length = 0;
