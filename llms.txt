@@ -106,6 +106,7 @@ src/
         gpustack.ts
         groq.ts
         lm-studio.ts
+        minimax.ts
         ollama.ts
         openai-compatible.ts
         openai.ts
@@ -296,6 +297,7 @@ src/
             GroqParameters.tsx
             index.ts
             LmStudioParameters.tsx
+            MinimaxParameters.tsx
             OllamaParameters.tsx
             OpenAiAdvancedSettings.tsx
             OpenAiCompatibleAdvancedSettings.tsx
@@ -445,6 +447,7 @@ src/
         GroqIcon.tsx
         index.ts
         LmStudioIcon.tsx
+        MinimaxIcon.tsx
         OllamaIcon.tsx
         OpenAiCompatibleIcon.tsx
         OpenAiIcon.tsx
@@ -1152,7 +1155,7 @@ unlinkSync(probeDestinationPath);
 renameSync(probeInExtractedDir, probeDestinationPath);
 console.log(`Moved ${sourceExeName} to ${probeDestinationPath}`);
 // Clean up the extracted directory
-rmdirSync(join(extractPath, extractedDirName), { recursive: true });
+rmSync(join(extractPath, extractedDirName), { recursive: true });
 } else if (existsSync(probeAtTopLevel)) {
 // If not found in extractedDir, check the top level (for older releases or different structures)
 ⋮----
@@ -1518,6 +1521,8 @@ File: src/common/locales/en.json
     "modelIdPlaceholder": "e.g. custom-gpt-4-turbo",
     "maxInputTokens": "Context Window",
     "maxOutputTokens": "Max Output Tokens",
+    "temperature": "Temperature",
+    "temperatureTooltip": "Controls the randomness of model responses. Lower values (0.0-0.3) produce more focused and deterministic outputs, while higher values (0.7-1.0) generate more creative and varied responses.",
     "cacheWrites": "Cache Writes",
     "cachedInput": "Cached Input",
     "inputCost": "Input",
@@ -1532,6 +1537,7 @@ File: src/common/locales/en.json
       "providerRequired": "Provider is required",
       "invalidTokenCount": "Token count must be a positive number",
       "invalidCost": "Cost must be a non-negative number",
+      "invalidTemperature": "Temperature must be between 0 and 2",
       "duplicateId": "Provider ID already exists"
     },
     "overrides": {
@@ -1555,6 +1561,9 @@ File: src/common/locales/en.json
     "baseUrlPlaceholder": "e.g. http://localhost:11434/api"
   },
   "anthropic": {
+    "apiKey": "API Key"
+  },
+  "minimax": {
     "apiKey": "API Key"
   },
   "gemini": {
@@ -1625,6 +1634,7 @@ File: src/common/locales/en.json
     "groq": "Groq",
     "gpustack": "GPUStack",
     "lmstudio": "LM Studio",
+    "minimax": "MiniMax",
     "ollama": "Ollama",
     "openai": "OpenAI",
     "openai-compatible": "OpenAI Compatible",
@@ -1674,8 +1684,8 @@ File: src/common/locales/en.json
       "noServersConfigured": "No MCP servers configured.",
       "computationalResources": "Maximum number of iterations for the agent per run. Helps control computational resources.",
       "rateLimiting": "Sets the minimum time between tool calls to prevent rate limiting (e.g. for Brave or other API-constrained services).",
-      "temperatureTooltip": "Controls randomness in responses. Lower values (0.0-0.3) make responses more focused and deterministic, higher values (0.7-1.0) make them more creative and varied.",
-      "tokensPerResponse": "Maximum number of tokens the agent can use per response.",
+      "temperatureTooltip": "Controls randomness in responses. Lower values (0.0-0.3) make responses more focused and deterministic, higher values (0.7-1.0) make them more creative and varied. When not set, uses the model's Temperature.",
+      "tokensPerResponse": "Maximum number of tokens the agent can use per response. When not set, uses the model's Max Output tokens.",
       "addMcpServer": "Add",
       "editConfig": "Edit Config",
       "editMcpServersConfig": "Edit MCP Servers Config",
@@ -1690,6 +1700,8 @@ File: src/common/locales/en.json
       "includeRepoMap": "Include repository map",
       "includeRepoMapTooltip": "Include the repository map from Aider in the agent's context. This can help the agent understand the project structure, but will increase token usage.",
       "autoApprove": "Auto approve",
+      "override": "Override",
+      "clearOverride": "Clear Override",
       "selectOrCreateProfile": "Select or create new agent profile",
       "newProfileName": "New Profile",
       "bashToolAllowedPattern": "Allowed patterns",
@@ -2325,6 +2337,7 @@ File: src/common/locales/en.json
     "createTask": "Create new task",
     "rename": "Rename",
     "taskNamePlaceholder": "Enter task name...",
+    "untitled": "[Untitled]",
     "exportAsMarkdown": "Export as markdown",
     "exportAsImage": "Export as image",
     "copyTaskId": "Copy task ID",
@@ -2584,6 +2597,8 @@ File: src/common/locales/zh.json
     "modelIdPlaceholder": "例如 custom-gpt-4-turbo",
     "maxInputTokens": "上下文窗口",
     "maxOutputTokens": "最大输出令牌数",
+    "temperature": "温度",
+    "temperatureTooltip": "控制模型响应的随机性。较低的值（0.0-0.3）产生更专注和确定性的输出，而较高的值（0.7-1.0）生成更有创意和多样化的响应。当未设置时，使用模型的默认温度。",
     "cacheWrites": "缓存写入",
     "cachedInput": "缓存输入",
     "inputCost": "输入",
@@ -2604,6 +2619,7 @@ File: src/common/locales/zh.json
       "providerRequired": "提供商必填",
       "invalidTokenCount": "令牌数必须为正数",
       "invalidCost": "成本必须为非负数",
+      "invalidTemperature": "温度必须在 0 到 2 之间",
       "duplicateId": "提供商 ID 已存在"
     },
     "overrides": {
@@ -2640,6 +2656,9 @@ File: src/common/locales/zh.json
     "apiKey": "API 密钥"
   },
   "anthropic": {
+    "apiKey": "API 密钥"
+  },
+  "minimax": {
     "apiKey": "API 密钥"
   },
   "gemini": {
@@ -2695,6 +2714,7 @@ File: src/common/locales/zh.json
     "groq": "Groq",
     "gpustack": "GPUStack",
     "lmstudio": "LM Studio",
+    "minimax": "Minimax",
     "ollama": "Ollama",
     "openai": "OpenAI",
     "openai-compatible": "OpenAI Compatible",
@@ -2744,8 +2764,8 @@ File: src/common/locales/zh.json
       "noServersConfigured": "未配置 MCP 服务器。",
       "computationalResources": "代理每次运行的最大迭代次数。有助于控制计算资源。",
       "rateLimiting": "设置工具调用之间的最小时间以防止速率限制(例如对于 Brave 或其他 API 受限的服务)。",
-      "temperatureTooltip": "控制响应的随机性。较低的值（0.0-0.3）使响应更专注和确定性，较高的值（0.7-1.0）使响应更有创意和变化性。",
-      "tokensPerResponse": "代理每次响应可以使用的最大令牌数。",
+      "temperatureTooltip": "控制响应的随机性。较低的值（0.0-0.3）使响应更专注和确定性，较高的值（0.7-1.0）使响应更有创意和变化性。当未设置时，使用模型的默认温度。",
+      "tokensPerResponse": "代理每次响应可以使用的最大令牌数。当未设置时，使用模型的默认最大输出令牌数。",
       "addMcpServer": "添加",
       "editConfig": "编辑配置",
       "editMcpServersConfig": "编辑 MCP 服务器配置",
@@ -2760,6 +2780,8 @@ File: src/common/locales/zh.json
       "includeRepoMap": "包含仓库地图",
       "includeRepoMapTooltip": "在代理的上下文中包含仓库地图。这有助于代理理解项目结构，但可能会增加token使用量。",
       "autoApprove": "自动批准",
+      "override": "覆盖",
+      "clearOverride": "清除覆盖",
       "selectOrCreateProfile": "选择或创建新的代理配置",
       "newProfileName": "新配置",
       "bashToolAllowedPattern": "始终允许的模式",
@@ -3406,6 +3428,7 @@ File: src/common/locales/zh.json
     "createTask": "创建新任务",
     "rename": "重命名",
     "taskNamePlaceholder": "输入任务名称...",
+    "untitled": "[未命名]",
     "exportAsMarkdown": "导出为 Markdown",
     "exportAsImage": "导出为图片",
     "copyTaskId": "复制任务 ID",
@@ -3494,6 +3517,7 @@ export type LlmProviderName =
   | 'gpustack'
   | 'groq'
   | 'lmstudio'
+  | 'minimax'
   | 'ollama'
   | 'openai'
   | 'openai-compatible'
@@ -3639,6 +3663,12 @@ export interface ZaiPlanProvider extends LlmProviderBase {
 }
 export const isZaiPlanProvider = (provider: LlmProviderBase): provider is ZaiPlanProvider
 ⋮----
+export interface MinimaxProvider extends LlmProviderBase {
+  name: 'minimax';
+  apiKey: string;
+}
+export const isMinimaxProvider = (provider: LlmProviderBase): provider is MinimaxProvider
+⋮----
 export type LlmProvider =
   | OpenAiProvider
   | AnthropicProvider
@@ -3655,7 +3685,8 @@ export type LlmProvider =
   | OllamaProvider
   | OpenRouterProvider
   | RequestyProvider
-  | ZaiPlanProvider;
+  | ZaiPlanProvider
+  | MinimaxProvider;
 ⋮----
 // aider tools
 ⋮----
@@ -3890,6 +3921,7 @@ import {
   GroqProvider,
   LlmProvider,
   LmStudioProvider,
+  MinimaxProvider,
   OllamaProvider,
   OpenAiCompatibleProvider,
   OpenAiProvider,
@@ -4192,9 +4224,9 @@ export interface AgentProfile {
   provider: string;
   model: string;
   maxIterations: number;
-  maxTokens: number;
+  maxTokens?: number; // Optional: overrides model maxOutputTokens when set
   minTimeBetweenToolCalls: number; // in milliseconds
-  temperature: number; // 0-1 for controlling randomness/creativity
+  temperature?: number; // Optional: overrides model temperature when set
   enabledServers: string[];
   toolApprovals: Record<string, ToolApprovalState>;
   toolSettings: Record<string, ToolSettings>;
@@ -4209,8 +4241,9 @@ export interface AgentProfile {
   isSubagent?: boolean; // flag to indicate if this profile is being used as a subagent
 }
 ⋮----
+maxTokens?: number; // Optional: overrides model maxOutputTokens when set
 minTimeBetweenToolCalls: number; // in milliseconds
-temperature: number; // 0-1 for controlling randomness/creativity
+temperature?: number; // Optional: overrides model temperature when set
 ⋮----
 isSubagent?: boolean; // flag to indicate if this profile is being used as a subagent
 ⋮----
@@ -4256,6 +4289,7 @@ export interface SettingsData {
     deepseek?: DeepseekProvider;
     ollama?: OllamaProvider;
     lmstudio?: LmStudioProvider;
+    minimax?: MinimaxProvider;
     'openai-compatible'?: OpenAiCompatibleProvider;
     openrouter?: OpenRouterProvider;
     requesty?: RequestyProvider;
@@ -4446,6 +4480,7 @@ export interface Model {
   providerId: string;
   maxInputTokens?: number;
   maxOutputTokens?: number;
+  temperature?: number;
   inputCostPerToken?: number;
   outputCostPerToken?: number;
   cacheWriteInputTokenCost?: number;
@@ -4495,10 +4530,6 @@ export interface TerminalExitData {
   taskId: string;
   exitCode: number;
   signal?: number;
-}
-⋮----
-export interface Test {
-  propertyA: string;
 }
 
 ================
@@ -4877,7 +4908,7 @@ import {
   wrapLanguageModel,
 } from 'ai';
 import { delay, extractServerNameToolName } from '@common/utils';
-import { LlmProviderName } from '@common/agent';
+import { DEFAULT_MODEL_TEMPERATURE, LlmProviderName } from '@common/agent';
 import { countTokens } from 'gpt-tokenizer/model/gpt-4o';
 import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.js';
 // @ts-expect-error istextorbinary is not typed properly
@@ -5036,6 +5067,8 @@ error: error.message, // Pass the validation error message
 ⋮----
 const onStepFinish = (stepResult: StepResult<typeof toolSet>) =>
 ⋮----
+// Get the model to use its temperature and max output tokens settings
+⋮----
 // @ts-expect-error checking keys in error
 ⋮----
 // try again
@@ -5075,7 +5108,7 @@ isRunning()
 ⋮----
 private processStep<TOOLS extends ToolSet>(
     currentResponseId: string,
-    { reasoningText, text, toolCalls, toolResults, finishReason, usage, providerMetadata, response }: StepResult<TOOLS>,
+    { reasoningText, text, toolCalls, toolResults, finishReason, usage, providerMetadata, response, reasoning }: StepResult<TOOLS>,
     task: Task,
     profile: AgentProfile,
     provider: ProviderProfile,
@@ -6285,6 +6318,84 @@ export const getLmStudioUsageReport = (task: Task, provider: ProviderProfile, mo
 // Model discovery functions
 
 ================
+File: src/main/models/providers/minimax.ts
+================
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { isMinimaxProvider, MinimaxProvider } from '@common/agent';
+import { Model, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+⋮----
+import type { LanguageModelUsage } from 'ai';
+import type { LanguageModelV2 } from '@ai-sdk/provider';
+⋮----
+import logger from '@/logger';
+import { AiderModelMapping, CacheControl, LlmProviderStrategy } from '@/models';
+import { LoadModelsResponse } from '@/models/types';
+import { Task } from '@/task/task';
+import { getEffectiveEnvironmentVariable } from '@/utils';
+⋮----
+export const loadMinimaxModels = async (profile: ProviderProfile): Promise<LoadModelsResponse> =>
+⋮----
+// Hardcoded MiniMax models - no API call needed
+⋮----
+inputCostPerToken: 0.0000003, // 0.3 per 1M tokens
+outputCostPerToken: 0.0000012, // 1.2 per 1M tokens
+cacheReadInputTokenCost: 0.00000003, // 0.03 per 1M tokens
+cacheWriteInputTokenCost: 0.00000004, // 0.04 per 1M tokens
+⋮----
+inputCostPerToken: 0.0000003, // 0.3 per 1M tokens
+outputCostPerToken: 0.0000012, // 1.2 per 1M tokens
+cacheReadInputTokenCost: 0.00000003, // 0.03 per 1M tokens
+cacheWriteInputTokenCost: 0.00000004, // 0.04 per 1M tokens
+⋮----
+export const hasMinimaxEnvVars = (settings: SettingsData): boolean =>
+⋮----
+export const getMinimaxAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
+⋮----
+// === LLM Creation Functions ===
+export const createMinimaxLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
+⋮----
+type MinimaxMetadata = {
+  anthropic: {
+    cacheCreationInputTokens?: number;
+    cacheReadInputTokens?: number;
+  };
+};
+⋮----
+// === Cost and Usage Functions ===
+export const calculateMinimaxCost = (
+  model: Model,
+  sentTokens: number,
+  receivedTokens: number,
+  cacheWriteTokens: number = 0,
+  cacheReadTokens: number = 0,
+): number =>
+⋮----
+export const getMinimaxUsageReport = (
+  task: Task,
+  provider: ProviderProfile,
+  model: Model,
+  usage: LanguageModelUsage,
+  providerMetadata?: unknown,
+): UsageReportData =>
+⋮----
+// Extract cache tokens from provider metadata
+⋮----
+// Calculate sentTokens after deducting cached tokens
+⋮----
+// Calculate cost internally with already deducted sentTokens
+⋮----
+// === Configuration Helper Functions ===
+export const getMinimaxCacheControl = (): CacheControl =>
+⋮----
+// === Complete Strategy Implementation ===
+⋮----
+// Core LLM functions
+⋮----
+// Model discovery functions
+⋮----
+// Configuration helpers
+
+================
 File: src/main/models/providers/ollama.ts
 ================
 import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
@@ -6797,6 +6908,7 @@ import { geminiProviderStrategy } from './providers/gemini';
 import { gpustackProviderStrategy } from './providers/gpustack';
 import { groqProviderStrategy } from './providers/groq';
 import { lmStudioProviderStrategy } from './providers/lm-studio';
+import { minimaxProviderStrategy } from './providers/minimax';
 import { ollamaProviderStrategy } from './providers/ollama';
 import { openaiProviderStrategy } from './providers/openai';
 import { openaiCompatibleProviderStrategy } from './providers/openai-compatible';
@@ -7193,9 +7305,7 @@ import path from 'path';
 import { CustomCommand, ProjectStartMode, SettingsData, TaskData } from '@common/types';
 import { fileExists } from '@common/utils';
 import { v4 as uuidv4 } from 'uuid';
-import { isEqual } from 'lodash';
 ⋮----
-import { getAllFiles } from '@/utils/file-system';
 import { McpManager } from '@/agent';
 import { Connector } from '@/connector';
 import { DataManager } from '@/data-manager';
@@ -7249,8 +7359,6 @@ public async loadInputHistory(): Promise<string[]>
 public async addToInputHistory(message: string)
 ⋮----
 private async sendInputHistoryUpdatedEvent()
-⋮----
-public async updateAutocompletionData(taskId: string, words: string[])
 ⋮----
 public getCustomCommands()
 ⋮----
@@ -8327,6 +8435,7 @@ import { extractTextContent, fileExists, getActiveAgentProfile, parseUsageReport
 import { COMPACT_CONVERSATION_AGENT_PROFILE, INIT_PROJECT_AGENTS_PROFILE } from '@common/agent';
 import { v4 as uuidv4 } from 'uuid';
 import debounce from 'lodash/debounce';
+import { isEqual } from 'lodash';
 ⋮----
 import type { SimpleGit } from 'simple-git';
 ⋮----
@@ -8628,6 +8737,8 @@ async updateContextInfo(checkContextFilesIncluded = false, checkRepoMapIncluded 
 ⋮----
 private sendRequestContextInfo()
 ⋮----
+public async updateAutocompletionData(words?: string[], force = false)
+⋮----
 async updateAgentEstimatedTokens(checkContextFilesIncluded = false, checkRepoMapIncluded = false)
 ⋮----
 settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
@@ -8695,6 +8806,8 @@ async restart()
 public async updateTask(updates: Partial<TaskData>): Promise<TaskData>
 ⋮----
 // Handle worktree configuration changes
+⋮----
+// setting a name will also save the task
 ⋮----
 // if this task is new empty task update should not trigger save
 ⋮----
@@ -11618,7 +11731,7 @@ import { useTranslation } from 'react-i18next';
 ⋮----
 export type Column<T> = {
   accessor?: keyof T;
-  header: string;
+  header: ReactNode;
   cell?: (value: T[keyof T] | null, row: T) => ReactNode;
   headerClassName?: string;
   cellClassName?: string;
@@ -11770,7 +11883,7 @@ import { BiCollapseVertical, BiExpandVertical } from 'react-icons/bi';
 import { LuFolderTree } from 'react-icons/lu';
 import { TbPencilOff } from 'react-icons/tb';
 import { useTranslation } from 'react-i18next';
-import { usePrevious } from '@reactuses/core';
+import { useLocalStorage, usePrevious } from '@reactuses/core';
 ⋮----
 import { StyledTooltip } from '../common/StyledTooltip';
 ⋮----
@@ -13083,6 +13196,23 @@ label=
 placeholder=
 
 ================
+File: src/renderer/src/components/ModelLibrary/providers/MinimaxParameters.tsx
+================
+import { ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import { MinimaxProvider } from '@common/agent';
+⋮----
+import { Input } from '@/components/common/Input';
+import { useEffectiveEnvironmentVariable } from '@/hooks/useEffectiveEnvironmentVariable';
+⋮----
+type Props = {
+  provider: MinimaxProvider;
+  onChange: (updated: MinimaxProvider) => void;
+};
+⋮----
+const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
+
+================
 File: src/renderer/src/components/ModelLibrary/providers/OllamaParameters.tsx
 ================
 import { ChangeEvent } from 'react';
@@ -13600,6 +13730,7 @@ File: src/renderer/src/components/ModelLibrary/ModelDialog.tsx
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Model, ProviderProfile } from '@common/types';
+import { DEFAULT_MODEL_TEMPERATURE } from '@common/agent';
 ⋮----
 import { ModelParameterOverrides } from './ModelParameterOverrides';
 ⋮----
@@ -13607,6 +13738,8 @@ import { Input } from '@/components/common/Input';
 import { Select } from '@/components/common/Select';
 import { Checkbox } from '@/components/common/Checkbox';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { Slider } from '@/components/common/Slider';
+import { InfoIcon } from '@/components/common/InfoIcon';
 ⋮----
 type Props = {
   model?: Model;
@@ -13640,9 +13773,10 @@ handleInputChange('outputCostPerToken', perTokenValue);
 ⋮----
 handleInputChange('cacheReadInputTokenCost', perTokenValue);
 ⋮----
-{/* Advanced Settings - Provider Overrides */}
+<span>
+<InfoIcon tooltip=
 ⋮----
-<Checkbox label=
+{/* Advanced Settings - Provider Overrides */}
 
 ================
 File: src/renderer/src/components/ModelLibrary/ModelLibrary.tsx
@@ -13743,6 +13877,8 @@ import { useDebounce } from '@reactuses/core';
 import { useTranslation } from 'react-i18next';
 import { FiEdit2, FiTrash2, FiPlus, FiEye, FiSliders, FiRefreshCw } from 'react-icons/fi';
 import { Model, ProviderProfile } from '@common/types';
+import { MdThermostat } from 'react-icons/md';
+import { DEFAULT_MODEL_TEMPERATURE } from '@common/agent';
 ⋮----
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
@@ -13750,6 +13886,7 @@ import { Checkbox } from '@/components/common/Checkbox';
 import { Column } from '@/components/common/Table';
 import { VirtualTable } from '@/components/common/VirtualTable';
 import { IconButton } from '@/components/common/IconButton';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
 ⋮----
 type Props = {
   models: Model[];
@@ -13832,6 +13969,7 @@ import {
   GpustackIcon,
   GroqIcon,
   LmStudioIcon,
+  MinimaxIcon,
   OllamaIcon,
   OpenAiCompatibleIcon,
   OpenAiIcon,
@@ -13887,6 +14025,7 @@ import {
   GpustackParameters,
   GroqParameters,
   LmStudioParameters,
+  MinimaxParameters,
   OllamaParameters,
   OpenAiCompatibleParameters,
   OpenAiParameters,
@@ -13978,6 +14117,7 @@ import {
   GpustackIcon,
   GroqIcon,
   LmStudioIcon,
+  MinimaxIcon,
   OllamaIcon,
   OpenAiCompatibleIcon,
   OpenAiIcon,
@@ -14537,7 +14677,7 @@ import { useClickOutside } from '@/hooks/useClickOutside';
 ⋮----
 type TaskMenuButtonProps = {
   onEdit: () => void;
-  onDelete: () => void;
+  onDelete?: () => void;
   onExportToMarkdown?: () => void;
   onExportToImage?: () => void;
   onCopyTaskId?: () => void;
@@ -15181,13 +15321,14 @@ File: src/renderer/src/components/settings/agent/AgentSettings.tsx
 import { AgentProfile, ContextMemoryMode, GenericTool, InvocationMode, McpServerConfig, SettingsData, ToolApprovalState } from '@common/types';
 import React, { ReactNode, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { FaPencilAlt, FaPlus, FaSyncAlt } from 'react-icons/fa';
-import { DEFAULT_AGENT_PROFILE } from '@common/agent';
+import { FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
+import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat } from 'react-icons/md';
+import { DEFAULT_AGENT_PROFILE, DEFAULT_MODEL_TEMPERATURE } from '@common/agent';
 import { BiTrash } from 'react-icons/bi';
 import { clsx } from 'clsx';
 import Sketch from '@uiw/react-color-sketch';
-import { DndContext, type DragEndEvent, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
-import { SortableContext, arrayMove, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { closestCenter, DndContext, type DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import {
   AIDER_TOOL_ADD_CONTEXT_FILES,
   AIDER_TOOL_DESCRIPTIONS,
@@ -15197,6 +15338,7 @@ import {
   AIDER_TOOL_RUN_PROMPT,
   POWER_TOOL_BASH,
   POWER_TOOL_DESCRIPTIONS,
+  POWER_TOOL_FETCH,
   POWER_TOOL_FILE_EDIT,
   POWER_TOOL_FILE_READ,
   POWER_TOOL_FILE_WRITE,
@@ -15204,7 +15346,6 @@ import {
   POWER_TOOL_GREP,
   POWER_TOOL_GROUP_NAME,
   POWER_TOOL_SEMANTIC_SEARCH,
-  POWER_TOOL_FETCH,
   TODO_TOOL_CLEAR_ITEMS,
   TODO_TOOL_DESCRIPTIONS,
   TODO_TOOL_GET_ITEMS,
@@ -15213,7 +15354,6 @@ import {
   TODO_TOOL_UPDATE_ITEM_COMPLETION,
 } from '@common/tools';
 import { useTranslation } from 'react-i18next';
-import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat } from 'react-icons/md';
 import { FaArrowRightFromBracket } from 'react-icons/fa6';
 ⋮----
 import { McpServer, McpServerForm } from './McpServerForm';
@@ -15222,8 +15362,9 @@ import { GenericToolGroupItem } from './GenericToolGroupItem';
 import { AgentRules } from './AgentRules';
 import { SortableAgentProfileItem } from './SortableAgentProfileItem';
 ⋮----
-import { AgentModelSelector } from '@/components/AgentModelSelector';
+import { IconButton } from '@/components/common/IconButton';
 import { Button } from '@/components/common/Button';
+import { AgentModelSelector } from '@/components/AgentModelSelector';
 import { Slider } from '@/components/common/Slider';
 import { InfoIcon } from '@/components/common/InfoIcon';
 import { Accordion } from '@/components/common/Accordion';
@@ -15234,7 +15375,12 @@ import { TextArea } from '@/components/common/TextArea';
 import { useApi } from '@/contexts/ApiContext';
 ⋮----
 // Helper functions for accordion summaries
-const getRunSettingsSummary = (profile: AgentProfile) =>
+⋮----
+// Always show max iterations
+⋮----
+// Only show temperature if it's overridden
+⋮----
+// Only show max tokens if it's overridden
 ⋮----
 type Props = {
   settings: SettingsData;
@@ -15309,6 +15455,13 @@ label=
 onChange=
 ⋮----
 <span>
+<InfoIcon tooltip=
+⋮----
+value=
+⋮----
+{/* Temperature Column */}
+⋮----
+{/* Max Tokens Column */}
 ⋮----
 onRemove=
 onEdit=
@@ -17101,6 +17254,41 @@ export const LmStudioIcon = ({ width = 64, height = 64, className }: Props) => (
         fillOpacity=".3"
       ></path>
       <path d="M2.84 2a1.273 1.273 0 100 2.547h10.287a1.274 1.274 0 000-2.547H2.84zM7.935 5.33a1.273 1.273 0 000 2.548H18.22a1.274 1.274 0 000-2.547H7.935zM3.624 9.935c0-.704.57-1.274 1.274-1.274h10.286a1.273 1.273 0 010 2.547H4.898c-.703 0-1.274-.57-1.274-1.273zM1.273 12.188a1.273 1.273 0 100 2.547H11.56a1.274 1.274 0 000-2.547H1.273zM3.624 16.792c0-.704.57-1.274 1.274-1.274h10.286a1.273 1.273 0 110 2.547H4.898c-.703 0-1.274-.57-1.274-1.273zM13.029 18.849a1.273 1.273 0 100 2.547h5.78a1.273 1.273 0 100-2.547h-5.78z"></path>
+    </svg>
+  </div>
+);
+
+================
+File: src/renderer/src/icons/MinimaxIcon.tsx
+================
+type Props = {
+  width?: number;
+  height?: number;
+  className?: string;
+};
+⋮----
+export const MinimaxIcon = ({ width = 64, height = 64, className }: Props) => (
+  <div
+    aria-label="Minimax"
+    className={`flex items-center justify-center rounded-md ${className || ''}`}
+    style={{
+      background: 'linear-gradient(to right, rgb(226, 22, 126), rgb(254, 96, 60))',
+      color: 'white',
+      height: `${height}px`,
+      width: `${width}px`,
+    }}
+  >
+    <svg
+      className="-ml-[2px]"
+      fill="currentColor"
+      fillRule="evenodd"
+      viewBox="0 0 24 24"
+      width={width * 0.75}
+      height={height * 0.75}
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <title>Minimax</title>
+      <path d="M16.278 2c1.156 0 2.093.927 2.093 2.07v12.501a.74.74 0 00.744.709.74.74 0 00.743-.709V9.099a2.06 2.06 0 012.071-2.049A2.06 2.06 0 0124 9.1v6.561a.649.649 0 01-.652.645.649.649 0 01-.653-.645V9.1a.762.762 0 00-.766-.758.762.762 0 00-.766.758v7.472a2.037 2.037 0 01-2.048 2.026 2.037 2.037 0 01-2.048-2.026v-12.5a.785.785 0 00-.788-.753.785.785 0 00-.789.752l-.001 15.904A2.037 2.037 0 0113.441 22a2.037 2.037 0 01-2.048-2.026V18.04c0-.356.292-.645.652-.645.36 0 .652.289.652.645v1.934c0 .263.142.506.372.638.23.131.514.131.744 0a.734.734 0 00.372-.638V4.07c0-1.143.937-2.07 2.093-2.07zm-5.674 0c1.156 0 2.093.927 2.093 2.07v11.523a.648.648 0 01-.652.645.648.648 0 01-.652-.645V4.07a.785.785 0 00-.789-.78.785.785 0 00-.789.78v14.013a2.06 2.06 0 01-2.07 2.048 2.06 2.06 0 01-2.071-2.048V9.1a.762.762 0 00-.766-.758.762.762 0 00-.766.758v3.8a2.06 2.06 0 01-2.071 2.049A2.06 2.06 0 010 12.9v-1.378c0-.357.292-.646.652-.646.36 0 .653.29.653.646V12.9c0 .418.343.757.766.757s.766-.339.766-.757V9.099a2.06 2.06 0 012.07-2.048 2.06 2.06 0 012.071 2.048v8.984c0 .419.343.758.767.758.423 0 .766-.339.766-.758V4.07c0-1.143.937-2.07 2.093-2.07z"></path>
     </svg>
   </div>
 );
@@ -19263,7 +19451,7 @@ File: package.json
 ================
 {
   "name": "aider-desk",
-  "version": "0.39.0-dev",
+  "version": "0.40.0-dev",
   "description": "Aider desktop application wrapper",
   "main": "./out/main/index.js",
   "author": "Hotovo",
@@ -19320,7 +19508,7 @@ File: package.json
     "@opentelemetry/auto-instrumentations-node": "^0.62.0",
     "@opentelemetry/sdk-node": "^0.203.0",
     "@opentelemetry/sdk-trace-base": "^2.0.1",
-    "@probelabs/probe": "0.6.0-rc128",
+    "@probelabs/probe": "^0.6.0-rc161",
     "@reactuses/core": "^6.0.6",
     "@replit/codemirror-vim": "^6.3.0",
     "@requesty/ai-sdk": "^2.0.4",
