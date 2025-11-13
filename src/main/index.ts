@@ -16,6 +16,7 @@ import { setupIpcHandlers } from '@/ipc-handlers';
 import { ProjectManager } from '@/project';
 import { performStartUp, UpdateProgressData } from '@/start-up';
 import { getDefaultProjectSettings, Store } from '@/store';
+import { AIDER_DESK_DATA_DIR, HEADLESS_MODE, SERVER_PORT } from '@/constants';
 import { VersionsManager } from '@/versions';
 import logger from '@/logger';
 import { TelemetryManager } from '@/telemetry';
@@ -24,7 +25,6 @@ import { ModelManager } from '@/models';
 import { DataManager } from '@/data-manager';
 import { TerminalManager } from '@/terminal';
 import { EventsHandler } from '@/events-handler';
-import { HEADLESS_MODE, SERVER_PORT } from '@/constants';
 import { WorktreeManager } from '@/worktrees';
 
 const setupCustomMenu = (): void => {
@@ -99,7 +99,7 @@ const setupCustomMenu = (): void => {
 
 const initStore = async (): Promise<Store> => {
   const store = new Store();
-  await store.init();
+  await store.init(AIDER_DESK_DATA_DIR);
 
   const args = process.argv.slice(app.isPackaged ? 1 : 2);
   if (args.length > 0) {

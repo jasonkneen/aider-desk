@@ -95,18 +95,15 @@ interface StoreSchema {
 
 const CURRENT_SETTINGS_VERSION = 16;
 
-interface CustomStore<T> {
-  get<K extends keyof T>(key: K): T[K] | undefined;
-  set<K extends keyof T>(key: K, value: T[K]): void;
-}
-
 export class Store {
   // @ts-expect-error expected to be initialized
-  private store: CustomStore<StoreSchema>;
+  private store: Conf<StoreSchema>;
 
-  async init(): Promise<void> {
-    const ElectronStore = (await import('electron-store')).default;
-    this.store = new ElectronStore<StoreSchema>() as unknown as CustomStore<StoreSchema>;
+  async init(path?: string): Promise<void> {
+    const { default: Conf } = await import('conf');
+    this.store = new Conf<StoreSchema>({
+      cwd: path,
+    });
 
     const settings = this.store.get('settings');
     const openProjects = this.store.get('openProjects');
