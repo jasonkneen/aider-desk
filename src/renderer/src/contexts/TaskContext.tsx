@@ -195,7 +195,6 @@ export const TaskProvider: React.FC<{
           loading: true,
         };
       }
-      console.log('getTaskState', taskId, taskState);
 
       return taskState;
     },
@@ -302,7 +301,6 @@ export const TaskProvider: React.FC<{
       };
 
       const setAllFiles = (allFiles: string[]) => {
-        console.log('setAllFiles', taskId, allFiles);
         updateTaskState(taskId, { allFiles });
       };
 
