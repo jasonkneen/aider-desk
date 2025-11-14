@@ -629,7 +629,6 @@ export const TaskProvider: React.FC<{
       };
 
       const handleUpdateAutocompletion = ({ allFiles, words }: AutocompletionData) => {
-        console.log('handleUpdateAutocompletion', taskId, allFiles, words);
         if (allFiles) {
           setAllFiles(allFiles);
         }

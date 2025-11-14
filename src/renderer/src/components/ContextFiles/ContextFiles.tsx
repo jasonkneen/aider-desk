@@ -134,7 +134,6 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
   }, [contextFiles]);
 
   const sortedAllFiles = useMemo(() => {
-    console.log('sortedAllFiles', allFiles);
     return [...allFiles].sort((a, b) => a.localeCompare(b));
   }, [allFiles]);
 
