@@ -1,9 +1,9 @@
 import { CloudflareTunnelStatus } from '@common/types';
 import { Tunnel, use as setCloudflaredBinary } from 'cloudflared';
-import { is } from '@electron-toolkit/utils';
 
 import { CLOUDFLARED_BINARY_PATH, SERVER_PORT } from '@/constants';
 import logger from '@/logger';
+import { isDev } from '@/app';
 
 export class CloudflareTunnelManager {
   private tunnel?: Tunnel;
@@ -14,12 +14,12 @@ export class CloudflareTunnelManager {
       throw new Error('Tunnel is already running');
     }
 
-    if (!is.dev) {
+    if (!isDev()) {
       // set cloudflared binary path only in production app
       setCloudflaredBinary(CLOUDFLARED_BINARY_PATH);
     }
 
-    const port = is.dev ? 5173 : SERVER_PORT;
+    const port = isDev() ? 5173 : SERVER_PORT;
     logger.info('Starting tunnel...', { port });
     this.tunnel = Tunnel.quick(`http://localhost:${port}`);
 

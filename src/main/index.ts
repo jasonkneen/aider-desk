@@ -1,6 +1,8 @@
 import { join } from 'path';
-import { createServer } from 'http';
 import { existsSync, statSync } from 'fs';
+
+// eslint-disable-next-line import/order
+import { AIDER_DESK_DATA_DIR, HEADLESS_MODE } from '@/constants';
 
 import { compareBaseDirs, delay } from '@common/utils';
 import { electronApp, is, optimizer } from '@electron-toolkit/utils';
@@ -9,23 +11,11 @@ import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
 import icon from '../../resources/icon.png?asset';
 
 import { ProgressWindow } from '@/progress-window';
-import { McpManager } from '@/agent';
-import { CloudflareTunnelManager, ServerController } from '@/server';
-import { ConnectorManager } from '@/connector';
 import { setupIpcHandlers } from '@/ipc-handlers';
-import { ProjectManager } from '@/project';
 import { performStartUp, UpdateProgressData } from '@/start-up';
 import { getDefaultProjectSettings, Store } from '@/store';
-import { AIDER_DESK_DATA_DIR, HEADLESS_MODE, SERVER_PORT } from '@/constants';
-import { VersionsManager } from '@/versions';
 import logger from '@/logger';
-import { TelemetryManager } from '@/telemetry';
-import { EventManager } from '@/events';
-import { ModelManager } from '@/models';
-import { DataManager } from '@/data-manager';
-import { TerminalManager } from '@/terminal';
-import { EventsHandler } from '@/events-handler';
-import { WorktreeManager } from '@/worktrees';
+import { initManagers } from '@/managers';
 
 const setupCustomMenu = (): void => {
   const menuTemplate: Electron.MenuItemConstructorOptions[] = [
@@ -138,114 +128,6 @@ const initStore = async (): Promise<Store> => {
   return store;
 };
 
-const initManagers = async (
-  mainWindow: BrowserWindow | null,
-  store: Store,
-): Promise<{
-  eventsHandler: EventsHandler;
-  serverController: ServerController;
-}> => {
-  // Initialize telemetry manager
-  const telemetryManager = new TelemetryManager(store);
-  await telemetryManager.init();
-
-  // Initialize MCP manager
-  const mcpManager = new McpManager();
-  const activeProject = store.getOpenProjects().find((project) => project.active);
-
-  void mcpManager.initMcpConnectors(store.getSettings().mcpServers, activeProject?.baseDir);
-
-  // Initialize event manager
-  const eventManager = new EventManager(mainWindow);
-
-  // Initialize model manager
-  const modelManager = new ModelManager(store, eventManager);
-
-  // Initialize data manager
-  const dataManager = new DataManager();
-  dataManager.init();
-
-  const worktreeManager = new WorktreeManager();
-
-  // Initialize project manager
-  const projectManager = new ProjectManager(store, mcpManager, telemetryManager, dataManager, eventManager, modelManager, worktreeManager);
-
-  // Initialize terminal manager
-  const terminalManager = new TerminalManager(eventManager, telemetryManager);
-
-  // Initialize Versions Manager (this also sets up listeners)
-  const versionsManager = new VersionsManager(eventManager, store);
-
-  // Create HTTP server
-  const httpServer = createServer();
-
-  // Initialize Cloudflare tunnel manager
-  const cloudflareTunnelManager = new CloudflareTunnelManager();
-
-  // Initialize events handler
-  const eventsHandler = new EventsHandler(
-    mainWindow,
-    projectManager,
-    store,
-    mcpManager,
-    versionsManager,
-    modelManager,
-    telemetryManager,
-    dataManager,
-    terminalManager,
-    cloudflareTunnelManager,
-    eventManager,
-  );
-
-  // Create and initialize REST API controller with the server
-  const serverController = new ServerController(httpServer, projectManager, eventsHandler, store);
-
-  // Initialize connector manager with the server
-  const connectorManager = new ConnectorManager(httpServer, projectManager, eventManager);
-
-  // start listening
-  httpServer.listen(SERVER_PORT);
-
-  let cleanedUp = false;
-
-  const beforeQuit = async (event?: Electron.Event) => {
-    if (cleanedUp) {
-      return;
-    }
-
-    event?.preventDefault();
-
-    try {
-      cloudflareTunnelManager.stop();
-      terminalManager.close();
-      versionsManager.destroy();
-      dataManager.close();
-
-      await Promise.all([connectorManager.close(), serverController.close(), projectManager.close(), mcpManager.close(), telemetryManager.destroy()]);
-    } catch (error) {
-      logger.error('Error during cleanup:', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-
-    cleanedUp = true;
-    app.quit();
-  };
-
-  app.on('before-quit', beforeQuit);
-
-  // Handle CTRL+C (SIGINT)
-  process.on('SIGINT', async () => {
-    await beforeQuit();
-    process.exit(0);
-  });
-
-  return {
-    eventsHandler,
-    serverController: serverController,
-  };
-};
-
 const initWindow = async (store: Store): Promise<BrowserWindow> => {
   const lastWindowState = store.getWindowState();
   const mainWindow = new BrowserWindow({
@@ -296,7 +178,35 @@ const initWindow = async (store: Store): Promise<BrowserWindow> => {
   mainWindow.on('maximize', saveWindowState);
   mainWindow.on('unmaximize', saveWindowState);
 
-  const { eventsHandler, serverController } = await initManagers(mainWindow, store);
+  const { eventsHandler, serverController, cleanup } = await initManagers(store, mainWindow);
+
+  let cleanedUp = false;
+  const beforeQuit = async (event?: Electron.Event) => {
+    if (cleanedUp) {
+      return;
+    }
+
+    event?.preventDefault();
+
+    try {
+      await cleanup();
+    } catch (error) {
+      logger.error('Error during cleanup:', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    cleanedUp = true;
+    app.quit();
+  };
+
+  app.on('before-quit', beforeQuit);
+
+  // Handle CTRL+C (SIGINT)
+  process.on('SIGINT', async () => {
+    await beforeQuit();
+    process.exit(0);
+  });
 
   // Initialize IPC handlers
   setupIpcHandlers(eventsHandler, serverController);
@@ -390,7 +300,7 @@ app.whenReady().then(async () => {
 
     if (HEADLESS_MODE) {
       // Initialize managers without window in headless mode
-      await initManagers(null, store);
+      await initManagers(store, null);
     } else {
       await initWindow(store);
       progressBar?.close();

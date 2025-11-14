@@ -1,10 +1,10 @@
 import { PostHog } from 'posthog-node';
 import { AgentProfile, Mode, SettingsData, TaskData } from '@common/types';
-import { app } from 'electron';
 
 import { Store } from '@/store';
 import logger from '@/logger';
 import { POSTHOG_PUBLIC_API_KEY, POSTHOG_HOST } from '@/constants';
+import { getElectronApp } from '@/app';
 
 export class TelemetryManager {
   private readonly store: Store;
@@ -36,6 +36,7 @@ export class TelemetryManager {
     try {
       await import('./open-telemetry');
 
+      const app = getElectronApp();
       this.client = new PostHog(POSTHOG_PUBLIC_API_KEY, {
         host: POSTHOG_HOST,
       });
@@ -44,7 +45,7 @@ export class TelemetryManager {
         distinctId: this.distinctId,
         properties: {
           os: process.platform,
-          version: app.getVersion(),
+          version: app?.getVersion(),
         },
       });
     } catch (error) {

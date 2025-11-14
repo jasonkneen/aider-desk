@@ -1,16 +1,16 @@
 import { Server } from 'http';
 import { join } from 'path';
 
-import express, { Request, Response, NextFunction } from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
-import { is } from '@electron-toolkit/utils';
 
-import { ContextApi, PromptApi, SettingsApi, ProjectApi, CommandsApi, UsageApi, SystemApi, TodoApi, McpApi, ProvidersApi } from '@/server/rest-api';
-import { SERVER_PORT, AUTH_USERNAME, AUTH_PASSWORD } from '@/constants';
+import { CommandsApi, ContextApi, McpApi, ProjectApi, PromptApi, ProvidersApi, SettingsApi, SystemApi, TodoApi, UsageApi } from '@/server/rest-api';
+import { AUTH_PASSWORD, AUTH_USERNAME, SERVER_PORT } from '@/constants';
 import logger from '@/logger';
 import { ProjectManager } from '@/project';
 import { EventsHandler } from '@/events-handler';
 import { Store } from '@/store';
+import { isDev, isElectron } from '@/app';
 
 const REQUEST_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -32,7 +32,9 @@ export class ServerController {
     if (process.env.AIDER_DESK_HEADLESS === 'true' || this.isStarted) {
       next();
     } else {
-      res.status(503).json({ error: 'Server is not started. Enable the server in your AiderDesk -> Settings -> Server.' });
+      res.status(503).json({
+        error: 'Server is not started. Enable the server in your AiderDesk -> Settings -> Server.',
+      });
     }
   }
 
@@ -116,7 +118,7 @@ export class ServerController {
     this.setupApiRoutes();
 
     // Serve static renderer files in production (for browser access)
-    if (!is.dev) {
+    if (!isElectron() || !isDev()) {
       logger.info(`Serving static renderer files on port ${SERVER_PORT}...`);
       this.app.use(express.static(join(__dirname, '../renderer')));
       // Handle SPA routing: serve index.html for non-API routes

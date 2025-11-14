@@ -1,19 +1,27 @@
-import { BrowserWindow } from 'electron';
 import Turndown from 'turndown';
 import * as cheerio from 'cheerio';
 
+import type { BrowserWindow as BrowserWindowType } from 'electron';
+
 import { isAbortError } from '@/utils/errors';
+import { isElectron } from '@/app';
 
 export class WebScraper {
-  private window: BrowserWindow | null = null;
-
   async scrape(url: string, timeout: number = 60000, abortSignal?: AbortSignal): Promise<string> {
-    return await this.scrapeWithBrowserWindow(url, timeout, abortSignal);
+    if (isElectron()) {
+      return await this.scrapeWithBrowserWindow(url, timeout, abortSignal);
+    } else {
+      return 'Not implemented';
+      // return await this.scrapeWithFetch(url, timeout, abortSignal);
+    }
   }
 
   private async scrapeWithBrowserWindow(url: string, timeout: number = 60000, abortSignal?: AbortSignal): Promise<string> {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { BrowserWindow } = require('electron');
+
     // Create hidden BrowserWindow for scraping
-    this.window = new BrowserWindow({
+    const window: BrowserWindowType = new BrowserWindow({
       show: false,
       width: 1024,
       height: 768,
@@ -40,14 +48,14 @@ export class WebScraper {
         : new Promise<never>(() => {});
 
       // Load the URL with timeout and abort signal
-      await Promise.race([this.window.loadURL(url), timeoutPromise, abortPromise]);
+      await Promise.race([window.loadURL(url), timeoutPromise, abortPromise]);
 
       // Wait for page to load completely with timeout and abort signal
-      await Promise.race([this.waitForPageLoad(), timeoutPromise, abortPromise]);
+      await Promise.race([this.waitForPageLoad(window), timeoutPromise, abortPromise]);
 
       // Get page content with timeout and abort signal
       const content = await Promise.race([
-        this.window.webContents.executeJavaScript(`
+        window.webContents.executeJavaScript(`
           document.documentElement.outerHTML;
         `),
         timeoutPromise,
@@ -55,7 +63,7 @@ export class WebScraper {
       ]);
 
       // Get content type from headers with timeout and abort signal
-      const contentType = await Promise.race([this.getContentType(), timeoutPromise, abortPromise]);
+      const contentType = await Promise.race([this.getContentType(window), timeoutPromise, abortPromise]);
 
       // If it's HTML, convert to markdown-like text
       if (contentType.includes('text/html') || this.looksLikeHTML(content)) {
@@ -70,18 +78,18 @@ export class WebScraper {
       return `Error: ${error instanceof Error ? error.message : String(error)}`;
     } finally {
       // Cleanup window
-      await this.cleanupWindow();
+      await this.cleanupWindow(window);
     }
   }
 
-  private async waitForPageLoad(): Promise<void> {
+  private async waitForPageLoad(window: BrowserWindowType): Promise<void> {
     return new Promise((resolve) => {
-      if (!this.window) {
+      if (!window) {
         return resolve();
       }
 
       const checkLoadState = () => {
-        if (this.window!.webContents.isLoading()) {
+        if (window!.webContents.isLoading()) {
           setTimeout(checkLoadState, 100);
         } else {
           // Additional wait for dynamic content to load
@@ -93,13 +101,9 @@ export class WebScraper {
     });
   }
 
-  private async getContentType(): Promise<string> {
-    if (!this.window) {
-      return '';
-    }
-
+  private async getContentType(window: BrowserWindowType): Promise<string> {
     try {
-      const contentType = await this.window.webContents.executeJavaScript(`
+      const contentType = await window.webContents.executeJavaScript(`
         (() => {
           const xhr = new XMLHttpRequest();
           xhr.open('HEAD', window.location.href, false);
@@ -113,11 +117,10 @@ export class WebScraper {
     }
   }
 
-  private async cleanupWindow(): Promise<void> {
-    if (this.window && !this.window.isDestroyed()) {
-      this.window.close();
+  private async cleanupWindow(window: BrowserWindowType): Promise<void> {
+    if (!window.isDestroyed()) {
+      window.close();
     }
-    this.window = null;
   }
 
   private looksLikeHTML(content: string): boolean {

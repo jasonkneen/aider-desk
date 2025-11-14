@@ -4,9 +4,8 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { promisify } from 'util';
 
-import { app } from 'electron';
-
 import logger from '@/logger';
+import { getElectronApp } from '@/app';
 
 const execAsync = promisify(exec);
 
@@ -286,6 +285,7 @@ export const getShellPath = (): string => {
 
       // Execute the command to get the PATH
       // For packaged apps, ALWAYS use login shell to get the user's real PATH
+      const app = getElectronApp();
       const isPackaged = process.env.NODE_ENV === 'production' || 'pkg' in process || app?.isPackaged;
 
       if (isPackaged) {

@@ -1,7 +1,6 @@
 import path from 'path';
 import fs from 'fs/promises';
 
-import { BrowserWindow, clipboard, dialog, shell } from 'electron';
 import {
   CloudflareTunnelStatus,
   CustomCommand,
@@ -27,6 +26,8 @@ import {
   VersionsInfo,
 } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
+
+import type { BrowserWindow } from 'electron';
 
 import { McpManager } from '@/agent';
 import { ModelManager } from '@/models';
@@ -233,6 +234,7 @@ export class EventsHandler {
     }
 
     try {
+      const { clipboard } = await import('electron');
       const image = clipboard.readImage();
       if (image.isEmpty()) {
         task.addLogMessage('info', 'No image found in clipboard.');
@@ -542,6 +544,7 @@ export class EventsHandler {
         let filePath = defaultPath;
 
         if (this.mainWindow) {
+          const { dialog } = await import('electron');
           const dialogResult = await dialog.showSaveDialog(this.mainWindow, {
             title: 'Export Session to Markdown',
             defaultPath: defaultPath,
@@ -648,11 +651,13 @@ export class EventsHandler {
         filePaths: [],
       };
     }
+    const { dialog } = await import('electron');
     return await dialog.showOpenDialog(this.mainWindow, options);
   }
 
   async openLogsDirectory(): Promise<boolean> {
     try {
+      const { shell } = await import('electron');
       await shell.openPath(LOGS_DIR);
       return true;
     } catch (error) {

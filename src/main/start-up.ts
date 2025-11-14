@@ -4,7 +4,6 @@ import * as path from 'path';
 import { promisify } from 'util';
 
 import { delay } from '@common/utils';
-import { is } from '@electron-toolkit/utils';
 
 import logger from '@/logger';
 import { getCurrentPythonLibVersion, getLatestPythonLibVersion, getPythonVenvBinPath } from '@/utils';
@@ -17,6 +16,7 @@ import {
   AIDER_DESK_MCP_SERVER_DIR,
   UV_EXECUTABLE,
 } from '@/constants';
+import { isDev } from '@/app';
 
 const execAsync = promisify(exec);
 
@@ -174,7 +174,7 @@ const installAiderConnectorRequirements = async (cleanInstall: boolean, updatePr
 };
 
 const setupMcpServer = async () => {
-  if (is.dev) {
+  if (isDev()) {
     logger.info('Skipping AiderDesk MCP server setup in dev mode');
     return;
   }

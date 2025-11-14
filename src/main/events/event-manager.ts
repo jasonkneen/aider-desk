@@ -1,4 +1,3 @@
-import { BrowserWindow } from 'electron';
 import { Socket } from 'socket.io';
 import {
   ContextFile,
@@ -25,6 +24,8 @@ import {
   ClearTaskData,
   ProjectSettings,
 } from '@common/types';
+
+import type { BrowserWindow } from 'electron';
 
 import logger from '@/logger';
 

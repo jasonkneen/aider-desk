@@ -2,7 +2,6 @@ import fs from 'fs/promises';
 import path from 'path';
 
 import { simpleGit } from 'simple-git';
-import { Notification } from 'electron';
 import YAML from 'yaml';
 import {
   AgentProfile,
@@ -56,6 +55,7 @@ import { ContextManager } from '@/task/context-manager';
 import { Project } from '@/project';
 import { AiderManager } from '@/task/aider-manager';
 import { WorktreeManager } from '@/worktrees';
+import { getElectronApp } from '@/app';
 
 export class Task {
   private initialized = false;
@@ -703,11 +703,14 @@ export class Task {
   }
 
   private notifyIfEnabled(title: string, text: string) {
+    const app = getElectronApp();
     const settings = this.store.getSettings();
-    if (!settings.notificationsEnabled) {
+    if (!settings.notificationsEnabled || !app) {
       return;
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Notification } = require('electron');
     if (Notification.isSupported()) {
       const notification = new Notification({
         title,

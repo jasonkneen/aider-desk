@@ -1,14 +1,12 @@
 import path from 'path';
 
 import { VersionsInfo } from '@common/types';
-import { autoUpdater } from 'electron-updater';
-import { app } from 'electron';
-import { is } from '@electron-toolkit/utils';
 
 import { getCurrentPythonLibVersion, getLatestPythonLibVersion } from '@/utils';
 import logger from '@/logger';
 import { Store } from '@/store';
 import { EventManager } from '@/events';
+import { getElectronApp, isDev } from '@/app';
 
 export class VersionsManager {
   private readonly checkInterval = 10 * 60 * 1000; // 10 minutes
@@ -28,10 +26,20 @@ export class VersionsManager {
     if (!forceRefresh && this.versionsInfo) {
       return this.versionsInfo;
     }
+    const app = getElectronApp();
+    if (!app) {
+      logger.info('Electron app not available, returning cached versions info.');
+      return {
+        ...this.versionsInfo,
+      };
+    }
 
     logger.info('Checking for version updates...');
     // Get AiderDesk version using app.getVersion()
     const aiderDeskCurrentVersion = app.getVersion();
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const autoUpdater = require('electron-updater').autoUpdater;
 
     // Get current and available Aider versions using utility functions
     const aiderCurrentVersion = await getCurrentPythonLibVersion('aider-chat');
@@ -86,9 +94,17 @@ export class VersionsManager {
   }
 
   private async init(): Promise<void> {
+    const app = getElectronApp();
+    if (!app) {
+      logger.info('Skipping versions manager initialization in non-Electron environment');
+      return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const autoUpdater = require('electron-updater').autoUpdater;
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = true; // Install on quit after download
-    if (is.dev) {
+    if (isDev()) {
       autoUpdater.forceDevUpdateConfig = true;
       process.env.APPIMAGE = path.join(__dirname, 'dist', `aider-desk-${app.getVersion()}.AppImage`);
     }
@@ -145,6 +161,15 @@ export class VersionsManager {
   }
 
   public async downloadLatestAiderDesk(): Promise<void> {
+    const app = getElectronApp();
+    if (!app) {
+      logger.info('Electron app not available, skipping AiderDesk update download.');
+      return;
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const autoUpdater = require('electron-updater').autoUpdater;
+
     logger.info('Starting AiderDesk update download...');
     try {
       // Check for updates first to ensure we have the latest info

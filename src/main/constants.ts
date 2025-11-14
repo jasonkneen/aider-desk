@@ -1,19 +1,12 @@
 import path from 'path';
 
-import { is } from '@electron-toolkit/utils';
-import { app } from 'electron';
-
-if (process.env.AIDER_DESK_DATA_DIR) {
-  app.setPath('userData', process.env.AIDER_DESK_DATA_DIR);
-} else if (is.dev) {
-  app.setPath('userData', `${app.getPath('userData')}-dev`);
-}
+import { getDataDir, getResourceDir } from './paths';
 
 export const AIDER_DESK_TITLE = 'AiderDesk';
 export const AIDER_DESK_WEBSITE = 'https://aiderdesk.hotovo.com';
-export const AIDER_DESK_DATA_DIR = app.getPath('userData');
+export const AIDER_DESK_DATA_DIR = getDataDir();
 export const AIDER_DESK_CACHE_DIR = path.join(AIDER_DESK_DATA_DIR, 'cache');
-export const RESOURCES_DIR = is.dev ? path.join(__dirname, '..', '..', 'resources') : process.resourcesPath;
+export const RESOURCES_DIR = getResourceDir();
 export const LOGS_DIR = path.join(AIDER_DESK_DATA_DIR, 'logs');
 export const DB_FILE_PATH = path.join(AIDER_DESK_DATA_DIR, 'aider-desk.db');
 export const SETUP_COMPLETE_FILENAME = path.join(AIDER_DESK_DATA_DIR, 'setup-complete');

@@ -1,7 +1,8 @@
 import { join } from 'path';
 
 import { BrowserWindow, ipcMain } from 'electron';
-import { is } from '@electron-toolkit/utils';
+
+import { isDev } from '@/app';
 
 export class ProgressWindow {
   private window: BrowserWindow;
@@ -48,7 +49,7 @@ export class ProgressWindow {
       this.window.webContents.send('set-progress', progress);
     });
 
-    if (is.dev) {
+    if (isDev()) {
       void this.window.loadFile('src/renderer/progress.html');
     } else {
       void this.window.loadFile(join(__dirname, '../renderer/progress.html'));
