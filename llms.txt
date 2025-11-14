@@ -177,6 +177,7 @@ src/
       terminal-manager.ts
     utils/
       environment.ts
+      errors.ts
       file-system.ts
       index.ts
       mutex.ts
@@ -4748,8 +4749,9 @@ import { PROBE_BINARY_PATH } from '@/constants';
 import { Task } from '@/task';
 import logger from '@/logger';
 import { filterIgnoredFiles, scrapeWeb } from '@/utils';
+import { isAbortError, isFileNotFoundError } from '@/utils/errors';
 ⋮----
-export const createPowerToolset = (task: Task, profile: AgentProfile, promptContext?: PromptContext): ToolSet =>
+export const createPowerToolset = (task: Task, profile: AgentProfile, promptContext?: PromptContext, abortSignal?: AbortSignal): ToolSet =>
 ⋮----
 // Sanitize escape characters from searchTerm and replacementText
 const sanitize = (str: string) =>
@@ -5878,8 +5880,6 @@ export const getAnthropicUsageReport = (
 ): UsageReportData =>
 ⋮----
 // Extract cache tokens from provider metadata
-⋮----
-// Calculate sentTokens after deducting cached tokens
 ⋮----
 // Calculate cost internally with already deducted sentTokens
 ⋮----
@@ -8528,6 +8528,10 @@ private findMessageConnectors(action: MessageAction): Connector[]
 ⋮----
 private async waitForCurrentPromptToFinish()
 ⋮----
+private async waitForCurrentAgentToFinish()
+⋮----
+private resolveAgentRunPromises()
+⋮----
 public async runPrompt(prompt: string, mode?: Mode): Promise<ResponseCompletedData[]>
 ⋮----
 // Generate promptContext for this run
@@ -8718,6 +8722,7 @@ public async compactConversation(
     contextMessages: ContextMessage[] = this.contextManager.getContextMessages(),
     promptContext?: PromptContext,
     abortSignal?: AbortSignal,
+    waitForAgentCompletion = true,
     logMessage = 'Compacting conversation...',
 )
 ⋮----
@@ -9055,6 +9060,24 @@ export const getEnvironmentVariablesForAider = (settings: SettingsData, baseDir:
 const getTelemetryEnvironmentVariablesForAider = (settings: SettingsData, baseDir: string): Record<string, unknown> =>
 ⋮----
 export const determineProvider = (projectDir?: string, settings?: SettingsData): LlmProviderName =>
+
+================
+File: src/main/utils/errors.ts
+================
+/**
+ * Utility functions for error handling
+ */
+⋮----
+/**
+ * Checks if an error is an AbortError (operation was cancelled)
+ * In Node.js, AbortError has name === 'AbortError' and code === 'ABORT_ERR'
+ */
+export const isAbortError = (error: unknown): boolean =>
+⋮----
+/**
+ * Checks if an error is a file not found error (ENOENT)
+ */
+export const isFileNotFoundError = (error: unknown): boolean =>
 
 ================
 File: src/main/utils/file-system.ts
@@ -9417,23 +9440,27 @@ File: src/main/utils/web-scrapper.ts
 import { BrowserWindow } from 'electron';
 import Turndown from 'turndown';
 ⋮----
+import { isAbortError } from '@/utils/errors';
+⋮----
 export class WebScraper
 ⋮----
-async scrape(url: string, timeout: number = 60000): Promise<string>
+async scrape(url: string, timeout: number = 60000, abortSignal?: AbortSignal): Promise<string>
 ⋮----
-private async scrapeWithBrowserWindow(url: string, timeout: number = 60000): Promise<string>
+private async scrapeWithBrowserWindow(url: string, timeout: number = 60000, abortSignal?: AbortSignal): Promise<string>
 ⋮----
 // Create hidden BrowserWindow for scraping
 ⋮----
 // Create timeout promise
 ⋮----
-// Load the URL with timeout
+// Create abort promise if signal is provided
 ⋮----
-// Wait for page to load completely with timeout
+// Load the URL with timeout and abort signal
 ⋮----
-// Get page content with timeout
+// Wait for page to load completely with timeout and abort signal
 ⋮----
-// Get content type from headers with timeout
+// Get page content with timeout and abort signal
+⋮----
+// Get content type from headers with timeout and abort signal
 ⋮----
 // If it's HTML, convert to markdown-like text
 ⋮----
@@ -9457,7 +9484,7 @@ private cleanHtml(content: string): string
 ⋮----
 private htmlToMarkDown(content: string): string
 ⋮----
-export const scrapeWeb = async (url: string, timeout: number = 60000) =>
+export const scrapeWeb = async (url: string, timeout: number = 60000, abortSignal?: AbortSignal) =>
 
 ================
 File: src/main/versions/index.ts
