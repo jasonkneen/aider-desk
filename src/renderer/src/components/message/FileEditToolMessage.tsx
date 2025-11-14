@@ -21,11 +21,11 @@ export const FileEditToolMessage = ({ message, onRemove, compact = false }: Prop
   const expandableRef = useRef<ExpandableMessageBlockRef>(null);
   const [hasClosedOnError, setHasClosedOnError] = useState(false);
 
-  const filePath = message.args.filePath as string;
-  const searchTerm = message.args.searchTerm as string;
-  const replacementText = message.args.replacementText as string;
-  const isRegex = message.args.isRegex as boolean;
-  const replaceAll = message.args.replaceAll as boolean;
+  const filePath = (message.args.filePath as string) || '';
+  const searchTerm = (message.args.searchTerm as string) || '';
+  const replacementText = (message.args.replacementText as string) || '';
+  const isRegex = (message.args.isRegex as boolean) ?? false;
+  const replaceAll = (message.args.replaceAll as boolean) ?? false;
   const content = message.content && JSON.parse(message.content);
   const language = getLanguageFromPath(filePath);
 

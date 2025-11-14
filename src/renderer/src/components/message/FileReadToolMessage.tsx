@@ -18,7 +18,7 @@ type Props = {
 export const FileReadToolMessage = ({ message, onRemove, compact = false }: Props) => {
   const { t } = useTranslation();
 
-  const filePath = message.args.filePath as string;
+  const filePath = (message.args.filePath as string) || '';
   const withLines = (message.args.withLines as boolean) ?? false;
   const lineOffset = (message.args.lineOffset as number) ?? 0;
   const lineLimit = (message.args.lineLimit as number) ?? 1000;

@@ -31,7 +31,7 @@ export const FileWriteToolMessage = ({ message, onRemove, compact = false }: Pro
   const [hasClosedOnError, setHasClosedOnError] = useState(false);
 
   const contentToWrite = message.args.content as string;
-  const filePath = message.args.filePath as string;
+  const filePath = (message.args.filePath as string) || '';
   const language = getLanguageFromPath(filePath);
   const content = message.content && JSON.parse(message.content);
   const isError = content && content.startsWith('Error:');

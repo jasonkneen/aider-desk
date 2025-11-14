@@ -131,8 +131,8 @@ export const isMessageEmpty = (content: unknown): boolean => {
   return true;
 };
 
-export const getLanguageFromPath = (path: string): string => {
-  const extension = path.split('.').pop()?.toLowerCase();
+export const getLanguageFromPath = (path: string | undefined): string => {
+  const extension = path?.split('.').pop()?.toLowerCase();
   // Add more mappings as needed
   switch (extension) {
     case 'js':
