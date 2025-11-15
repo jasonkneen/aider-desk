@@ -139,6 +139,7 @@ src/
         usage-api.ts
       cloudflare-tunnel-manager.ts
       index.ts
+      runner.ts
       server-controller.ts
     store/
       migrations/
@@ -191,12 +192,15 @@ src/
       index.ts
       types.ts
       worktree-manager.ts
+    app.ts
     constants.ts
     events-handler.ts
     index.ts
     ipc-handlers.ts
     logger.ts
+    managers.ts
     messages.ts
+    paths.ts
     progress-window.ts
     start-up.ts
   mcp-server/
@@ -4585,7 +4589,7 @@ export const extractServerNameToolName = (toolCallName: string): [string, string
 ⋮----
 export const isMessageEmpty = (content: unknown): boolean =>
 ⋮----
-export const getLanguageFromPath = (path: string): string =>
+export const getLanguageFromPath = (path: string | undefined): string =>
 ⋮----
 // Add more mappings as needed
 ⋮----
@@ -5683,7 +5687,6 @@ File: src/main/data-manager/index.ts
 ================
 File: src/main/events/event-manager.ts
 ================
-import { BrowserWindow } from 'electron';
 import { Socket } from 'socket.io';
 import {
   ContextFile,
@@ -5710,6 +5713,8 @@ import {
   ClearTaskData,
   ProjectSettings,
 } from '@common/types';
+⋮----
+import type { BrowserWindow } from 'electron';
 ⋮----
 import logger from '@/logger';
 ⋮----
@@ -7736,10 +7741,10 @@ File: src/main/server/cloudflare-tunnel-manager.ts
 ================
 import { CloudflareTunnelStatus } from '@common/types';
 import { Tunnel, use as setCloudflaredBinary } from 'cloudflared';
-import { is } from '@electron-toolkit/utils';
 ⋮----
 import { CLOUDFLARED_BINARY_PATH, SERVER_PORT } from '@/constants';
 import logger from '@/logger';
+import { isDev } from '@/app';
 ⋮----
 export class CloudflareTunnelManager
 ⋮----
@@ -7763,21 +7768,36 @@ File: src/main/server/index.ts
 // Export main controller
 
 ================
+File: src/main/server/runner.ts
+================
+import logger from '@/logger';
+import { initManagers } from '@/managers';
+import { performStartUp } from '@/start-up';
+import { Store } from '@/store';
+import { AIDER_DESK_DATA_DIR } from '@/constants';
+⋮----
+const main = async (): Promise<void> =>
+⋮----
+// Force headless mode for node-runner
+⋮----
+const updateProgress = (
+
+================
 File: src/main/server/server-controller.ts
 ================
 import { Server } from 'http';
 import { join } from 'path';
 ⋮----
-import express, { Request, Response, NextFunction } from 'express';
+import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
-import { is } from '@electron-toolkit/utils';
 ⋮----
-import { ContextApi, PromptApi, SettingsApi, ProjectApi, CommandsApi, UsageApi, SystemApi, TodoApi, McpApi, ProvidersApi } from '@/server/rest-api';
-import { SERVER_PORT, AUTH_USERNAME, AUTH_PASSWORD } from '@/constants';
+import { CommandsApi, ContextApi, McpApi, ProjectApi, PromptApi, ProvidersApi, SettingsApi, SystemApi, TodoApi, UsageApi } from '@/server/rest-api';
+import { AUTH_PASSWORD, AUTH_USERNAME, SERVER_PORT } from '@/constants';
 import logger from '@/logger';
 import { ProjectManager } from '@/project';
 import { EventsHandler } from '@/events-handler';
 import { Store } from '@/store';
+import { isDev, isElectron } from '@/app';
 ⋮----
 const REQUEST_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 ⋮----
@@ -8040,19 +8060,11 @@ interface StoreSchema {
 ⋮----
 recentProjects: string[]; // baseDir paths of recently closed projects
 ⋮----
-interface CustomStore<T> {
-  get<K extends keyof T>(key: K): T[K] | undefined;
-  set<K extends keyof T>(key: K, value: T[K]): void;
-}
-⋮----
-get<K extends keyof T>(key: K): T[K] | undefined;
-set<K extends keyof T>(key: K, value: T[K]): void;
-⋮----
 export class Store
 ⋮----
 // @ts-expect-error expected to be initialized
 ⋮----
-async init(): Promise<void>
+async init(path?: string): Promise<void>
 ⋮----
 getUserId(): string
 ⋮----
@@ -8403,7 +8415,6 @@ import fs from 'fs/promises';
 import path from 'path';
 ⋮----
 import { simpleGit } from 'simple-git';
-import { Notification } from 'electron';
 import YAML from 'yaml';
 import {
   AgentProfile,
@@ -8457,6 +8468,7 @@ import { ContextManager } from '@/task/context-manager';
 import { Project } from '@/project';
 import { AiderManager } from '@/task/aider-manager';
 import { WorktreeManager } from '@/worktrees';
+import { getElectronApp } from '@/app';
 ⋮----
 export class Task
 ⋮----
@@ -8594,6 +8606,8 @@ public processResponseMessage(message: ResponseMessage, saveToDb = true)
 sendResponseCompleted(data: ResponseCompletedData)
 ⋮----
 private notifyIfEnabled(title: string, text: string)
+⋮----
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 ⋮----
 private getQuestionKey(question: QuestionData): string
 ⋮----
@@ -8897,11 +8911,11 @@ File: src/main/telemetry/telemetry-manager.ts
 ================
 import { PostHog } from 'posthog-node';
 import { AgentProfile, Mode, SettingsData, TaskData } from '@common/types';
-import { app } from 'electron';
 ⋮----
 import { Store } from '@/store';
 import logger from '@/logger';
 import { POSTHOG_PUBLIC_API_KEY, POSTHOG_HOST } from '@/constants';
+import { getElectronApp } from '@/app';
 ⋮----
 export class TelemetryManager
 ⋮----
@@ -9250,9 +9264,8 @@ import { exec, execSync } from 'child_process';
 ⋮----
 import { promisify } from 'util';
 ⋮----
-import { app } from 'electron';
-⋮----
 import logger from '@/logger';
+import { getElectronApp } from '@/app';
 ⋮----
 interface ShellInfo {
   path: string;
@@ -9437,16 +9450,22 @@ export const execWithShellPath = async (command: string, options?:
 ================
 File: src/main/utils/web-scrapper.ts
 ================
-import { BrowserWindow } from 'electron';
 import Turndown from 'turndown';
 ⋮----
+import type { BrowserWindow as BrowserWindowType } from 'electron';
+⋮----
 import { isAbortError } from '@/utils/errors';
+import { isElectron } from '@/app';
 ⋮----
 export class WebScraper
 ⋮----
 async scrape(url: string, timeout: number = 60000, abortSignal?: AbortSignal): Promise<string>
 ⋮----
+// return await this.scrapeWithFetch(url, timeout, abortSignal);
+⋮----
 private async scrapeWithBrowserWindow(url: string, timeout: number = 60000, abortSignal?: AbortSignal): Promise<string>
+⋮----
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 ⋮----
 // Create hidden BrowserWindow for scraping
 ⋮----
@@ -9466,15 +9485,15 @@ private async scrapeWithBrowserWindow(url: string, timeout: number = 60000, abor
 ⋮----
 // Cleanup window
 ⋮----
-private async waitForPageLoad(): Promise<void>
+private async waitForPageLoad(window: BrowserWindowType): Promise<void>
 ⋮----
 const checkLoadState = () =>
 ⋮----
 // Additional wait for dynamic content to load
 ⋮----
-private async getContentType(): Promise<string>
+private async getContentType(window: BrowserWindowType): Promise<string>
 ⋮----
-private async cleanupWindow(): Promise<void>
+private async cleanupWindow(window: BrowserWindowType): Promise<void>
 ⋮----
 private looksLikeHTML(content: string): boolean
 ⋮----
@@ -9497,14 +9516,12 @@ File: src/main/versions/versions-manager.ts
 import path from 'path';
 ⋮----
 import { VersionsInfo } from '@common/types';
-import { autoUpdater } from 'electron-updater';
-import { app } from 'electron';
-import { is } from '@electron-toolkit/utils';
 ⋮----
 import { getCurrentPythonLibVersion, getLatestPythonLibVersion } from '@/utils';
 import logger from '@/logger';
 import { Store } from '@/store';
 import { EventManager } from '@/events';
+import { getElectronApp, isDev } from '@/app';
 ⋮----
 export class VersionsManager
 ⋮----
@@ -9519,6 +9536,8 @@ async getVersions(forceRefresh = false): Promise<VersionsInfo>
 ⋮----
 // Get AiderDesk version using app.getVersion()
 ⋮----
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+⋮----
 // Get current and available Aider versions using utility functions
 ⋮----
 // Don't show error box for this common case
@@ -9531,6 +9550,8 @@ private updateVersionsInfo(partialInfo: Partial<VersionsInfo>): void
 ⋮----
 private async init(): Promise<void>
 ⋮----
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+⋮----
 autoUpdater.autoInstallOnAppQuit = true; // Install on quit after download
 ⋮----
 // Schedule periodic checks
@@ -9540,6 +9561,8 @@ autoUpdater.autoInstallOnAppQuit = true; // Install on quit after download
 public destroy(): void
 ⋮----
 public async downloadLatestAiderDesk(): Promise<void>
+⋮----
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 ⋮----
 // Check for updates first to ensure we have the latest info
 ⋮----
@@ -9933,12 +9956,26 @@ private async pruneDeleted(projectDir: string): Promise<void>
 async close(projectDir: string)
 
 ================
+File: src/main/app.ts
+================
+import type { App } from 'electron';
+⋮----
+export const isElectron = (): boolean =>
+⋮----
+export const getElectronApp = (): App | null =>
+⋮----
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+⋮----
+export const isDev = (): boolean =>
+⋮----
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+
+================
 File: src/main/constants.ts
 ================
 import path from 'path';
 ⋮----
-import { is } from '@electron-toolkit/utils';
-import { app } from 'electron';
+import { getDataDir, getResourceDir } from './paths';
 ⋮----
 // constants for project directory files
 
@@ -9948,7 +9985,6 @@ File: src/main/events-handler.ts
 import path from 'path';
 import fs from 'fs/promises';
 ⋮----
-import { BrowserWindow, clipboard, dialog, shell } from 'electron';
 import {
   CloudflareTunnelStatus,
   CustomCommand,
@@ -9974,6 +10010,8 @@ import {
   VersionsInfo,
 } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
+⋮----
+import type { BrowserWindow } from 'electron';
 ⋮----
 import { McpManager } from '@/agent';
 import { ModelManager } from '@/models';
@@ -10187,8 +10225,10 @@ getCloudflareTunnelStatus(): CloudflareTunnelStatus
 File: src/main/index.ts
 ================
 import { join } from 'path';
-import { createServer } from 'http';
 import { existsSync, statSync } from 'fs';
+⋮----
+// eslint-disable-next-line import/order
+import { AIDER_DESK_DATA_DIR, HEADLESS_MODE } from '@/constants';
 ⋮----
 import { compareBaseDirs, delay } from '@common/utils';
 import { electronApp, is, optimizer } from '@electron-toolkit/utils';
@@ -10197,23 +10237,11 @@ import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
 import icon from '../../resources/icon.png?asset';
 ⋮----
 import { ProgressWindow } from '@/progress-window';
-import { McpManager } from '@/agent';
-import { CloudflareTunnelManager, ServerController } from '@/server';
-import { ConnectorManager } from '@/connector';
 import { setupIpcHandlers } from '@/ipc-handlers';
-import { ProjectManager } from '@/project';
 import { performStartUp, UpdateProgressData } from '@/start-up';
 import { getDefaultProjectSettings, Store } from '@/store';
-import { VersionsManager } from '@/versions';
 import logger from '@/logger';
-import { TelemetryManager } from '@/telemetry';
-import { EventManager } from '@/events';
-import { ModelManager } from '@/models';
-import { DataManager } from '@/data-manager';
-import { TerminalManager } from '@/terminal';
-import { EventsHandler } from '@/events-handler';
-import { HEADLESS_MODE, SERVER_PORT } from '@/constants';
-import { WorktreeManager } from '@/worktrees';
+import { initManagers } from '@/managers';
 ⋮----
 const setupCustomMenu = (): void =>
 ⋮----
@@ -10225,46 +10253,13 @@ const setupCustomMenu = (): void =>
 ⋮----
 const initStore = async (): Promise<Store> =>
 ⋮----
-const initManagers = async (
-  mainWindow: BrowserWindow | null,
-  store: Store,
-): Promise<
+const initWindow = async (store: Store): Promise<BrowserWindow> =>
 ⋮----
-// Initialize telemetry manager
-⋮----
-// Initialize MCP manager
-⋮----
-// Initialize event manager
-⋮----
-// Initialize model manager
-⋮----
-// Initialize data manager
-⋮----
-// Initialize project manager
-⋮----
-// Initialize terminal manager
-⋮----
-// Initialize Versions Manager (this also sets up listeners)
-⋮----
-// Create HTTP server
-⋮----
-// Initialize Cloudflare tunnel manager
-⋮----
-// Initialize events handler
-⋮----
-// Create and initialize REST API controller with the server
-⋮----
-// Initialize connector manager with the server
-⋮----
-// start listening
+const saveWindowState = (): void =>
 ⋮----
 const beforeQuit = async (event?: Electron.Event) =>
 ⋮----
 // Handle CTRL+C (SIGINT)
-⋮----
-const initWindow = async (store: Store): Promise<BrowserWindow> =>
-⋮----
-const saveWindowState = (): void =>
 ⋮----
 // Initialize IPC handlers
 ⋮----
@@ -10311,6 +10306,69 @@ import DailyRotateFile from 'winston-daily-rotate-file';
 import { LOGS_DIR } from '@/constants';
 ⋮----
 // If we're not in production, also log to the console
+
+================
+File: src/main/managers.ts
+================
+import { createServer } from 'http';
+⋮----
+import type { BrowserWindow } from 'electron';
+⋮----
+import { McpManager } from '@/agent';
+import { CloudflareTunnelManager, ServerController } from '@/server';
+import { ConnectorManager } from '@/connector';
+import { ProjectManager } from '@/project';
+import { EventManager } from '@/events';
+import { ModelManager } from '@/models';
+import { DataManager } from '@/data-manager';
+import { TerminalManager } from '@/terminal';
+import { VersionsManager } from '@/versions';
+import { TelemetryManager } from '@/telemetry';
+import { WorktreeManager } from '@/worktrees';
+import { Store } from '@/store';
+import { SERVER_PORT } from '@/constants';
+import logger from '@/logger';
+import { EventsHandler } from '@/events-handler';
+⋮----
+export interface ManagersResult {
+  eventsHandler: EventsHandler;
+  serverController: ServerController;
+  cleanup: () => Promise<void>;
+}
+⋮----
+export const initManagers = async (store: Store, mainWindow: BrowserWindow | null = null): Promise<ManagersResult> =>
+⋮----
+// Initialize telemetry manager
+⋮----
+// Initialize MCP manager
+⋮----
+// Initialize event manager (no main window in headless)
+⋮----
+// Initialize model manager
+⋮----
+// Initialize data manager
+⋮----
+// Initialize project manager
+⋮----
+// Initialize terminal manager
+⋮----
+// Initialize Versions Manager
+⋮----
+// Create HTTP server
+⋮----
+// Initialize Cloudflare tunnel manager
+⋮----
+// Initialize events handler (no main window)
+⋮----
+// Create and initialize REST API controller with the server
+⋮----
+// Initialize connector manager with the server
+⋮----
+// Start listening
+⋮----
+const cleanup = async (): Promise<void> =>
+⋮----
+// Handle process signals
 
 ================
 File: src/main/messages.ts
@@ -10560,12 +10618,26 @@ export interface UnsubscribeEventsMessage extends Message {
 export const isUnsubscribeEventsMessage = (message: Message): message is UnsubscribeEventsMessage =>
 
 ================
+File: src/main/paths.ts
+================
+import path from 'path';
+⋮----
+import { getElectronApp, isDev, isElectron } from '@/app';
+⋮----
+export const getDataDir = (): string =>
+⋮----
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+⋮----
+export const getResourceDir = (): string =>
+
+================
 File: src/main/progress-window.ts
 ================
 import { join } from 'path';
 ⋮----
 import { BrowserWindow, ipcMain } from 'electron';
-import { is } from '@electron-toolkit/utils';
+⋮----
+import { isDev } from '@/app';
 ⋮----
 export class ProgressWindow
 ⋮----
@@ -10591,7 +10663,6 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 ⋮----
 import { delay } from '@common/utils';
-import { is } from '@electron-toolkit/utils';
 ⋮----
 import logger from '@/logger';
 import { getCurrentPythonLibVersion, getLatestPythonLibVersion, getPythonVenvBinPath } from '@/utils';
@@ -10604,6 +10675,7 @@ import {
   AIDER_DESK_MCP_SERVER_DIR,
   UV_EXECUTABLE,
 } from '@/constants';
+import { isDev } from '@/app';
 ⋮----
 /**
  * Checks if uv is available and accessible.
@@ -19498,13 +19570,15 @@ File: package.json
     "dev": "electron-vite dev",
     "dev:no-hmr": "NO_HMR=true electron-vite dev",
     "build:mcp": "esbuild src/mcp-server/aider-desk-mcp-server.ts --bundle --platform=node --outdir=out/mcp-server",
+    "build:server": "esbuild src/main/server/runner.ts --bundle --platform=node --outdir=out/server --external:better-sqlite3 --external:@homebridge/node-pty-prebuilt-multiarch --external:@probelabs/probe --external:electron --tsconfig=tsconfig.server.json && cp -r resources out/resources",
     "build": "npm run typecheck && electron-vite build && npm run build:mcp",
     "postinstall": "electron-builder install-app-deps && node scripts/download-uv.mjs && node scripts/download-probe.mjs && patch-package",
     "build:unpack": "npm run build && electron-builder --dir",
     "build:win": "npm run build && electron-builder --win",
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux",
-    "prepare": "husky"
+    "prepare": "husky",
+    "start:server": "AIDER_DESK_HEADLESS=true node out/server/runner.js"
   },
   "dependencies": {
     "@ai-sdk/amazon-bedrock": "^3.0.30",
@@ -19561,9 +19635,10 @@ File: package.json
     "chokidar": "^4.0.3",
     "cloudflared": "^0.7.1",
     "clsx": "^2.1.1",
+    "conf": "^15.0.2",
     "cors": "^2.8.5",
-    "electron-store": "^10.1.0",
     "electron-updater": "^6.6.2",
+    "env-paths": "^3.0.0",
     "express": "^4.21.2",
     "file-type": "^21.0.0",
     "fix-path": "^4.0.0",
