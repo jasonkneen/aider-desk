@@ -11,7 +11,6 @@ import {
   McpTool,
   Mode,
   Model,
-  ModelInfo,
   OS,
   ProjectData,
   ProjectSettings,
@@ -19,8 +18,8 @@ import {
   ProviderProfile,
   ResponseCompletedData,
   SettingsData,
-  TaskStateData,
   TaskData,
+  TaskStateData,
   TodoItem,
   UsageDataRow,
   VersionsInfo,
@@ -71,15 +70,6 @@ export class EventsHandler {
     this.telemetryManager.settingsChanged(oldSettings, newSettings);
 
     return this.store.getSettings();
-  }
-
-  async getModelsInfo(): Promise<Record<string, ModelInfo>> {
-    try {
-      return await this.modelManager.getAllModelsInfo();
-    } catch (error) {
-      logger.error('Error loading models info:', error);
-      return {}; // Return empty object or handle error as appropriate
-    }
   }
 
   getProjectSettings(baseDir: string): ProjectSettings {
@@ -619,7 +609,11 @@ export class EventsHandler {
   }
 
   async getProviderModels(reload = false): Promise<ProviderModelsData> {
-    return await this.modelManager.getProviderModels(reload);
+    const providerModels = await this.modelManager.getProviderModels(reload);
+    if (reload) {
+      this.projectManager.modelsUpdated();
+    }
+    return providerModels;
   }
 
   getProviders(): ProviderProfile[] {
@@ -633,11 +627,13 @@ export class EventsHandler {
 
     await this.modelManager.providersChanged(oldProviders, providers);
 
+    this.projectManager.modelsUpdated();
     this.eventManager.sendProvidersUpdated(providers);
   }
 
   async upsertModel(providerId: string, modelId: string, model: Model): Promise<void> {
     await this.modelManager.upsertModel(providerId, modelId, model);
+    this.projectManager.modelsUpdated();
   }
 
   async deleteModel(providerId: string, modelId: string): Promise<void> {
@@ -661,7 +657,9 @@ export class EventsHandler {
       await shell.openPath(LOGS_DIR);
       return true;
     } catch (error) {
-      logger.error('Failed to open logs directory:', error);
+      logger.error('Failed to open logs directory:', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return false;
     }
   }

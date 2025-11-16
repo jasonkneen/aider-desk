@@ -1,5 +1,5 @@
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { isOllamaProvider, OllamaProvider } from '@common/agent';
+import { Model, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { DEFAULT_MODEL_TEMPERATURE, isOllamaProvider, OllamaProvider } from '@common/agent';
 import { createOllama } from 'ollama-ai-provider-v2';
 import { simulateStreamingMiddleware, wrapLanguageModel } from 'ai';
 
@@ -11,11 +11,7 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Task } from '@/task/task';
 
-export const loadOllamaModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> => {
+export const loadOllamaModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isOllamaProvider(profile.provider)) {
     return { models: [], success: false };
   }
@@ -44,13 +40,11 @@ export const loadOllamaModels = async (
     const data = await response.json();
     const models =
       data?.models?.map((m: { name: string }) => {
-        const modelParts = m.name.split('/');
-        const info = modelsInfo[modelParts[modelParts.length - 1]];
         return {
           id: m.name,
           providerId: profile.id,
-          ...info, // Merge with existing model info if available
-        };
+          temperature: DEFAULT_MODEL_TEMPERATURE,
+        } satisfies Model;
       }) || [];
     logger.info(`Loaded ${models.length} Ollama models from ${effectiveBaseUrl} for profile ${profile.id}`);
     return { models, success: true };
@@ -112,27 +106,14 @@ export const createOllamaLlm = (profile: ProviderProfile, model: Model, settings
   });
 };
 
-// === Cost and Usage Functions ===
-export const calculateOllamaCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
-  const inputCostPerToken = model.inputCostPerToken ?? 0;
-  const outputCostPerToken = model.outputCostPerToken ?? 0;
-  const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? inputCostPerToken;
-
-  const inputCost = sentTokens * inputCostPerToken;
-  const outputCost = receivedTokens * outputCostPerToken;
-  const cacheCost = cacheReadTokens * cacheReadInputTokenCost;
-
-  return inputCost + outputCost + cacheCost;
-};
-
 export const getOllamaUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
   const totalSentTokens = usage.inputTokens || 0;
   const receivedTokens = usage.outputTokens || 0;
   const cacheReadTokens = usage.cachedInputTokens || 0;
   const sentTokens = totalSentTokens - cacheReadTokens;
 
-  // Calculate cost internally (no caching for Ollama)
-  const messageCost = calculateOllamaCost(model, sentTokens, receivedTokens, cacheReadTokens);
+  // Cost is always 0 for Ollama
+  const messageCost = 0;
 
   return {
     model: `${provider.id}/${model.id}`,

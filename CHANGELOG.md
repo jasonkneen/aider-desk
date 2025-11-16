@@ -9,6 +9,7 @@
 - enhanced model configuration with temperature and max tokens support at the model level, with optional agent profile overrides
 - improved new task handling in sidebar
 - better utilization of abort signals and improved the interruption handling
+- passing the model parameters (cost, temperature) to Aider process to utilize Model Library settings
 
 ## [0.39.0]
 

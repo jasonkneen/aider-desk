@@ -29,6 +29,7 @@ export const loadMinimaxModels = async (profile: ProviderProfile): Promise<LoadM
       outputCostPerToken: 0.0000012, // 1.2 per 1M tokens
       cacheReadInputTokenCost: 0.00000003, // 0.03 per 1M tokens
       cacheWriteInputTokenCost: 0.00000004, // 0.04 per 1M tokens
+      temperature: 0.5,
     },
     {
       id: 'MiniMax-M2-Stable',
@@ -39,6 +40,7 @@ export const loadMinimaxModels = async (profile: ProviderProfile): Promise<LoadM
       outputCostPerToken: 0.0000012, // 1.2 per 1M tokens
       cacheReadInputTokenCost: 0.00000003, // 0.03 per 1M tokens
       cacheWriteInputTokenCost: 0.00000004, // 0.04 per 1M tokens
+      temperature: 0.5,
     },
   ];
 
@@ -139,7 +141,7 @@ export const getMinimaxUsageReport = (
   // Calculate cost internally with already deducted sentTokens
   const messageCost = calculateMinimaxCost(model, sentTokens, receivedTokens, cacheWriteTokens, cacheReadTokens);
 
-  const usageReportData: UsageReportData = {
+  return {
     model: `${provider.id}/${model.id}`,
     sentTokens,
     receivedTokens,
@@ -148,8 +150,6 @@ export const getMinimaxUsageReport = (
     messageCost,
     agentTotalCost: task.task.agentTotalCost + messageCost,
   };
-
-  return usageReportData;
 };
 
 // === Configuration Helper Functions ===

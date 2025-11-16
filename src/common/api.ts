@@ -15,7 +15,6 @@ import {
   McpTool,
   Mode,
   Model,
-  ModelInfo,
   ModelsData,
   OS,
   ProjectData,
@@ -119,7 +118,6 @@ export interface ApplicationAPI {
   getReleaseNotes: () => Promise<string | null>;
   clearReleaseNotes: () => Promise<void>;
   getOS: () => Promise<OS>;
-  loadModelsInfo: () => Promise<Record<string, ModelInfo>>;
   queryUsageData: (from: string, to: string) => Promise<UsageDataRow[]>;
   getEffectiveEnvironmentVariable: (key: string, baseDir?: string) => Promise<EnvironmentVariable | undefined>;
   getProviderModels: (reload?: boolean) => Promise<ProviderModelsData>;

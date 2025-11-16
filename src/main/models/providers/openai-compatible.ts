@@ -1,20 +1,15 @@
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, ReasoningEffort } from '@common/types';
-import { isOpenAiCompatibleProvider, OpenAiCompatibleProvider, LlmProvider } from '@common/agent';
+import { Model, ProviderProfile, ReasoningEffort, SettingsData } from '@common/types';
+import { DEFAULT_MODEL_TEMPERATURE, isOpenAiCompatibleProvider, LlmProvider, OpenAiCompatibleProvider } from '@common/agent';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 
-import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
-import { Task } from '@/task/task';
 import { getEffectiveEnvironmentVariable } from '@/utils';
+import { getDefaultUsageReport } from '@/models/providers/default';
 
-const loadOpenaiCompatibleModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> => {
+const loadOpenaiCompatibleModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isOpenAiCompatibleProvider(profile.provider)) {
     return { models: [], success: false };
   }
@@ -46,12 +41,11 @@ const loadOpenaiCompatibleModels = async (
     const data = await response.json();
     const models =
       data.data?.map((model: { id: string }) => {
-        const info = modelsInfo[model.id];
         return {
           id: model.id,
           providerId: profile.id,
-          ...info,
-        };
+          temperature: DEFAULT_MODEL_TEMPERATURE,
+        } satisfies Model;
       }) || [];
 
     logger.info(`Loaded ${models.length} OpenAI-compatible models for profile ${profile.id}`);
@@ -127,38 +121,6 @@ const createOpenAiCompatibleLlm = (profile: ProviderProfile, model: Model, setti
   return compatibleProvider(model.id);
 };
 
-// === Cost and Usage Functions ===
-const calculateOpenAiCompatibleCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
-  const inputCostPerToken = model.inputCostPerToken ?? 0;
-  const outputCostPerToken = model.outputCostPerToken ?? 0;
-  const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? inputCostPerToken;
-
-  const inputCost = sentTokens * inputCostPerToken;
-  const outputCost = receivedTokens * outputCostPerToken;
-  const cacheCost = cacheReadTokens * cacheReadInputTokenCost;
-
-  return inputCost + outputCost + cacheCost;
-};
-
-const getOpenAiCompatibleUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
-  const totalSentTokens = usage.inputTokens || 0;
-  const receivedTokens = usage.outputTokens || 0;
-  const cacheReadTokens = usage.cachedInputTokens || 0;
-  const sentTokens = totalSentTokens - cacheReadTokens;
-
-  // Calculate cost internally (no caching for OpenAI Compatible)
-  const messageCost = calculateOpenAiCompatibleCost(model, sentTokens, receivedTokens, cacheReadTokens);
-
-  return {
-    model: `${provider.id}/${model.id}`,
-    sentTokens,
-    receivedTokens,
-    cacheReadTokens,
-    messageCost,
-    agentTotalCost: task.task.agentTotalCost + messageCost,
-  };
-};
-
 // === Configuration Helper Functions ===
 const getOpenAiCompatibleProviderOptions = (provider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined => {
   if (!isOpenAiCompatibleProvider(provider)) {
@@ -178,7 +140,9 @@ const getOpenAiCompatibleProviderOptions = (provider: LlmProvider, model: Model)
       : (reasoningEffort.toLowerCase() as 'minimal' | 'low' | 'medium' | 'high');
 
   if (mappedReasoningEffort) {
-    logger.debug('Using reasoning effort for OpenAI Compatible:', { mappedReasoningEffort });
+    logger.debug('Using reasoning effort for OpenAI Compatible:', {
+      mappedReasoningEffort,
+    });
     return {
       [provider.name]: {
         reasoningEffort: mappedReasoningEffort,
@@ -193,7 +157,7 @@ const getOpenAiCompatibleProviderOptions = (provider: LlmProvider, model: Model)
 export const openaiCompatibleProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
   createLlm: createOpenAiCompatibleLlm,
-  getUsageReport: getOpenAiCompatibleUsageReport,
+  getUsageReport: getDefaultUsageReport,
 
   // Model discovery functions
   loadModels: loadOpenaiCompatibleModels,

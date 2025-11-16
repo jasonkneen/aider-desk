@@ -62,15 +62,6 @@ export class SettingsApi extends BaseApi {
       }),
     );
 
-    // Get models
-    router.get(
-      '/models-info',
-      this.handleRequest(async (_, res) => {
-        const modelsInfo = await this.eventsHandler.getModelsInfo();
-        res.status(200).json(modelsInfo);
-      }),
-    );
-
     // Get recent projects
     router.get(
       '/settings/recent-projects',

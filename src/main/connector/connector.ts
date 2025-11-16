@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { ContextFile, EditFormat, FileEdit, MessageRole, Mode, PromptContext } from '@common/types';
+import { ContextFile, EditFormat, FileEdit, MessageRole, Mode, ModelInfo, PromptContext } from '@common/types';
 import { Socket } from 'socket.io';
 
 import logger from '@/logger';
@@ -19,6 +19,7 @@ import {
   RunCommandMessage,
   SetModelsMessage,
   UpdateEnvVarsMessage,
+  UpdateModelsInfoMessage,
 } from '@/messages';
 
 export class Connector {
@@ -159,6 +160,14 @@ export class Connector {
       action: 'request-context-info',
       messages,
       files,
+    };
+    this.sendMessage(message);
+  }
+
+  public sendUpdateModelsInfoMessage(modelsInfo: Record<string, ModelInfo>) {
+    const message: UpdateModelsInfoMessage = {
+      action: 'update-models-info',
+      modelsInfo,
     };
     this.sendMessage(message);
   }

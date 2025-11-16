@@ -2,15 +2,17 @@ import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from
 import { isZaiPlanProvider, ZaiPlanProvider } from '@common/agent';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 
-import type { LanguageModelUsage } from 'ai';
+import { calculateCost, getDefaultUsageReport } from './default';
+
 import type { LanguageModelV2 } from '@ai-sdk/provider';
+import type { LanguageModelUsage } from 'ai';
 
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
-import { Task } from '@/task/task';
 import { getEffectiveEnvironmentVariable } from '@/utils';
+import { Task } from '@/task';
 
-const loadZaiPlanModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>, settings: SettingsData): Promise<LoadModelsResponse> => {
+const loadZaiPlanModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isZaiPlanProvider(profile.provider)) {
     return { models: [], success: false };
   }
@@ -40,12 +42,11 @@ const loadZaiPlanModels = async (profile: ProviderProfile, modelsInfo: Record<st
     const data = await response.json();
     const models =
       data.data?.map((model: { id: string }) => {
-        const info = modelsInfo[model.id];
         return {
           id: model.id,
           providerId: profile.id,
-          ...info,
-        };
+          temperature: 0.1, // Default temperature for ZAI models
+        } satisfies Model;
       }) || [];
 
     logger.info(`Loaded ${models.length} ZAI models for profile ${profile.id}`);
@@ -105,28 +106,13 @@ const createZaiPlanLlm = (profile: ProviderProfile, model: Model, settings: Sett
   return compatibleProvider(model.id);
 };
 
-// === Cost and Usage Functions ===
-const calculateZaiPlanCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
-  // Use model overrides if available, otherwise use base model info
-  const inputCostPerToken = model.inputCostPerToken ?? 0;
-  const outputCostPerToken = model.outputCostPerToken ?? 0;
-  const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? inputCostPerToken;
-
-  const inputCost = sentTokens * inputCostPerToken;
-  const outputCost = receivedTokens * outputCostPerToken;
-  const cacheCost = cacheReadTokens * cacheReadInputTokenCost;
-
-  return inputCost + outputCost + cacheCost;
-};
-
-const getZaiPlanUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
+export const getZaiPlanUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
   const totalSentTokens = usage.inputTokens || 0;
   const receivedTokens = usage.outputTokens || 0;
   const cacheReadTokens = usage.cachedInputTokens || 0;
   const sentTokens = totalSentTokens - cacheReadTokens;
 
-  // Calculate cost internally (no caching for ZAI Plan)
-  const messageCost = calculateZaiPlanCost(model, sentTokens, receivedTokens, cacheReadTokens);
+  const messageCost = calculateCost(model, sentTokens, receivedTokens, cacheReadTokens);
 
   return {
     model: `${provider.id}/${model.id}`,
@@ -138,14 +124,20 @@ const getZaiPlanUsageReport = (task: Task, provider: ProviderProfile, model: Mod
   };
 };
 
+const getZaiPlanModelInfo = (_provider: ProviderProfile, modelId: string, allModelInfos: Record<string, ModelInfo>): ModelInfo | undefined => {
+  const fullModelId = `zai-coding-plan/${modelId}`;
+  return allModelInfos[fullModelId];
+};
+
 // === Complete Strategy Implementation ===
 export const zaiPlanProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
   createLlm: createZaiPlanLlm,
-  getUsageReport: getZaiPlanUsageReport,
+  getUsageReport: getDefaultUsageReport,
 
   // Model discovery functions
   loadModels: loadZaiPlanModels,
   hasEnvVars: hasZaiPlanEnvVars,
   getAiderMapping: getZaiPlanAiderMapping,
+  getModelInfo: getZaiPlanModelInfo,
 };

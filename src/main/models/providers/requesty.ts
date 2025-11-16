@@ -1,12 +1,12 @@
-import { AgentProfile, Model, ModelInfo, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData } from '@common/types';
-import { isRequestyProvider, LlmProvider, RequestyProvider } from '@common/agent';
+import { AgentProfile, Model, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData } from '@common/types';
+import { DEFAULT_MODEL_TEMPERATURE, isRequestyProvider, LlmProvider, RequestyProvider } from '@common/agent';
 import { createRequesty, type RequestyProviderMetadata } from '@requesty/ai-sdk';
 
 import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AIDER_DESK_TITLE, AIDER_DESK_WEBSITE } from '@/constants';
-import { AiderModelMapping, LlmProviderStrategy, CacheControl, LoadModelsResponse } from '@/models';
+import { AiderModelMapping, CacheControl, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Task } from '@/task/task';
@@ -32,11 +32,23 @@ interface RequestyModelsResponse {
   data: RequestyModel[];
 }
 
-export const loadRequestyModels = async (
-  profile: ProviderProfile,
-  _modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> => {
+const getDefaultModelTemperature = (modelId: string) => {
+  if (modelId.includes('claude')) {
+    return undefined;
+  }
+  if (modelId.includes('gemini')) {
+    return 0.7;
+  }
+  if (modelId.includes('gpt-5')) {
+    return undefined;
+  }
+  if (modelId.includes('qwen')) {
+    return 0.55;
+  }
+  return DEFAULT_MODEL_TEMPERATURE;
+};
+
+const loadRequestyModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isRequestyProvider(profile.provider)) {
     return { models: [], success: false };
   }
@@ -69,11 +81,12 @@ export const loadRequestyModels = async (
           id: model.id,
           providerId: profile.id,
           maxInputTokens: model.context_window,
-          maxOutputTokens: model.max_output_tokens,
+          maxOutputTokens: model.max_output_tokens === 0 ? undefined : model.max_output_tokens,
           inputCostPerToken: model.input_price,
           outputCostPerToken: model.output_price,
           cacheWriteInputTokenCost: model.caching_price ? model.caching_price : undefined,
           cacheReadInputTokenCost: model.cached_price ? model.cached_price : undefined,
+          temperature: getDefaultModelTemperature(model.id),
         } satisfies Model;
       }) || [];
     logger.info(`Loaded ${models.length} Requesty models for profile ${profile.id}`);
@@ -189,7 +202,7 @@ export const getRequestyUsageReport = (
   // Calculate cost internally with already deducted sentTokens
   const messageCost = calculateRequestyCost(model, sentTokens, receivedTokens, cacheWriteTokens, cacheReadTokens);
 
-  const usageReportData: UsageReportData = {
+  return {
     model: `${provider.id}/${model.id}`,
     sentTokens,
     receivedTokens,
@@ -198,8 +211,6 @@ export const getRequestyUsageReport = (
     messageCost,
     agentTotalCost: task.task.agentTotalCost + messageCost,
   };
-
-  return usageReportData;
 };
 
 // === Configuration Helper Functions ===

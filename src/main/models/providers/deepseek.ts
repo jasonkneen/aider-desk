@@ -1,20 +1,15 @@
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { DeepseekProvider, isDeepseekProvider } from '@common/agent';
+import { Model, ProviderProfile, SettingsData } from '@common/types';
+import { DeepseekProvider, DEFAULT_MODEL_TEMPERATURE, isDeepseekProvider } from '@common/agent';
 import { createDeepSeek } from '@ai-sdk/deepseek';
 
-import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Task } from '@/task/task';
+import { getDefaultModelInfo, getDefaultUsageReport } from '@/models/providers/default';
 
-export const loadDeepseekModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> => {
+export const loadDeepseekModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isDeepseekProvider(profile.provider)) {
     return { models: [], success: false };
   }
@@ -40,12 +35,11 @@ export const loadDeepseekModels = async (
     const data = await response.json();
     const models =
       data.data?.map((m: { id: string }) => {
-        const info = modelsInfo[m.id];
         return {
           id: m.id,
           providerId: profile.id,
-          ...info,
-        };
+          temperature: DEFAULT_MODEL_TEMPERATURE,
+        } satisfies Model;
       }) || [];
 
     logger.info(`Loaded ${models.length} DeepSeek models for profile ${profile.id}`);
@@ -99,46 +93,15 @@ export const createDeepseekLlm = (profile: ProviderProfile, model: Model, settin
   return deepseekProvider(model.id);
 };
 
-// === Cost and Usage Functions ===
-export const calculateDeepseekCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
-  const inputCostPerToken = model.inputCostPerToken ?? 0;
-  const outputCostPerToken = model.outputCostPerToken ?? 0;
-  const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? inputCostPerToken;
-
-  const inputCost = sentTokens * inputCostPerToken;
-  const outputCost = receivedTokens * outputCostPerToken;
-  const cacheCost = cacheReadTokens * cacheReadInputTokenCost;
-
-  return inputCost + outputCost + cacheCost;
-};
-
-export const getDeepseekUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
-  const totalSentTokens = usage.inputTokens || 0;
-  const receivedTokens = usage.outputTokens || 0;
-  const cacheReadTokens = usage.cachedInputTokens || 0;
-  const sentTokens = totalSentTokens - cacheReadTokens;
-
-  // Calculate cost internally (no caching for DeepSeek)
-  const messageCost = calculateDeepseekCost(model, sentTokens, receivedTokens, cacheReadTokens);
-
-  return {
-    model: `${provider.id}/${model.id}`,
-    sentTokens,
-    receivedTokens,
-    cacheReadTokens,
-    messageCost,
-    agentTotalCost: task.task.agentTotalCost + messageCost,
-  };
-};
-
 // === Complete Strategy Implementation ===
 export const deepseekProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
   createLlm: createDeepseekLlm,
-  getUsageReport: getDeepseekUsageReport,
+  getUsageReport: getDefaultUsageReport,
 
   // Model discovery functions
   loadModels: loadDeepseekModels,
   hasEnvVars: hasDeepseekEnvVars,
   getAiderMapping: getDeepseekAiderMapping,
+  getModelInfo: getDefaultModelInfo,
 };

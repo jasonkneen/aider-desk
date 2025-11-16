@@ -1,23 +1,18 @@
 import { BedrockClient, GetFoundationModelAvailabilityCommand, type InferenceProfileSummary, ListInferenceProfilesCommand } from '@aws-sdk/client-bedrock';
 import { fromNodeProviderChain } from '@aws-sdk/credential-providers';
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { BedrockProvider, isBedrockProvider } from '@common/agent';
+import { Model, ModelInfo, ProviderProfile, SettingsData } from '@common/types';
+import { BedrockProvider, DEFAULT_MODEL_TEMPERATURE, isBedrockProvider } from '@common/agent';
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
 
-import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Task } from '@/task/task';
 import { LoadModelsResponse } from '@/models/types';
+import { getDefaultUsageReport } from '@/models/providers/default';
 
-export const loadBedrockModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> => {
+export const loadBedrockModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isBedrockProvider(profile.provider)) {
     return {
       models: [],
@@ -113,7 +108,7 @@ export const loadBedrockModels = async (
 
     const availabilityResults = await Promise.all(availabilityPromises);
 
-    const availableProfiles: Model[] = [];
+    const availableModels: Model[] = [];
     for (const result of availabilityResults) {
       if (!result) {
         continue;
@@ -123,19 +118,11 @@ export const loadBedrockModels = async (
 
       // Check if the model is authorized and available
       if (response.authorizationStatus === 'AUTHORIZED' && response.entitlementAvailability === 'AVAILABLE' && response.regionAvailability === 'AVAILABLE') {
-        const info = modelsInfo[modelId];
-        if (info) {
-          availableProfiles.push({
-            id: inferenceProfile.inferenceProfileId!,
-            providerId: profile.id,
-            ...info,
-          });
-        } else {
-          availableProfiles.push({
-            id: inferenceProfile.inferenceProfileId!,
-            providerId: profile.id,
-          });
-        }
+        availableModels.push({
+          id: inferenceProfile.inferenceProfileId!,
+          providerId: profile.id,
+          temperature: DEFAULT_MODEL_TEMPERATURE,
+        });
         logger.debug(`Profile ${inferenceProfile.inferenceProfileId!} with model ${modelId!} is available and authorized`);
       } else {
         logger.debug(`Profile ${inferenceProfile.inferenceProfileId!} with model ${modelId!} is not available or not authorized`, {
@@ -146,7 +133,7 @@ export const loadBedrockModels = async (
       }
     }
 
-    return { models: availableProfiles, success: true };
+    return { models: availableModels, success: true };
   } catch (error) {
     return {
       models: [],
@@ -255,46 +242,36 @@ export const createBedrockLlm = (profile: ProviderProfile, model: Model, setting
   return bedrockProviderInstance(model.id);
 };
 
-// === Cost and Usage Functions ===
-export const calculateBedrockCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
-  const inputCostPerToken = model.inputCostPerToken ?? 0;
-  const outputCostPerToken = model.outputCostPerToken ?? 0;
-  const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? inputCostPerToken;
+const getBedrockModelInfo = (_provider: ProviderProfile, modelId: string, allModelInfos: Record<string, ModelInfo>): ModelInfo | undefined => {
+  const fullModelId = `amazon-bedrock/${modelId}`;
+  const allModelInfo = allModelInfos[fullModelId];
+  if (allModelInfo) {
+    return allModelInfo;
+  }
 
-  const inputCost = sentTokens * inputCostPerToken;
-  const outputCost = receivedTokens * outputCostPerToken;
-  const cacheCost = cacheReadTokens * cacheReadInputTokenCost;
+  // check by model part of the model name (e.g. excluding any prefix before the first dot)
+  // Remove prefix before first dot if present (e.g., "us.anthropic.claude-3-sonnet-20240229-v1:0" -> "anthropic.claude-3-sonnet-20240229-v1:0")
+  const modelIdWithoutPrefix = modelId.includes('.') ? modelId.split('.').slice(1).join('.') : modelId;
 
-  return inputCost + outputCost + cacheCost;
-};
+  for (const key of Object.keys(allModelInfos)) {
+    // Check if key ends with the modelId without prefix
+    if (key === `amazon-bedrock/${modelIdWithoutPrefix}`) {
+      return allModelInfos[key];
+    }
+  }
 
-export const getBedrockUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
-  const totalSentTokens = usage.inputTokens || 0;
-  const receivedTokens = usage.outputTokens || 0;
-  const cacheReadTokens = usage.cachedInputTokens || 0;
-  const sentTokens = totalSentTokens - cacheReadTokens;
-
-  // Calculate cost internally (no caching for Bedrock)
-  const messageCost = calculateBedrockCost(model, sentTokens, receivedTokens, cacheReadTokens);
-
-  return {
-    model: `${provider.id}/${model.id}`,
-    sentTokens,
-    receivedTokens,
-    cacheReadTokens,
-    messageCost,
-    agentTotalCost: task.task.agentTotalCost + messageCost,
-  };
+  return undefined;
 };
 
 // === Complete Strategy Implementation ===
 export const bedrockProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
   createLlm: createBedrockLlm,
-  getUsageReport: getBedrockUsageReport,
+  getUsageReport: getDefaultUsageReport,
 
   // Model discovery functions
   loadModels: loadBedrockModels,
   hasEnvVars: hasBedrockEnvVars,
   getAiderMapping: getBedrockAiderMapping,
+  getModelInfo: getBedrockModelInfo,
 };

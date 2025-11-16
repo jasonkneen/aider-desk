@@ -226,10 +226,6 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     return eventsHandler.getOS();
   });
 
-  ipcMain.handle('load-models-info', async () => {
-    return await eventsHandler.getModelsInfo();
-  });
-
   ipcMain.handle('init-project-rules-file', async (_, baseDir: string, taskId: string) => {
     return await eventsHandler.initProjectRulesFile(baseDir, taskId);
   });
@@ -263,7 +259,7 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
   });
 
   ipcMain.handle('open-logs-directory', async () => {
-    return await eventsHandler.openLogsDirectory();
+    return eventsHandler.openLogsDirectory();
   });
 
   ipcMain.handle('get-custom-commands', async (_, baseDir: string) => {

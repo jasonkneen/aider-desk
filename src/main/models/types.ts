@@ -45,7 +45,7 @@ export interface LlmProviderStrategy {
   /**
    * Loads available models from the provider's API
    */
-  loadModels: (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>, settings: SettingsData) => Promise<LoadModelsResponse>;
+  loadModels: (profile: ProviderProfile, settings: SettingsData) => Promise<LoadModelsResponse>;
 
   /**
    * Checks if required environment variables are available
@@ -77,6 +77,11 @@ export interface LlmProviderStrategy {
    * Returns provider-specific parameters for the given model
    */
   getProviderParameters?: (provider: LlmProvider, model: Model) => Record<string, unknown>;
+
+  /**
+   * Returns model info for a specific model ID
+   */
+  getModelInfo?: (provider: ProviderProfile, modelId: string, allModelInfos: Record<string, ModelInfo>) => ModelInfo | undefined;
 }
 
 export type LlmProviderRegistry = Record<LlmProviderName, LlmProviderStrategy>;

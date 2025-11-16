@@ -92,6 +92,12 @@ export class ProjectManager {
     });
   }
 
+  modelsUpdated() {
+    this.projects.forEach((project) => {
+      project.forEachTask((task) => task.modelsUpdated());
+    });
+  }
+
   public getCustomCommands(baseDir: string) {
     return this.getProject(baseDir).getCustomCommands();
   }

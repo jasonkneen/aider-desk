@@ -1,5 +1,5 @@
 import { createAzure } from '@ai-sdk/azure';
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, ReasoningEffort } from '@common/types';
+import { Model, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData } from '@common/types';
 import { AzureProvider, isAzureProvider, LlmProvider } from '@common/agent';
 import { type OpenAIChatLanguageModelOptions } from '@ai-sdk/openai';
 
@@ -10,6 +10,7 @@ import logger from '@/logger';
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Task } from '@/task/task';
+import { calculateCost, getDefaultModelInfo } from '@/models/providers/default';
 
 const extractResourceNameFromEndpoint = (endpoint: string): string => {
   try {
@@ -97,18 +98,6 @@ type AzureMetadata = {
 };
 
 // === Cost and Usage Functions ===
-export const calculateAzureCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
-  const inputCostPerToken = model.inputCostPerToken ?? 0;
-  const outputCostPerToken = model.outputCostPerToken ?? 0;
-  const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? inputCostPerToken;
-
-  const inputCost = sentTokens * inputCostPerToken;
-  const outputCost = receivedTokens * outputCostPerToken;
-  const cacheCost = cacheReadTokens * cacheReadInputTokenCost;
-
-  return inputCost + outputCost + cacheCost;
-};
-
 export const getAzureUsageReport = (
   task: Task,
   provider: ProviderProfile,
@@ -127,9 +116,9 @@ export const getAzureUsageReport = (
   const sentTokens = totalSentTokens - cacheReadTokens;
 
   // Calculate cost internally with already deducted sentTokens
-  const messageCost = calculateAzureCost(model, sentTokens, receivedTokens, cacheReadTokens);
+  const messageCost = calculateCost(model, sentTokens, receivedTokens, cacheReadTokens);
 
-  const usageReportData: UsageReportData = {
+  return {
     model: `${provider.id}/${model.id}`,
     sentTokens,
     receivedTokens,
@@ -137,8 +126,6 @@ export const getAzureUsageReport = (
     messageCost,
     agentTotalCost: task.task.agentTotalCost + messageCost,
   };
-
-  return usageReportData;
 };
 
 export const getAzureProviderOptions = (llmProvider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined => {
@@ -201,7 +188,7 @@ export const azureProviderStrategy: LlmProviderStrategy = {
   getUsageReport: getAzureUsageReport,
 
   // Model discovery functions
-  loadModels: async (_profile: ProviderProfile, _modelsInfo: Record<string, ModelInfo>, _settings: SettingsData) => ({
+  loadModels: async () => ({
     models: [],
     success: true,
   }),
@@ -209,4 +196,5 @@ export const azureProviderStrategy: LlmProviderStrategy = {
   getAiderMapping: getAzureAiderMapping,
   getProviderOptions: getAzureProviderOptions,
   getProviderParameters: getAzureProviderParameters,
+  getModelInfo: getDefaultModelInfo,
 };

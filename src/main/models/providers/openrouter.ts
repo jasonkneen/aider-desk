@@ -1,15 +1,16 @@
-import { AgentProfile, Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { isOpenRouterProvider, LlmProvider, OpenRouterProvider } from '@common/agent';
+import { AgentProfile, Model, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { DEFAULT_MODEL_TEMPERATURE, isOpenRouterProvider, LlmProvider, OpenRouterProvider } from '@common/agent';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 
 import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AIDER_DESK_TITLE, AIDER_DESK_WEBSITE } from '@/constants';
-import { AiderModelMapping, LlmProviderStrategy, CacheControl, LoadModelsResponse } from '@/models';
+import { AiderModelMapping, CacheControl, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Task } from '@/task/task';
+import { calculateCost } from '@/models/providers/default';
 
 interface OpenRouterTopProvider {
   is_moderated: boolean;
@@ -38,11 +39,23 @@ interface OpenRouterModelsResponse {
   data: OpenRouterModel[];
 }
 
-export const loadOpenrouterModels = async (
-  profile: ProviderProfile,
-  _modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> => {
+const getDefaultModelTemperature = (modelId: string) => {
+  if (modelId.includes('claude')) {
+    return undefined;
+  }
+  if (modelId.includes('gemini')) {
+    return 0.7;
+  }
+  if (modelId.includes('gpt-5')) {
+    return undefined;
+  }
+  if (modelId.includes('qwen')) {
+    return 0.55;
+  }
+  return DEFAULT_MODEL_TEMPERATURE;
+};
+
+const loadOpenrouterModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isOpenRouterProvider(profile.provider)) {
     return { models: [], success: false };
   }
@@ -80,6 +93,7 @@ export const loadOpenrouterModels = async (
           outputCostPerToken: Number(model.pricing.completion),
           cacheWriteInputTokenCost: model.pricing.input_cache_write ? Number(model.pricing.input_cache_write) : undefined,
           cacheReadInputTokenCost: model.pricing.input_cache_read ? Number(model.pricing.input_cache_read) : undefined,
+          temperature: getDefaultModelTemperature(model.id),
         } satisfies Model;
       }) || [];
 
@@ -182,20 +196,6 @@ type OpenRouterMetadata = {
   };
 };
 
-// === Cost and Usage Functions ===
-export const calculateOpenRouterCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
-  // OpenRouter provides cost directly from provider metadata, but we'll calculate it as fallback
-  const inputCostPerToken = model.inputCostPerToken ?? 0;
-  const outputCostPerToken = model.outputCostPerToken ?? 0;
-  const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? inputCostPerToken;
-
-  const inputCost = sentTokens * inputCostPerToken;
-  const outputCost = receivedTokens * outputCostPerToken;
-  const cacheCost = cacheReadTokens * cacheReadInputTokenCost;
-
-  return inputCost + outputCost + cacheCost;
-};
-
 export const getOpenRouterUsageReport = (
   task: Task,
   provider: ProviderProfile,
@@ -214,9 +214,9 @@ export const getOpenRouterUsageReport = (
   const sentTokens = totalSentTokens - cacheReadTokens;
 
   // Use cost from provider metadata if available, otherwise calculate
-  const messageCost = openrouter.usage.cost ?? calculateOpenRouterCost(model, sentTokens, receivedTokens, cacheReadTokens);
+  const messageCost = openrouter.usage.cost ?? calculateCost(model, sentTokens, receivedTokens, cacheReadTokens);
 
-  const usageReportData: UsageReportData = {
+  return {
     model: `${provider.id}/${model.id}`,
     sentTokens,
     receivedTokens,
@@ -224,8 +224,6 @@ export const getOpenRouterUsageReport = (
     messageCost,
     agentTotalCost: task.task.agentTotalCost + messageCost,
   };
-
-  return usageReportData;
 };
 
 // === Configuration Helper Functions ===

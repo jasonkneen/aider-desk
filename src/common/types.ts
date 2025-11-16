@@ -573,12 +573,14 @@ export enum FileWriteMode {
 }
 
 export interface ModelInfo {
-  maxInputTokens: number;
-  maxOutputTokens: number;
-  inputCostPerToken: number;
-  outputCostPerToken: number;
+  maxInputTokens?: number;
+  maxOutputTokens?: number;
+  inputCostPerToken?: number;
+  outputCostPerToken?: number;
   cacheWriteInputTokenCost?: number;
   cacheReadInputTokenCost?: number;
+  useTemperature?: boolean;
+  temperature?: number;
 }
 
 export interface TaskContext {

@@ -8,7 +8,7 @@ import { EditFormat, ModelsData, ProjectSettings, TokensInfoData } from '@common
 import { fileExists } from '@common/utils';
 import treeKill from 'tree-kill';
 
-import { AIDER_DESK_CONNECTOR_DIR, AIDER_DESK_PROJECT_RULES_DIR, PID_FILES_DIR, PYTHON_COMMAND, SERVER_PORT } from '@/constants';
+import { AIDER_DESK_CONNECTOR_DIR, AIDER_DESK_PROJECT_RULES_DIR, AIDER_DESK_TASKS_DIR, PID_FILES_DIR, PYTHON_COMMAND, SERVER_PORT } from '@/constants';
 import { Connector } from '@/connector';
 import logger from '@/logger';
 import { Store } from '@/store';
@@ -137,9 +137,13 @@ export class AiderManager {
       args.push(settings.aider.cachingEnabled ? '--cache-prompts' : '--no-cache-prompts');
     }
 
+    if (!optionsArgsSet.has('--chat-history-file')) {
+      args.push('--chat-history-file', path.join(this.task.getProjectDir(), AIDER_DESK_TASKS_DIR, this.task.taskId, '.aider.chat.history.md'));
+    }
+
     logger.info('Running Aider with args:', {
       dir: this.task.getTaskDir(),
-      taskId: this.task.task.id,
+      taskId: this.task.taskId,
       args,
     });
 
@@ -400,6 +404,8 @@ export class AiderManager {
     }
 
     logger.info('Updating models:', {
+      baseDir: this.task.getProjectDir(),
+      taskId: this.task.taskId,
       mainModel: mainModelName,
       weakModel: weakModelName,
       editFormat,

@@ -12,6 +12,7 @@ import uuid
 from pathlib import Path
 from typing import Dict, Optional, Any, Coroutine
 from aider import models, utils
+from aider.models import model_info_manager
 from aider.coders import Coder
 from aider.commands import Commands
 from aider.io import InputOutput, AutoCompleter
@@ -150,6 +151,12 @@ class PromptExecutor:
 
       if mode == "architect" and architect_model:
         running_model = models.Model(architect_model, weak_model=coder_model.weak_model.name, editor_model=coder_model.name)
+
+        # check if we have temperature info for the architect model
+        if self.connector.models_info and self.connector.models_info.get(architect_model):
+          temperature = self.connector.models_info.get(architect_model).get('temperature')
+          running_model.use_temperature = temperature if temperature is not None else False
+
         sequence_number = -1
 
       coder = clone_coder(
@@ -647,6 +654,8 @@ class Connector:
     self.reasoning_effort = reasoning_effort
     self.thinking_tokens = thinking_tokens
     self.confirm_before_edit = confirm_before_edit
+    self.base_local_model_metadata = None
+    self.models_info = None
 
     try:
       self.loop = asyncio.get_event_loop()
@@ -794,7 +803,8 @@ class Connector:
         "run-command",
         "interrupt-response",
         "apply-edits",
-        "update-env-vars"
+        "update-env-vars",
+        "update-models-info"
       ],
       "contextFiles": self.get_context_files(),
       "inputHistoryFile": self.coder.io.input_history_file
@@ -955,6 +965,10 @@ class Connector:
 
           main_model = models.Model(self.coder.main_model.name, weak_model=self.coder.main_model.weak_model.name)
           self.coder.main_model = main_model
+
+      elif action == "update-models-info":
+        models_info = message.get('modelsInfo')
+        await self.handle_models_info_update(models_info)
 
       elif action == "request-context-info":
         messages = message.get('messages')
@@ -1263,6 +1277,67 @@ class Connector:
       "action": "tokens-info",
       "info": info
     })
+
+  async def handle_models_info_update(self, models_info):
+    """Handle models info update event"""
+    self.coder.io.tool_output(f"Received models info update: {len(models_info)} models")
+
+    # Initialize base_local_model_metadata if not set
+    if self.base_local_model_metadata is None:
+      self.base_local_model_metadata = model_info_manager.local_model_metadata.copy()
+
+    self.models_info = models_info
+
+    # Transform the model info data into the expected format
+    transformed_data = {}
+    for model_id, info in models_info.items():
+      if model_id in self.base_local_model_metadata:
+        # skip models that are configured by other means
+        continue
+
+      max_input_tokens = info.get("maxInputTokens")
+      # skip models that don't have maxInputTokens defined
+      if max_input_tokens is None:
+        continue
+
+      transformed_data[model_id] = {
+        "max_tokens": max_input_tokens,
+        "max_input_tokens": max_input_tokens,
+        "max_output_tokens": info.get('maxOutputTokens', 32000),
+        "input_cost_per_token": info.get('inputCostPerToken', 0),
+        "output_cost_per_token": info.get('outputCostPerToken', 0),
+        "cache_creation_input_token_cost": info.get('cacheWriteInputTokenCost'),
+        "cache_read_input_token_cost": info.get('cacheReadInputTokenCost'),
+        "litellm_provider": model_id.split("/")[0],
+        "mode": "chat"
+      }
+
+    # Update the model_info_manager.local_model_metadata
+    model_info_manager.local_model_metadata.update(transformed_data)
+
+    self.coder.main_model.info = self.coder.main_model.get_model_info(self.coder.main_model.name)
+    max_input_tokens = self.coder.main_model.info.get('max_input_tokens') if self.coder.main_model.info else None
+    if max_input_tokens:
+      self.coder.main_model.max_chat_history_tokens = min(max(max_input_tokens / 16, 1024), 8192)
+    temperature = models_info.get(self.coder.main_model.name, {}).get('temperature')
+    self.coder.main_model.use_temperature = temperature if temperature is not None else False
+
+    if self.coder.main_model.weak_model:
+      self.coder.main_model.weak_model.info = self.coder.main_model.weak_model.get_model_info(self.coder.main_model.weak_model.name)
+      max_input_tokens = self.coder.main_model.weak_model.info.get('max_input_tokens') if self.coder.main_model.weak_model.info else None
+      if max_input_tokens:
+        self.coder.main_model.weak_model.max_chat_history_tokens = min(max(max_input_tokens / 16, 1024), 8192)
+      temperature = models_info.get(self.coder.main_model.weak_model.name, {}).get('temperature')
+      self.coder.main_model.weak_model.use_temperature = temperature if temperature is not None else False
+
+    # Log the updated models info
+    for model_id, info in transformed_data.items():
+      self.coder.io.tool_output(f"Updated model: {model_id}")
+      self.coder.io.tool_output(f"  Max Input Tokens: {info['max_input_tokens']}")
+      self.coder.io.tool_output(f"  Max Output Tokens: {info['max_output_tokens']}")
+      self.coder.io.tool_output(f"  Input Cost/Token: ${info['input_cost_per_token']}")
+      self.coder.io.tool_output(f"  Output Cost/Token: ${info['output_cost_per_token']}")
+      self.coder.io.tool_output(f"  LiteLLM Provider: {info['litellm_provider']}")
 
 def main(argv=None):
   try:

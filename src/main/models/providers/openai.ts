@@ -1,6 +1,6 @@
 import { createOpenAI } from '@ai-sdk/openai';
-import { isOpenAiProvider, OpenAiProvider, LlmProvider } from '@common/agent';
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, ReasoningEffort } from '@common/types';
+import { isOpenAiProvider, LlmProvider, OpenAiProvider } from '@common/agent';
+import { Model, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData } from '@common/types';
 
 import type { LanguageModelUsage, ToolSet } from 'ai';
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
@@ -9,12 +9,9 @@ import logger from '@/logger';
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import { Task } from '@/task/task';
 import { getEffectiveEnvironmentVariable } from '@/utils';
+import { calculateCost, getDefaultModelInfo } from '@/models/providers/default';
 
-export const loadOpenAiModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> => {
+export const loadOpenAiModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isOpenAiProvider(profile.provider)) {
     return { models: [], success: false };
   }
@@ -64,12 +61,11 @@ export const loadOpenAiModels = async (
       }) || [];
     const models =
       filteredModels.map((model: { id: string }) => {
-        const info = modelsInfo[model.id];
         return {
           id: model.id,
           providerId: profile.id,
-          ...info,
-        };
+          temperature: undefined,
+        } satisfies Model;
       }) || [];
 
     logger.info(`Loaded ${models.length} OpenAI models for profile ${profile.id}`);
@@ -132,19 +128,6 @@ type OpenAiMetadata = {
   };
 };
 
-// === Cost and Usage Functions ===
-export const calculateOpenAiCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
-  const inputCostPerToken = model.inputCostPerToken ?? 0;
-  const outputCostPerToken = model.outputCostPerToken ?? 0;
-  const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? inputCostPerToken;
-
-  const inputCost = sentTokens * inputCostPerToken;
-  const outputCost = receivedTokens * outputCostPerToken;
-  const cacheCost = cacheReadTokens * cacheReadInputTokenCost;
-
-  return inputCost + outputCost + cacheCost;
-};
-
 export const getOpenAiUsageReport = (
   task: Task,
   provider: ProviderProfile,
@@ -163,9 +146,9 @@ export const getOpenAiUsageReport = (
   const sentTokens = totalSentTokens - cacheReadTokens;
 
   // Calculate cost internally with already deducted sentTokens
-  const messageCost = calculateOpenAiCost(model, sentTokens, receivedTokens, cacheReadTokens);
+  const messageCost = calculateCost(model, sentTokens, receivedTokens, cacheReadTokens);
 
-  const usageReportData: UsageReportData = {
+  return {
     model: `${provider.id}/${model.id}`,
     sentTokens,
     receivedTokens,
@@ -173,8 +156,6 @@ export const getOpenAiUsageReport = (
     messageCost,
     agentTotalCost: task.task.agentTotalCost + messageCost,
   };
-
-  return usageReportData;
 };
 
 // === Configuration Helper Functions ===
@@ -243,6 +224,7 @@ export const openaiProviderStrategy: LlmProviderStrategy = {
   loadModels: loadOpenAiModels,
   hasEnvVars: hasOpenAiEnvVars,
   getAiderMapping: getOpenAiAiderMapping,
+  getModelInfo: getDefaultModelInfo,
 
   // Configuration helper functions
   getProviderOptions: getOpenAiProviderOptions,

@@ -15,7 +15,6 @@ import {
   McpTool,
   Mode,
   Model,
-  ModelInfo,
   ModelsData,
   OS,
   ProjectData,
@@ -29,8 +28,8 @@ import {
   ResponseChunkData,
   ResponseCompletedData,
   SettingsData,
-  TaskStateData,
   TaskData,
+  TaskStateData,
   TerminalData,
   TerminalExitData,
   TodoItem,
@@ -433,7 +432,10 @@ export class BrowserApi implements ApplicationAPI {
     return this.post('/project/tasks/delete', { projectDir: baseDir, id });
   }
   duplicateTask(baseDir: string, taskId: string): Promise<TaskData> {
-    return this.post('/project/tasks/duplicate', { projectDir: baseDir, taskId });
+    return this.post('/project/tasks/duplicate', {
+      projectDir: baseDir,
+      taskId,
+    });
   }
   getTasks(baseDir: string): Promise<TaskData[]> {
     return this.get('/project/tasks', { projectDir: baseDir });
@@ -497,9 +499,6 @@ export class BrowserApi implements ApplicationAPI {
   }
   async getOS(): Promise<OS> {
     return this.get<{ os: OS }>('/os').then((res) => res.os);
-  }
-  loadModelsInfo(): Promise<Record<string, ModelInfo>> {
-    return this.get('/models-info');
   }
   getProviderModels(reload?: boolean): Promise<ProviderModelsData> {
     return this.get('/models', { reload });

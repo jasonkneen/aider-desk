@@ -218,7 +218,7 @@ export type LlmProvider =
   | ZaiPlanProvider
   | MinimaxProvider;
 
-export const DEFAULT_MODEL_TEMPERATURE = 0.5;
+export const DEFAULT_MODEL_TEMPERATURE = 0.0;
 
 export const DEFAULT_PROVIDER_MODEL: Partial<Record<LlmProviderName, string>> = {
   anthropic: 'claude-sonnet-4-20250514',

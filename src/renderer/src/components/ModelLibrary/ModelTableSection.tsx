@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { FiEdit2, FiTrash2, FiPlus, FiEye, FiSliders, FiRefreshCw } from 'react-icons/fi';
 import { Model, ProviderProfile } from '@common/types';
 import { MdThermostat } from 'react-icons/md';
-import { DEFAULT_MODEL_TEMPERATURE } from '@common/agent';
 
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
@@ -152,8 +151,18 @@ export const ModelTableSection = ({
       align: 'center',
       maxWidth: 50,
       cellClassName: 'text-xs',
-      cell: (value) => (value as number | undefined) ?? DEFAULT_MODEL_TEMPERATURE,
-      sort: (a, b) => (a.temperature ?? DEFAULT_MODEL_TEMPERATURE) - (b.temperature ?? DEFAULT_MODEL_TEMPERATURE),
+      sort: (a, b) => {
+        if (a.temperature === undefined && b.temperature === undefined) {
+          return 0;
+        }
+        if (a.temperature === undefined) {
+          return 1;
+        }
+        if (b.temperature === undefined) {
+          return -1;
+        }
+        return (a.temperature || 0) - (b.temperature || 0);
+      },
     },
     {
       header: '',

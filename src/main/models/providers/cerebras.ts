@@ -1,15 +1,14 @@
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { CerebrasProvider, isCerebrasProvider } from '@common/agent';
+import { Model, ProviderProfile, SettingsData } from '@common/types';
+import { CerebrasProvider, DEFAULT_MODEL_TEMPERATURE, isCerebrasProvider } from '@common/agent';
 import { createCerebras } from '@ai-sdk/cerebras';
 
-import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils/environment';
 import { LoadModelsResponse } from '@/models/types';
-import { Task } from '@/task/task';
+import { getDefaultModelInfo, getDefaultUsageReport } from '@/models/providers/default';
 
 interface CerebrasModel {
   id: string;
@@ -17,11 +16,7 @@ interface CerebrasModel {
   description?: string;
 }
 
-export const loadCerebrasModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> => {
+export const loadCerebrasModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isCerebrasProvider(profile.provider)) {
     return { models: [], success: false };
   }
@@ -52,20 +47,14 @@ export const loadCerebrasModels = async (
 
     const data = await response.json();
     const models =
-      data.data
-        ?.filter((model: CerebrasModel) => {
-          // Filter out models that don't have pricing information
-          return modelsInfo[model.id];
-        })
-        .map((model: CerebrasModel) => {
-          const info = modelsInfo[model.id];
-          return {
-            id: model.id,
-            providerId: profile.id,
-            ...info,
-            maxInputTokens: model.max_context_length || info?.maxInputTokens,
-          };
-        }) || [];
+      data.data?.map((model: CerebrasModel) => {
+        return {
+          id: model.id,
+          providerId: profile.id,
+          maxInputTokens: model.max_context_length,
+          temperature: DEFAULT_MODEL_TEMPERATURE,
+        } satisfies Model;
+      }) || [];
 
     logger.info(`Loaded ${models.length} Cerebras models for profile ${profile.id}`);
     return { models, success: true };
@@ -118,46 +107,15 @@ export const createCerebrasLlm = (profile: ProviderProfile, model: Model, settin
   return cerebrasProvider(model.id);
 };
 
-// === Cost and Usage Functions ===
-export const calculateCerebrasCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
-  const inputCostPerToken = model.inputCostPerToken ?? 0;
-  const outputCostPerToken = model.outputCostPerToken ?? 0;
-  const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? inputCostPerToken;
-
-  const inputCost = sentTokens * inputCostPerToken;
-  const outputCost = receivedTokens * outputCostPerToken;
-  const cacheCost = cacheReadTokens * cacheReadInputTokenCost;
-
-  return inputCost + outputCost + cacheCost;
-};
-
-export const getCerebrasUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
-  const totalSentTokens = usage.inputTokens || 0;
-  const receivedTokens = usage.outputTokens || 0;
-  const cacheReadTokens = usage.cachedInputTokens || 0;
-  const sentTokens = totalSentTokens - cacheReadTokens;
-
-  // Calculate cost internally (no caching for Cerebras)
-  const messageCost = calculateCerebrasCost(model, sentTokens, receivedTokens, cacheReadTokens);
-
-  return {
-    model: `${provider.id}/${model.id}`,
-    sentTokens,
-    receivedTokens,
-    cacheReadTokens,
-    messageCost,
-    agentTotalCost: task.task.agentTotalCost + messageCost,
-  };
-};
-
 // === Complete Strategy Implementation ===
 export const cerebrasProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
   createLlm: createCerebrasLlm,
-  getUsageReport: getCerebrasUsageReport,
+  getUsageReport: getDefaultUsageReport,
 
   // Model discovery functions
   loadModels: loadCerebrasModels,
   hasEnvVars: hasCerebrasEnvVars,
   getAiderMapping: getCerebrasAiderMapping,
+  getModelInfo: getDefaultModelInfo,
 };

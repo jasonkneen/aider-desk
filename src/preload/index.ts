@@ -111,7 +111,6 @@ const api: ApplicationAPI = {
   getReleaseNotes: () => ipcRenderer.invoke('get-release-notes'),
   clearReleaseNotes: () => ipcRenderer.invoke('clear-release-notes'),
   getOS: (): Promise<OS> => ipcRenderer.invoke('get-os'),
-  loadModelsInfo: () => ipcRenderer.invoke('load-models-info'),
   getProviderModels: (reload?: boolean) => ipcRenderer.invoke('get-provider-models', reload),
   getProviders: () => ipcRenderer.invoke('get-providers'),
   updateProviders: async (providers) => await ipcRenderer.invoke('update-providers', providers),

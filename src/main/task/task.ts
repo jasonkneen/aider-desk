@@ -28,6 +28,7 @@ import {
   UsageReportData,
   UserMessageData,
   WorkingMode,
+  ModelInfo,
 } from '@common/types';
 import { extractTextContent, fileExists, getActiveAgentProfile, parseUsageReport } from '@common/utils';
 import { COMPACT_CONVERSATION_AGENT_PROFILE, INIT_PROJECT_AGENTS_PROFILE } from '@common/agent';
@@ -975,15 +976,102 @@ export class Task {
   }
 
   public updateAiderModels(modelsData: ModelsData) {
+    if (!this.initialized) {
+      return;
+    }
     this.aiderManager.updateAiderModels(modelsData);
+    void this.sendUpdateModelsInfo();
   }
 
   public updateModels(mainModel: string, weakModel: string | null, editFormat: EditFormat = 'diff') {
+    if (!this.initialized) {
+      return;
+    }
     this.aiderManager.updateModels(mainModel, weakModel, editFormat);
+    void this.sendUpdateModelsInfo();
   }
 
   public setArchitectModel(architectModel: string) {
+    if (!this.initialized) {
+      return;
+    }
     this.aiderManager.setArchitectModel(architectModel);
+    void this.sendUpdateModelsInfo();
+  }
+
+  private async sendUpdateModelsInfo(): Promise<void> {
+    if (!this.initialized) {
+      return;
+    }
+
+    const aiderModelsData = this.aiderManager.getAiderModelsData();
+    if (!aiderModelsData) {
+      return;
+    }
+
+    const modelsInfo: Record<string, ModelInfo> = {};
+
+    // Helper function to extract model info using getModel with fallback
+    const extractModelInfo = (modelName: string | null | undefined) => {
+      if (!modelName) {
+        return null;
+      }
+
+      // Parse providerId and actual modelId from the modelId string
+      const [providerId, ...modelIdParts] = modelName.split('/');
+      const modelId = modelIdParts.join('/');
+
+      if (!providerId || !modelId) {
+        return null;
+      }
+
+      const model = this.modelManager.getModel(providerId, modelId, true);
+      if (!model) {
+        return null;
+      }
+
+      return {
+        maxInputTokens: model.maxInputTokens,
+        maxOutputTokens: model.maxOutputTokens,
+        inputCostPerToken: model.inputCostPerToken,
+        outputCostPerToken: model.outputCostPerToken,
+        cacheWriteInputTokenCost: model.cacheWriteInputTokenCost,
+        cacheReadInputTokenCost: model.cacheReadInputTokenCost,
+        temperature: model.temperature,
+      } satisfies ModelInfo;
+    };
+
+    // Extract info for main model
+    const mainModelInfo = extractModelInfo(aiderModelsData.mainModel);
+    if (mainModelInfo) {
+      modelsInfo[this.modelManager.getAiderModelMapping(aiderModelsData.mainModel).modelName] = mainModelInfo;
+    }
+
+    // Extract info for weak model
+    if (aiderModelsData.weakModel) {
+      const weakModelInfo = extractModelInfo(aiderModelsData.weakModel);
+      if (weakModelInfo) {
+        modelsInfo[this.modelManager.getAiderModelMapping(aiderModelsData.weakModel).modelName] = weakModelInfo;
+      }
+    }
+
+    // Extract info for architect model
+    if (aiderModelsData.architectModel) {
+      const architectModelInfo = extractModelInfo(aiderModelsData.architectModel);
+      if (architectModelInfo) {
+        modelsInfo[this.modelManager.getAiderModelMapping(aiderModelsData.architectModel).modelName] = architectModelInfo;
+      }
+    }
+
+    logger.info('Sending update models info to connectors', {
+      baseDir: this.project.baseDir,
+      taskId: this.taskId,
+      modelsInfo: Object.keys(modelsInfo),
+    });
+
+    // Send to connectors that listen to 'update-models-info'
+    this.findMessageConnectors('update-models-info').forEach((connector) => connector.sendUpdateModelsInfoMessage(modelsInfo));
+    this.sendRequestContextInfo();
   }
 
   public async getAddableFiles(searchRegex?: string): Promise<string[]> {
@@ -1461,6 +1549,10 @@ export class Task {
       const updatedEnvironmentVariables = getEnvironmentVariablesForAider(newSettings, this.project.baseDir);
       this.sendUpdateEnvVars(updatedEnvironmentVariables);
     }
+  }
+
+  async modelsUpdated() {
+    await this.sendUpdateModelsInfo();
   }
 
   private sendUpdateEnvVars(environmentVariables: Record<string, unknown>) {

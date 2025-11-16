@@ -10,11 +10,7 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Task } from '@/task/task';
 
-export const loadGeminiModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> => {
+const loadGeminiModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isGeminiProvider(profile.provider)) {
     return { models: [], success: false };
   }
@@ -48,14 +44,13 @@ export const loadGeminiModels = async (
         ?.filter((model: { supportedGenerationMethods?: string[] }) => model.supportedGenerationMethods?.includes('generateContent'))
         .map((model: { name: string; inputTokenLimit?: number; outputTokenLimit?: number; supportedGenerationMethods?: string[] }) => {
           const modelId = model.name.replace('models/', '');
-          const info = modelsInfo[modelId];
           return {
-            ...info,
             id: modelId,
             providerId: profile.id,
             maxInputTokens: model.inputTokenLimit,
             maxOutputTokens: model.outputTokenLimit,
-          };
+            temperature: 0.7, // Default temperature for Gemini models
+          } satisfies Model;
         }) || [];
 
     logger.info(`Loaded ${models.length} Gemini models for profile ${profile.id}`);
@@ -67,11 +62,11 @@ export const loadGeminiModels = async (
   }
 };
 
-export const hasGeminiEnvVars = (settings: SettingsData): boolean => {
+const hasGeminiEnvVars = (settings: SettingsData): boolean => {
   return !!getEffectiveEnvironmentVariable('GEMINI_API_KEY', settings, undefined)?.value;
 };
 
-export const getGeminiAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {
+const getGeminiAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {
   const geminiProvider = provider.provider as GeminiProvider;
   const envVars: Record<string, string> = {};
 
@@ -90,7 +85,7 @@ export const getGeminiAiderMapping = (provider: ProviderProfile, modelId: string
 };
 
 // === LLM Creation Functions ===
-export const createGeminiLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 => {
+const createGeminiLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 => {
   const provider = profile.provider as GeminiProvider;
   let apiKey = provider.apiKey;
   let baseUrl = provider.customBaseUrl;
@@ -130,7 +125,7 @@ type GoogleMetadata = {
 };
 
 // === Cost and Usage Functions ===
-export const calculateGeminiCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
+const calculateGeminiCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
   const inputCostPerToken = model.inputCostPerToken ?? 0;
   const outputCostPerToken = model.outputCostPerToken ?? 0;
   const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? inputCostPerToken * 0.25;
@@ -142,13 +137,7 @@ export const calculateGeminiCost = (model: Model, sentTokens: number, receivedTo
   return inputCost + outputCost + cacheCost;
 };
 
-export const getGeminiUsageReport = (
-  task: Task,
-  provider: ProviderProfile,
-  model: Model,
-  usage: LanguageModelUsage,
-  providerMetadata?: unknown,
-): UsageReportData => {
+const getGeminiUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage, providerMetadata?: unknown): UsageReportData => {
   const totalSentTokens = usage.inputTokens || 0;
   const receivedTokens = usage.outputTokens || 0;
 
@@ -162,7 +151,7 @@ export const getGeminiUsageReport = (
   // Calculate cost internally with already deducted sentTokens
   const messageCost = calculateGeminiCost(model, sentTokens, receivedTokens, cacheReadTokens);
 
-  const usageReportData: UsageReportData = {
+  return {
     model: `${provider.id}/${model.id}`,
     sentTokens,
     receivedTokens,
@@ -170,11 +159,9 @@ export const getGeminiUsageReport = (
     messageCost,
     agentTotalCost: task.task.agentTotalCost + messageCost,
   };
-
-  return usageReportData;
 };
 
-export const getGeminiProviderOptions = (llmProvider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined => {
+const getGeminiProviderOptions = (llmProvider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined => {
   if (isGeminiProvider(llmProvider)) {
     const providerOverrides = model.providerOverrides as Partial<GeminiProvider> | undefined;
 
@@ -198,7 +185,7 @@ export const getGeminiProviderOptions = (llmProvider: LlmProvider, model: Model)
 };
 
 // === Provider Tools Functions ===
-export const getGeminiProviderTools = (provider: LlmProvider, model: Model): ToolSet => {
+const getGeminiProviderTools = (provider: LlmProvider, model: Model): ToolSet => {
   if (!isGeminiProvider(provider)) {
     return {};
   }
@@ -216,6 +203,11 @@ export const getGeminiProviderTools = (provider: LlmProvider, model: Model): Too
   } as ToolSet;
 };
 
+const getGeminiModelInfo = (_provider: ProviderProfile, modelId: string, allModelInfos: Record<string, ModelInfo>): ModelInfo | undefined => {
+  const fullModelId = `google/${modelId}`;
+  return allModelInfos[fullModelId];
+};
+
 // === Complete Strategy Implementation ===
 export const geminiProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
@@ -229,4 +221,5 @@ export const geminiProviderStrategy: LlmProviderStrategy = {
 
   getProviderOptions: getGeminiProviderOptions,
   getProviderTools: getGeminiProviderTools,
+  getModelInfo: getGeminiModelInfo,
 };

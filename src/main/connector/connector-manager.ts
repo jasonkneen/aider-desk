@@ -85,6 +85,7 @@ export class ConnectorManager {
       if (isInitMessage(message)) {
         logger.info('Initializing connector for base directory:', {
           baseDir: message.baseDir,
+          taskId: message.taskId,
           listenTo: message.listenTo,
         });
         const connector = new Connector(socket, message.baseDir, message.taskId, message.source, message.listenTo, message.inputHistoryFile);
@@ -96,6 +97,7 @@ export class ConnectorManager {
         message.contextFiles?.forEach((file) => project.getTask(connector.taskId)?.addFile(file));
         logger.info('Socket.IO registered project for base directory:', {
           baseDir: message.baseDir,
+          taskId: message.taskId,
         });
       } else if (isResponseMessage(message)) {
         const connector = this.findConnectorBySocket(socket);

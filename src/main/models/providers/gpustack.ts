@@ -1,5 +1,5 @@
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { GpustackProvider, isGpustackProvider } from '@common/agent';
+import { Model, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { DEFAULT_MODEL_TEMPERATURE, GpustackProvider, isGpustackProvider } from '@common/agent';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 
 import type { LanguageModelUsage } from 'ai';
@@ -19,7 +19,7 @@ interface GpustackModelResponse {
   }>;
 }
 
-const loadGpustackModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>, settings: SettingsData): Promise<LoadModelsResponse> => {
+const loadGpustackModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isGpustackProvider(profile.provider)) {
     return { models: [], success: false };
   }
@@ -51,12 +51,12 @@ const loadGpustackModels = async (profile: ProviderProfile, modelsInfo: Record<s
     const data = (await response.json()) as GpustackModelResponse;
     const models =
       data.items?.map((model) => {
-        const info = modelsInfo[model.name];
         return {
           id: model.name,
           providerId: profile.id,
           // Extract max_model_len from meta if available
-          maxInputTokens: model.meta?.max_model_len ?? info?.maxInputTokens,
+          maxInputTokens: model.meta?.max_model_len,
+          temperature: DEFAULT_MODEL_TEMPERATURE,
         } satisfies Model;
       }) || [];
 

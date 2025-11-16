@@ -1,6 +1,6 @@
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { AnthropicProvider, isAnthropicProvider } from '@common/agent';
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { Model, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 
 import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2 } from '@ai-sdk/provider';
@@ -10,12 +10,9 @@ import { AiderModelMapping, CacheControl, LlmProviderStrategy } from '@/models';
 import { LoadModelsResponse } from '@/models/types';
 import { Task } from '@/task/task';
 import { getEffectiveEnvironmentVariable } from '@/utils';
+import { getDefaultModelInfo } from '@/models/providers/default';
 
-export const loadAnthropicModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> => {
+export const loadAnthropicModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isAnthropicProvider(profile.provider)) {
     return {
       models: [],
@@ -49,11 +46,9 @@ export const loadAnthropicModels = async (
     const data = await response.json();
     const models =
       data.data?.map((m: { id: string }) => {
-        const info = modelsInfo[m.id];
         return {
           id: m.id,
           providerId: profile.id,
-          ...info,
         } satisfies Model;
       }) || [];
 
@@ -156,7 +151,7 @@ export const getAnthropicUsageReport = (
   // Calculate cost internally with already deducted sentTokens
   const messageCost = calculateAnthropicCost(model, sentTokens, receivedTokens, cacheWriteTokens, cacheReadTokens);
 
-  const usageReportData: UsageReportData = {
+  return {
     model: `${provider.id}/${model.id}`,
     sentTokens,
     receivedTokens,
@@ -165,8 +160,6 @@ export const getAnthropicUsageReport = (
     messageCost,
     agentTotalCost: task.task.agentTotalCost + messageCost,
   };
-
-  return usageReportData;
 };
 
 // === Configuration Helper Functions ===
@@ -188,6 +181,7 @@ export const anthropicProviderStrategy: LlmProviderStrategy = {
   loadModels: loadAnthropicModels,
   hasEnvVars: hasAnthropicEnvVars,
   getAiderMapping: getAnthropicAiderMapping,
+  getModelInfo: getDefaultModelInfo,
 
   // Configuration helpers
   getCacheControl: getAnthropicCacheControl,

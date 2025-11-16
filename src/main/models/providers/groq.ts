@@ -1,14 +1,13 @@
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { GroqProvider, isGroqProvider } from '@common/agent';
+import { Model, ProviderProfile, SettingsData } from '@common/types';
+import { DEFAULT_MODEL_TEMPERATURE, GroqProvider, isGroqProvider } from '@common/agent';
 import { createGroq } from '@ai-sdk/groq';
 
-import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2 } from '@ai-sdk/provider';
 
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Task } from '@/task/task';
+import { getDefaultModelInfo, getDefaultUsageReport } from '@/models/providers/default';
 
 interface GroqModel {
   id: string;
@@ -18,7 +17,7 @@ interface GroqApiResponse {
   data: GroqModel[];
 }
 
-export const loadGroqModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>, settings: SettingsData): Promise<LoadModelsResponse> => {
+export const loadGroqModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isGroqProvider(profile.provider)) {
     return { models: [], success: false };
   }
@@ -50,19 +49,13 @@ export const loadGroqModels = async (profile: ProviderProfile, modelsInfo: Recor
 
     const data: GroqApiResponse = await response.json();
     const models =
-      data.data
-        ?.filter((model: GroqModel) => {
-          // Filter out models that don't have pricing information
-          return modelsInfo[model.id];
-        })
-        .map((model: GroqModel) => {
-          const info = modelsInfo[model.id];
-          return {
-            id: model.id,
-            providerId: profile.id,
-            ...info,
-          };
-        }) || [];
+      data.data?.map((model: GroqModel) => {
+        return {
+          id: model.id,
+          providerId: profile.id,
+          temperature: DEFAULT_MODEL_TEMPERATURE,
+        } satisfies Model;
+      }) || [];
 
     logger.info(`Loaded ${models.length} Groq models for profile ${profile.id}`);
     return { models, success: true };
@@ -115,46 +108,15 @@ export const createGroqLlm = (profile: ProviderProfile, model: Model, settings: 
   return groqProvider(model.id);
 };
 
-// === Cost and Usage Functions ===
-export const calculateGroqCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
-  const inputCostPerToken = model.inputCostPerToken ?? 0;
-  const outputCostPerToken = model.outputCostPerToken ?? 0;
-  const cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? inputCostPerToken;
-
-  const inputCost = sentTokens * inputCostPerToken;
-  const outputCost = receivedTokens * outputCostPerToken;
-  const cacheCost = cacheReadTokens * cacheReadInputTokenCost;
-
-  return inputCost + outputCost + cacheCost;
-};
-
-export const getGroqUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
-  const totalSentTokens = usage.inputTokens || 0;
-  const receivedTokens = usage.outputTokens || 0;
-  const cacheReadTokens = usage.cachedInputTokens || 0;
-  const sentTokens = totalSentTokens - cacheReadTokens;
-
-  // Calculate cost internally (no caching for Groq)
-  const messageCost = calculateGroqCost(model, sentTokens, receivedTokens, cacheReadTokens);
-
-  return {
-    model: `${provider.id}/${model.id}`,
-    sentTokens,
-    receivedTokens,
-    cacheReadTokens,
-    messageCost,
-    agentTotalCost: task.task.agentTotalCost + messageCost,
-  };
-};
-
 // === Complete Strategy Implementation ===
 export const groqProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
   createLlm: createGroqLlm,
-  getUsageReport: getGroqUsageReport,
+  getUsageReport: getDefaultUsageReport,
 
   // Model discovery functions
   loadModels: loadGroqModels,
   hasEnvVars: hasGroqEnvVars,
   getAiderMapping: getGroqAiderMapping,
+  getModelInfo: getDefaultModelInfo,
 };

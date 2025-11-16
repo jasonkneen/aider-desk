@@ -1,15 +1,16 @@
 import {
-  ContextFileSourceType,
   ContextFile,
-  TokensCost,
-  FileEdit,
-  UsageReportData,
-  LogLevel,
-  Mode,
-  MessageRole,
-  RawModelInfo,
+  ContextFileSourceType,
   EditFormat,
+  FileEdit,
+  LogLevel,
+  MessageRole,
+  Mode,
+  ModelInfo,
   PromptContext,
+  RawModelInfo,
+  TokensCost,
+  UsageReportData,
 } from '@common/types';
 
 export type MessageAction =
@@ -35,7 +36,8 @@ export type MessageAction =
   | 'update-env-vars'
   | 'request-context-info'
   | 'subscribe-events'
-  | 'unsubscribe-events';
+  | 'unsubscribe-events'
+  | 'update-models-info';
 
 export interface Message {
   action: MessageAction;
@@ -246,6 +248,15 @@ export interface UpdateEnvVarsMessage extends Message {
 
 export const isUpdateEnvVarsMessage = (message: Message): message is UpdateEnvVarsMessage => {
   return message.action === 'update-env-vars';
+};
+
+export interface UpdateModelsInfoMessage extends Message {
+  action: 'update-models-info';
+  modelsInfo: Record<string, ModelInfo>;
+}
+
+export const isUpdateModelsInfoMessage = (message: Message): message is UpdateModelsInfoMessage => {
+  return message.action === 'update-models-info';
 };
 
 export interface RequestContextInfoMessage extends Message {

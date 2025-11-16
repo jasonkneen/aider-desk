@@ -12,11 +12,7 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Task } from '@/task/task';
 
-export const loadVertexAIModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> => {
+export const loadVertexAIModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isVertexAiProvider(profile.provider)) {
     return { models: [], success: false };
   }
@@ -69,12 +65,11 @@ export const loadVertexAIModels = async (
     const models = response
       .map((model) => {
         const modelId = model.name?.split('/').pop();
-        const info = modelsInfo[modelId || ''];
 
         return {
           id: modelId,
           providerId: profile.id,
-          ...info,
+          temperature: 0.7, // Default temperature for Vertex AI models
         };
       })
       .filter((model) => model.id) as Model[];
@@ -171,8 +166,7 @@ type VertexGoogleMetadata = {
   };
 };
 
-// === Cost and Usage Functions ===
-export const calculateVertexAiCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
+const calculateVertexAiCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number => {
   // Use model overrides if available, otherwise use base model info
   const inputCostPerToken = model.inputCostPerToken ?? 0;
   const outputCostPerToken = model.outputCostPerToken ?? 0;
@@ -185,7 +179,7 @@ export const calculateVertexAiCost = (model: Model, sentTokens: number, received
   return inputCost + outputCost + cacheCost;
 };
 
-export const getVertexAiUsageReport = (
+const getVertexAiUsageReport = (
   task: Task,
   provider: ProviderProfile,
   model: Model,
@@ -240,6 +234,11 @@ export const getVertexAiProviderOptions = (llmProvider: LlmProvider, model: Mode
   return undefined;
 };
 
+const getVertexAiModelInfo = (_provider: ProviderProfile, modelId: string, allModelInfos: Record<string, ModelInfo>): ModelInfo | undefined => {
+  const fullModelId = `google-vertex/${modelId}`;
+  return allModelInfos[fullModelId];
+};
+
 // === Complete Strategy Implementation ===
 export const vertexAiProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
@@ -250,6 +249,7 @@ export const vertexAiProviderStrategy: LlmProviderStrategy = {
   loadModels: loadVertexAIModels,
   hasEnvVars: hasVertexAiEnvVars,
   getAiderMapping: getVertexAiAiderMapping,
+  getModelInfo: getVertexAiModelInfo,
 
   // Configuration helpers
   getProviderOptions: getVertexAiProviderOptions,

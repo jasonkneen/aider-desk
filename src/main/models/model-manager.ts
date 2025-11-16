@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 import { AVAILABLE_PROVIDERS, getDefaultProviderParams, LlmProvider, LlmProviderName } from '@common/agent';
-import { AgentProfile, Model, ModelInfo, SettingsData, ModelOverrides, ProviderModelsData, ProviderProfile, UsageReportData } from '@common/types';
+import { AgentProfile, Model, ModelInfo, ModelOverrides, ProviderModelsData, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 
 import { anthropicProviderStrategy } from './providers/anthropic';
 import { azureProviderStrategy } from './providers/azure';
@@ -23,14 +23,14 @@ import { vertexAiProviderStrategy } from './providers/vertex-ai';
 import { zaiPlanProviderStrategy } from './providers/zai-plan';
 
 import type { LanguageModelV2 } from '@ai-sdk/provider';
-import type { LanguageModelUsage, ToolSet, JSONValue } from 'ai';
+import type { JSONValue, LanguageModelUsage, ToolSet } from 'ai';
 
-import { AIDER_DESK_DATA_DIR, AIDER_DESK_CACHE_DIR } from '@/constants';
+import { AIDER_DESK_CACHE_DIR, AIDER_DESK_DATA_DIR } from '@/constants';
 import logger from '@/logger';
 import { Store } from '@/store';
 import { EventManager } from '@/events';
 import { Task } from '@/task/task';
-import { AiderModelMapping, CacheControl, LlmProviderRegistry } from '@/models/types';
+import { AiderModelMapping, CacheControl, LlmProviderRegistry, LlmProviderStrategy } from '@/models/types';
 
 const MODELS_META_URL = 'https://models.dev/api.json';
 const MODELS_FILE = path.join(AIDER_DESK_DATA_DIR, 'models.json');
@@ -48,6 +48,7 @@ type ModelsMetaResponse = Record<
           cache_read?: number;
           cache_write?: number;
         };
+        temperature?: boolean;
         limit: {
           context: number;
           output: number;
@@ -169,39 +170,17 @@ export class ModelManager {
       }
 
       for (const modelKey in providerData.models) {
+        const modelId = `${providerId}/${modelKey}`;
         const modelData = providerData.models[modelKey];
-        const existingModelInfo = this.modelsInfo[modelKey];
-
-        if (existingModelInfo) {
-          // Add properties only if they don't exist
-          if (!existingModelInfo.maxInputTokens) {
-            existingModelInfo.maxInputTokens = modelData.limit.context;
-          }
-          if (!existingModelInfo.maxOutputTokens) {
-            existingModelInfo.maxOutputTokens = modelData.limit.output;
-          }
-          if (!existingModelInfo.inputCostPerToken && modelData.cost?.input) {
-            existingModelInfo.inputCostPerToken = modelData.cost.input / 1_000_000;
-          }
-          if (!existingModelInfo.outputCostPerToken && modelData.cost?.output) {
-            existingModelInfo.outputCostPerToken = modelData.cost.output / 1_000_000;
-          }
-          if (!existingModelInfo.cacheReadInputTokenCost && modelData.cost?.cache_read) {
-            existingModelInfo.cacheReadInputTokenCost = modelData.cost.cache_read / 1_000_000;
-          }
-          if (!existingModelInfo.cacheWriteInputTokenCost && modelData.cost?.cache_write) {
-            existingModelInfo.cacheReadInputTokenCost = modelData.cost.cache_write / 1_000_000;
-          }
-        } else {
-          this.modelsInfo[modelData.id] = {
-            maxInputTokens: modelData.limit.context,
-            maxOutputTokens: modelData.limit.output,
-            inputCostPerToken: (modelData.cost?.input || 0) / 1_000_000,
-            outputCostPerToken: (modelData.cost?.output || 0) / 1_000_000,
-            cacheReadInputTokenCost: modelData.cost?.cache_read ? modelData.cost.cache_read / 1_000_000 : undefined,
-            cacheWriteInputTokenCost: modelData.cost?.cache_write ? modelData.cost.cache_write / 1_000_000 : undefined,
-          } satisfies ModelInfo;
-        }
+        this.modelsInfo[modelId] = {
+          maxInputTokens: modelData.limit.context,
+          maxOutputTokens: modelData.limit.output,
+          inputCostPerToken: (modelData.cost?.input || 0) / 1_000_000,
+          outputCostPerToken: (modelData.cost?.output || 0) / 1_000_000,
+          cacheReadInputTokenCost: modelData.cost?.cache_read ? modelData.cost.cache_read / 1_000_000 : undefined,
+          cacheWriteInputTokenCost: modelData.cost?.cache_write ? modelData.cost.cache_write / 1_000_000 : undefined,
+          useTemperature: modelData.temperature,
+        } satisfies ModelInfo;
       }
     }
   }
@@ -247,11 +226,6 @@ export class ModelManager {
     return changedProviderProfiles.length > 0 || removedProviders.length > 0;
   }
 
-  async getAllModelsInfo(): Promise<Record<string, ModelInfo>> {
-    await Promise.allSettled([this.initPromise]);
-    return this.modelsInfo;
-  }
-
   private async loadProviderModels(providers: ProviderProfile[]): Promise<void> {
     this.eventManager.sendProviderModelsUpdated({ loading: true });
 
@@ -274,12 +248,12 @@ export class ModelManager {
         const loadModels = async () => {
           // Load models from each profile for this provider type
           for (const profile of profilesForProvider) {
-            const allModels: Model[] = [];
-            const response = await strategy.loadModels(profile, this.modelsInfo, this.store.getSettings());
+            let providerModels: Model[] = [];
+            const response = await strategy.loadModels(profile, this.store.getSettings());
 
             delete this.providerErrors[profile.id];
             if (response.success) {
-              allModels.push(...response.models);
+              providerModels.push(...response.models);
             } else {
               if (response.error) {
                 logger.error(`Failed to load models for provider profile ${profile.id}:`, {
@@ -291,30 +265,10 @@ export class ModelManager {
               }
             }
 
-            // Add custom models or override existing ones
-            const providerModelOverrides = this.modelOverrides.filter((modelOverride) => modelOverride.providerId === profile.id);
-            for (const modelOverride of providerModelOverrides) {
-              const existingIndex = allModels.findIndex((m) => m.id === modelOverride.id);
-              if (existingIndex >= 0) {
-                const cleanedOverride = Object.fromEntries(Object.entries(modelOverride).filter(([_, value]) => value !== undefined));
-                logger.debug(`Overriding model: ${profile.id}/${modelOverride.id}`, {
-                  existing: allModels[existingIndex],
-                  override: modelOverride,
-                  cleanedOverrides: cleanedOverride,
-                });
+            providerModels = this.enrichWithModelInfo(providerModels, profile, strategy);
+            providerModels = this.enrichWithOverrides(providerModels, profile.id);
 
-                allModels[existingIndex] = {
-                  ...allModels[existingIndex],
-                  ...cleanedOverride,
-                  isCustom: false,
-                  hasModelOverrides: Object.keys(cleanedOverride).length > 0,
-                };
-              } else if (modelOverride.isCustom) {
-                allModels.push({ ...modelOverride });
-              }
-            }
-
-            this.providerModels[profile.id] = allModels;
+            this.providerModels[profile.id] = providerModels;
           }
         };
 
@@ -334,6 +288,61 @@ export class ModelManager {
     // Update agent profiles with the new models
     await this.store.updateProviderModelInAgentProfiles(Object.values(this.providerModels).flat());
     this.eventManager.sendSettingsUpdated(this.store.getSettings());
+  }
+
+  private enrichWithModelInfo(models: Model[], profile: ProviderProfile, strategy: LlmProviderStrategy): Model[] {
+    const enrichedModels = [...models];
+
+    for (const model of enrichedModels) {
+      if (strategy.getModelInfo) {
+        const modelInfo = strategy.getModelInfo(profile, model.id, this.modelsInfo);
+        if (modelInfo) {
+          logger.debug(`Enriching model ${model.id} with info`, modelInfo);
+
+          model.maxInputTokens = model.maxInputTokens ?? modelInfo.maxInputTokens;
+          model.maxOutputTokens = model.maxOutputTokens ?? modelInfo.maxOutputTokens;
+          model.inputCostPerToken = model.inputCostPerToken ?? modelInfo.inputCostPerToken;
+          model.outputCostPerToken = model.outputCostPerToken ?? modelInfo.outputCostPerToken;
+          model.cacheWriteInputTokenCost = model.cacheWriteInputTokenCost ?? modelInfo.cacheWriteInputTokenCost;
+          model.cacheReadInputTokenCost = model.cacheReadInputTokenCost ?? modelInfo.cacheReadInputTokenCost;
+
+          // remove temperature if model does not support it
+          if (modelInfo.useTemperature === false) {
+            model.temperature = undefined;
+          }
+        }
+      }
+    }
+
+    return enrichedModels;
+  }
+
+  private enrichWithOverrides(models: Model[], providerId: string): Model[] {
+    const enrichedModels = [...models];
+    const providerModelOverrides = this.modelOverrides.filter((modelOverride) => modelOverride.providerId === providerId);
+
+    for (const modelOverride of providerModelOverrides) {
+      const existingIndex = enrichedModels.findIndex((model) => model.id === modelOverride.id);
+      if (existingIndex >= 0) {
+        const cleanedOverride = Object.fromEntries(Object.entries(modelOverride).filter(([_, value]) => value !== undefined));
+        logger.debug(`Overriding model: ${providerId}/${modelOverride.id}`, {
+          existing: enrichedModels[existingIndex],
+          override: modelOverride,
+          cleanedOverrides: cleanedOverride,
+        });
+
+        enrichedModels[existingIndex] = {
+          ...enrichedModels[existingIndex],
+          ...cleanedOverride,
+          isCustom: false,
+          hasModelOverrides: Object.keys(cleanedOverride).length > 0,
+        };
+      } else if (modelOverride.isCustom) {
+        enrichedModels.push({ ...modelOverride });
+      }
+    }
+
+    return enrichedModels;
   }
 
   /**
@@ -498,12 +507,25 @@ export class ModelManager {
     return strategy.getAiderMapping(provider, modelId);
   }
 
-  getModel(providerId: string, modelId: string): Model | undefined {
+  getModel(providerId: string, modelId: string, useModelInfoFallback = false): Model | undefined {
+    let model: Model | undefined;
     const providerModels = this.providerModels[providerId];
-    if (!providerModels) {
-      return undefined;
+    if (providerModels) {
+      model = providerModels.find((m) => m.id === modelId);
     }
-    return providerModels.find((m) => m.id === modelId);
+
+    if (!model && useModelInfoFallback) {
+      const modelInfo = this.getModelInfo(`${providerId}/${modelId}`);
+      if (modelInfo) {
+        model = {
+          id: modelId,
+          providerId: providerId,
+          ...modelInfo,
+        };
+      }
+    }
+
+    return model;
   }
 
   createLlm(provider: ProviderProfile, model: string | Model, settings: SettingsData, projectDir: string): LanguageModelV2 {
@@ -543,16 +565,7 @@ export class ModelManager {
     // Resolve Model object
     let modelObj: Model | undefined;
     if (typeof model === 'string') {
-      modelObj = this.getModel(provider.id, model);
-      if (!modelObj) {
-        // Fallback to creating a minimal Model object if not found
-        const modelInfo = this.getModelInfo(model);
-        modelObj = {
-          ...modelInfo,
-          id: model,
-          providerId: provider.id,
-        };
-      }
+      modelObj = this.getModel(provider.id, model, true);
     } else {
       modelObj = model;
     }
