@@ -24,36 +24,40 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
   const [formData, setFormData] = useState<Partial<Model>>({
     id: '',
     providerId: providers[0]?.id || '',
-    temperature: DEFAULT_MODEL_TEMPERATURE,
     ...model,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [providerOverrides, setProviderOverrides] = useState<Record<string, unknown>>(model?.providerOverrides || {});
+  const [temperatureEnabled, setTemperatureEnabled] = useState(model?.temperature !== undefined);
   const selectedProvider = providers.find((p) => p.id === formData.providerId);
 
   useEffect(() => {
     if (model) {
-      setFormData({
+      const newFormData = {
         id: model.id,
         providerId: model.providerId,
         maxInputTokens: model.maxInputTokens,
         maxOutputTokens: model.maxOutputTokens,
-        temperature: model.temperature ?? DEFAULT_MODEL_TEMPERATURE,
+        temperature: model.temperature,
         inputCostPerToken: model.inputCostPerToken,
         outputCostPerToken: model.outputCostPerToken,
         cacheReadInputTokenCost: model.cacheReadInputTokenCost,
         cacheWriteInputTokenCost: model.cacheWriteInputTokenCost,
         supportsTools: model.supportsTools,
         isHidden: model.isHidden,
-      });
+      };
+      setFormData(newFormData);
       setProviderOverrides(model.providerOverrides || {});
+      setTemperatureEnabled(model.temperature !== undefined);
     } else {
-      setFormData({
+      const newFormData = {
         id: '',
         providerId: providers[0]?.id || '',
-      });
+      };
+      setFormData(newFormData);
       setProviderOverrides({});
+      setTemperatureEnabled(false);
     }
     setErrors({});
   }, [model, providers]);
@@ -77,7 +81,7 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
       newErrors.maxOutputTokens = t('modelLibrary.errors.invalidTokenCount');
     }
 
-    if (formData.temperature && (formData.temperature < 0 || formData.temperature > 2)) {
+    if (temperatureEnabled && formData.temperature && (formData.temperature < 0 || formData.temperature > 2)) {
       newErrors.temperature = t('modelLibrary.errors.invalidTemperature');
     }
 
@@ -103,7 +107,7 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
       providerId: formData.providerId!,
       maxInputTokens: formData.maxInputTokens,
       maxOutputTokens: formData.maxOutputTokens,
-      temperature: formData.temperature,
+      temperature: temperatureEnabled ? formData.temperature : undefined,
       inputCostPerToken: formData.inputCostPerToken,
       outputCostPerToken: formData.outputCostPerToken,
       cacheReadInputTokenCost: formData.cacheReadInputTokenCost,
@@ -122,6 +126,15 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  const handleTemperatureToggle = (enabled: boolean) => {
+    setTemperatureEnabled(enabled);
+    if (enabled) {
+      handleInputChange('temperature', DEFAULT_MODEL_TEMPERATURE);
+    } else {
+      handleInputChange('temperature', undefined);
     }
   };
 
@@ -255,25 +268,40 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
           </div>
         </div>
 
-        <div className="space-y-2 grid grid-cols-2 gap-4">
-          <Slider
-            label={
-              <div className="flex items-center text-sm">
-                <span>{t('modelLibrary.temperature')}</span>
-                <InfoIcon tooltip={t('modelLibrary.temperatureTooltip')} className="ml-2" />
-              </div>
-            }
-            min={0}
-            max={2}
-            step={0.05}
-            value={formData.temperature ?? DEFAULT_MODEL_TEMPERATURE}
-            onChange={(value) => handleInputChange('temperature', value)}
-          />
-          {errors.temperature && <p className="text-error text-2xs mt-1">{errors.temperature}</p>}
+        <div className="space-y-2 grid grid-cols-2 gap-4 mb-8">
+          <div>
+            <div className="flex justify-between items-center">
+              <Checkbox
+                label={
+                  <div className="flex items-center text-sm">
+                    <span>{t('modelLibrary.temperature')}</span>
+                    <InfoIcon tooltip={t('modelLibrary.temperatureTooltip')} className="ml-2" />
+                  </div>
+                }
+                checked={temperatureEnabled}
+                onChange={handleTemperatureToggle}
+              />
+              {temperatureEnabled && <span className="text-sm font-medium text-text-primary">{formData.temperature}</span>}
+            </div>
+            {temperatureEnabled && (
+              <Slider
+                min={0}
+                max={2}
+                step={0.05}
+                value={formData.temperature ?? DEFAULT_MODEL_TEMPERATURE}
+                onChange={(value) => handleInputChange('temperature', value)}
+              />
+            )}
+            {errors.temperature && <p className="text-error text-2xs mt-1">{errors.temperature}</p>}
+          </div>
         </div>
 
         {/* Advanced Settings - Provider Overrides */}
-        {selectedProvider && <ModelParameterOverrides provider={selectedProvider.provider} overrides={providerOverrides} onChange={setProviderOverrides} />}
+        {selectedProvider && (
+          <div className="pt-2">
+            <ModelParameterOverrides provider={selectedProvider.provider} overrides={providerOverrides} onChange={setProviderOverrides} />
+          </div>
+        )}
 
         <div className="flex justify-end">
           <Checkbox label={t('modelLibrary.hidden')} checked={formData.isHidden || false} onChange={(checked) => handleInputChange('isHidden', checked)} />
