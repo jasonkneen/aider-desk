@@ -11118,21 +11118,29 @@ const calculateEnabledTools = async () =>
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
-const handleSwitchProfile = (profileId: string) =>
+const toggleSelectorVisible = () =>
 ⋮----
-const handleToggleServer = (serverName: string) =>
+if (activeProfile && settings)
 ⋮----
 // Remove tool approvals for this server
 ⋮----
-const handleOpenAgentProfiles = () =>
-⋮----
 {/* Profiles List */}
+⋮----
+onClick=
 ⋮----
 {/* MCP Servers */}
 ⋮----
 <span className="text-xs flex-1 font-medium text-text-secondary text-left px-1 uppercase">
 ⋮----
 {/* Quick Settings */}
+⋮----
+<MdOutlineHdrAuto className=
+⋮----
+<MdOutlineChecklist className=
+⋮----
+icon=
+⋮----
+<SettingsDialog onClose=
 
 ================
 File: src/renderer/src/components/AgentSelector/index.ts
@@ -11158,6 +11166,8 @@ type Props = {
   toolApprovals: Record<string, ToolApprovalState>;
   onToggle: (serverName: string) => void;
 };
+⋮----
+export const McpServerSelectorItem = (
 ⋮----
 const loadTools = async () =>
 ⋮----
@@ -11376,6 +11386,11 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'onChange'> & 
   tooltipId?: string;
 };
 ⋮----
+className=
+⋮----
+e.stopPropagation();
+onChange(!checked);
+⋮----
 className="sr-only" // Hide the actual input but keep it accessible
 
 ================
@@ -11426,8 +11441,6 @@ const parsed = parseDiffContent(children!); // children is non-null and a diff
 // eslint-disable-next-line no-console
 ⋮----
 const handleRevertChanges = () =>
-⋮----
-tooltip=
 
 ================
 File: src/renderer/src/components/common/CodeInline.tsx
@@ -11570,6 +11583,8 @@ type Props = {
   disabled?: boolean;
 };
 ⋮----
+export const IconButton = (
+⋮----
 const handleClick = (e: MouseEvent<HTMLDivElement>) =>
 
 ================
@@ -11672,7 +11687,7 @@ type Props = {
   children: ReactNode;
 };
 ⋮----
-tooltip=
+export const ModalOverlayLayout = (
 
 ================
 File: src/renderer/src/components/common/MultiSelect.tsx
@@ -11745,6 +11760,10 @@ type Props = {
   children: ReactNode;
   className?: string;
 };
+⋮----
+export const Section = (
+⋮----
+<div className=
 
 ================
 File: src/renderer/src/components/common/Select.tsx
@@ -11884,6 +11903,8 @@ type Props = InputHTMLAttributes<HTMLInputElement> & {
   onChange: () => void;
   className?: string;
 };
+⋮----
+onClick=
 
 ================
 File: src/renderer/src/components/common/VirtualTable.tsx
@@ -11922,8 +11943,6 @@ type Props<T> = {
 
 ⋮----
 {/* Virtualized body */}
-⋮----
-className=
 ⋮----
 {/* Footer - Outside virtualized area */}
 
@@ -12012,6 +12031,8 @@ type Props = {
   tokensInfo?: TokensInfoData | null;
 };
 ⋮----
+export const ContextFiles = (
+⋮----
 // eslint-disable-next-line react-hooks/exhaustive-deps
 ⋮----
 const checkChild = (childKey: string) =>
@@ -12058,6 +12079,8 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
 };
+⋮----
+return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/CommandOutputMessageBlock.tsx
@@ -12091,8 +12114,6 @@ type Props = {
 };
 ⋮----
 const copyToClipboard = () =>
-⋮----
-tooltip=
 
 ================
 File: src/renderer/src/components/message/CustomCommandBashBlock.tsx
@@ -12157,7 +12178,7 @@ type Props = {
   compact?: boolean;
 };
 ⋮----
-if (isError)
+return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/FileEditToolMessage.tsx
@@ -12181,8 +12202,6 @@ type Props = {
 };
 ⋮----
 <strong>
-⋮----
-content=
 
 ================
 File: src/renderer/src/components/message/FileReadToolMessage.tsx
@@ -12207,6 +12226,8 @@ type Props = {
 {/* File content - filter out line numbers if present */}
 ⋮----
 {/* Parameter information */}
+⋮----
+return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/FileWriteToolMessage.tsx
@@ -12233,8 +12254,6 @@ type Props = {
 const formatName = (name: string): string =>
 ⋮----
 const getToolName = (): string =>
-⋮----
-content=
 
 ================
 File: src/renderer/src/components/message/GlobToolMessage.tsx
@@ -12255,7 +12274,7 @@ type Props = {
   compact?: boolean;
 };
 ⋮----
-if (isError)
+return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/GrepToolMessage.tsx
@@ -12276,9 +12295,7 @@ type Props = {
   compact?: boolean;
 };
 ⋮----
-if (isError)
-⋮----
-<span className="text-text-muted">
+return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/GroupMessageBlock.tsx
@@ -12318,9 +12335,13 @@ const getGroupDisplayName = (name?: string | LocalizedString) =>
 ⋮----
 // name is LocalizedString
 ⋮----
+<div className=
+⋮----
 {/* Color Bar */}
 ⋮----
 {/* Content */}
+⋮----
+const arePropsEqual = (prevProps: Props, nextProps: Props): boolean =>
 ⋮----
 // Check basic message properties
 ⋮----
@@ -12380,8 +12401,6 @@ const renderMessage = () => (
   );
 ⋮----
 <CopyMessageButton content=
-⋮----
-tooltip=
 
 ================
 File: src/renderer/src/components/message/MessageBar.tsx
@@ -12414,6 +12433,10 @@ const handleRemoveClick = () =>
 const handleRedoClick = () =>
 ⋮----
 const handleEditClick = () =>
+⋮----
+<div className=
+⋮----
+onClick=
 
 ================
 File: src/renderer/src/components/message/MessageBlock.tsx
@@ -12478,6 +12501,10 @@ type Props = {
   redo?: () => void;
   edit?: (content: string) => void;
 };
+⋮----
+switch (toolMessage.serverName)
+⋮----
+const arePropsEqual = (prevProps: Props, nextProps: Props): boolean =>
 
 ================
 File: src/renderer/src/components/message/Messages.tsx
@@ -12521,11 +12548,7 @@ const exportToImage = async () =>
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
-tooltip=
-⋮----
 aria-label=
-⋮----
-remove=
 
 ================
 File: src/renderer/src/components/message/ReflectedMessageBlock.tsx
@@ -12565,6 +12588,10 @@ type Props = {
   compact?: boolean;
   onRemove?: () => void;
 };
+⋮----
+export const ResponseMessageBlock = (
+⋮----
+className=
 
 ================
 File: src/renderer/src/components/message/SemanticSearchToolMessage.tsx
@@ -12585,7 +12612,7 @@ type Props = {
   compact?: boolean;
 };
 ⋮----
-if (isError)
+return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/SubagentToolMessage.tsx
@@ -12603,6 +12630,8 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
 };
+⋮----
+export const SubagentToolMessage = (
 ⋮----
 const getToolName = (): string =>
 ⋮----
@@ -12642,7 +12671,11 @@ const handleToggleThinking = (e: MouseEvent<HTMLDivElement>) =>
 ⋮----
 {/* Thinking section */}
 ⋮----
+<div className=
+⋮----
 {/* Answer section - only show if we have an answer or we're streaming */}
+⋮----
+className=
 
 ================
 File: src/renderer/src/components/message/ToolMessageBlock.tsx
@@ -12687,6 +12720,8 @@ const defaultLabel = () => t('toolMessage.toolLabel',
 ⋮----
 // Handles message.args.paths (array) or fallback to message.args.path (string)
 ⋮----
+<span>
+⋮----
 // Display pretty-printed JSON
 ⋮----
 rawContentToCopy = JSON.stringify(parsedResult.json); // Copy raw JSON
@@ -12694,6 +12729,8 @@ rawContentToCopy = JSON.stringify(parsedResult.json); // Copy raw JSON
 // Display extracted text if inner JSON parsing failed
 ⋮----
 // Fallback to the original raw content if no text was extracted
+⋮----
+
 ⋮----
 {/* Tool Specific Content */}
 
@@ -12708,6 +12745,8 @@ type Props = {
   usageReport: UsageReportData;
   className?: string;
 };
+⋮----
+<span className="flex items-center gap-1" data-tooltip-id="usage-info-tooltip" data-tooltip-content=
 
 ================
 File: src/renderer/src/components/message/UserMessageBlock.tsx
@@ -12731,7 +12770,11 @@ type Props = {
   onEdit?: (content: string) => void;
 };
 ⋮----
+export const UserMessageBlock = (
+⋮----
 const handleEdit = () =>
+⋮----
+<div className=
 
 ================
 File: src/renderer/src/components/message/utils.tsx
@@ -12756,7 +12799,9 @@ import { GroupMessage, isResponseMessage, isToolMessage, Message, ToolMessage } 
 ⋮----
 // Table styling
 ⋮----
-const findFileInPreviousLine = (currentLine: number):
+
+⋮----
+const processCodeBlock = () =>
 ⋮----
 // Check if the line is just a filepath
 ⋮----
@@ -12773,6 +12818,8 @@ const findFileInNextLine = (currentLine: number):
 // Process any accumulated text first
 ⋮----
 // Find the end of the custom-command-bash block
+⋮----
+if (lines[j].trim() === '</custom-command-bash>')
 ⋮----
 // Extract the content between the tags
 ⋮----
@@ -12796,6 +12843,8 @@ const findFileInNextLine = (currentLine: number):
 ⋮----
 // Handle any remaining content
 ⋮----
+processCodeBlock();
+⋮----
 export const parseThinkingAnswerFormat = (
   content: string,
   baseDir: string = '',
@@ -12807,8 +12856,6 @@ export const parseThinkingAnswerFormat = (
 // Check for the thinking section first
 ⋮----
 // Check if the answer section exists
-⋮----
-export const parseCustomCommandBashFormat = (baseDir: string, content: string): React.ReactNode | null =>
 ⋮----
 // Find the opening tag
 ⋮----
@@ -12823,27 +12870,9 @@ export const parseCustomCommandBashFormat = (baseDir: string, content: string): 
 // Extract command and output content
 ⋮----
 // --- Tool Message Parsing ---
-interface ParsedToolContentItem {
-  type: string;
-  text?: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any; // Allow other properties
-}
 ⋮----
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 [key: string]: any; // Allow other properties
-⋮----
-interface ParsedToolMessage {
-  content: ParsedToolContentItem[];
-  isError: boolean;
-}
-⋮----
-export interface ToolContentResult {
-  extractedText: string | null;
-  json: object | null;
-  isError: boolean | null;
-  rawContent: string; // Always include the original raw content
-}
 ⋮----
 rawContent: string; // Always include the original raw content
 ⋮----
@@ -12853,7 +12882,6 @@ rawContent: string; // Always include the original raw content
  * The 'content' array items should have a 'text' property.
  * The concatenated 'text' properties might themselves be a JSON string.
  */
-export const parseToolContent = (rawContent: string): ToolContentResult =>
 ⋮----
 return result; // Return default if rawContent is empty
 ⋮----
@@ -12871,15 +12899,11 @@ return result; // Return default if rawContent is empty
 // Ignore error if the raw content is not valid JSON
 // eslint-disable-next-line no-console
 ⋮----
-export const areMessagesEqual = (prevMessage: Message, nextMessage: Message): boolean =>
-⋮----
 // Check basic message properties
 ⋮----
 // Check usageReport for ResponseMessage and ToolMessage
 ⋮----
 // Check args for ToolMessage
-⋮----
-export const groupMessagesByPromptContext = (messages: Message[]): Message[] =>
 ⋮----
 // First pass: collect messages with groups
 ⋮----
@@ -12940,8 +12964,6 @@ const exportToImage = async () =>
 ⋮----
 // Show notification that export is not available with virtualized rendering
 ⋮----
-tooltip=
-⋮----
 aria-label=
 
 ================
@@ -12964,8 +12986,6 @@ export const AnthropicParameters = (
 const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
 label=
-⋮----
-? t('settings.agent.envVarFoundPlaceholder',
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/AzureAdvancedSettings.tsx
@@ -13039,8 +13059,6 @@ const handleApiVersionChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
 label=
 ⋮----
-? t('settings.agent.envVarFoundPlaceholder',
-⋮----
 <p className="text-xs text-info-lightest">
 
 ================
@@ -13069,9 +13087,11 @@ const handleSessionTokenChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
 label=
 ⋮----
-placeholder=
+awsAccessKeyIdEnv
 ⋮----
 <span>
+⋮----
+awsSecretAccessKeyEnv
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/CerebrasParameters.tsx
@@ -13093,8 +13113,6 @@ export const CerebrasParameters = (
 const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
 label=
-⋮----
-? t('settings.agent.envVarFoundPlaceholder',
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/DeepseekParameters.tsx
@@ -13116,8 +13134,6 @@ export const DeepseekParameters = (
 const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
 label=
-⋮----
-? t('settings.agent.envVarFoundPlaceholder',
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/DefaultModelOverrides.tsx
@@ -13163,8 +13179,6 @@ const handleIncludeThoughtsChange = (checked: boolean) =>
 const handleUseSearchGroundingChange = (checked: boolean) =>
 ⋮----
 label=
-⋮----
-<InfoIcon tooltip=
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/GeminiModelOverrides.tsx
@@ -13215,8 +13229,6 @@ const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 const handleCustomBaseUrlChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
 label=
-⋮----
-? t('settings.agent.envVarFoundPlaceholder',
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/GpustackParameters.tsx
@@ -13238,8 +13250,6 @@ const handleBaseUrlChange = (e: ChangeEvent<HTMLInputElement>) =>
 const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
 label=
-⋮----
-placeholder=
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/GroqParameters.tsx
@@ -13261,8 +13271,6 @@ export const GroqParameters = (
 const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
 label=
-⋮----
-? t('settings.agent.envVarFoundPlaceholder',
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/index.ts
@@ -13286,13 +13294,9 @@ type Props = {
   onChange: (updated: LmStudioProvider) => void;
 };
 ⋮----
-export const LmStudioParameters = (
-⋮----
 const handleBaseUrlChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
 label=
-⋮----
-placeholder=
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/MinimaxParameters.tsx
@@ -13326,13 +13330,9 @@ type Props = {
   onChange: (updated: OllamaProvider) => void;
 };
 ⋮----
-export const OllamaParameters = (
-⋮----
 const handleBaseUrlChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
 label=
-⋮----
-placeholder=
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/OpenAiAdvancedSettings.tsx
@@ -13349,6 +13349,8 @@ type Props = {
   provider: OpenAiProvider;
   onChange: (updated: OpenAiProvider) => void;
 };
+⋮----
+export const OpenAiAdvancedSettings = (
 ⋮----
 const handleReasoningEffortChange = (value: string) =>
 ⋮----
@@ -13370,8 +13372,6 @@ type Props = {
   provider: OpenAiCompatibleProvider;
   onChange: (updated: OpenAiCompatibleProvider) => void;
 };
-⋮----
-export const OpenAiCompatibleAdvancedSettings = (
 ⋮----
 const handleReasoningEffortChange = (value: string) =>
 ⋮----
@@ -13426,8 +13426,6 @@ const handleBaseUrlChange = (e: ChangeEvent<HTMLInputElement>) =>
 const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
 label=
-⋮----
-placeholder=
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/OpenAiModelOverrides.tsx
@@ -13473,13 +13471,9 @@ type Props = {
   onChange: (updated: OpenAiProvider) => void;
 };
 ⋮----
-export const OpenAiParameters = (
-⋮----
 const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
 label=
-⋮----
-? t('settings.agent.envVarFoundPlaceholder',
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/OpenRouterAdvancedSettings.tsx
@@ -13521,16 +13515,6 @@ const handleDataCollectionChange = (value: string) =>
 const handleSortChange = (value: string) =>
 ⋮----
 const handleRequireParametersChange = (checked: boolean) =>
-⋮----
-href="https://openrouter.ai/docs/features/provider-routing#ordering-specific-providers"
-⋮----
-href="https://openrouter.ai/docs/features/provider-routing#disabling-fallbacks"
-⋮----
-href="https://openrouter.ai/docs/features/provider-routing#allowing-only-specific-providers"
-⋮----
-href="https://openrouter.ai/docs/features/provider-routing#quantization"
-⋮----
-href="https://openrouter.ai/docs/features/provider-routing#provider-sorting"
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/OpenRouterModelOverrides.tsx
@@ -13577,6 +13561,8 @@ type Props = {
   onChange: (updated: OpenRouterProvider) => void;
 };
 ⋮----
+export const OpenRouterParameters = (
+⋮----
 const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
 const renderSectionAccordion = (title: ReactNode, children: ReactNode, open?: boolean, setOpen?: (open: boolean) => void) => (
@@ -13593,7 +13579,7 @@ const renderSectionAccordion = (title: ReactNode, children: ReactNode, open?: bo
 ⋮----
 label=
 ⋮----
-? t('settings.agent.envVarFoundPlaceholder',
+openRouterApiKeyEnv
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/ProviderModels.tsx
@@ -13625,7 +13611,6 @@ const handleAddModels = () =>
 // Add all selected models at once
 ⋮----
 onChange=
-placeholder=
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/RequestyAdvancedSettings.tsx
@@ -13648,7 +13633,6 @@ const handleUseAutoCacheChange = (checked: boolean) =>
 const handleReasoningEffortChange = (value: string) =>
 ⋮----
 <Checkbox label=
-<InfoIcon tooltip=
 ⋮----
 <span>
 
@@ -13696,13 +13680,9 @@ type Props = {
   onChange: (updated: RequestyProvider) => void;
 };
 ⋮----
-export const RequestyParameters = (
-⋮----
 const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
 label=
-⋮----
-? t('settings.agent.envVarFoundPlaceholder',
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/VertexAiAdvancedSettings.tsx
@@ -13724,8 +13704,6 @@ const handleThinkingBudgetChange = (value: number) =>
 const handleIncludeThoughtsChange = (checked: boolean) =>
 ⋮----
 label=
-⋮----
-<InfoIcon tooltip=
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/VertexAiModelOverrides.tsx
@@ -13778,7 +13756,6 @@ const handleLocationChange = (e: ChangeEvent<HTMLInputElement>) =>
 const handleCredentialsChange = (e: ChangeEvent<HTMLTextAreaElement>) =>
 ⋮----
 label=
-placeholder=
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/ZaiPlanParameters.tsx
@@ -13800,8 +13777,6 @@ export const ZaiPlanParameters = (
 const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
 label=
-⋮----
-? t('settings.agent.envVarFoundPlaceholder',
 
 ================
 File: src/renderer/src/components/ModelLibrary/DisableStreaming.tsx
@@ -13861,21 +13836,13 @@ onChange=
 ⋮----
 disabled={!!model} // Don't allow changing provider for existing models
 ⋮----
-placeholder=
 disabled={!!model} // Don't allow changing ID for existing models
 ⋮----
-const perMillionValue = e.target.value !== '' ? parseFloat(e.target.value) : undefined;
-⋮----
-handleInputChange('inputCostPerToken', perTokenValue);
-⋮----
-handleInputChange('outputCostPerToken', perTokenValue);
-⋮----
-handleInputChange('cacheReadInputTokenCost', perTokenValue);
-⋮----
 <span>
-<InfoIcon tooltip=
 ⋮----
 {/* Advanced Settings - Provider Overrides */}
+⋮----
+<Checkbox label=
 
 ================
 File: src/renderer/src/components/ModelLibrary/ModelLibrary.tsx
@@ -14001,11 +13968,11 @@ type Props = {
 ⋮----
 const getRowClassName = (row: Model) =>
 ⋮----
+onClick=
+⋮----
 {/* Search and Info Header */}
 ⋮----
 <Checkbox label=
-⋮----
-? t('modelLibrary.showingAllModels',
 ⋮----
 {/* Table */}
 
@@ -14043,7 +14010,10 @@ type Props = {
   onDeleteProfile: (profile: ProviderProfile) => void;
 };
 ⋮----
-isSelected=
+onToggleSelect=
+⋮----
+onEdit=
+onDelete=
 
 ================
 File: src/renderer/src/components/ModelLibrary/ProviderProfileCard.tsx
@@ -14099,9 +14069,31 @@ const handleEdit = () =>
 ⋮----
 const handleDelete = () =>
 ⋮----
+className=
+⋮----
 {/* Action buttons - shown on hover (desktop) or when showActions is true (mobile) */}
 ⋮----
+className={clsx(
+            'flex flex-col items-center h-full space-y-3 transition-all duration-200',
+            showActions ? 'opacity-100 translate-x-6' : 'opacity-0 translate-x-4 pointer-events-none',
+            'md:group-hover:opacity-100 md:group-hover:translate-x-4 md:group-hover:pointer-events-auto',
+          )}
+        >
+          <IconButton icon={<FiEdit2 />} onClick={handleEdit} />
+          <IconButton icon={<FiTrash2 />} onClick={handleDelete} className="text-error hover:text-error-light" />
+        </div>
+      </div>
+      {showDeleteConfirm && (
+        <ConfirmDialog
+          title={t('modelLibrary.deleteProfileTitle')}
+onConfirm=
+⋮----
 title=
+⋮----
+onDelete();
+setShowDeleteConfirm(false);
+⋮----
+onCancel=
 
 ================
 File: src/renderer/src/components/ModelLibrary/ProviderProfileForm.tsx
@@ -14232,11 +14224,7 @@ type Props = {
   showTitle?: boolean;
 };
 ⋮----
-name=
-⋮----
-onClick={() => onSelectProvider(provider)}
-            />
-          );
+onClick=
 
 ================
 File: src/renderer/src/components/onboarding/OnboardingProviderSetup.tsx
@@ -14327,8 +14315,6 @@ const handleAddFiles = () =>
 ⋮----
 title=
 ⋮----
-confirmButtonText=
-⋮----
 className="w-full" // Changed from flex-1 as it's the only main element now
 ⋮----
 <Checkbox label=
@@ -14391,6 +14377,8 @@ const getPlaceholderKey = (isForSelectedPaths: boolean) =>
 const handleBrowse = async (browseType: 'file' | 'directory') =>
 ⋮----
 // eslint-disable-next-line no-console
+⋮----
+onClick=
 
 ================
 File: src/renderer/src/components/project/MobileSidebar.tsx
@@ -14444,6 +14432,12 @@ export const MobileSidebar = ({
   projectSettings,
   saveProjectSettings,
 }: Props) =>
+⋮----
+className=
+⋮----
+<div onClick=
+⋮----
+showFileDialog=
 
 ================
 File: src/renderer/src/components/project/NoProjectsOpen.tsx
@@ -14490,7 +14484,8 @@ const handleAddProject = () =>
 ⋮----
 title=
 ⋮----
-confirmButtonText=
+onAddProject(path);
+onClose();
 
 ================
 File: src/renderer/src/components/project/ProjectTabs.tsx
@@ -14538,37 +14533,13 @@ const handleDragEnd = (event: DragEndEvent) =>
 ⋮----
 onChange=
 ⋮----
-<DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={() => setDragging(true)} onDragEnd={handleDragEnd}>
-            <SortableContext items={projectIds} strategy={horizontalListSortingStrategy}>
-              {openProjects.map((project) => (
-                <SortableTabItem
-                  key={project.baseDir}
-                  project={project}
-                  activeProject={activeProject}
-                  projectOperations={projectOperations}
-                  openProjectsNumber={openProjects.length}
-                />
-              ))}
-            </SortableContext>
-          </DndContext>
-        </div>
-        {showRightScrollButton && (
-          <button
-            className="absolute right-[52px] z-10 h-full flex items-center px-2 bg-bg-primary-light hover:bg-bg-secondary transition-colors duration-200"
-            onClick={handleScrollRight}
-          >
-            <MdChevronRight className="h-5 w-5 text-text-muted-light" />
-          </button>
-        )}
-        <button
-          className="px-4 py-2 text-text-muted-light hover:text-text-secondary hover:bg-bg-secondary transition-colors duration-200 flex items-center justify-center"
-          onClick={onAddProject}
-        >
-          <MdAdd className="h-5 w-5" />
-        </button>
-      </TabList>
-    </TabGroup>
-  );
+const handleRightClick = (event: React.MouseEvent) =>
+⋮----
+className={clsx(
+            'flex items-center justify-center rounded-full p-1 transition-colors duration-200 z-10',
+            activeProject?.baseDir === project.baseDir ? 'hover:bg-bg-fourth' : 'hover:bg-bg-tertiary-strong',
+          )}
+onClick=
 ⋮----
 e.stopPropagation(); // Prevent tab selection/drag initiation
 
@@ -14645,8 +14616,6 @@ const handleToggleCollapse = () =>
 // Optionally switch to the new task
 ⋮----
 // eslint-disable-next-line no-console
-⋮----
-updateTask=
 
 ================
 File: src/renderer/src/components/project/SidebarContent.tsx
@@ -14733,6 +14702,8 @@ type Props = {
 ⋮----
 // optimistic update
 ⋮----
+if (!settings)
+⋮----
 // eslint-disable-next-line no-console
 ⋮----
 // eslint-disable-next-line no-console
@@ -14747,7 +14718,9 @@ type Props = {
 ⋮----
 // Original horizontal layout for other modes
 ⋮----
-tooltip=
+data-tooltip-content=
+⋮----
+onSquash=
 
 ================
 File: src/renderer/src/components/project/TaskSidebar.tsx
@@ -14803,6 +14776,14 @@ const handleArchiveTaskClick = (e: MouseEvent) =>
 ⋮----
 const handleUnarchiveTaskClick = (e: MouseEvent) =>
 ⋮----
+<div className=
+⋮----
+className={clsx(
+            'transition-opacity p-1.5 rounded-md hover:bg-bg-tertiary text-text-muted hover:text-text-primary',
+            !isMenuOpen && 'opacity-0 group-hover:opacity-100',
+          )}
+onClick=
+⋮----
 const handleTaskClick = (taskId: string) =>
 ⋮----
 const handleConfirmDelete = async (taskId: string) =>
@@ -14833,12 +14814,9 @@ const handleUnarchiveTask = async (taskId: string) =>
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
-
+return <span className=
 ⋮----
-className=
-⋮----
-onChange=
-placeholder=
+onClick=
 ⋮----
 // Custom comparison function for React.memo
 ⋮----
@@ -14979,8 +14957,16 @@ const handleCopyTerminalOutput = (output: string) =>
 ⋮----
 const handleAutoApproveChanged = (autoApprove: boolean) =>
 ⋮----
+<div className=
+⋮----
+onToggleSidebar=
+⋮----
+
+⋮----
 if (node?.container)
 setSearchContainer(node.container);
+⋮----
+height=
 ⋮----
 answerQuestion=
 
@@ -15017,9 +15003,7 @@ const handleDelete = () =>
 ⋮----
 onChange=
 ⋮----
-disabled=
-⋮----
-tooltip=
+<span className=
 
 ================
 File: src/renderer/src/components/project/TodoWindow.tsx
@@ -15061,15 +15045,13 @@ const handleKeyPress = (e: React.KeyboardEvent) =>
 ⋮----
 {/* Header */}
 ⋮----
-tooltip=
-⋮----
 {/* Content */}
 ⋮----
 {/* Add Todo Input */}
 ⋮----
-placeholder=
+onChange=
 ⋮----
-
+placeholder=
 ⋮----
 {/* Todo List */}
 ⋮----
@@ -15083,11 +15065,6 @@ import { FiCode, FiFile, FiLayers, FiZap, FiTerminal } from 'react-icons/fi';
 ⋮----
 // @ts-expect-error TypeScript is not aware of asset import
 import icon from '../../../../../resources/icon.png?asset';
-⋮----
-<h1 className="text-xl font-semibold text-text-primary mb-2">
-<p className="text-sm text-text-secondary mb-10">
-⋮----
-<span>
 
 ================
 File: src/renderer/src/components/project/WorktreeMergeButton.tsx
@@ -15122,6 +15099,8 @@ const handleSquashConfirm = () =>
 const handleOnlyUncommittedConfirm = () =>
 ⋮----
 title=
+⋮----
+confirmButtonText=
 
 ================
 File: src/renderer/src/components/project/WorktreeRevertButton.tsx
@@ -15147,6 +15126,8 @@ const handleRevertConfirm = () =>
 tooltip=
 ⋮----
 title=
+⋮----
+confirmButtonText=
 
 ================
 File: src/renderer/src/components/PromptField/CommandSuggestion.tsx
@@ -15222,8 +15203,6 @@ type Props = {
 };
 ⋮----
 const handleScroll = () =>
-⋮----
-onClick=
 
 ================
 File: src/renderer/src/components/PromptField/ModeSelector.tsx
@@ -15356,7 +15335,15 @@ const getAutocompleteDetailLabel = (item: string): [string | null, boolean] =>
 ⋮----
 // Check if it's a custom command
 ⋮----
+onClick=
+⋮----
+placeholder=
+⋮----
 paste(event)
+⋮----
+className=
+⋮----
+data-tooltip-content=
 ⋮----
 onClose=
 
@@ -15399,6 +15386,10 @@ type Props = {
   isSelected: boolean;
   onClick: (id: string) => void;
 };
+⋮----
+export const AgentProfileItem = (
+⋮----
+onClick=
 
 ================
 File: src/renderer/src/components/settings/agent/AgentRules.tsx
@@ -15474,12 +15465,19 @@ import { TextArea } from '@/components/common/TextArea';
 import { useApi } from '@/contexts/ApiContext';
 ⋮----
 // Helper functions for accordion summaries
+const getRunSettingsSummary = (profile: AgentProfile) =>
 ⋮----
 // Always show max iterations
 ⋮----
 // Only show temperature if it's overridden
 ⋮----
 // Only show max tokens if it's overridden
+⋮----
+const getContextSummary = (profile: AgentProfile) =>
+⋮----
+const getGenericToolsSummary = (profile: AgentProfile) =>
+⋮----
+const getMcpServersSummary = (profile: AgentProfile, mcpServers: Record<string, McpServerConfig>) =>
 ⋮----
 type Props = {
   settings: SettingsData;
@@ -15527,45 +15525,24 @@ const handleServersConfigSave = (servers: Record<string, McpServerConfig>) =>
 ⋮----
 const handleToolApprovalChange = (toolId: string, approval: ToolApprovalState) =>
 ⋮----
-const renderSectionAccordion = (title: ReactNode, children: ReactNode, open?: boolean, setOpen?: (open: boolean) => void, summary?: ReactNode) => (
-    <Accordion
-      title={
-        <div className="flex-1 text-left text-sm font-medium px-2 flex items-center justify-between">
-          <div>{title}</div>
-          {summary && <div className="text-xs text-text-muted-light ml-2">{summary}</div>}
-        </div>
-      }
-      chevronPosition="right"
-      className="mb-2 border rounded-md border-border-default-dark"
-      isOpen={open}
-      onOpenChange={setOpen}
-      scrollToVisibleWhenExpanded={true}
-    >
-      <div className="p-4 pt-2">{children}</div>
-    </Accordion>
-  );
-⋮----
 {/* Left sidebar with profiles and providers */}
 ⋮----
 {/* Center content area for profile settings */}
 ⋮----
-label=
-⋮----
-onChange=
-⋮----
 <span>
-<InfoIcon tooltip=
-⋮----
-value=
 ⋮----
 {/* Temperature Column */}
 ⋮----
+onClick=
+⋮----
 {/* Max Tokens Column */}
+⋮----
+onChange=
 ⋮----
 onRemove=
 onEdit=
 ⋮----
-placeholder=
+<Button onClick=
 
 ================
 File: src/renderer/src/components/settings/agent/BashToolItem.tsx
@@ -15588,9 +15565,7 @@ type Props = {
 ⋮----
 <span className="text-2xs">
 ⋮----
-onProfileChange('toolSettings', updatedSettings);
-⋮----
-placeholder=
+onChange=
 
 ================
 File: src/renderer/src/components/settings/agent/GenericToolGroupItem.tsx
@@ -15679,6 +15654,8 @@ const handleAddServer = () =>
 // Accept both { mcpServers: {...} } and just { ... }
 ⋮----
 const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) =>
+⋮----
+placeholder=
 
 ================
 File: src/renderer/src/components/settings/agent/McpServerItem.tsx
@@ -15886,8 +15863,6 @@ onChange=
 ⋮----
 {/* Vim key bindings */}
 ⋮----
-<InfoIcon tooltip=
-⋮----
 <Checkbox label=
 
 ================
@@ -15967,6 +15942,10 @@ const getTunnelButtonText = () =>
 label=
 ⋮----
 {/* Collapsible Authentication Inputs */}
+⋮----
+<span className=
+⋮----
+tooltip=
 
 ================
 File: src/renderer/src/components/settings/SettingsDialog.tsx
@@ -16002,8 +15981,6 @@ const handleLanguageChange = (language: string) =>
 const handleZoomChange = (zoomLevel: number) =>
 ⋮----
 title=
-⋮----
-confirmButtonText=
 
 ================
 File: src/renderer/src/components/terminal/Terminal.scss
@@ -16071,8 +16048,6 @@ const handleTerminalExit = (data: TerminalExitData) =>
 // Small delay to ensure the container is properly sized
 ⋮----
 // Cleanup on unmount
-⋮----
-<div key=
 
 ================
 File: src/renderer/src/components/terminal/TerminalView.tsx
@@ -16124,11 +16099,12 @@ const closeTerminalTab = (tabId: string) =>
 // Handle copying terminal output
 const handleCopyOutput = () =>
 ⋮----
+<div className=
 {/* Tab bar */}
 ⋮----
-{/* Terminal content */}
+onClick=
 ⋮----
-<div key=
+{/* Terminal content */}
 
 ================
 File: src/renderer/src/components/usage/CostBreakdownChart.tsx
@@ -16164,8 +16140,6 @@ const projects = Array.from(projectSet).sort(); // Sort for consistency
 const formatCurrency = (value: number) =>
 ⋮----
 // Limit legend items to prevent overcrowding
-⋮----
-<Bar key=
 ⋮----
 {/* Render remaining projects without legend */}
 
@@ -16205,8 +16179,6 @@ const projects = Array.from(projectSet).sort(); // Sort for consistency
 const formatCount = (value: number) =>
 ⋮----
 // Limit legend items to prevent overcrowding
-⋮----
-<Bar key=
 ⋮----
 {/* Render remaining projects without legend */}
 
@@ -16250,10 +16222,6 @@ const formatCurrency = (value: number) =>
 const formatPercentage = (value: number) =>
 ⋮----
 <Cell key=
-⋮----
-
-⋮----
-content=
 ⋮----
 // Limit legend items to prevent overcrowding
 ⋮----
@@ -16342,9 +16310,11 @@ const handleRefresh = () =>
 ⋮----
 label=
 ⋮----
-tooltip=
+className=
 ⋮----
 {/* Tab Navigation */}
+⋮----
+onClick=
 
 ================
 File: src/renderer/src/components/usage/UsageTable.tsx
@@ -16443,9 +16413,14 @@ const handleKeyDown = (e: React.KeyboardEvent) =>
 ⋮----
 zIndex: 1000, // Ensure it's above other elements
 ⋮----
+onChange(suggestion, true);
+setShowSuggestions(false);
+⋮----
+<div className=
+⋮----
 className=
 ⋮----
-onChange=
+placeholder=
 ⋮----
 {/* eslint-disable-next-line react-hooks/refs */}
 
@@ -16473,7 +16448,13 @@ type Props = {
   saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
 };
 ⋮----
-const filesTotalTokens = tokensInfo?.files ? Object.values(tokensInfo.files).reduce((sum, file)
+onClick=
+⋮----
+refreshRepoMap();
+setRefreshingAnimation(true);
+setTimeout(()
+⋮----
+data-tooltip-content=
 
 ================
 File: src/renderer/src/components/ModelSelector.tsx
@@ -16513,9 +16494,12 @@ const onModelSelectorSearchInputKeyDown = (e: KeyboardEvent<HTMLInputElement>) =
 ⋮----
 const handleRemovePreferredModel = (e: MouseEvent) =>
 ⋮----
+className=
+⋮----
 placeholder=
 ⋮----
 onChange=
+⋮----
 
 ================
 File: src/renderer/src/components/TelemetryInfoDialog.tsx
@@ -16552,6 +16536,8 @@ type Props = {
   saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
 };
 ⋮----
+className=
+⋮----
 
 ================
 File: src/renderer/src/contexts/ApiContext.tsx
@@ -16560,8 +16546,6 @@ import { createContext, useMemo, ReactNode, useContext } from 'react';
 import { ApplicationAPI } from '@common/api';
 ⋮----
 import { BrowserApi } from '@/api/browser-api';
-⋮----
-export const ApiProvider = (
 ⋮----
 export const useApi = (): ApplicationAPI =>
 
@@ -17080,9 +17064,7 @@ navigateToElement(0); // Navigate to the first result
 ⋮----
 // eslint-disable-next-line
 ⋮----
-placeholder=
-⋮----
-onChange=
+<div className=
 
 ================
 File: src/renderer/src/hooks/useVersions.ts
@@ -17586,12 +17568,16 @@ const handleCloseOtherProjects = async (baseDir: string) =>
 ⋮----
 const handleCloseAllProjects = async () =>
 ⋮----
-if (versions?.aiderDeskNewVersionReady)
-return t('settings.about.newAiderDeskVersionReady');
-⋮----
 return ''; // Should not happen if showUpdateIcon is true
 ⋮----
+setShowSettingsTab(4);
+⋮----
 tooltip=
+⋮----
+setShowSettingsTab(0);
+⋮----
+<OpenProjectDialog onClose=
+⋮----
 
 ================
 File: src/renderer/src/pages/Onboarding.tsx
@@ -17626,13 +17612,10 @@ const handleFinish = async () =>
 ⋮----
 {/* Language Selector in top-right corner */}
 ⋮----
-<p className="text-text-tertiary text-sm">{t('onboarding.getStarted')}</p>
-          </div>
-        );
-⋮----
 {/* Stepper */}
 ⋮----
 {/* Step Content */}
+
 ⋮----
 {/* Navigation Buttons */}
 
@@ -19238,8 +19221,6 @@ const ThemeAndFontManager = () =>
 // Add the current theme class, default to dark
 ⋮----
 const App = () =>
-⋮----
-useEffect(() =>
 
 ================
 File: src/renderer/src/env.d.ts
