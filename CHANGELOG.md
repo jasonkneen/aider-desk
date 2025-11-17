@@ -3,6 +3,7 @@
 ## [UNRELEASED]
 
 - added resize functionality to todo window
+- added multiselect to task sidebar
 
 ## [0.40.0]
 

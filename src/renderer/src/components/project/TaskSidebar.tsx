@@ -1,7 +1,7 @@
 import { TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { KeyboardEvent, MouseEvent, useState, memo, useRef } from 'react';
-import { HiOutlinePencil, HiOutlineTrash, HiPlus } from 'react-icons/hi';
+import { KeyboardEvent, MouseEvent, useState, memo, useRef, useEffect } from 'react';
+import { HiOutlinePencil, HiOutlineTrash, HiPlus, HiCheck } from 'react-icons/hi';
 import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { FaEllipsisVertical } from 'react-icons/fa6';
 import { IoLogoMarkdown } from 'react-icons/io';
@@ -11,7 +11,7 @@ import { clsx } from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BiCopy, BiDuplicate, BiArchive, BiArchiveIn } from 'react-icons/bi';
 import { HiXMark } from 'react-icons/hi2';
-import { useDebounce } from '@reactuses/core';
+import { useDebounce, useLongPress } from '@reactuses/core';
 
 import { useTask } from '@/contexts/TaskContext';
 import { Input } from '@/components/common/Input';
@@ -19,6 +19,7 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { Button } from '@/components/common/Button';
 import { IconButton } from '@/components/common/IconButton';
 import { useClickOutside } from '@/hooks/useClickOutside';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 
 export const COLLAPSED_WIDTH = 44;
 export const EXPANDED_WIDTH = 256;
@@ -218,6 +219,86 @@ type Props = {
   onDuplicateTask?: (taskId: string) => void;
 };
 
+// Multiselect Menu Component
+const MultiselectMenu = ({
+  selectedCount: _selectedCount,
+  hasArchived,
+  onDelete,
+  onArchive,
+  onUnarchive,
+  isOpen,
+  onToggle,
+  menuRef,
+  buttonRef,
+}: {
+  selectedCount: number;
+  hasArchived: boolean;
+  onDelete: () => void;
+  onArchive: () => void;
+  onUnarchive: () => void;
+  isOpen: boolean;
+  onToggle: () => void;
+  menuRef: React.RefObject<HTMLDivElement | null>;
+  buttonRef: React.RefObject<HTMLDivElement | null>;
+}) => {
+  const { t } = useTranslation();
+
+  return (
+    <div className="relative flex items-center">
+      <div ref={buttonRef}>
+        <button
+          className="p-1.5 rounded-md hover:bg-bg-tertiary transition-colors"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
+        >
+          <FaEllipsisVertical className="w-4 h-4 text-text-primary" />
+        </button>
+      </div>
+      {isOpen && (
+        <div ref={menuRef} className="absolute right-0 top-full mt-1 w-[170px] bg-bg-secondary-light border border-border-default-dark rounded shadow-lg z-10">
+          <ul>
+            <li
+              className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+            >
+              <HiOutlineTrash className="w-4 h-4 text-error" />
+              <span className="whitespace-nowrap">{t('taskSidebar.deleteSelected')}</span>
+            </li>
+            {!hasArchived ? (
+              <li
+                className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onArchive();
+                }}
+              >
+                <BiArchive className="w-4 h-4" />
+                <span className="whitespace-nowrap">{t('taskSidebar.archiveSelected')}</span>
+              </li>
+            ) : (
+              <li
+                className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onUnarchive();
+                }}
+              >
+                <BiArchiveIn className="w-4 h-4" />
+                <span className="whitespace-nowrap">{t('taskSidebar.unarchiveSelected')}</span>
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const TaskSidebarComponent = ({
   loading,
   tasks,
@@ -245,6 +326,41 @@ const TaskSidebarComponent = ({
   const searchInputRef = useRef<HTMLInputElement>(null);
   const debouncedSearchQuery = useDebounce(searchQuery, 50);
 
+  // Multiselect state
+  const [isMultiselectMode, setIsMultiselectMode] = useState<boolean>(false);
+  const [selectedTasks, setSelectedTasks] = useState<Set<string>>(new Set());
+  const [isMultiselectMenuOpen, setIsMultiselectMenuOpen] = useState<boolean>(false);
+  const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState<boolean>(false);
+  const [bulkArchiveConfirm, setBulkArchiveConfirm] = useState<boolean>(false);
+  const multiselectMenuRef = useRef<HTMLDivElement>(null);
+  const multiselectButtonRef = useRef<HTMLDivElement>(null);
+  const selectedArchived = Array.from(selectedTasks).filter((taskId) => tasks.find((task) => task.id === taskId)?.archived);
+
+  const handleMultiselectClose = () => {
+    setIsMultiselectMode(false);
+    setSelectedTasks(new Set());
+    setIsMultiselectMenuOpen(false);
+    setBulkDeleteConfirm(false);
+    setBulkArchiveConfirm(false);
+  };
+
+  // Handle ESC key to exit multiselect mode
+  useEffect(() => {
+    const handleKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === 'Escape' && isMultiselectMode) {
+        handleMultiselectClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isMultiselectMode]);
+
+  // Handle click outside for multiselect menu
+  useClickOutside([multiselectMenuRef, multiselectButtonRef], () => {
+    setIsMultiselectMenuOpen(false);
+  });
+
   const sortedTasks = tasks
     .filter((task) => showArchived || !task.archived)
     .filter((task) => {
@@ -266,9 +382,24 @@ const TaskSidebarComponent = ({
       }
     });
 
-  const handleTaskClick = (taskId: string) => {
-    onTaskSelect(taskId);
+  const handleTaskClick = (e: MouseEvent, taskId: string) => {
+    if (e.ctrlKey || e.metaKey) {
+      handleTaskCtrlClick(e, taskId);
+    } else if (isMultiselectMode) {
+      handleTaskClickInMultiselect(e, taskId);
+    } else {
+      onTaskSelect(taskId);
+    }
   };
+
+  const longPressProps = useLongPress(
+    () => {
+      setIsMultiselectMode(true);
+    },
+    {
+      delay: 500,
+    },
+  );
 
   const handleDeleteClick = (taskId: string) => {
     setDeleteConfirmTaskId(taskId);
@@ -366,6 +497,70 @@ const TaskSidebarComponent = ({
     }
   };
 
+  // Multiselect handlers
+  const handleTaskCtrlClick = (e: MouseEvent, taskId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isMultiselectMode) {
+      setIsMultiselectMode(true);
+      setSelectedTasks(new Set([taskId]));
+    } else {
+      setSelectedTasks((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(taskId)) {
+          newSet.delete(taskId);
+        } else {
+          newSet.add(taskId);
+        }
+        return newSet;
+      });
+    }
+  };
+
+  const handleTaskClickInMultiselect = (e: MouseEvent, taskId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    setSelectedTasks((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(taskId)) {
+        newSet.delete(taskId);
+      } else {
+        newSet.add(taskId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      if (deleteTask) {
+        await Promise.all(Array.from(selectedTasks).map((taskId) => deleteTask(taskId)));
+      }
+      handleMultiselectClose();
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to delete tasks:', error);
+    }
+  };
+
+  const handleBulkArchive = async () => {
+    try {
+      if (updateTask) {
+        if (selectedArchived.length) {
+          await Promise.all(Array.from(selectedArchived).map((taskId) => updateTask(taskId, { archived: false })));
+        } else {
+          await Promise.all(Array.from(selectedTasks).map((taskId) => updateTask(taskId, { archived: true })));
+        }
+      }
+      handleMultiselectClose();
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to archive/unarchive tasks:', error);
+    }
+  };
+
   const renderTaskStateIcon = (taskId: string, isCollapsed: boolean = false) => {
     const taskState = getTaskState(taskId, false);
     const iconSize = isCollapsed ? 'w-3.5 h-3.5' : 'w-4 h-4';
@@ -376,82 +571,104 @@ const TaskSidebarComponent = ({
     return taskState?.processing ? <CgSpinner className={clsx('animate-spin', iconSize, 'text-text-primary')} /> : null;
   };
 
-  const renderExpandedTaskItem = (task: TaskData) => (
-    <div>
-      <div
-        className={clsx(
-          'group relative flex items-center justify-between py-1 pl-2.5 cursor-pointer transition-colors border',
-          activeTaskId === task.id ? 'bg-bg-secondary border-border-dark-light' : 'hover:bg-bg-secondary border-transparent',
+  const renderExpandedTaskItem = (task: TaskData) => {
+    return (
+      <div>
+        <div
+          {...longPressProps}
+          className={clsx(
+            'group relative flex items-center justify-between py-1 pl-2.5 cursor-pointer transition-colors border',
+            activeTaskId === task.id && !isMultiselectMode
+              ? 'bg-bg-secondary border-border-dark-light'
+              : selectedTasks.has(task.id) && isMultiselectMode
+                ? 'bg-bg-secondary border-border-dark-light'
+                : 'hover:bg-bg-secondary border-transparent',
+          )}
+          onClick={(e) => handleTaskClick(e, task.id)}
+          data-task-id={task.id}
+        >
+          {isMultiselectMode && (
+            <div className="flex items-center mr-2">
+              <div
+                className={clsx(
+                  'w-4 h-4 border rounded flex items-center justify-center transition-colors',
+                  selectedTasks.has(task.id) ? 'bg-bg-primary-light-strong border-border-light text-text-primary' : 'border-border-default bg-bg-primary-light',
+                )}
+              >
+                {selectedTasks.has(task.id) && <HiCheck className="w-3 h-3" />}
+              </div>
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div
+              className={clsx(
+                'text-xs font-medium truncate transition-colors',
+                task.archived && activeTaskId !== task.id ? 'text-text-muted group-hover:text-text-primary' : 'text-text-primary',
+              )}
+            >
+              {task.name || t('taskSidebar.untitled')}
+            </div>
+            <div className="text-3xs text-text-muted truncate">
+              {formatDate(task.updatedAt || new Date().toISOString())}
+              {task.archived && ` • ${t('taskSidebar.archived')}`}
+            </div>
+          </div>
+
+          <div className="flex items-center pl-2">{renderTaskStateIcon(task.id, false)}</div>
+
+          {!isMultiselectMode && (
+            <TaskMenuButton
+              onEdit={() => handleEditClick(task.id, task.name)}
+              onDelete={task.createdAt ? () => handleDeleteClick(task.id) : undefined}
+              onExportToMarkdown={onExportToMarkdown && task.createdAt ? () => onExportToMarkdown(task.id) : undefined}
+              onExportToImage={onExportToImage && task.createdAt ? () => onExportToImage(task.id) : undefined}
+              onCopyTaskId={onCopyTaskId && task.createdAt ? () => onCopyTaskId(task.id) : undefined}
+              onDuplicateTask={onDuplicateTask && task.createdAt ? () => onDuplicateTask(task.id) : undefined}
+              onArchiveTask={task.archived || !task.createdAt ? undefined : () => handleArchiveTask(task.id)}
+              onUnarchiveTask={task.archived ? () => handleUnarchiveTask(task.id) : undefined}
+            />
+          )}
+        </div>
+
+        {editingTaskId === task.id && (
+          <div className="m-2 p-2 bg-bg-primary border border-border-default rounded-md">
+            <Input
+              value={editTaskName}
+              onChange={(e) => setEditTaskName(e.target.value)}
+              onKeyDown={handleEditKeyDown}
+              placeholder={t('taskSidebar.taskNamePlaceholder')}
+              className="mb-2"
+              size="sm"
+              autoFocus
+              onFocus={(e) => e.target.select()}
+            />
+            <div className="flex gap-2 justify-end">
+              <Button variant="text" size="xs" color="tertiary" onClick={handleCancelEdit}>
+                {t('common.cancel')}
+              </Button>
+              <Button variant="contained" color="primary" size="xs" onClick={() => handleConfirmEdit(task.id)}>
+                {t('common.confirm')}
+              </Button>
+            </div>
+          </div>
         )}
-        onClick={() => handleTaskClick(task.id)}
-      >
-        <div className="flex-1 min-w-0">
-          <div
-            className={clsx(
-              'text-xs font-medium truncate transition-colors',
-              task.archived && activeTaskId !== task.id ? 'text-text-muted group-hover:text-text-primary' : 'text-text-primary',
-            )}
-          >
-            {task.name || t('taskSidebar.untitled')}
-          </div>
-          <div className="text-3xs text-text-muted truncate">
-            {formatDate(task.updatedAt || new Date().toISOString())}
-            {task.archived && ` • ${t('taskSidebar.archived')}`}
-          </div>
-        </div>
 
-        <div className="flex items-center pl-2">{renderTaskStateIcon(task.id, false)}</div>
-
-        <TaskMenuButton
-          onEdit={() => handleEditClick(task.id, task.name)}
-          onDelete={task.createdAt ? () => handleDeleteClick(task.id) : undefined}
-          onExportToMarkdown={onExportToMarkdown && task.createdAt ? () => onExportToMarkdown(task.id) : undefined}
-          onExportToImage={onExportToImage && task.createdAt ? () => onExportToImage(task.id) : undefined}
-          onCopyTaskId={onCopyTaskId && task.createdAt ? () => onCopyTaskId(task.id) : undefined}
-          onDuplicateTask={onDuplicateTask && task.createdAt ? () => onDuplicateTask(task.id) : undefined}
-          onArchiveTask={task.archived || !task.createdAt ? undefined : () => handleArchiveTask(task.id)}
-          onUnarchiveTask={task.archived ? () => handleUnarchiveTask(task.id) : undefined}
-        />
+        {deleteConfirmTaskId === task.id && (
+          <div className="m-2 p-2 bg-bg-primary border border-border-default rounded-md">
+            <div className="text-2xs text-text-primary mb-2">{t('taskSidebar.deleteConfirm')}</div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="text" size="xs" color="tertiary" onClick={handleCancelDelete}>
+                {t('common.cancel')}
+              </Button>
+              <Button variant="contained" color="danger" size="xs" onClick={() => handleConfirmDelete(task.id)}>
+                {t('common.confirm')}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
-
-      {editingTaskId === task.id && (
-        <div className="m-2 p-2 bg-bg-primary border border-border-default rounded-md">
-          <Input
-            value={editTaskName}
-            onChange={(e) => setEditTaskName(e.target.value)}
-            onKeyDown={handleEditKeyDown}
-            placeholder={t('taskSidebar.taskNamePlaceholder')}
-            className="mb-2"
-            size="sm"
-            autoFocus
-            onFocus={(e) => e.target.select()}
-          />
-          <div className="flex gap-2 justify-end">
-            <Button variant="text" size="xs" color="tertiary" onClick={handleCancelEdit}>
-              {t('common.cancel')}
-            </Button>
-            <Button variant="contained" color="primary" size="xs" onClick={() => handleConfirmEdit(task.id)}>
-              {t('common.confirm')}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {deleteConfirmTaskId === task.id && (
-        <div className="m-2 p-2 bg-bg-primary border border-border-default rounded-md">
-          <div className="text-2xs text-text-primary mb-2">{t('taskSidebar.deleteConfirm')}</div>
-          <div className="flex gap-2 justify-end">
-            <Button variant="text" size="xs" color="tertiary" onClick={handleCancelDelete}>
-              {t('common.cancel')}
-            </Button>
-            <Button variant="contained" color="danger" size="xs" onClick={() => handleConfirmDelete(task.id)}>
-              {t('common.confirm')}
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    );
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleString();
@@ -479,40 +696,70 @@ const TaskSidebarComponent = ({
                 transition={{ duration: 0.2 }}
                 className="flex items-center justify-between w-full ml-2"
               >
-                <h3 className="text-sm font-semibold uppercase h-5">{t('taskSidebar.title')}</h3>
-                <div className="flex items-center gap-1">
-                  <IconButton
-                    onClick={() => setShowArchived(!showArchived)}
-                    tooltip={showArchived ? t('taskSidebar.hideArchived') : t('taskSidebar.showArchived')}
-                    tooltipId="task-sidebar-tooltip"
-                    className="p-1.5 hover:bg-bg-tertiary rounded-md group"
-                    icon={
-                      showArchived ? (
-                        <BiArchiveIn className="w-4 h-4 text-text-primary" />
-                      ) : (
-                        <BiArchive className="w-4 h-4 text-text-dark group-hover:text-text-muted" />
-                      )
-                    }
-                  />
-                  <button
-                    data-tooltip-id="task-sidebar-tooltip"
-                    data-tooltip-content={t('taskSidebar.search')}
-                    className="p-1 rounded-md hover:bg-bg-tertiary transition-colors"
-                    onClick={handleSearchToggle}
-                  >
-                    <MdOutlineSearch className="w-5 h-5 text-text-primary" />
-                  </button>
-                  {createNewTask && (
-                    <button
-                      data-tooltip-id="task-sidebar-tooltip"
-                      data-tooltip-content={t('taskSidebar.createTask')}
-                      className="p-1 rounded-md hover:bg-bg-tertiary transition-colors"
-                      onClick={handleCreateTask}
-                    >
-                      <HiPlus className="w-5 h-5 text-text-primary" />
-                    </button>
-                  )}
-                </div>
+                {isMultiselectMode ? (
+                  <>
+                    <h3 className="text-sm font-semibold uppercase h-5">{t('taskSidebar.title')}</h3>
+                    <div className="flex items-center gap-1">
+                      <span className="text-2xs text-text-muted mr-2">{t('taskSidebar.selectedCount', { count: selectedTasks.size })}</span>
+                      <button
+                        data-tooltip-id="task-sidebar-tooltip"
+                        data-tooltip-content={t('taskSidebar.closeMultiselect')}
+                        className="p-1 rounded-md hover:bg-bg-tertiary transition-colors"
+                        onClick={handleMultiselectClose}
+                      >
+                        <HiXMark className="w-5 h-5 text-text-primary" />
+                      </button>
+                      <MultiselectMenu
+                        selectedCount={selectedTasks.size}
+                        hasArchived={Array.from(selectedTasks).some((taskId) => tasks.find((task) => task.id === taskId)?.archived)}
+                        onDelete={() => setBulkDeleteConfirm(true)}
+                        onArchive={() => setBulkArchiveConfirm(true)}
+                        onUnarchive={() => setBulkArchiveConfirm(true)}
+                        isOpen={isMultiselectMenuOpen}
+                        onToggle={() => setIsMultiselectMenuOpen(!isMultiselectMenuOpen)}
+                        menuRef={multiselectMenuRef}
+                        buttonRef={multiselectButtonRef}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-sm font-semibold uppercase h-5">{t('taskSidebar.title')}</h3>
+                    <div className="flex items-center gap-1">
+                      <IconButton
+                        onClick={() => setShowArchived(!showArchived)}
+                        tooltip={showArchived ? t('taskSidebar.hideArchived') : t('taskSidebar.showArchived')}
+                        tooltipId="task-sidebar-tooltip"
+                        className="p-1.5 hover:bg-bg-tertiary rounded-md group"
+                        icon={
+                          showArchived ? (
+                            <BiArchiveIn className="w-4 h-4 text-text-primary" />
+                          ) : (
+                            <BiArchive className="w-4 h-4 text-text-dark group-hover:text-text-muted" />
+                          )
+                        }
+                      />
+                      <button
+                        data-tooltip-id="task-sidebar-tooltip"
+                        data-tooltip-content={t('taskSidebar.search')}
+                        className="p-1 rounded-md hover:bg-bg-tertiary transition-colors"
+                        onClick={handleSearchToggle}
+                      >
+                        <MdOutlineSearch className="w-5 h-5 text-text-primary" />
+                      </button>
+                      {createNewTask && (
+                        <button
+                          data-tooltip-id="task-sidebar-tooltip"
+                          data-tooltip-content={t('taskSidebar.createTask')}
+                          className="p-1 rounded-md hover:bg-bg-tertiary transition-colors"
+                          onClick={handleCreateTask}
+                        >
+                          <HiPlus className="w-5 h-5 text-text-primary" />
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -603,6 +850,33 @@ const TaskSidebarComponent = ({
           )}
         </AnimatePresence>
       </div>
+
+      {/* Bulk Delete Confirmation */}
+      {bulkDeleteConfirm && (
+        <ConfirmDialog
+          title={t('taskSidebar.deleteSelected')}
+          onConfirm={handleBulkDelete}
+          onCancel={() => setBulkDeleteConfirm(false)}
+          confirmButtonClass="bg-error hover:bg-error/90"
+        >
+          <div className="text-sm text-text-primary">{t('taskSidebar.deleteSelectedConfirm', { count: selectedTasks.size })}</div>
+        </ConfirmDialog>
+      )}
+
+      {/* Bulk Archive Confirmation */}
+      {bulkArchiveConfirm && (
+        <ConfirmDialog
+          title={selectedArchived.length ? t('taskSidebar.unarchiveSelected') : t('taskSidebar.archiveSelected')}
+          onConfirm={handleBulkArchive}
+          onCancel={() => setBulkArchiveConfirm(false)}
+        >
+          <div className="text-sm text-text-primary">
+            {selectedArchived.length
+              ? t('taskSidebar.unarchiveSelectedConfirm', { count: selectedArchived.length })
+              : t('taskSidebar.archiveSelectedConfirm', { count: selectedTasks.size })}
+          </div>
+        </ConfirmDialog>
+      )}
     </motion.div>
   );
 };

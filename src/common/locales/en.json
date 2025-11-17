@@ -1036,7 +1036,16 @@
     "unarchiveTask": "Unarchive Task",
     "showArchived": "Show archived",
     "hideArchived": "Hide archived",
-    "archived": "Archived"
+    "archived": "Archived",
+    "multiselectMode": "Multiselect Mode",
+    "selectedCount": "{{count}} selected",
+    "closeMultiselect": "Exit multiselect",
+    "deleteSelected": "Delete selected",
+    "archiveSelected": "Archive selected",
+    "unarchiveSelected": "Unarchive selected",
+    "deleteSelectedConfirm": "Are you sure you want to delete {{count}} selected tasks?",
+    "archiveSelectedConfirm": "Are you sure you want to archive {{count}} selected tasks?",
+    "unarchiveSelectedConfirm": "Are you sure you want to unarchive {{count}} selected tasks?"
   },
   "worktree": {
     "merge": "Merge",

@@ -1044,7 +1044,16 @@
     "unarchiveTask": "取消归档任务",
     "showArchived": "显示已归档",
     "hideArchived": "隐藏已归档",
-    "archived": "已归档"
+    "archived": "已归档",
+    "multiselectMode": "多选模式",
+    "selectedCount": "已选择 {{count}} 个",
+    "closeMultiselect": "退出多选",
+    "deleteSelected": "删除选中项",
+    "archiveSelected": "归档选中项",
+    "unarchiveSelected": "取消归档选中项",
+    "deleteSelectedConfirm": "您确定要删除 {{count}} 个选中的任务吗？",
+    "archiveSelectedConfirm": "您确定要归档 {{count}} 个选中的任务吗？",
+    "unarchiveSelectedConfirm": "您确定要取消归档 {{count}} 个选中的任务吗？"
   },
   "worktree": {
     "merge": "合并",
