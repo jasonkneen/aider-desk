@@ -1,5 +1,9 @@
 # Changelog
 
+## [UNRELEASED]
+
+- added resize functionality to todo window
+
 ## [0.40.0]
 
 - added support for MiniMax provider
