@@ -102,6 +102,7 @@ src/
         bedrock.ts
         cerebras.ts
         deepseek.ts
+        default.ts
         gemini.ts
         gpustack.ts
         groq.ts
@@ -587,6 +588,11 @@ coder_model = self.connector.coder.main_model
 running_model = self.connector.coder.main_model
 ⋮----
 running_model = models.Model(architect_model, weak_model=coder_model.weak_model.name, editor_model=coder_model.name)
+⋮----
+# check if we have temperature info for the architect model
+⋮----
+temperature = self.connector.models_info.get(architect_model).get('temperature')
+⋮----
 sequence_number = -1
 ⋮----
 coder = clone_coder(
@@ -930,6 +936,8 @@ edit_tuples = [(edit['path'], edit['original'], edit['updated']) for edit in edi
 ⋮----
 main_model = models.Model(self.coder.main_model.name, weak_model=self.coder.main_model.weak_model.name)
 ⋮----
+models_info = message.get('modelsInfo')
+⋮----
 messages = message.get('messages')
 files = message.get('files')
 ⋮----
@@ -1058,6 +1066,32 @@ tokens = self.coder.main_model.token_count_for_image(file_path)
 # approximate
 content = f"{relative_fname}\n{fence}\n" + content + "{fence}\n"
 tokens = self.coder.main_model.token_count(content)
+⋮----
+async def handle_models_info_update(self, models_info)
+⋮----
+"""Handle models info update event"""
+⋮----
+# Initialize base_local_model_metadata if not set
+⋮----
+# Transform the model info data into the expected format
+transformed_data = {}
+⋮----
+# skip models that are configured by other means
+⋮----
+max_input_tokens = info.get("maxInputTokens")
+# skip models that don't have maxInputTokens defined
+⋮----
+# Update the model_info_manager.local_model_metadata
+⋮----
+max_input_tokens = self.coder.main_model.info.get('max_input_tokens') if self.coder.main_model.info else None
+⋮----
+temperature = models_info.get(self.coder.main_model.name, {}).get('temperature')
+⋮----
+max_input_tokens = self.coder.main_model.weak_model.info.get('max_input_tokens') if self.coder.main_model.weak_model.info else None
+⋮----
+temperature = models_info.get(self.coder.main_model.weak_model.name, {}).get('temperature')
+⋮----
+# Log the updated models info
 ⋮----
 def main(argv=None)
 ⋮----
@@ -3736,7 +3770,6 @@ import {
   McpTool,
   Mode,
   Model,
-  ModelInfo,
   ModelsData,
   OS,
   ProjectData,
@@ -3840,7 +3873,6 @@ export interface ApplicationAPI {
   getReleaseNotes: () => Promise<string | null>;
   clearReleaseNotes: () => Promise<void>;
   getOS: () => Promise<OS>;
-  loadModelsInfo: () => Promise<Record<string, ModelInfo>>;
   queryUsageData: (from: string, to: string) => Promise<UsageDataRow[]>;
   getEffectiveEnvironmentVariable: (key: string, baseDir?: string) => Promise<EnvironmentVariable | undefined>;
   getProviderModels: (reload?: boolean) => Promise<ProviderModelsData>;
@@ -4438,12 +4470,14 @@ export enum FileWriteMode {
 }
 ⋮----
 export interface ModelInfo {
-  maxInputTokens: number;
-  maxOutputTokens: number;
-  inputCostPerToken: number;
-  outputCostPerToken: number;
+  maxInputTokens?: number;
+  maxOutputTokens?: number;
+  inputCostPerToken?: number;
+  outputCostPerToken?: number;
   cacheWriteInputTokenCost?: number;
   cacheReadInputTokenCost?: number;
+  useTemperature?: boolean;
+  temperature?: number;
 }
 ⋮----
 export interface TaskContext {
@@ -4914,7 +4948,7 @@ import {
   wrapLanguageModel,
 } from 'ai';
 import { delay, extractServerNameToolName } from '@common/utils';
-import { DEFAULT_MODEL_TEMPERATURE, LlmProviderName } from '@common/agent';
+import { LlmProviderName } from '@common/agent';
 import { countTokens } from 'gpt-tokenizer/model/gpt-4o';
 import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.js';
 // @ts-expect-error istextorbinary is not typed properly
@@ -5461,7 +5495,7 @@ File: src/main/connector/connector.ts
 ================
 import path from 'path';
 ⋮----
-import { ContextFile, EditFormat, FileEdit, MessageRole, Mode, PromptContext } from '@common/types';
+import { ContextFile, EditFormat, FileEdit, MessageRole, Mode, ModelInfo, PromptContext } from '@common/types';
 import { Socket } from 'socket.io';
 ⋮----
 import logger from '@/logger';
@@ -5480,6 +5514,7 @@ import {
   RunCommandMessage,
   SetModelsMessage,
   UpdateEnvVarsMessage,
+  UpdateModelsInfoMessage,
 } from '@/messages';
 ⋮----
 export class Connector
@@ -5510,6 +5545,8 @@ public sendCompactConversationMessage(customInstructions?: string)
 public sendUpdateEnvVarsMessage(environmentVariables: Record<string, unknown>)
 ⋮----
 public sendRequestTokensInfoMessage(messages:
+⋮----
+public sendUpdateModelsInfoMessage(modelsInfo: Record<string, ModelInfo>)
 
 ================
 File: src/main/connector/index.ts
@@ -5836,7 +5873,7 @@ File: src/main/models/providers/anthropic.ts
 ================
 import { createAnthropic } from '@ai-sdk/anthropic';
 import { AnthropicProvider, isAnthropicProvider } from '@common/agent';
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { Model, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 ⋮----
 import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2 } from '@ai-sdk/provider';
@@ -5846,12 +5883,9 @@ import { AiderModelMapping, CacheControl, LlmProviderStrategy } from '@/models';
 import { LoadModelsResponse } from '@/models/types';
 import { Task } from '@/task/task';
 import { getEffectiveEnvironmentVariable } from '@/utils';
+import { getDefaultModelInfo } from '@/models/providers/default';
 ⋮----
-export const loadAnthropicModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> =>
+export const loadAnthropicModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> =>
 ⋮----
 export const hasAnthropicEnvVars = (settings: SettingsData): boolean =>
 ⋮----
@@ -5903,7 +5937,7 @@ export const getAnthropicCacheControl = (): CacheControl =>
 File: src/main/models/providers/azure.ts
 ================
 import { createAzure } from '@ai-sdk/azure';
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, ReasoningEffort } from '@common/types';
+import { Model, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData } from '@common/types';
 import { AzureProvider, isAzureProvider, LlmProvider } from '@common/agent';
 import { type OpenAIChatLanguageModelOptions } from '@ai-sdk/openai';
 ⋮----
@@ -5914,6 +5948,7 @@ import logger from '@/logger';
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Task } from '@/task/task';
+import { calculateCost, getDefaultModelInfo } from '@/models/providers/default';
 ⋮----
 const extractResourceNameFromEndpoint = (endpoint: string): string =>
 ⋮----
@@ -5933,8 +5968,6 @@ type AzureMetadata = {
 };
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateAzureCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
-⋮----
 export const getAzureUsageReport = (
   task: Task,
   provider: ProviderProfile,
@@ -5972,24 +6005,19 @@ File: src/main/models/providers/bedrock.ts
 ================
 import { BedrockClient, GetFoundationModelAvailabilityCommand, type InferenceProfileSummary, ListInferenceProfilesCommand } from '@aws-sdk/client-bedrock';
 import { fromNodeProviderChain } from '@aws-sdk/credential-providers';
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { BedrockProvider, isBedrockProvider } from '@common/agent';
+import { Model, ModelInfo, ProviderProfile, SettingsData } from '@common/types';
+import { BedrockProvider, DEFAULT_MODEL_TEMPERATURE, isBedrockProvider } from '@common/agent';
 import { createAmazonBedrock } from '@ai-sdk/amazon-bedrock';
 ⋮----
-import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Task } from '@/task/task';
 import { LoadModelsResponse } from '@/models/types';
+import { getDefaultUsageReport } from '@/models/providers/default';
 ⋮----
-export const loadBedrockModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> =>
+export const loadBedrockModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> =>
 ⋮----
 // Check if we have explicit keys or if AWS_PROFILE is set in the main process env
 ⋮----
@@ -6010,12 +6038,12 @@ export const getBedrockAiderMapping = (provider: ProviderProfile, modelId: strin
 // === LLM Creation Functions ===
 export const createBedrockLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
-// === Cost and Usage Functions ===
-export const calculateBedrockCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
+const getBedrockModelInfo = (_provider: ProviderProfile, modelId: string, allModelInfos: Record<string, ModelInfo>): ModelInfo | undefined =>
 ⋮----
-export const getBedrockUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
+// check by model part of the model name (e.g. excluding any prefix before the first dot)
+// Remove prefix before first dot if present (e.g., "us.anthropic.claude-3-sonnet-20240229-v1:0" -> "anthropic.claude-3-sonnet-20240229-v1:0")
 ⋮----
-// Calculate cost internally (no caching for Bedrock)
+// Check if key ends with the modelId without prefix
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -6026,18 +6054,17 @@ export const getBedrockUsageReport = (task: Task, provider: ProviderProfile, mod
 ================
 File: src/main/models/providers/cerebras.ts
 ================
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { CerebrasProvider, isCerebrasProvider } from '@common/agent';
+import { Model, ProviderProfile, SettingsData } from '@common/types';
+import { CerebrasProvider, DEFAULT_MODEL_TEMPERATURE, isCerebrasProvider } from '@common/agent';
 import { createCerebras } from '@ai-sdk/cerebras';
 ⋮----
-import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils/environment';
 import { LoadModelsResponse } from '@/models/types';
-import { Task } from '@/task/task';
+import { getDefaultModelInfo, getDefaultUsageReport } from '@/models/providers/default';
 ⋮----
 interface CerebrasModel {
   id: string;
@@ -6045,13 +6072,7 @@ interface CerebrasModel {
   description?: string;
 }
 ⋮----
-export const loadCerebrasModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> =>
-⋮----
-// Filter out models that don't have pricing information
+export const loadCerebrasModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> =>
 ⋮----
 export const hasCerebrasEnvVars = (settings: SettingsData): boolean =>
 ⋮----
@@ -6059,13 +6080,6 @@ export const getCerebrasAiderMapping = (provider: ProviderProfile, modelId: stri
 ⋮----
 // === LLM Creation Functions ===
 export const createCerebrasLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
-⋮----
-// === Cost and Usage Functions ===
-export const calculateCerebrasCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
-⋮----
-export const getCerebrasUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
-⋮----
-// Calculate cost internally (no caching for Cerebras)
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -6076,23 +6090,18 @@ export const getCerebrasUsageReport = (task: Task, provider: ProviderProfile, mo
 ================
 File: src/main/models/providers/deepseek.ts
 ================
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { DeepseekProvider, isDeepseekProvider } from '@common/agent';
+import { Model, ProviderProfile, SettingsData } from '@common/types';
+import { DeepseekProvider, DEFAULT_MODEL_TEMPERATURE, isDeepseekProvider } from '@common/agent';
 import { createDeepSeek } from '@ai-sdk/deepseek';
 ⋮----
-import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Task } from '@/task/task';
+import { getDefaultModelInfo, getDefaultUsageReport } from '@/models/providers/default';
 ⋮----
-export const loadDeepseekModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> =>
+export const loadDeepseekModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> =>
 ⋮----
 export const hasDeepseekEnvVars = (settings: SettingsData): boolean =>
 ⋮----
@@ -6101,18 +6110,32 @@ export const getDeepseekAiderMapping = (provider: ProviderProfile, modelId: stri
 // === LLM Creation Functions ===
 export const createDeepseekLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
-// === Cost and Usage Functions ===
-export const calculateDeepseekCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
-⋮----
-export const getDeepseekUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
-⋮----
-// Calculate cost internally (no caching for DeepSeek)
-⋮----
 // === Complete Strategy Implementation ===
 ⋮----
 // Core LLM functions
 ⋮----
 // Model discovery functions
+
+================
+File: src/main/models/providers/default.ts
+================
+import { Model, ModelInfo, ProviderProfile, UsageReportData } from '@common/types';
+⋮----
+import type { LanguageModelUsage } from 'ai';
+⋮----
+import { Task } from '@/task';
+import logger from '@/logger';
+⋮----
+export const getDefaultModelInfo = (provider: ProviderProfile, modelId: string, allModelInfos: Record<string, ModelInfo>): ModelInfo | undefined =>
+⋮----
+// Try provider.name prefix first
+⋮----
+// If not found, try provider.id prefix
+⋮----
+// === Cost and Usage Functions ===
+export const calculateCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
+⋮----
+export const getDefaultUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 
 ================
 File: src/main/models/providers/gemini.ts
@@ -6129,18 +6152,16 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Task } from '@/task/task';
 ⋮----
-export const loadGeminiModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> =>
+const loadGeminiModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> =>
 ⋮----
-export const hasGeminiEnvVars = (settings: SettingsData): boolean =>
+temperature: 0.7, // Default temperature for Gemini models
 ⋮----
-export const getGeminiAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
+const hasGeminiEnvVars = (settings: SettingsData): boolean =>
+⋮----
+const getGeminiAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
 ⋮----
 // === LLM Creation Functions ===
-export const createGeminiLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
+const createGeminiLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 type GoogleMetadata = {
   google: {
@@ -6149,15 +6170,9 @@ type GoogleMetadata = {
 };
 ⋮----
 // === Cost and Usage Functions ===
-export const calculateGeminiCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
+const calculateGeminiCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
-export const getGeminiUsageReport = (
-  task: Task,
-  provider: ProviderProfile,
-  model: Model,
-  usage: LanguageModelUsage,
-  providerMetadata?: unknown,
-): UsageReportData =>
+const getGeminiUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage, providerMetadata?: unknown): UsageReportData =>
 ⋮----
 // Extract cache read tokens from provider metadata or usage
 ⋮----
@@ -6165,14 +6180,16 @@ export const getGeminiUsageReport = (
 ⋮----
 // Calculate cost internally with already deducted sentTokens
 ⋮----
-export const getGeminiProviderOptions = (llmProvider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined =>
+const getGeminiProviderOptions = (llmProvider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined =>
 ⋮----
 // Use model-specific overrides, falling back to provider defaults
 ⋮----
 // === Provider Tools Functions ===
-export const getGeminiProviderTools = (provider: LlmProvider, model: Model): ToolSet =>
+const getGeminiProviderTools = (provider: LlmProvider, model: Model): ToolSet =>
 ⋮----
 // Check for model-specific overrides
+⋮----
+const getGeminiModelInfo = (_provider: ProviderProfile, modelId: string, allModelInfos: Record<string, ModelInfo>): ModelInfo | undefined =>
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -6183,8 +6200,8 @@ export const getGeminiProviderTools = (provider: LlmProvider, model: Model): Too
 ================
 File: src/main/models/providers/gpustack.ts
 ================
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { GpustackProvider, isGpustackProvider } from '@common/agent';
+import { Model, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { DEFAULT_MODEL_TEMPERATURE, GpustackProvider, isGpustackProvider } from '@common/agent';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 ⋮----
 import type { LanguageModelUsage } from 'ai';
@@ -6204,7 +6221,7 @@ interface GpustackModelResponse {
   }>;
 }
 ⋮----
-const loadGpustackModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>, settings: SettingsData): Promise<LoadModelsResponse> =>
+const loadGpustackModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> =>
 ⋮----
 // Extract max_model_len from meta if available
 ⋮----
@@ -6233,17 +6250,16 @@ const getGpustackUsageReport = (task: Task, provider: ProviderProfile, model: Mo
 ================
 File: src/main/models/providers/groq.ts
 ================
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { GroqProvider, isGroqProvider } from '@common/agent';
+import { Model, ProviderProfile, SettingsData } from '@common/types';
+import { DEFAULT_MODEL_TEMPERATURE, GroqProvider, isGroqProvider } from '@common/agent';
 import { createGroq } from '@ai-sdk/groq';
 ⋮----
-import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Task } from '@/task/task';
+import { getDefaultModelInfo, getDefaultUsageReport } from '@/models/providers/default';
 ⋮----
 interface GroqModel {
   id: string;
@@ -6253,9 +6269,7 @@ interface GroqApiResponse {
   data: GroqModel[];
 }
 ⋮----
-export const loadGroqModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>, settings: SettingsData): Promise<LoadModelsResponse> =>
-⋮----
-// Filter out models that don't have pricing information
+export const loadGroqModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> =>
 ⋮----
 export const hasGroqEnvVars = (settings: SettingsData): boolean =>
 ⋮----
@@ -6263,13 +6277,6 @@ export const getGroqAiderMapping = (provider: ProviderProfile, modelId: string):
 ⋮----
 // === LLM Creation Functions ===
 export const createGroqLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
-⋮----
-// === Cost and Usage Functions ===
-export const calculateGroqCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
-⋮----
-export const getGroqUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
-⋮----
-// Calculate cost internally (no caching for Groq)
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -6280,8 +6287,8 @@ export const getGroqUsageReport = (task: Task, provider: ProviderProfile, model:
 ================
 File: src/main/models/providers/lm-studio.ts
 ================
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { isLmStudioProvider, LmStudioProvider } from '@common/agent';
+import { Model, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { DEFAULT_MODEL_TEMPERATURE, isLmStudioProvider, LmStudioProvider } from '@common/agent';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 ⋮----
 import type { LanguageModelUsage } from 'ai';
@@ -6292,15 +6299,9 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Task } from '@/task/task';
 ⋮----
-export const loadLmStudioModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> =>
+export const loadLmStudioModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> =>
 ⋮----
 const normalized = effectiveBaseUrl.replace(/\/+$/g, ''); // Remove all trailing slashes
-⋮----
-...info, // Merge with existing model info if available
 ⋮----
 export const hasLmStudioEnvVars = (settings: SettingsData): boolean =>
 ⋮----
@@ -6309,12 +6310,9 @@ export const getLmStudioAiderMapping = (provider: ProviderProfile, modelId: stri
 // === LLM Creation Functions ===
 export const createLmStudioLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
-// === Cost and Usage Functions ===
-export const calculateLmStudioCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
-⋮----
 export const getLmStudioUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
-// Calculate cost internally (no caching for LM Studio)
+// no cost for LMStudio models
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -6403,8 +6401,8 @@ export const getMinimaxCacheControl = (): CacheControl =>
 ================
 File: src/main/models/providers/ollama.ts
 ================
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { isOllamaProvider, OllamaProvider } from '@common/agent';
+import { Model, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { DEFAULT_MODEL_TEMPERATURE, isOllamaProvider, OllamaProvider } from '@common/agent';
 import { createOllama } from 'ollama-ai-provider-v2';
 import { simulateStreamingMiddleware, wrapLanguageModel } from 'ai';
 ⋮----
@@ -6416,15 +6414,9 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Task } from '@/task/task';
 ⋮----
-export const loadOllamaModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> =>
+export const loadOllamaModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> =>
 ⋮----
 let normalized = effectiveBaseUrl.replace(/\/+$/, ''); // Remove all trailing slashes
-⋮----
-...info, // Merge with existing model info if available
 ⋮----
 export const hasOllamaEnvVars = (settings: SettingsData): boolean =>
 ⋮----
@@ -6435,12 +6427,9 @@ export const createOllamaLlm = (profile: ProviderProfile, model: Model, settings
 ⋮----
 let normalized = baseUrl.replace(/\/+$/, ''); // Remove all trailing slashes
 ⋮----
-// === Cost and Usage Functions ===
-export const calculateOllamaCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
-⋮----
 export const getOllamaUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
-// Calculate cost internally (no caching for Ollama)
+// Cost is always 0 for Ollama
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -6451,23 +6440,18 @@ export const getOllamaUsageReport = (task: Task, provider: ProviderProfile, mode
 ================
 File: src/main/models/providers/openai-compatible.ts
 ================
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, ReasoningEffort } from '@common/types';
-import { isOpenAiCompatibleProvider, OpenAiCompatibleProvider, LlmProvider } from '@common/agent';
+import { Model, ProviderProfile, ReasoningEffort, SettingsData } from '@common/types';
+import { DEFAULT_MODEL_TEMPERATURE, isOpenAiCompatibleProvider, LlmProvider, OpenAiCompatibleProvider } from '@common/agent';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 ⋮----
-import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
-import { Task } from '@/task/task';
 import { getEffectiveEnvironmentVariable } from '@/utils';
+import { getDefaultUsageReport } from '@/models/providers/default';
 ⋮----
-const loadOpenaiCompatibleModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> =>
+const loadOpenaiCompatibleModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> =>
 ⋮----
 const hasOpenAiCompatibleEnvVars = (settings: SettingsData): boolean =>
 ⋮----
@@ -6479,13 +6463,6 @@ const getOpenAiCompatibleAiderMapping = (provider: ProviderProfile, modelId: str
 const createOpenAiCompatibleLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
 ⋮----
 // Use createOpenAICompatible to get a provider instance, then get the model
-⋮----
-// === Cost and Usage Functions ===
-const calculateOpenAiCompatibleCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
-⋮----
-const getOpenAiCompatibleUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
-⋮----
-// Calculate cost internally (no caching for OpenAI Compatible)
 ⋮----
 // === Configuration Helper Functions ===
 const getOpenAiCompatibleProviderOptions = (provider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined =>
@@ -6506,8 +6483,8 @@ const getOpenAiCompatibleProviderOptions = (provider: LlmProvider, model: Model)
 File: src/main/models/providers/openai.ts
 ================
 import { createOpenAI } from '@ai-sdk/openai';
-import { isOpenAiProvider, OpenAiProvider, LlmProvider } from '@common/agent';
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, ReasoningEffort } from '@common/types';
+import { isOpenAiProvider, LlmProvider, OpenAiProvider } from '@common/agent';
+import { Model, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData } from '@common/types';
 ⋮----
 import type { LanguageModelUsage, ToolSet } from 'ai';
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
@@ -6516,12 +6493,9 @@ import logger from '@/logger';
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import { Task } from '@/task/task';
 import { getEffectiveEnvironmentVariable } from '@/utils';
+import { calculateCost, getDefaultModelInfo } from '@/models/providers/default';
 ⋮----
-export const loadOpenAiModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> =>
+export const loadOpenAiModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> =>
 ⋮----
 export const hasOpenAiEnvVars = (settings: SettingsData): boolean =>
 ⋮----
@@ -6537,9 +6511,6 @@ type OpenAiMetadata = {
     cachedPromptTokens?: number;
   };
 };
-⋮----
-// === Cost and Usage Functions ===
-export const calculateOpenAiCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
 export const getOpenAiUsageReport = (
   task: Task,
@@ -6578,18 +6549,19 @@ export const getOpenAiProviderTools = (provider: LlmProvider, model: Model): Too
 ================
 File: src/main/models/providers/openrouter.ts
 ================
-import { AgentProfile, Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
-import { isOpenRouterProvider, LlmProvider, OpenRouterProvider } from '@common/agent';
+import { AgentProfile, Model, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { DEFAULT_MODEL_TEMPERATURE, isOpenRouterProvider, LlmProvider, OpenRouterProvider } from '@common/agent';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 ⋮----
 import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AIDER_DESK_TITLE, AIDER_DESK_WEBSITE } from '@/constants';
-import { AiderModelMapping, LlmProviderStrategy, CacheControl, LoadModelsResponse } from '@/models';
+import { AiderModelMapping, CacheControl, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Task } from '@/task/task';
+import { calculateCost } from '@/models/providers/default';
 ⋮----
 interface OpenRouterTopProvider {
   is_moderated: boolean;
@@ -6618,11 +6590,9 @@ interface OpenRouterModelsResponse {
   data: OpenRouterModel[];
 }
 ⋮----
-export const loadOpenrouterModels = async (
-  profile: ProviderProfile,
-  _modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> =>
+const getDefaultModelTemperature = (modelId: string) =>
+⋮----
+const loadOpenrouterModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> =>
 ⋮----
 export const hasOpenRouterEnvVars = (settings: SettingsData): boolean =>
 ⋮----
@@ -6647,11 +6617,6 @@ type OpenRouterMetadata = {
     };
   };
 };
-⋮----
-// === Cost and Usage Functions ===
-export const calculateOpenRouterCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
-⋮----
-// OpenRouter provides cost directly from provider metadata, but we'll calculate it as fallback
 ⋮----
 export const getOpenRouterUsageReport = (
   task: Task,
@@ -6681,15 +6646,15 @@ export const getOpenRouterCacheControl = (profile: AgentProfile, llmProvider: Ll
 ================
 File: src/main/models/providers/requesty.ts
 ================
-import { AgentProfile, Model, ModelInfo, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData } from '@common/types';
-import { isRequestyProvider, LlmProvider, RequestyProvider } from '@common/agent';
+import { AgentProfile, Model, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData } from '@common/types';
+import { DEFAULT_MODEL_TEMPERATURE, isRequestyProvider, LlmProvider, RequestyProvider } from '@common/agent';
 import { createRequesty, type RequestyProviderMetadata } from '@requesty/ai-sdk';
 ⋮----
 import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2 } from '@ai-sdk/provider';
 ⋮----
 import { AIDER_DESK_TITLE, AIDER_DESK_WEBSITE } from '@/constants';
-import { AiderModelMapping, LlmProviderStrategy, CacheControl, LoadModelsResponse } from '@/models';
+import { AiderModelMapping, CacheControl, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Task } from '@/task/task';
@@ -6715,11 +6680,9 @@ interface RequestyModelsResponse {
   data: RequestyModel[];
 }
 ⋮----
-export const loadRequestyModels = async (
-  profile: ProviderProfile,
-  _modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> =>
+const getDefaultModelTemperature = (modelId: string) =>
+⋮----
+const loadRequestyModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> =>
 ⋮----
 export const hasRequestyEnvVars = (settings: SettingsData): boolean =>
 ⋮----
@@ -6781,15 +6744,13 @@ import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
 import { Task } from '@/task/task';
 ⋮----
-export const loadVertexAIModels = async (
-  profile: ProviderProfile,
-  modelsInfo: Record<string, ModelInfo>,
-  settings: SettingsData,
-): Promise<LoadModelsResponse> =>
+export const loadVertexAIModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> =>
 ⋮----
 // Use provided credentials JSON
 ⋮----
 // Use default credentials (e.g., gcloud, environment variables, or service account)
+⋮----
+temperature: 0.7, // Default temperature for Vertex AI models
 ⋮----
 export const hasVertexAiEnvVars = (_settings: SettingsData): boolean =>
 ⋮----
@@ -6811,12 +6772,11 @@ type VertexGoogleMetadata = {
   };
 };
 ⋮----
-// === Cost and Usage Functions ===
-export const calculateVertexAiCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
+const calculateVertexAiCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
 ⋮----
 // Use model overrides if available, otherwise use base model info
 ⋮----
-export const getVertexAiUsageReport = (
+const getVertexAiUsageReport = (
   task: Task,
   provider: ProviderProfile,
   model: Model,
@@ -6834,6 +6794,8 @@ export const getVertexAiProviderOptions = (llmProvider: LlmProvider, model: Mode
 ⋮----
 // Use model-specific overrides, falling back to provider defaults
 ⋮----
+const getVertexAiModelInfo = (_provider: ProviderProfile, modelId: string, allModelInfos: Record<string, ModelInfo>): ModelInfo | undefined =>
+⋮----
 // === Complete Strategy Implementation ===
 ⋮----
 // Core LLM functions
@@ -6849,17 +6811,21 @@ import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from
 import { isZaiPlanProvider, ZaiPlanProvider } from '@common/agent';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 ⋮----
-import type { LanguageModelUsage } from 'ai';
+import { calculateCost, getDefaultUsageReport } from './default';
+⋮----
 import type { LanguageModelV2 } from '@ai-sdk/provider';
+import type { LanguageModelUsage } from 'ai';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
-import { Task } from '@/task/task';
 import { getEffectiveEnvironmentVariable } from '@/utils';
+import { Task } from '@/task';
 ⋮----
-const loadZaiPlanModels = async (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>, settings: SettingsData): Promise<LoadModelsResponse> =>
+const loadZaiPlanModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> =>
 ⋮----
 // ZAI uses specific endpoint for model discovery
+⋮----
+temperature: 0.1, // Default temperature for ZAI models
 ⋮----
 const hasZaiPlanEnvVars = (): boolean
 ⋮----
@@ -6875,14 +6841,9 @@ const createZaiPlanLlm = (profile: ProviderProfile, model: Model, settings: Sett
 // Use createOpenAICompatible to get a provider instance, then get the model
 // ZAI uses specific base URL for chat completions
 ⋮----
-// === Cost and Usage Functions ===
-const calculateZaiPlanCost = (model: Model, sentTokens: number, receivedTokens: number, cacheReadTokens: number = 0): number =>
+export const getZaiPlanUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
 ⋮----
-// Use model overrides if available, otherwise use base model info
-⋮----
-const getZaiPlanUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData =>
-⋮----
-// Calculate cost internally (no caching for ZAI Plan)
+const getZaiPlanModelInfo = (_provider: ProviderProfile, modelId: string, allModelInfos: Record<string, ModelInfo>): ModelInfo | undefined =>
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -6902,7 +6863,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 ⋮----
 import { AVAILABLE_PROVIDERS, getDefaultProviderParams, LlmProvider, LlmProviderName } from '@common/agent';
-import { AgentProfile, Model, ModelInfo, SettingsData, ModelOverrides, ProviderModelsData, ProviderProfile, UsageReportData } from '@common/types';
+import { AgentProfile, Model, ModelInfo, ModelOverrides, ProviderModelsData, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
 ⋮----
 import { anthropicProviderStrategy } from './providers/anthropic';
 import { azureProviderStrategy } from './providers/azure';
@@ -6923,14 +6884,14 @@ import { vertexAiProviderStrategy } from './providers/vertex-ai';
 import { zaiPlanProviderStrategy } from './providers/zai-plan';
 ⋮----
 import type { LanguageModelV2 } from '@ai-sdk/provider';
-import type { LanguageModelUsage, ToolSet, JSONValue } from 'ai';
+import type { JSONValue, LanguageModelUsage, ToolSet } from 'ai';
 ⋮----
-import { AIDER_DESK_DATA_DIR, AIDER_DESK_CACHE_DIR } from '@/constants';
+import { AIDER_DESK_CACHE_DIR, AIDER_DESK_DATA_DIR } from '@/constants';
 import logger from '@/logger';
 import { Store } from '@/store';
 import { EventManager } from '@/events';
 import { Task } from '@/task/task';
-import { AiderModelMapping, CacheControl, LlmProviderRegistry } from '@/models/types';
+import { AiderModelMapping, CacheControl, LlmProviderRegistry, LlmProviderStrategy } from '@/models/types';
 ⋮----
 type ModelsMetaResponse = Record<
   string,
@@ -6945,6 +6906,7 @@ type ModelsMetaResponse = Record<
           cache_read?: number;
           cache_write?: number;
         };
+        temperature?: boolean;
         limit: {
           context: number;
           output: number;
@@ -6979,8 +6941,6 @@ const fetchFreshDataAndCache = async (cacheFile: string): Promise<void> =>
 ⋮----
 private processModelsMeta(data: ModelsMetaResponse)
 ⋮----
-// Add properties only if they don't exist
-⋮----
 getModelInfo(modelName: string): ModelInfo | undefined
 ⋮----
 private createEnvVarProvider(providerName: LlmProviderName): ProviderProfile
@@ -6991,8 +6951,6 @@ private getChangedProviders(oldProviders: ProviderProfile[], newProviders: Provi
 ⋮----
 async providersChanged(oldProviders: ProviderProfile[], newProviders: ProviderProfile[])
 ⋮----
-async getAllModelsInfo(): Promise<Record<string, ModelInfo>>
-⋮----
 private async loadProviderModels(providers: ProviderProfile[]): Promise<void>
 ⋮----
 // Group providers by their provider name
@@ -7001,11 +6959,15 @@ const loadModels = async () =>
 ⋮----
 // Load models from each profile for this provider type
 ⋮----
-// Add custom models or override existing ones
-⋮----
 // Emit the updated provider models event
 ⋮----
 // Update agent profiles with the new models
+⋮----
+private enrichWithModelInfo(models: Model[], profile: ProviderProfile, strategy: LlmProviderStrategy): Model[]
+⋮----
+// remove temperature if model does not support it
+⋮----
+private enrichWithOverrides(models: Model[], providerId: string): Model[]
 ⋮----
 /**
    * Detect and add automatic providers from environment variables
@@ -7030,7 +6992,7 @@ getAiderModelMapping(modelName: string): AiderModelMapping
 ⋮----
 private getProviderAiderMapping(provider: ProviderProfile, modelId: string): AiderModelMapping
 ⋮----
-getModel(providerId: string, modelId: string): Model | undefined
+getModel(providerId: string, modelId: string, useModelInfoFallback = false): Model | undefined
 ⋮----
 createLlm(provider: ProviderProfile, model: string | Model, settings: SettingsData, projectDir: string): LanguageModelV2
 ⋮----
@@ -7041,8 +7003,6 @@ createLlm(provider: ProviderProfile, model: string | Model, settings: SettingsDa
 getUsageReport(task: Task, provider: ProviderProfile, model: string | Model, usage: LanguageModelUsage, providerMetadata?: unknown): UsageReportData
 ⋮----
 // Resolve Model object
-⋮----
-// Fallback to creating a minimal Model object if not found
 ⋮----
 getCacheControl(profile: AgentProfile, llmProvider: LlmProvider): CacheControl
 ⋮----
@@ -7118,7 +7078,7 @@ export interface LlmProviderStrategy {
   /**
    * Loads available models from the provider's API
    */
-  loadModels: (profile: ProviderProfile, modelsInfo: Record<string, ModelInfo>, settings: SettingsData) => Promise<LoadModelsResponse>;
+  loadModels: (profile: ProviderProfile, settings: SettingsData) => Promise<LoadModelsResponse>;
 
   /**
    * Checks if required environment variables are available
@@ -7150,6 +7110,11 @@ export interface LlmProviderStrategy {
    * Returns provider-specific parameters for the given model
    */
   getProviderParameters?: (provider: LlmProvider, model: Model) => Record<string, unknown>;
+
+  /**
+   * Returns model info for a specific model ID
+   */
+  getModelInfo?: (provider: ProviderProfile, modelId: string, allModelInfos: Record<string, ModelInfo>) => ModelInfo | undefined;
 }
 ⋮----
 // === LLM Creation and Usage Functions ===
@@ -7190,6 +7155,10 @@ export interface LlmProviderStrategy {
 ⋮----
 /**
    * Returns provider-specific parameters for the given model
+   */
+⋮----
+/**
+   * Returns model info for a specific model ID
    */
 ⋮----
 export type LlmProviderRegistry = Record<LlmProviderName, LlmProviderStrategy>;
@@ -7298,6 +7267,8 @@ public async restartProject(baseDir: string): Promise<void>
 public async close(): Promise<void>
 ⋮----
 settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
+⋮----
+modelsUpdated()
 ⋮----
 public getCustomCommands(baseDir: string)
 
@@ -7657,8 +7628,6 @@ registerRoutes(router: Router): void
 // Get settings
 ⋮----
 // Update settings
-⋮----
-// Get models
 ⋮----
 // Get recent projects
 ⋮----
@@ -8188,7 +8157,7 @@ import { EditFormat, ModelsData, ProjectSettings, TokensInfoData } from '@common
 import { fileExists } from '@common/utils';
 import treeKill from 'tree-kill';
 ⋮----
-import { AIDER_DESK_CONNECTOR_DIR, AIDER_DESK_PROJECT_RULES_DIR, PID_FILES_DIR, PYTHON_COMMAND, SERVER_PORT } from '@/constants';
+import { AIDER_DESK_CONNECTOR_DIR, AIDER_DESK_PROJECT_RULES_DIR, AIDER_DESK_TASKS_DIR, PID_FILES_DIR, PYTHON_COMMAND, SERVER_PORT } from '@/constants';
 import { Connector } from '@/connector';
 import logger from '@/logger';
 import { Store } from '@/store';
@@ -8441,6 +8410,7 @@ import {
   UsageReportData,
   UserMessageData,
   WorkingMode,
+  ModelInfo,
 } from '@common/types';
 import { extractTextContent, fileExists, getActiveAgentProfile, parseUsageReport } from '@common/utils';
 import { COMPACT_CONVERSATION_AGENT_PROFILE, INIT_PROJECT_AGENTS_PROFILE } from '@common/agent';
@@ -8668,6 +8638,21 @@ public updateModels(mainModel: string, weakModel: string | null, editFormat: Edi
 ⋮----
 public setArchitectModel(architectModel: string)
 ⋮----
+private async sendUpdateModelsInfo(): Promise<void>
+⋮----
+// Helper function to extract model info using getModel with fallback
+const extractModelInfo = (modelName: string | null | undefined) =>
+⋮----
+// Parse providerId and actual modelId from the modelId string
+⋮----
+// Extract info for main model
+⋮----
+// Extract info for weak model
+⋮----
+// Extract info for architect model
+⋮----
+// Send to connectors that listen to 'update-models-info'
+⋮----
 public async getAddableFiles(searchRegex?: string): Promise<string[]>
 ⋮----
 public getContextFiles(): ContextFile[]
@@ -8765,6 +8750,8 @@ settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
 // Check for changes in agent config properties that affect token count
 ⋮----
 // Check for changes in Aider
+⋮----
+async modelsUpdated()
 ⋮----
 private sendUpdateEnvVars(environmentVariables: Record<string, unknown>)
 ⋮----
@@ -9995,7 +9982,6 @@ import {
   McpTool,
   Mode,
   Model,
-  ModelInfo,
   OS,
   ProjectData,
   ProjectSettings,
@@ -10003,8 +9989,8 @@ import {
   ProviderProfile,
   ResponseCompletedData,
   SettingsData,
-  TaskStateData,
   TaskData,
+  TaskStateData,
   TodoItem,
   UsageDataRow,
   VersionsInfo,
@@ -10034,10 +10020,6 @@ constructor(
 loadSettings(): SettingsData
 ⋮----
 async saveSettings(newSettings: SettingsData): Promise<SettingsData>
-⋮----
-async getModelsInfo(): Promise<Record<string, ModelInfo>>
-⋮----
-return {}; // Return empty object or handle error as appropriate
 ⋮----
 getProjectSettings(baseDir: string): ProjectSettings
 ⋮----
@@ -10374,17 +10356,18 @@ const cleanup = async (): Promise<void> =>
 File: src/main/messages.ts
 ================
 import {
-  ContextFileSourceType,
   ContextFile,
-  TokensCost,
-  FileEdit,
-  UsageReportData,
-  LogLevel,
-  Mode,
-  MessageRole,
-  RawModelInfo,
+  ContextFileSourceType,
   EditFormat,
+  FileEdit,
+  LogLevel,
+  MessageRole,
+  Mode,
+  ModelInfo,
   PromptContext,
+  RawModelInfo,
+  TokensCost,
+  UsageReportData,
 } from '@common/types';
 ⋮----
 export type MessageAction =
@@ -10410,7 +10393,8 @@ export type MessageAction =
   | 'update-env-vars'
   | 'request-context-info'
   | 'subscribe-events'
-  | 'unsubscribe-events';
+  | 'unsubscribe-events'
+  | 'update-models-info';
 ⋮----
 export interface Message {
   action: MessageAction;
@@ -10594,6 +10578,13 @@ export interface UpdateEnvVarsMessage extends Message {
 }
 ⋮----
 export const isUpdateEnvVarsMessage = (message: Message): message is UpdateEnvVarsMessage =>
+⋮----
+export interface UpdateModelsInfoMessage extends Message {
+  action: 'update-models-info';
+  modelsInfo: Record<string, ModelInfo>;
+}
+⋮----
+export const isUpdateModelsInfoMessage = (message: Message): message is UpdateModelsInfoMessage =>
 ⋮----
 export interface RequestContextInfoMessage extends Message {
   action: 'request-context-info';
@@ -10830,7 +10821,6 @@ import {
   McpTool,
   Mode,
   Model,
-  ModelInfo,
   ModelsData,
   OS,
   ProjectData,
@@ -10844,8 +10834,8 @@ import {
   ResponseChunkData,
   ResponseCompletedData,
   SettingsData,
-  TaskStateData,
   TaskData,
+  TaskStateData,
   TerminalData,
   TerminalExitData,
   TodoItem,
@@ -10999,7 +10989,6 @@ downloadLatestAiderDesk(): Promise<void>
 async getReleaseNotes(): Promise<string | null>
 clearReleaseNotes(): Promise<void>
 async getOS(): Promise<OS>
-loadModelsInfo(): Promise<Record<string, ModelInfo>>
 getProviderModels(reload?: boolean): Promise<ProviderModelsData>
 getProviders(): Promise<ProviderProfile[]>
 updateProviders(providers: ProviderProfile[]): Promise<ProviderProfile[]>
@@ -13830,6 +13819,8 @@ const handleInputChange = (field: keyof Model, value: unknown) =>
 ⋮----
 // Clear error when user starts typing
 ⋮----
+const handleTemperatureToggle = (enabled: boolean) =>
+⋮----
 label=
 ⋮----
 onChange=
@@ -13944,7 +13935,6 @@ import { useTranslation } from 'react-i18next';
 import { FiEdit2, FiTrash2, FiPlus, FiEye, FiSliders, FiRefreshCw } from 'react-icons/fi';
 import { Model, ProviderProfile } from '@common/types';
 import { MdThermostat } from 'react-icons/md';
-import { DEFAULT_MODEL_TEMPERATURE } from '@common/agent';
 ⋮----
 import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
