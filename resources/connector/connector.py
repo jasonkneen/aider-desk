@@ -25,9 +25,11 @@ import litellm
 import types
 
 class PromptContext:
-  def __init__(self, id: str, group=None):
+  def __init__(self, id: str, group=None, auto_approve=False, deny_commands=False):
     self.id = id
     self.group = group
+    self.auto_approve = auto_approve
+    self.deny_commands = deny_commands
 
 nest_asyncio.apply()
 
@@ -501,6 +503,17 @@ class ConnectorInputOutput(InputOutput):
         await asyncio.sleep(0.25)
       return confirmation_result
 
+    if question == "Add URL to the chat?":
+      # we are handling this in AiderDesk differently
+      return False
+
+    if self.prompt_context:
+      if question.startswith("Run shell command") and self.prompt_context.deny_commands:
+        return False
+
+      if self.prompt_context.auto_approve:
+        return True
+
     if result is None:
       result = wait_for_async(self.connector, ask_question())
 
@@ -891,11 +904,17 @@ class Connector:
         prompt_context_data = message.get('promptContext')
         messages = message.get('messages', [])
         files = message.get('files', [])
+        options = message.get('options', {})
 
         if not prompt:
           return
 
-        prompt_context = PromptContext(prompt_context_data.get('id'), prompt_context_data.get('group'))
+        # Log the options with default values
+        auto_approve = options.get('autoApprove', False)
+        deny_commands = options.get('denyCommands', False)
+        self.coder.io.tool_output(f"AiderRunOptions received: autoApprove={auto_approve}, denyCommands={deny_commands}")
+
+        prompt_context = PromptContext(prompt_context_data.get('id'), prompt_context_data.get('group'), auto_approve, deny_commands)
         await self.prompt_executor.run_prompt(prompt, prompt_context, mode, architect_model, messages, files)
 
       elif action == "answer-question":

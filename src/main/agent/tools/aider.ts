@@ -210,7 +210,10 @@ export const createAiderToolset = (task: Task, profile: AgentProfile, promptCont
 
       task.addToolMessage(toolCallId, TOOL_GROUP_NAME, TOOL_RUN_PROMPT, { prompt }, undefined, undefined, aiderPromptContext);
 
-      const responses = await task.sendPrompt(prompt, aiderPromptContext, 'code', []);
+      const responses = await task.sendPromptToAider(prompt, aiderPromptContext, 'code', [], undefined, {
+        autoApprove: task.task.autoApprove,
+        denyCommands: true,
+      });
 
       // Notify that we are still processing after aider finishes
       task.addLogMessage('loading');

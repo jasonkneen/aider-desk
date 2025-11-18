@@ -1,6 +1,6 @@
 import path from 'path';
 
-import { ContextFile, EditFormat, FileEdit, MessageRole, Mode, ModelInfo, PromptContext } from '@common/types';
+import { AiderRunOptions, ContextFile, EditFormat, FileEdit, MessageRole, Mode, ModelInfo, PromptContext } from '@common/types';
 import { Socket } from 'socket.io';
 
 import logger from '@/logger';
@@ -51,6 +51,7 @@ export class Connector {
     architectModel: string | null = null,
     messages: { role: MessageRole; content: string }[] = [],
     files: ContextFile[] = [],
+    options?: AiderRunOptions,
   ): void {
     const message: PromptMessage = {
       action: 'prompt',
@@ -60,6 +61,7 @@ export class Connector {
       architectModel,
       messages,
       files,
+      options,
     };
     this.sendMessage(message);
   }

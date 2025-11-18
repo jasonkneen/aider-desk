@@ -46,6 +46,11 @@ export type LocalizedString = {
 
 export type Mode = 'code' | 'ask' | 'architect' | 'context' | 'agent';
 
+export interface AiderRunOptions {
+  autoApprove?: boolean;
+  denyCommands?: boolean;
+}
+
 export type EditFormat = 'diff' | 'diff-fenced' | 'whole' | 'udiff' | 'udiff-simple' | 'patch';
 
 export enum ReasoningEffort {

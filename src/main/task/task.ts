@@ -4,6 +4,7 @@ import path from 'path';
 import { simpleGit } from 'simple-git';
 import YAML from 'yaml';
 import {
+  AiderRunOptions,
   AgentProfile,
   ContextAssistantMessage,
   ContextFile,
@@ -490,7 +491,7 @@ export class Task {
       startedAt: new Date().toISOString(),
     });
 
-    const responses = await this.sendPrompt(prompt, promptContext, mode);
+    const responses = await this.sendPromptToAider(prompt, promptContext, mode, undefined, undefined, undefined);
     logger.debug('Responses:', { responses });
 
     // add messages to session
@@ -581,24 +582,23 @@ export class Task {
     return await this.agent.runAgent(this, profile, prompt, promptContext, contextMessages, contextFiles, systemPrompt, abortSignal);
   }
 
-  public sendPrompt(
+  public sendPromptToAider(
     prompt: string,
     promptContext: PromptContext = { id: uuidv4() },
     mode?: Mode,
-    messages?: { role: MessageRole; content: string }[],
-    files?: ContextFile[],
+    messages: { role: MessageRole; content: string }[] = this.contextManager.toConnectorMessages(),
+    files: ContextFile[] = this.contextManager.getContextFiles(),
+    options?: AiderRunOptions,
   ): Promise<ResponseCompletedData[]> {
     this.currentPromptResponses = [];
     this.currentResponseMessageId = null;
     this.currentPromptContext = promptContext;
 
-    const connectorMessages = messages || this.contextManager.toConnectorMessages();
-    const contextFiles = files || this.contextManager.getContextFiles();
     const architectModel = this.aiderManager.getArchitectModel();
     const architectModelMapping = architectModel ? this.modelManager.getAiderModelMapping(architectModel) : null;
 
     this.findMessageConnectors('prompt').forEach((connector) => {
-      connector.sendPromptMessage(prompt, promptContext, mode, architectModelMapping?.modelName, connectorMessages, contextFiles);
+      connector.sendPromptMessage(prompt, promptContext, mode, architectModelMapping?.modelName, messages, files, options);
     });
 
     // Wait for prompt to finish and return collected responses
@@ -1418,7 +1418,7 @@ export class Task {
         await this.contextManager.loadMessages(this.contextManager.getContextMessages());
       }
     } else {
-      const responses = await this.sendPrompt(getCompactConversationPrompt(customInstructions), undefined, 'ask', undefined, []);
+      const responses = await this.sendPromptToAider(getCompactConversationPrompt(customInstructions), undefined, 'ask', undefined, [], undefined);
 
       // add messages to session
       this.contextManager.setContextMessages([userMessage], false);

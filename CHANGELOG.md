@@ -4,6 +4,7 @@
 
 - added resize functionality to todo window
 - added multiselect to task sidebar
+- passing auto approve options and denying execution of bash commands when running Aider via tool
 
 ## [0.40.0]
 

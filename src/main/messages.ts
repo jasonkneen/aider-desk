@@ -1,4 +1,5 @@
 import {
+  AiderRunOptions,
   ContextFile,
   ContextFileSourceType,
   EditFormat,
@@ -72,6 +73,7 @@ export interface PromptMessage extends Message {
   promptContext: PromptContext;
   messages?: { role: MessageRole; content: string }[];
   files?: ContextFile[];
+  options?: AiderRunOptions;
 }
 
 export interface ResponseMessage extends Message {
