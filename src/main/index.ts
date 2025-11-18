@@ -1,15 +1,13 @@
 import { join } from 'path';
 import { existsSync, statSync } from 'fs';
 
-// eslint-disable-next-line import/order
-import { AIDER_DESK_DATA_DIR, HEADLESS_MODE } from '@/constants';
-
 import { compareBaseDirs, delay } from '@common/utils';
 import { electronApp, is, optimizer } from '@electron-toolkit/utils';
 import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
 
 import icon from '../../resources/icon.png?asset';
 
+import { AIDER_DESK_DATA_DIR, HEADLESS_MODE } from '@/constants';
 import { ProgressWindow } from '@/progress-window';
 import { setupIpcHandlers } from '@/ipc-handlers';
 import { performStartUp, UpdateProgressData } from '@/start-up';

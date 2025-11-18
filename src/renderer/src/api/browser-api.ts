@@ -38,7 +38,9 @@ import {
   UsageDataRow,
   UserMessageData,
   VersionsInfo,
+  VoiceSession,
 } from '@common/types';
+import { LlmProvider } from '@common/agent';
 import { ApplicationAPI } from '@common/api';
 import axios, { type AxiosInstance } from 'axios';
 import { io, Socket } from 'socket.io-client';
@@ -521,6 +523,13 @@ export class BrowserApi implements ApplicationAPI {
   getEffectiveEnvironmentVariable(key: string, baseDir?: string): Promise<EnvironmentVariable | undefined> {
     return this.get('/system/env-var', { key, baseDir });
   }
+
+  // Voice API
+  createVoiceSession(provider: LlmProvider): Promise<VoiceSession> {
+    void provider;
+    throw new UnsupportedError('createVoiceSession not supported in browser mode');
+  }
+
   addSettingsUpdatedListener(callback: (data: SettingsData) => void): () => void {
     return this.addListener('settings-updated', callback);
   }

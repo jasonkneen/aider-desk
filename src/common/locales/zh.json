@@ -168,6 +168,8 @@
     }
   },
   "modelLibrary": {
+    "enableVoiceControl": "启用语音控制",
+    "enableVoiceControlTooltip": "为此提供商启用语音控制。一次只能启用一个提供商。",
     "title": "模型库",
     "search": "搜索模型",
     "providers": "提供商",

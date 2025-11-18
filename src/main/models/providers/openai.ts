@@ -1,6 +1,6 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { isOpenAiProvider, LlmProvider, OpenAiProvider } from '@common/agent';
-import { Model, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData } from '@common/types';
+import { Model, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData, VoiceSession } from '@common/types';
 
 import type { LanguageModelUsage, ToolSet } from 'ai';
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
@@ -211,7 +211,89 @@ export const getOpenAiProviderTools = (provider: LlmProvider, model: Model): Too
 
   return {
     web_search: openaiProvider.tools.webSearch({}),
-  };
+  } as ToolSet;
+};
+
+// === Complete Strategy Implementation ===
+const createOpenAIVoiceSession = async (profile: ProviderProfile, settings: SettingsData): Promise<VoiceSession> => {
+  if (!isOpenAiProvider(profile.provider)) {
+    throw new Error('OpenAI provider not configured');
+  }
+
+  const provider = profile.provider as OpenAiProvider;
+  let apiKey = provider.apiKey;
+
+  if (!apiKey) {
+    const effectiveVar = getEffectiveEnvironmentVariable('OPENAI_API_KEY', settings);
+    if (effectiveVar) {
+      apiKey = effectiveVar.value;
+      logger.debug(`Loaded OPENAI_API_KEY from ${effectiveVar.source}`);
+    }
+  }
+
+  if (!apiKey) {
+    throw new Error('OpenAI API key is required for voice session');
+  }
+
+  try {
+    // Generate ephemeral token for OpenAI Realtime API
+    // This creates a short-lived token specifically for Realtime API usage
+    const model = 'gpt-4o-transcribe';
+    const response = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        session: {
+          type: 'transcription',
+          audio: {
+            input: {
+              transcription: {
+                language: 'en',
+                model,
+                prompt: 'Expect words related to programming, development, and technology.',
+              },
+              turn_detection: {
+                type: 'server_vad',
+                prefix_padding_ms: 300,
+                silence_duration_ms: 500,
+                threshold: 0.5,
+                idle_timeout_ms: 5000,
+              },
+              noise_reduction: {
+                type: 'near_field',
+              },
+            },
+          },
+        },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorMsg = `OpenAI client secrets API response failed: ${response.status} ${response.statusText} ${await response.text()}`;
+      logger.error(errorMsg, response.status, response.statusText);
+      throw new Error(errorMsg);
+    }
+
+    const data = await response.json();
+    const ephemeralToken = data.value;
+
+    if (!ephemeralToken) {
+      throw new Error('Failed to generate OpenAI ephemeral token');
+    }
+
+    logger.info('OpenAI ephemeral token generated');
+
+    return {
+      ephemeralToken,
+      model,
+    };
+  } catch (error) {
+    logger.error('Failed to create OpenAI voice session:', error);
+    throw error;
+  }
 };
 
 // === Complete Strategy Implementation ===
@@ -229,4 +311,7 @@ export const openaiProviderStrategy: LlmProviderStrategy = {
   // Configuration helper functions
   getProviderOptions: getOpenAiProviderOptions,
   getProviderTools: getOpenAiProviderTools,
+
+  // Voice support
+  createVoiceSession: createOpenAIVoiceSession,
 };

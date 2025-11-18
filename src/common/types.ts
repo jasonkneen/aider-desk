@@ -464,6 +464,11 @@ export interface ProvidersUpdatedData {
   providers: ProviderProfile[];
 }
 
+export interface VoiceSession {
+  ephemeralToken: string;
+  model: string;
+}
+
 export interface Group {
   id: string;
   name?: string | LocalizedString;

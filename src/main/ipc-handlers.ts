@@ -1,11 +1,17 @@
 import { EditFormat, FileEdit, McpServerConfig, Mode, Model, ProjectSettings, ProviderProfile, SettingsData, TaskData, TodoItem } from '@common/types';
 import { ipcMain } from 'electron';
+import { LlmProviderBase } from '@common/agent';
 
 import { EventsHandler } from './events-handler';
 
 import { ServerController } from '@/server';
 
 export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController: ServerController) => {
+  // Voice handlers
+  ipcMain.handle('create-voice-session', async (_, provider: LlmProviderBase) => {
+    return await eventsHandler.createVoiceSession(provider);
+  });
+
   ipcMain.handle('load-settings', () => {
     return eventsHandler.loadSettings();
   });
@@ -15,7 +21,7 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
   });
 
   ipcMain.on('run-prompt', async (_, baseDir: string, taskId: string, prompt: string, mode?: Mode) => {
-    eventsHandler.runPrompt(baseDir, taskId, prompt, mode);
+    void eventsHandler.runPrompt(baseDir, taskId, prompt, mode);
   });
 
   ipcMain.handle('save-prompt', async (_, baseDir: string, taskId: string, prompt: string) => {

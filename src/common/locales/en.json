@@ -169,6 +169,8 @@
     }
   },
   "modelLibrary": {
+    "enableVoiceControl": "Enable Voice Control",
+    "enableVoiceControlTooltip": "Enable voice control for this provider. Only one provider can be enabled at a time.",
     "title": "Model Library",
     "search": "Search Models",
     "providers": "Providers",
@@ -833,6 +835,8 @@
     "noChanges": "No changes have been made. Content is identical."
   },
   "promptField": {
+    "startRecording": "Start listening",
+    "stopRecording": "Stop listening",
     "savePrompt": "Save Prompt",
     "savePromptDescription": "Save prompt without executing",
     "saveError": "Failed to save prompt: {{error}}",

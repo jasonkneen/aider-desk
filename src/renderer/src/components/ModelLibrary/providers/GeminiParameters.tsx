@@ -4,6 +4,8 @@ import { GeminiProvider } from '@common/agent';
 
 import { GeminiAdvancedSettings } from './GeminiAdvancedSettings';
 
+import { Checkbox } from '@/components/common/Checkbox';
+import { InfoIcon } from '@/components/common/InfoIcon';
 import { Input } from '@/components/common/Input';
 import { useEffectiveEnvironmentVariable } from '@/hooks/useEffectiveEnvironmentVariable';
 
@@ -16,6 +18,7 @@ export const GeminiParameters = ({ provider, onChange }: Props) => {
   const { t } = useTranslation();
 
   const { apiKey, customBaseUrl } = provider;
+  const voiceEnabled = provider.voiceEnabled ?? false;
 
   const { environmentVariable: geminiApiKeyEnv } = useEffectiveEnvironmentVariable('GEMINI_API_KEY');
   const { environmentVariable: geminiBaseUrlEnv } = useEffectiveEnvironmentVariable('GEMINI_API_BASE_URL');
@@ -26,6 +29,10 @@ export const GeminiParameters = ({ provider, onChange }: Props) => {
 
   const handleCustomBaseUrlChange = (e: ChangeEvent<HTMLInputElement>) => {
     onChange({ ...provider, customBaseUrl: e.target.value });
+  };
+
+  const handleVoiceEnabledChange = (checked: boolean) => {
+    onChange({ ...provider, voiceEnabled: checked });
   };
 
   return (
@@ -64,6 +71,11 @@ export const GeminiParameters = ({ provider, onChange }: Props) => {
               })
         }
       />
+
+      <div className="flex items-center space-x-2">
+        <Checkbox label={<span className="text-sm">{t('modelLibrary.enableVoiceControl')}</span>} checked={voiceEnabled} onChange={handleVoiceEnabledChange} />
+        <InfoIcon tooltip={t('modelLibrary.enableVoiceControlTooltip')} />
+      </div>
 
       <GeminiAdvancedSettings provider={provider} onChange={onChange} />
     </div>

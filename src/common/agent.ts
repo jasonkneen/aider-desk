@@ -42,6 +42,7 @@ export type LlmProviderName =
 export interface LlmProviderBase {
   name: LlmProviderName;
   disableStreaming?: boolean;
+  voiceEnabled?: boolean;
 }
 
 export interface OllamaProvider extends LlmProviderBase {

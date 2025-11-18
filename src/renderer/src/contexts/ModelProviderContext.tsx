@@ -73,7 +73,22 @@ export const ModelProviderProvider: React.FC<{ children: ReactNode }> = ({ child
 
   const saveProvider = useCallback(
     async (profile: ProviderProfile) => {
-      const updated = providers.some((p) => p.id === profile.id) ? providers.map((p) => (p.id === profile.id ? profile : p)) : [...providers, profile];
+      let updated = providers.some((p) => p.id === profile.id) ? providers.map((p) => (p.id === profile.id ? profile : p)) : [...providers, profile];
+
+      if (profile.provider.voiceEnabled) {
+        updated = updated.map((p) => {
+          if (p.id !== profile.id && p.provider.voiceEnabled) {
+            return {
+              ...p,
+              provider: {
+                ...p.provider,
+                voiceEnabled: false,
+              },
+            };
+          }
+          return p;
+        });
+      }
 
       startTransition(async () => {
         setOptimisticProviders(updated);

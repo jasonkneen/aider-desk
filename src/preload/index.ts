@@ -119,6 +119,9 @@ const api: ApplicationAPI = {
   queryUsageData: (from, to) => ipcRenderer.invoke('query-usage-data', from, to),
   getEffectiveEnvironmentVariable: (key: string, baseDir?: string) => ipcRenderer.invoke('get-effective-environment-variable', key, baseDir),
 
+  // Voice API
+  createVoiceSession: (provider) => ipcRenderer.invoke('create-voice-session', provider),
+
   addSettingsUpdatedListener: (callback: (data: SettingsData) => void) => {
     const listener = (_: Electron.IpcRendererEvent, data: SettingsData) => {
       callback(data);

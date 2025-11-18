@@ -1,4 +1,4 @@
-import { AgentProfile, Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { AgentProfile, Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, VoiceSession } from '@common/types';
 import { LlmProvider, LlmProviderName } from '@common/agent';
 
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
@@ -82,6 +82,11 @@ export interface LlmProviderStrategy {
    * Returns model info for a specific model ID
    */
   getModelInfo?: (provider: ProviderProfile, modelId: string, allModelInfos: Record<string, ModelInfo>) => ModelInfo | undefined;
+
+  /**
+   * Creates a voice session configuration if supported
+   */
+  createVoiceSession?: (profile: ProviderProfile, settings: SettingsData) => Promise<VoiceSession>;
 }
 
 export type LlmProviderRegistry = Record<LlmProviderName, LlmProviderStrategy>;

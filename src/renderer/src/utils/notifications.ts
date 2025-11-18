@@ -40,10 +40,11 @@ export const showSuccessNotification = (message: string) => {
   });
 };
 
-export const showErrorNotification = (message: string) => {
+export const showErrorNotification = (message: string, autoClose: number | false = 3000) => {
   const options = getOptions();
   toast.error(message, {
     ...options,
+    autoClose,
     style: {
       ...options.style,
       color: 'var(--color-error)',

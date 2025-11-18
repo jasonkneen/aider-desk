@@ -4,6 +4,8 @@ import { OpenAiProvider } from '@common/agent';
 
 import { OpenAiAdvancedSettings } from './OpenAiAdvancedSettings';
 
+import { Checkbox } from '@/components/common/Checkbox';
+import { InfoIcon } from '@/components/common/InfoIcon';
 import { Input } from '@/components/common/Input';
 import { useEffectiveEnvironmentVariable } from '@/hooks/useEffectiveEnvironmentVariable';
 
@@ -16,11 +18,16 @@ export const OpenAiParameters = ({ provider, onChange }: Props) => {
   const { t } = useTranslation();
 
   const apiKey = provider.apiKey || '';
+  const voiceEnabled = provider.voiceEnabled ?? false;
 
   const { environmentVariable: openAiApiKeyEnv } = useEffectiveEnvironmentVariable('OPENAI_API_KEY');
 
   const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) => {
     onChange({ ...provider, apiKey: e.target.value });
+  };
+
+  const handleVoiceEnabledChange = (checked: boolean) => {
+    onChange({ ...provider, voiceEnabled: checked });
   };
 
   return (
@@ -45,6 +52,11 @@ export const OpenAiParameters = ({ provider, onChange }: Props) => {
               })
         }
       />
+
+      <div className="flex items-center space-x-2">
+        <Checkbox label={<span className="text-sm">{t('modelLibrary.enableVoiceControl')}</span>} checked={voiceEnabled} onChange={handleVoiceEnabledChange} />
+        <InfoIcon tooltip={t('modelLibrary.enableVoiceControlTooltip')} />
+      </div>
 
       <OpenAiAdvancedSettings provider={provider} onChange={onChange} />
     </div>

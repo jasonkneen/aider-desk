@@ -2,7 +2,17 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 import { AVAILABLE_PROVIDERS, getDefaultProviderParams, LlmProvider, LlmProviderName } from '@common/agent';
-import { AgentProfile, Model, ModelInfo, ModelOverrides, ProviderModelsData, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import {
+  AgentProfile,
+  Model,
+  ModelInfo,
+  ModelOverrides,
+  ProviderModelsData,
+  ProviderProfile,
+  SettingsData,
+  UsageReportData,
+  VoiceSession,
+} from '@common/types';
 
 import { anthropicProviderStrategy } from './providers/anthropic';
 import { azureProviderStrategy } from './providers/azure';
@@ -684,5 +694,17 @@ export class ModelManager {
     }
 
     return strategy.getProviderTools(llmProvider, modelObj);
+  }
+
+  /**
+   * Creates a voice session if supported by the provider
+   */
+  async createVoiceSession(provider: ProviderProfile): Promise<VoiceSession> {
+    const strategy = this.providerRegistry[provider.provider.name];
+    if (!strategy?.createVoiceSession) {
+      throw new Error(`Voice not supported for provider: ${provider.provider.name}`);
+    }
+
+    return await strategy.createVoiceSession(provider, this.store.getSettings());
   }
 }

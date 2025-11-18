@@ -38,7 +38,9 @@ import {
   UsageDataRow,
   UserMessageData,
   VersionsInfo,
+  VoiceSession,
 } from '@common/types';
+import { LlmProvider } from '@common/agent';
 
 export interface ApplicationAPI {
   isOpenLogsDirectorySupported: () => boolean;
@@ -120,6 +122,10 @@ export interface ApplicationAPI {
   getOS: () => Promise<OS>;
   queryUsageData: (from: string, to: string) => Promise<UsageDataRow[]>;
   getEffectiveEnvironmentVariable: (key: string, baseDir?: string) => Promise<EnvironmentVariable | undefined>;
+
+  // Voice API
+  createVoiceSession: (provider: LlmProvider) => Promise<VoiceSession>;
+
   getProviderModels: (reload?: boolean) => Promise<ProviderModelsData>;
   getProviders: () => Promise<ProviderProfile[]>;
   updateProviders: (providers: ProviderProfile[]) => Promise<ProviderProfile[]>;

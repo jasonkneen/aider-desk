@@ -16,7 +16,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 import { useDebounce, useLocalStorage } from '@reactuses/core';
 import { useTranslation } from 'react-i18next';
 import { BiSend } from 'react-icons/bi';
-import { MdDoneAll, MdPlaylistRemove, MdSave, MdStop } from 'react-icons/md';
+import { MdDoneAll, MdPlaylistRemove, MdSave, MdStop, MdMic, MdMicOff } from 'react-icons/md';
 import { VscTerminal } from 'react-icons/vsc';
 import { clsx } from 'clsx';
 
@@ -29,6 +29,7 @@ import { useCustomCommands } from '@/hooks/useCustomCommands';
 import { useApi } from '@/contexts/ApiContext';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { IconButton } from '@/components/common/IconButton';
+import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 
 const External = Annotation.define<boolean>();
 
@@ -165,7 +166,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
     const debouncedText = useDebounce(text, 100);
     const [savedText, setSavedText] = useLocalStorage(`prompt-field-text-${baseDir}-${taskId}`, '');
     const initialTextRefSet = useRef(false);
-    const [placeholderIndex, setPlaceholderIndex] = useState(Math.floor(Math.random() * PLACEHOLDER_COUNT));
+    const [placeholderIndex, setPlaceholderIndex] = useState(() => Math.floor(Math.random() * PLACEHOLDER_COUNT));
     const [historyMenuVisible, setHistoryMenuVisible] = useState(false);
     const [highlightedHistoryItemIndex, setHighlightedHistoryItemIndex] = useState(0);
     const [historyLimit, setHistoryLimit] = useState(HISTORY_MENU_CHUNK_SIZE);
@@ -178,6 +179,44 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
     const editorRef = useRef<ReactCodeMirrorRef>(null);
     const customCommands = useCustomCommands(baseDir);
     const api = useApi();
+
+    const { isRecording, isProcessing, startRecording, stopRecording, transcription, error: voiceError, resetTranscription } = useAudioRecorder();
+    const [textBeforeRecording, setTextBeforeRecording] = useState('');
+
+    const setTextWithDispatch = (newText: string) => {
+      const view = editorRef.current?.view;
+      view?.dispatch({
+        changes: { from: 0, to: view.state.doc.toString().length, insert: newText },
+        annotations: [External.of(true)],
+      });
+      setText(newText);
+      setSavedText(newText);
+    };
+
+    useEffect(() => {
+      if (voiceError) {
+        showErrorNotification(voiceError, false);
+      }
+    }, [voiceError]);
+
+    useEffect(() => {
+      if (isRecording) {
+        setTextBeforeRecording(text);
+      } else if (transcription) {
+        // When recording stops, we reset after a short delay or immediately?
+        // We want to keep the text.
+        // We just need to reset the recorder state for next time.
+        resetTranscription();
+        setTextBeforeRecording('');
+      }
+    }, [isRecording]);
+
+    useEffect(() => {
+      if ((isRecording || isProcessing) && transcription) {
+        const separator = textBeforeRecording && !textBeforeRecording.endsWith(' ') ? ' ' : '';
+        setTextWithDispatch(textBeforeRecording + separator + transcription);
+      }
+    }, [transcription, isRecording, isProcessing, textBeforeRecording]);
 
     const completionSource = async (context: CompletionContext): Promise<CompletionResult | null> => {
       const word = context.matchBefore(/\S*/);
@@ -252,16 +291,6 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
         setKeepHistoryHighlightTop(true);
       }
     }, [historyLimit, allHistoryItems.length]);
-
-    const setTextWithDispatch = (newText: string) => {
-      const view = editorRef.current?.view;
-      view?.dispatch({
-        changes: { from: 0, to: view.state.doc.toString().length, insert: newText },
-        annotations: [External.of(true)],
-      });
-      setText(newText);
-      setSavedText(newText);
-    };
 
     useImperativeHandle(ref, () => ({
       focus: () => {
@@ -524,6 +553,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
 
     const handleSubmit = () => {
       scrollToBottom?.();
+      stopRecording();
       if (text) {
         if (text.startsWith('/') && !isPathLike(text)) {
           // Check if it's a custom command
@@ -892,32 +922,48 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
                 <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
               </div>
             ) : (
-              <>
+              <div className="absolute right-3 top-1/2 -translate-y-[12px] flex items-center space-x-2 text-text-muted-light">
                 <button
-                  onClick={handleSavePrompt}
-                  disabled={!text.trim() || disabled}
+                  onClick={isRecording ? stopRecording : startRecording}
+                  disabled={disabled || isProcessing}
                   className={clsx(
-                    'absolute right-10 top-1/2 -translate-y-[12px] text-text-muted-light hover:text-text-tertiary hover:bg-bg-tertiary rounded p-1 transition-all duration-200',
-                    !text.trim() ? 'opacity-0' : 'opacity-100',
+                    'text-text-muted-light hover:text-text-tertiary hover:bg-bg-tertiary rounded p-1 transition-all duration-200',
+                    isRecording ? 'text-accent-primary animate-pulse' : '',
                   )}
                   data-tooltip-id="prompt-field-tooltip"
-                  data-tooltip-content={t('promptField.savePrompt')}
+                  data-tooltip-content={isRecording ? t('promptField.stopRecording') : t('promptField.startRecording')}
                 >
-                  <MdSave className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={!text.trim() || disabled}
-                  className={clsx(
-                    'absolute right-2 top-1/2 -translate-y-[12px] text-text-muted-light hover:text-text-tertiary hover:bg-bg-tertiary rounded p-1 transition-all duration-200',
-                    !text.trim() ? 'opacity-0' : 'opacity-100',
+                  {isProcessing ? (
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : isRecording ? (
+                    <MdMicOff className="w-4 h-4" />
+                  ) : (
+                    <MdMic className="w-4 h-4" />
                   )}
-                  data-tooltip-id="prompt-field-tooltip"
-                  data-tooltip-content={t('promptField.sendMessage')}
-                >
-                  <BiSend className="w-4 h-4" />
                 </button>
-              </>
+                {text.trim() && !isRecording && (
+                  <>
+                    <button
+                      onClick={handleSavePrompt}
+                      disabled={!text.trim() || disabled}
+                      className={clsx('text-text-muted-light hover:text-text-tertiary hover:bg-bg-tertiary rounded p-1 transition-all duration-200')}
+                      data-tooltip-id="prompt-field-tooltip"
+                      data-tooltip-content={t('promptField.savePrompt')}
+                    >
+                      <MdSave className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={handleSubmit}
+                      disabled={!text.trim() || disabled}
+                      className={clsx('hover:text-text-tertiary hover:bg-bg-tertiary rounded p-1 transition-all duration-200')}
+                      data-tooltip-id="prompt-field-tooltip"
+                      data-tooltip-content={t('promptField.sendMessage')}
+                    >
+                      <BiSend className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
+              </div>
             )}
           </div>
           <div className="relative w-full flex items-center gap-1.5">

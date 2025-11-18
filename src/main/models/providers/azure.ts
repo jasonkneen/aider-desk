@@ -88,7 +88,7 @@ export const createAzureLlm = (profile: ProviderProfile, model: Model, settings:
     apiKey,
     headers: profile.headers,
   });
-  return azureProvider(model.id);
+  return azureProvider.responses(model.id);
 };
 
 type AzureMetadata = {

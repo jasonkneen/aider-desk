@@ -1,6 +1,7 @@
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, VoiceSession } from '@common/types';
 import { GeminiProvider, isGeminiProvider, LlmProvider } from '@common/agent';
 import { createGoogleGenerativeAI, google, type GoogleGenerativeAIProviderOptions } from '@ai-sdk/google';
+import { Modality } from '@google/genai';
 
 import type { LanguageModelUsage, ToolSet } from 'ai';
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
@@ -208,6 +209,73 @@ const getGeminiModelInfo = (_provider: ProviderProfile, modelId: string, allMode
   return allModelInfos[fullModelId];
 };
 
+const createGeminiVoiceSession = async (profile: ProviderProfile, settings: SettingsData): Promise<VoiceSession> => {
+  if (!isGeminiProvider(profile.provider)) {
+    throw new Error('Gemini provider not configured');
+  }
+
+  const provider = profile.provider as GeminiProvider;
+  let apiKey = provider.apiKey;
+
+  if (!apiKey) {
+    const effectiveVar = getEffectiveEnvironmentVariable('GEMINI_API_KEY', settings);
+    if (effectiveVar) {
+      apiKey = effectiveVar.value;
+      logger.debug(`Loaded GEMINI_API_KEY from ${effectiveVar.source}`);
+    }
+  }
+
+  if (!apiKey) {
+    throw new Error('Gemini API key is required for voice session');
+  }
+
+  try {
+    const { GoogleGenAI } = await import('@google/genai');
+    const client = new GoogleGenAI({
+      apiKey,
+    });
+
+    // Default to the model specified in requirements or fallback
+    const modelId = 'gemini-2.5-flash-native-audio-preview-09-2025';
+
+    // Create ephemeral token
+    // The token is valid for 1 minute for session initiation, and 30 minutes for the session duration by default.
+    const expireTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+    const token = await client.authTokens.create({
+      config: {
+        uses: 1,
+        expireTime: expireTime,
+        liveConnectConstraints: {
+          model: modelId,
+          config: {
+            inputAudioTranscription: {},
+            realtimeInputConfig: {
+              automaticActivityDetection: {
+                disabled: true,
+              },
+            },
+            temperature: 0.7,
+            responseModalities: [Modality.AUDIO],
+          },
+        },
+        httpOptions: {
+          apiVersion: 'v1alpha',
+        },
+      },
+    });
+
+    logger.info('Gemini ephemeral token generated');
+
+    return {
+      ephemeralToken: token.name || '',
+      model: modelId,
+    };
+  } catch (error) {
+    logger.error('Failed to create Gemini voice session:', error);
+    throw error;
+  }
+};
+
 // === Complete Strategy Implementation ===
 export const geminiProviderStrategy: LlmProviderStrategy = {
   // Core LLM functions
@@ -222,4 +290,5 @@ export const geminiProviderStrategy: LlmProviderStrategy = {
   getProviderOptions: getGeminiProviderOptions,
   getProviderTools: getGeminiProviderTools,
   getModelInfo: getGeminiModelInfo,
+  createVoiceSession: createGeminiVoiceSession,
 };
