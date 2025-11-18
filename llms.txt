@@ -2388,7 +2388,16 @@ File: src/common/locales/en.json
     "unarchiveTask": "Unarchive Task",
     "showArchived": "Show archived",
     "hideArchived": "Hide archived",
-    "archived": "Archived"
+    "archived": "Archived",
+    "multiselectMode": "Multiselect Mode",
+    "selectedCount": "{{count}} selected",
+    "closeMultiselect": "Exit multiselect",
+    "deleteSelected": "Delete selected",
+    "archiveSelected": "Archive selected",
+    "unarchiveSelected": "Unarchive selected",
+    "deleteSelectedConfirm": "Are you sure you want to delete {{count}} selected tasks?",
+    "archiveSelectedConfirm": "Are you sure you want to archive {{count}} selected tasks?",
+    "unarchiveSelectedConfirm": "Are you sure you want to unarchive {{count}} selected tasks?"
   },
   "worktree": {
     "merge": "Merge",
@@ -3479,7 +3488,16 @@ File: src/common/locales/zh.json
     "unarchiveTask": "取消归档任务",
     "showArchived": "显示已归档",
     "hideArchived": "隐藏已归档",
-    "archived": "已归档"
+    "archived": "已归档",
+    "multiselectMode": "多选模式",
+    "selectedCount": "已选择 {{count}} 个",
+    "closeMultiselect": "退出多选",
+    "deleteSelected": "删除选中项",
+    "archiveSelected": "归档选中项",
+    "unarchiveSelected": "取消归档选中项",
+    "deleteSelectedConfirm": "您确定要删除 {{count}} 个选中的任务吗？",
+    "archiveSelectedConfirm": "您确定要归档 {{count}} 个选中的任务吗？",
+    "unarchiveSelectedConfirm": "您确定要取消归档 {{count}} 个选中的任务吗？"
   },
   "worktree": {
     "merge": "合并",
@@ -14717,8 +14735,8 @@ File: src/renderer/src/components/project/TaskSidebar.tsx
 ================
 import { TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { KeyboardEvent, MouseEvent, useState, memo, useRef } from 'react';
-import { HiOutlinePencil, HiOutlineTrash, HiPlus } from 'react-icons/hi';
+import { KeyboardEvent, MouseEvent, useState, memo, useRef, useEffect } from 'react';
+import { HiOutlinePencil, HiOutlineTrash, HiPlus, HiCheck } from 'react-icons/hi';
 import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { FaEllipsisVertical } from 'react-icons/fa6';
 import { IoLogoMarkdown } from 'react-icons/io';
@@ -14728,7 +14746,7 @@ import { clsx } from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BiCopy, BiDuplicate, BiArchive, BiArchiveIn } from 'react-icons/bi';
 import { HiXMark } from 'react-icons/hi2';
-import { useDebounce } from '@reactuses/core';
+import { useDebounce, useLongPress } from '@reactuses/core';
 ⋮----
 import { useTask } from '@/contexts/TaskContext';
 import { Input } from '@/components/common/Input';
@@ -14736,6 +14754,7 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { Button } from '@/components/common/Button';
 import { IconButton } from '@/components/common/IconButton';
 import { useClickOutside } from '@/hooks/useClickOutside';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 ⋮----
 type TaskMenuButtonProps = {
   onEdit: () => void;
@@ -14774,7 +14793,26 @@ className={clsx(
           )}
 onClick=
 ⋮----
-const handleTaskClick = (taskId: string) =>
+// Multiselect Menu Component
+⋮----
+e.stopPropagation();
+onDelete();
+⋮----
+onArchive();
+⋮----
+onUnarchive();
+⋮----
+// Multiselect state
+⋮----
+const handleMultiselectClose = () =>
+⋮----
+// Handle ESC key to exit multiselect mode
+⋮----
+const handleKeyDown = (e: globalThis.KeyboardEvent) =>
+⋮----
+// Handle click outside for multiselect menu
+⋮----
+const handleTaskClick = (e: MouseEvent, taskId: string) =>
 ⋮----
 const handleConfirmDelete = async (taskId: string) =>
 ⋮----
@@ -14804,11 +14842,38 @@ const handleUnarchiveTask = async (taskId: string) =>
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
+// Multiselect handlers
+const handleTaskCtrlClick = (e: MouseEvent, taskId: string) =>
+⋮----
+const handleTaskClickInMultiselect = (e: MouseEvent, taskId: string) =>
+⋮----
+const handleBulkDelete = async () =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+const handleBulkArchive = async () =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
 return <span className=
+⋮----
+onEdit=
+⋮----
+<h3 className="text-sm font-semibold uppercase h-5">
+⋮----
+onArchive=
+onUnarchive=
 ⋮----
 onClick=
 ⋮----
+{/* Bulk Delete Confirmation */}
+⋮----
+title=
+⋮----
+{/* Bulk Archive Confirmation */}
+⋮----
 // Custom comparison function for React.memo
+const arePropsEqual = (prevProps: Props, nextProps: Props): boolean =>
 ⋮----
 // Compare primitive props
 ⋮----
@@ -15002,6 +15067,7 @@ import { useEffect, useState } from 'react';
 import { MdAdd, MdExpandLess, MdOutlineChecklist, MdPlaylistRemove } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { TodoItem } from '@common/types';
+import { ResizableBox } from 'react-resizable';
 ⋮----
 import { IconButton } from '../common/IconButton';
 import { Button } from '../common/Button';
@@ -19521,7 +19587,7 @@ File: package.json
 ================
 {
   "name": "aider-desk",
-  "version": "0.40.0-dev",
+  "version": "0.41.0-dev",
   "description": "Aider desktop application wrapper",
   "main": "./out/main/index.js",
   "author": "Hotovo",
