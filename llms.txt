@@ -510,7 +510,7 @@ File: resources/connector/connector.py
 ⋮----
 class PromptContext
 ⋮----
-def __init__(self, id: str, group=None)
+def __init__(self, id: str, group=None, auto_approve=False, deny_commands=False)
 ⋮----
 confirmation_result = None
 ⋮----
@@ -744,6 +744,8 @@ result = "n"
 # Create coroutine for emitting the question
 async def ask_question()
 ⋮----
+# we are handling this in AiderDesk differently
+⋮----
 result = wait_for_async(self.connector, ask_question())
 ⋮----
 # Get the specific coder for this prompt
@@ -912,8 +914,13 @@ architect_model = message.get('architectModel')
 prompt_context_data = message.get('promptContext')
 messages = message.get('messages', [])
 files = message.get('files', [])
+options = message.get('options', {})
 ⋮----
-prompt_context = PromptContext(prompt_context_data.get('id'), prompt_context_data.get('group'))
+# Log the options with default values
+auto_approve = options.get('autoApprove', False)
+deny_commands = options.get('denyCommands', False)
+⋮----
+prompt_context = PromptContext(prompt_context_data.get('id'), prompt_context_data.get('group'), auto_approve, deny_commands)
 ⋮----
 confirmation_result = message.get('answer')
 ⋮----
@@ -4004,6 +4011,11 @@ export type LocalizedString = {
 ⋮----
 export type Mode = 'code' | 'ask' | 'architect' | 'context' | 'agent';
 ⋮----
+export interface AiderRunOptions {
+  autoApprove?: boolean;
+  denyCommands?: boolean;
+}
+⋮----
 export type EditFormat = 'diff' | 'diff-fenced' | 'whole' | 'udiff' | 'udiff-simple' | 'patch';
 ⋮----
 export enum ReasoningEffort {
@@ -5513,7 +5525,7 @@ File: src/main/connector/connector.ts
 ================
 import path from 'path';
 ⋮----
-import { ContextFile, EditFormat, FileEdit, MessageRole, Mode, ModelInfo, PromptContext } from '@common/types';
+import { AiderRunOptions, ContextFile, EditFormat, FileEdit, MessageRole, Mode, ModelInfo, PromptContext } from '@common/types';
 import { Socket } from 'socket.io';
 ⋮----
 import logger from '@/logger';
@@ -5546,6 +5558,7 @@ public sendPromptMessage(
     architectModel: string | null = null,
     messages: { role: MessageRole; content: string }[] = [],
     files: ContextFile[] = [],
+    options?: AiderRunOptions,
 ): void
 ⋮----
 public sendSetModelsMessage(mainModel: string, weakModel: string | null, editFormat: EditFormat, environmentVariables?: Record<string, string>): void
@@ -8404,6 +8417,7 @@ import path from 'path';
 import { simpleGit } from 'simple-git';
 import YAML from 'yaml';
 import {
+  AiderRunOptions,
   AgentProfile,
   ContextAssistantMessage,
   ContextFile,
@@ -8571,12 +8585,13 @@ public async runSubagent(
     promptContext?: PromptContext,
 ): Promise<ContextMessage[]>
 ⋮----
-public sendPrompt(
+public sendPromptToAider(
     prompt: string,
     promptContext: PromptContext = { id: uuidv4() },
     mode?: Mode,
-    messages?: { role: MessageRole; content: string }[],
-    files?: ContextFile[],
+    messages: { role: MessageRole; content: string }[] = this.contextManager.toConnectorMessages(),
+    files: ContextFile[] = this.contextManager.getContextFiles(),
+    options?: AiderRunOptions,
 ): Promise<ResponseCompletedData[]>
 ⋮----
 // Wait for prompt to finish and return collected responses
@@ -10374,6 +10389,7 @@ const cleanup = async (): Promise<void> =>
 File: src/main/messages.ts
 ================
 import {
+  AiderRunOptions,
   ContextFile,
   ContextFileSourceType,
   EditFormat,
@@ -10445,6 +10461,7 @@ export interface PromptMessage extends Message {
   promptContext: PromptContext;
   messages?: { role: MessageRole; content: string }[];
   files?: ContextFile[];
+  options?: AiderRunOptions;
 }
 ⋮----
 export interface ResponseMessage extends Message {
