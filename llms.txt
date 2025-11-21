@@ -189,6 +189,9 @@ src/
     versions/
       index.ts
       versions-manager.ts
+    voice/
+      index.ts
+      VoiceService.ts
     worktrees/
       index.ts
       types.ts
@@ -425,6 +428,7 @@ src/
         SpaceMono.ttf
         UbuntuMono.ttf
       hooks/
+        useAudioRecorder.ts
         useBooleanState.ts
         useClickOutside.ts
         useCustomCommands.ts
@@ -487,6 +491,11 @@ src/
         notifications.ts
         routes.ts
         string-utils.ts
+      voice/
+        gemini.ts
+        index.ts
+        openai.ts
+        types.ts
       App.tsx
       env.d.ts
       fonts.css
@@ -1528,6 +1537,8 @@ File: src/common/locales/en.json
     }
   },
   "modelLibrary": {
+    "enableVoiceControl": "Enable Voice Control",
+    "enableVoiceControlTooltip": "Enable voice control for this provider. Only one provider can be enabled at a time.",
     "title": "Model Library",
     "search": "Search Models",
     "providers": "Providers",
@@ -2192,6 +2203,8 @@ File: src/common/locales/en.json
     "noChanges": "No changes have been made. Content is identical."
   },
   "promptField": {
+    "startRecording": "Start listening",
+    "stopRecording": "Stop listening",
     "savePrompt": "Save Prompt",
     "savePromptDescription": "Save prompt without executing",
     "saveError": "Failed to save prompt: {{error}}",
@@ -2619,6 +2632,8 @@ File: src/common/locales/zh.json
     }
   },
   "modelLibrary": {
+    "enableVoiceControl": "启用语音控制",
+    "enableVoiceControlTooltip": "为此提供商启用语音控制。一次只能启用一个提供商。",
     "title": "模型库",
     "search": "搜索模型",
     "providers": "提供商",
@@ -3593,6 +3608,7 @@ export type LlmProviderName =
 export interface LlmProviderBase {
   name: LlmProviderName;
   disableStreaming?: boolean;
+  voiceEnabled?: boolean;
 }
 ⋮----
 export interface OllamaProvider extends LlmProviderBase {
@@ -3818,7 +3834,9 @@ import {
   UsageDataRow,
   UserMessageData,
   VersionsInfo,
+  VoiceSession,
 } from '@common/types';
+import { LlmProvider } from '@common/agent';
 ⋮----
 export interface ApplicationAPI {
   isOpenLogsDirectorySupported: () => boolean;
@@ -3900,6 +3918,10 @@ export interface ApplicationAPI {
   getOS: () => Promise<OS>;
   queryUsageData: (from: string, to: string) => Promise<UsageDataRow[]>;
   getEffectiveEnvironmentVariable: (key: string, baseDir?: string) => Promise<EnvironmentVariable | undefined>;
+
+  // Voice API
+  createVoiceSession: (provider: LlmProvider) => Promise<VoiceSession>;
+
   getProviderModels: (reload?: boolean) => Promise<ProviderModelsData>;
   getProviders: () => Promise<ProviderProfile[]>;
   updateProviders: (providers: ProviderProfile[]) => Promise<ProviderProfile[]>;
@@ -3960,6 +3982,8 @@ export interface ApplicationAPI {
 }
 ⋮----
 // Todo operations
+⋮----
+// Voice API
 ⋮----
 // Task lifecycle event listeners
 ⋮----
@@ -4384,6 +4408,11 @@ export interface ProviderProfile {
 ⋮----
 export interface ProvidersUpdatedData {
   providers: ProviderProfile[];
+}
+⋮----
+export interface VoiceSession {
+  ephemeralToken: string;
+  model: string;
 }
 ⋮----
 export interface Group {
@@ -6171,9 +6200,10 @@ export const getDefaultUsageReport = (task: Task, provider: ProviderProfile, mod
 ================
 File: src/main/models/providers/gemini.ts
 ================
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, VoiceSession } from '@common/types';
 import { GeminiProvider, isGeminiProvider, LlmProvider } from '@common/agent';
 import { createGoogleGenerativeAI, google, type GoogleGenerativeAIProviderOptions } from '@ai-sdk/google';
+import { Modality } from '@google/genai';
 ⋮----
 import type { LanguageModelUsage, ToolSet } from 'ai';
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
@@ -6221,6 +6251,13 @@ const getGeminiProviderTools = (provider: LlmProvider, model: Model): ToolSet =>
 // Check for model-specific overrides
 ⋮----
 const getGeminiModelInfo = (_provider: ProviderProfile, modelId: string, allModelInfos: Record<string, ModelInfo>): ModelInfo | undefined =>
+⋮----
+const createGeminiVoiceSession = async (profile: ProviderProfile, settings: SettingsData): Promise<VoiceSession> =>
+⋮----
+// Default to the model specified in requirements or fallback
+⋮----
+// Create ephemeral token
+// The token is valid for 1 minute for session initiation, and 30 minutes for the session duration by default.
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -6515,7 +6552,7 @@ File: src/main/models/providers/openai.ts
 ================
 import { createOpenAI } from '@ai-sdk/openai';
 import { isOpenAiProvider, LlmProvider, OpenAiProvider } from '@common/agent';
-import { Model, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData } from '@common/types';
+import { Model, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData, VoiceSession } from '@common/types';
 ⋮----
 import type { LanguageModelUsage, ToolSet } from 'ai';
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
@@ -6570,12 +6607,20 @@ export const getOpenAiProviderTools = (provider: LlmProvider, model: Model): Too
 // Check for model-specific overrides
 ⋮----
 // === Complete Strategy Implementation ===
+const createOpenAIVoiceSession = async (profile: ProviderProfile, settings: SettingsData): Promise<VoiceSession> =>
+⋮----
+// Generate ephemeral token for OpenAI Realtime API
+// This creates a short-lived token specifically for Realtime API usage
+⋮----
+// === Complete Strategy Implementation ===
 ⋮----
 // Core LLM functions
 ⋮----
 // Model discovery functions
 ⋮----
 // Configuration helper functions
+⋮----
+// Voice support
 
 ================
 File: src/main/models/providers/openrouter.ts
@@ -6894,7 +6939,17 @@ import { promises as fs } from 'fs';
 import path from 'path';
 ⋮----
 import { AVAILABLE_PROVIDERS, getDefaultProviderParams, LlmProvider, LlmProviderName } from '@common/agent';
-import { AgentProfile, Model, ModelInfo, ModelOverrides, ProviderModelsData, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import {
+  AgentProfile,
+  Model,
+  ModelInfo,
+  ModelOverrides,
+  ProviderModelsData,
+  ProviderProfile,
+  SettingsData,
+  UsageReportData,
+  VoiceSession,
+} from '@common/types';
 ⋮----
 import { anthropicProviderStrategy } from './providers/anthropic';
 import { azureProviderStrategy } from './providers/azure';
@@ -7053,6 +7108,11 @@ getProviderParameters(provider: ProviderProfile, modelId: string): Record<string
 async getProviderTools(provider: ProviderProfile, modelId: string): Promise<ToolSet>
 ⋮----
 // Resolve Model object
+⋮----
+/**
+   * Creates a voice session if supported by the provider
+   */
+async createVoiceSession(provider: ProviderProfile): Promise<VoiceSession>
 
 ================
 File: src/main/models/models.ts
@@ -7062,7 +7122,7 @@ File: src/main/models/models.ts
 ================
 File: src/main/models/types.ts
 ================
-import { AgentProfile, Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { AgentProfile, Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, VoiceSession } from '@common/types';
 import { LlmProvider, LlmProviderName } from '@common/agent';
 ⋮----
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
@@ -7146,6 +7206,11 @@ export interface LlmProviderStrategy {
    * Returns model info for a specific model ID
    */
   getModelInfo?: (provider: ProviderProfile, modelId: string, allModelInfos: Record<string, ModelInfo>) => ModelInfo | undefined;
+
+  /**
+   * Creates a voice session configuration if supported
+   */
+  createVoiceSession?: (profile: ProviderProfile, settings: SettingsData) => Promise<VoiceSession>;
 }
 ⋮----
 // === LLM Creation and Usage Functions ===
@@ -7190,6 +7255,10 @@ export interface LlmProviderStrategy {
 ⋮----
 /**
    * Returns model info for a specific model ID
+   */
+⋮----
+/**
+   * Creates a voice session configuration if supported
    */
 ⋮----
 export type LlmProviderRegistry = Record<LlmProviderName, LlmProviderStrategy>;
@@ -9593,6 +9662,16 @@ public async downloadLatestAiderDesk(): Promise<void>
 autoUpdater.autoDownload = false; // Ensure it's reset on error
 
 ================
+File: src/main/voice/index.ts
+================
+// Voice functionality is now handled directly by LlmProviderStrategy
+
+================
+File: src/main/voice/VoiceService.ts
+================
+// This file has been removed as voice functionality is now handled directly by LlmProviderStrategy
+
+================
 File: src/main/worktrees/index.ts
 ================
 
@@ -10027,8 +10106,10 @@ import {
   TodoItem,
   UsageDataRow,
   VersionsInfo,
+  VoiceSession,
 } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
+import { LlmProviderBase } from '@common/agent';
 ⋮----
 import type { BrowserWindow } from 'electron';
 ⋮----
@@ -10063,6 +10144,10 @@ async startProject(baseDir: string)
 async stopProject(baseDir: string): Promise<void>
 ⋮----
 async restartProject(baseDir: string): Promise<void>
+⋮----
+async createVoiceSession(provider: LlmProviderBase): Promise<VoiceSession>
+⋮----
+// Find the provider profile from the store
 ⋮----
 async restartTask(baseDir: string, taskId: string): Promise<void>
 ⋮----
@@ -10242,15 +10327,13 @@ File: src/main/index.ts
 import { join } from 'path';
 import { existsSync, statSync } from 'fs';
 ⋮----
-// eslint-disable-next-line import/order
-import { AIDER_DESK_DATA_DIR, HEADLESS_MODE } from '@/constants';
-⋮----
 import { compareBaseDirs, delay } from '@common/utils';
 import { electronApp, is, optimizer } from '@electron-toolkit/utils';
 import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
 ⋮----
 import icon from '../../resources/icon.png?asset';
 ⋮----
+import { AIDER_DESK_DATA_DIR, HEADLESS_MODE } from '@/constants';
 import { ProgressWindow } from '@/progress-window';
 import { setupIpcHandlers } from '@/ipc-handlers';
 import { performStartUp, UpdateProgressData } from '@/start-up';
@@ -10297,12 +10380,15 @@ File: src/main/ipc-handlers.ts
 ================
 import { EditFormat, FileEdit, McpServerConfig, Mode, Model, ProjectSettings, ProviderProfile, SettingsData, TaskData, TodoItem } from '@common/types';
 import { ipcMain } from 'electron';
+import { LlmProviderBase } from '@common/agent';
 ⋮----
 import { EventsHandler } from './events-handler';
 ⋮----
 import { ServerController } from '@/server';
 ⋮----
 export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController: ServerController) =>
+⋮----
+// Voice handlers
 ⋮----
 // Terminal handlers
 ⋮----
@@ -10826,6 +10912,8 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import { ApplicationAPI } from '@common/api';
 import { compareBaseDirs } from '@common/utils';
 ⋮----
+// Voice API
+⋮----
 const listener = (_: Electron.IpcRendererEvent, data: SettingsData) =>
 ⋮----
 // Task lifecycle event listeners
@@ -10879,7 +10967,9 @@ import {
   UsageDataRow,
   UserMessageData,
   VersionsInfo,
+  VoiceSession,
 } from '@common/types';
+import { LlmProvider } from '@common/agent';
 import { ApplicationAPI } from '@common/api';
 import axios, { type AxiosInstance } from 'axios';
 import { io, Socket } from 'socket.io-client';
@@ -11031,6 +11121,10 @@ upsertModel(providerId: string, modelId: string, model: Model): Promise<Provider
 deleteModel(providerId: string, modelId: string): Promise<ProviderModelsData>
 queryUsageData(from: string, to: string): Promise<UsageDataRow[]>
 getEffectiveEnvironmentVariable(key: string, baseDir?: string): Promise<EnvironmentVariable | undefined>
+⋮----
+// Voice API
+createVoiceSession(provider: LlmProvider): Promise<VoiceSession>
+⋮----
 addSettingsUpdatedListener(callback: (data: SettingsData) => void): () => void
 addResponseChunkListener(baseDir: string, taskId: string, callback: (data: ResponseChunkData) => void): () => void
 addResponseCompletedListener(baseDir: string, taskId: string, callback: (data: ResponseCompletedData) => void): () => void
@@ -13240,6 +13334,8 @@ import { GeminiProvider } from '@common/agent';
 ⋮----
 import { GeminiAdvancedSettings } from './GeminiAdvancedSettings';
 ⋮----
+import { Checkbox } from '@/components/common/Checkbox';
+import { InfoIcon } from '@/components/common/InfoIcon';
 import { Input } from '@/components/common/Input';
 import { useEffectiveEnvironmentVariable } from '@/hooks/useEffectiveEnvironmentVariable';
 ⋮----
@@ -13251,6 +13347,8 @@ type Props = {
 const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
 const handleCustomBaseUrlChange = (e: ChangeEvent<HTMLInputElement>) =>
+⋮----
+const handleVoiceEnabledChange = (checked: boolean) =>
 ⋮----
 label=
 
@@ -13487,6 +13585,8 @@ import { OpenAiProvider } from '@common/agent';
 ⋮----
 import { OpenAiAdvancedSettings } from './OpenAiAdvancedSettings';
 ⋮----
+import { Checkbox } from '@/components/common/Checkbox';
+import { InfoIcon } from '@/components/common/InfoIcon';
 import { Input } from '@/components/common/Input';
 import { useEffectiveEnvironmentVariable } from '@/hooks/useEffectiveEnvironmentVariable';
 ⋮----
@@ -13497,7 +13597,11 @@ type Props = {
 ⋮----
 const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
+const handleVoiceEnabledChange = (checked: boolean) =>
+⋮----
 label=
+⋮----
+openAiApiKeyEnv
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/OpenRouterAdvancedSettings.tsx
@@ -15317,7 +15421,7 @@ import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useSta
 import { useDebounce, useLocalStorage } from '@reactuses/core';
 import { useTranslation } from 'react-i18next';
 import { BiSend } from 'react-icons/bi';
-import { MdDoneAll, MdPlaylistRemove, MdSave, MdStop } from 'react-icons/md';
+import { MdDoneAll, MdPlaylistRemove, MdSave, MdStop, MdMic, MdMicOff } from 'react-icons/md';
 import { VscTerminal } from 'react-icons/vsc';
 import { clsx } from 'clsx';
 ⋮----
@@ -15330,6 +15434,7 @@ import { useCustomCommands } from '@/hooks/useCustomCommands';
 import { useApi } from '@/contexts/ApiContext';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { IconButton } from '@/components/common/IconButton';
+import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 ⋮----
 const isPathLike = (input: string): boolean =>
 ⋮----
@@ -15374,6 +15479,12 @@ type Props = {
   onAutoApproveChanged?: (autoApprove: boolean) => void;
 };
 ⋮----
+const setTextWithDispatch = (newText: string) =>
+⋮----
+// When recording stops, we reset after a short delay or immediately?
+// We want to keep the text.
+// We just need to reset the recorder state for next time.
+⋮----
 const completionSource = async (context: CompletionContext): Promise<CompletionResult | null> =>
 ⋮----
 // Handle @-based file suggestions (exclusive)
@@ -15381,8 +15492,6 @@ const completionSource = async (context: CompletionContext): Promise<CompletionR
 // Handle command suggestions
 ⋮----
 // Add custom commands to the list
-⋮----
-const setTextWithDispatch = (newText: string) =>
 ⋮----
 // Ensure cursor is at the end after setting text
 ⋮----
@@ -15414,9 +15523,9 @@ placeholder=
 ⋮----
 paste(event)
 ⋮----
-className=
-⋮----
 data-tooltip-content=
+⋮----
+className=
 ⋮----
 onClose=
 
@@ -16905,6 +17014,38 @@ const handleUpdateAiderModels = (data: ModelsData) =>
 // eslint-disable-next-line no-console
 ⋮----
 export const useTask = (): TaskContextType =>
+
+================
+File: src/renderer/src/hooks/useAudioRecorder.ts
+================
+import { useCallback, useRef, useState } from 'react';
+⋮----
+import { useApi } from '@/contexts/ApiContext';
+import { useModelProviders } from '@/contexts/ModelProviderContext';
+import { createGeminiVoiceProvider, createOpenAIVoiceProvider } from '@/voice';
+import { VoiceProvider, VoiceSession, VoiceSessionState } from '@/voice/types';
+⋮----
+export interface UseAudioRecorderType {
+  isRecording: boolean;
+  isProcessing: boolean;
+  startRecording: () => Promise<void>;
+  stopRecording: () => Promise<void>;
+  transcription: string;
+  error: string | null;
+  resetTranscription: () => void;
+}
+⋮----
+export const useAudioRecorder = (): UseAudioRecorderType =>
+⋮----
+// Future providers can be added here
+⋮----
+// Create voice session
+⋮----
+// Create and configure voice provider
+⋮----
+// Start voice session
+⋮----
+// eslint-disable-next-line no-console
 
 ================
 File: src/renderer/src/hooks/useBooleanState.ts
@@ -19248,7 +19389,7 @@ const getOptions = (): ToastOptions => (
 ⋮----
 export const showSuccessNotification = (message: string) =>
 ⋮----
-export const showErrorNotification = (message: string) =>
+export const showErrorNotification = (message: string, autoClose: number | false = 3000) =>
 ⋮----
 export const showInfoNotification = (message: string) =>
 ⋮----
@@ -19265,6 +19406,132 @@ File: src/renderer/src/utils/string-utils.ts
 import type { TFunction } from 'i18next';
 ⋮----
 export const formatHumanReadable = (t: TFunction, value: number): string =>
+
+================
+File: src/renderer/src/voice/gemini.ts
+================
+import { GoogleGenAI, LiveServerMessage, Session } from '@google/genai';
+⋮----
+import { VoiceProvider, VoiceSession, VoiceSessionConfig, VoiceSessionState } from './types';
+⋮----
+export class GeminiVoiceProvider implements VoiceProvider
+⋮----
+// Silence detection refs
+⋮----
+async startSession(config: VoiceSessionConfig): Promise<VoiceSession>
+⋮----
+// Initialize silence detection
+⋮----
+async stopSession(): Promise<void>
+⋮----
+// Clear silence detection timeout
+⋮----
+// Cleanup audio processing
+⋮----
+// Close Gemini session
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+private async setupAudioProcessing(stream: MediaStream): Promise<void>
+⋮----
+// Calculate RMS to detect audio level
+⋮----
+// Check if audio level is above threshold (adjust as needed)
+const audioThreshold = 0.01; // Threshold for detecting audio input
+⋮----
+// Reset the silence timer when audio is detected
+⋮----
+// Clear existing timeout
+⋮----
+// Check for silence (no audio for 5 seconds)
+⋮----
+private handleMessage(message: LiveServerMessage): void
+⋮----
+private convertFloat32ToInt16(float32Array: Float32Array): Int16Array
+⋮----
+private arrayBufferToBase64(buffer: ArrayBuffer): string
+⋮----
+private setState(newState: VoiceSessionState): void
+⋮----
+// Factory function
+export const createGeminiVoiceProvider = (): VoiceProvider =>
+
+================
+File: src/renderer/src/voice/index.ts
+================
+// Future exports: export * from './anthropic';
+
+================
+File: src/renderer/src/voice/openai.ts
+================
+import { VoiceProvider, VoiceSession, VoiceSessionConfig, VoiceSessionState } from './types';
+⋮----
+export class OpenAIVoiceProvider implements VoiceProvider
+⋮----
+async startSession(config: VoiceSessionConfig): Promise<VoiceSession>
+⋮----
+private async connectWebRTC(): Promise<void>
+⋮----
+// Create a peer connection
+⋮----
+// Add local audio track for microphone input in the browser
+⋮----
+// Set up data channel for sending and receiving events
+⋮----
+// Start the session using the Session Description Protocol (SDP)
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// Listen for server events
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+async stopSession(): Promise<void>
+⋮----
+private setState(newState: VoiceSessionState): void
+⋮----
+// Factory function
+export const createOpenAIVoiceProvider = (): VoiceProvider =>
+
+================
+File: src/renderer/src/voice/types.ts
+================
+export interface VoiceProvider {
+  name: string;
+  startSession(config: VoiceSessionConfig): Promise<VoiceSession>;
+  stopSession(): Promise<void>;
+  onTranscription?: (text: string) => void;
+  onError?: (error: Error) => void;
+  onSessionStateChange?: (state: VoiceSessionState) => void;
+}
+⋮----
+startSession(config: VoiceSessionConfig): Promise<VoiceSession>;
+stopSession(): Promise<void>;
+⋮----
+export interface VoiceSessionConfig {
+  token: string;
+  model: string;
+  mediaStream: MediaStream;
+  onTranscription: (text: string) => void;
+  onError: (error: Error) => void;
+  onSessionStateChange?: (state: VoiceSessionState) => void;
+  onStopRecording?: () => void;
+}
+⋮----
+export interface VoiceSession {
+  isActive: boolean;
+  provider: VoiceProvider;
+}
+⋮----
+export enum VoiceSessionState {
+  IDLE = 'idle',
+  CONNECTING = 'connecting',
+  ACTIVE = 'active',
+  ERROR = 'error',
+  CLOSED = 'closed',
+}
 
 ================
 File: src/renderer/src/App.tsx
@@ -19637,10 +19904,10 @@ File: package.json
   "dependencies": {
     "@ai-sdk/amazon-bedrock": "^3.0.30",
     "@ai-sdk/anthropic": "^2.0.23",
-    "@ai-sdk/azure": "^2.0.60",
+    "@ai-sdk/azure": "^2.0.70",
     "@ai-sdk/cerebras": "^1.0.21",
     "@ai-sdk/deepseek": "^1.0.20",
-    "@ai-sdk/google": "^2.0.17",
+    "@ai-sdk/google": "^2.0.40",
     "@ai-sdk/google-vertex": "^3.0.34",
     "@ai-sdk/groq": "^2.0.22",
     "@ai-sdk/openai": "^2.0.42",
@@ -19657,6 +19924,8 @@ File: package.json
     "@electron-toolkit/preload": "^3.0.2",
     "@electron-toolkit/utils": "^4.0.0",
     "@google-cloud/aiplatform": "^5.7.0",
+    "@google-cloud/speech": "^7.2.1",
+    "@google/genai": "^1.30.0",
     "@headlessui/react": "^2.2.0",
     "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
     "@openrouter/ai-sdk-provider": "^1.2.0",
@@ -19712,6 +19981,7 @@ File: package.json
     "match-sorter": "^8.0.0",
     "object-hash": "^3.0.0",
     "ollama-ai-provider-v2": "^1.4.1",
+    "openai": "^6.9.1",
     "os-name": "^6.0.0",
     "patch-package": "^8.0.0",
     "posthog-node": "^4.18.0",
