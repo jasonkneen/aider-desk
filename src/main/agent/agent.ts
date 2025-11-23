@@ -741,6 +741,7 @@ export class Agent {
         if (this.modelManager.isStreamingDisabled(provider, profile.model)) {
           logger.debug('Streaming disabled, using generateText');
           await generateText({
+            providerOptions,
             model,
             system: systemPrompt,
             messages: optimizeMessages(profile, initialUserRequestMessageIndex, messages, cacheControl, settings),
@@ -749,6 +750,9 @@ export class Agent {
             maxOutputTokens: effectiveMaxOutputTokens,
             maxRetries: 5,
             temperature: effectiveTemperature,
+            experimental_telemetry: {
+              isEnabled: true,
+            },
             ...providerParameters,
             onStepFinish,
             experimental_repairToolCall: repairToolCall,

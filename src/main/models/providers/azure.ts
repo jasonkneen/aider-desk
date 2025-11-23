@@ -1,7 +1,7 @@
 import { createAzure } from '@ai-sdk/azure';
 import { Model, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData } from '@common/types';
 import { AzureProvider, isAzureProvider, LlmProvider } from '@common/agent';
-import { type OpenAIChatLanguageModelOptions } from '@ai-sdk/openai';
+import { type OpenAIResponsesProviderOptions } from '@ai-sdk/openai';
 
 import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
@@ -140,14 +140,12 @@ export const getAzureProviderOptions = (llmProvider: LlmProvider, model: Model):
         ? undefined
         : (reasoningEffort.toLowerCase() as 'minimal' | 'low' | 'medium' | 'high');
 
-    const options: OpenAIChatLanguageModelOptions = {};
+    const options: OpenAIResponsesProviderOptions = {};
 
     if (mappedReasoningEffort) {
       logger.debug('Using reasoning effort:', { mappedReasoningEffort });
       options.reasoningEffort = mappedReasoningEffort;
-      if (model.maxOutputTokens) {
-        options.maxCompletionTokens = model.maxOutputTokens;
-      }
+      options.reasoningSummary = 'auto';
     }
 
     if (Object.keys(options).length === 0) {

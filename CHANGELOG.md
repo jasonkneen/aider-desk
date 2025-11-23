@@ -7,6 +7,7 @@
 - passing auto approve options and denying execution of bash commands when running Aider via tool
 - added speech to text support using Gemini or OpenAI provider
 - corrected parameter name for internal helper tool when LLM uses invalid tool arguments
+- added missing parameters to providers when Disable streaming is used
 
 ## [0.40.0]
 
