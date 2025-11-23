@@ -13,6 +13,7 @@ export interface UseAudioRecorderType {
   transcription: string;
   error: string | null;
   resetTranscription: () => void;
+  voiceAvailable: boolean;
 }
 
 export const useAudioRecorder = (): UseAudioRecorderType => {
@@ -31,6 +32,8 @@ export const useAudioRecorder = (): UseAudioRecorderType => {
   const getVoiceProvider = useCallback(() => {
     return providers.find((p) => p.provider.voiceEnabled);
   }, [providers]);
+
+  const voiceAvailable = !!getVoiceProvider();
 
   const createVoiceProvider = useCallback((providerName: string): VoiceProvider => {
     switch (providerName) {
@@ -130,5 +133,6 @@ export const useAudioRecorder = (): UseAudioRecorderType => {
     transcription,
     error,
     resetTranscription,
+    voiceAvailable,
   };
 };

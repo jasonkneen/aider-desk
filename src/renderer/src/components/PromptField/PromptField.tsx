@@ -14,6 +14,7 @@ import { githubDarkInit } from '@uiw/codemirror-theme-github';
 import CodeMirror, { Annotation, Prec, type ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { useDebounce, useLocalStorage } from '@reactuses/core';
+import { useHotkeys } from 'react-hotkeys-hook';
 import { useTranslation } from 'react-i18next';
 import { BiSend } from 'react-icons/bi';
 import { MdDoneAll, MdPlaylistRemove, MdSave, MdStop, MdMic, MdMicOff } from 'react-icons/md';
@@ -180,7 +181,16 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
     const customCommands = useCustomCommands(baseDir);
     const api = useApi();
 
-    const { isRecording, isProcessing, startRecording, stopRecording, transcription, error: voiceError, resetTranscription } = useAudioRecorder();
+    const {
+      isRecording,
+      isProcessing,
+      startRecording,
+      stopRecording,
+      transcription,
+      error: voiceError,
+      resetTranscription,
+      voiceAvailable,
+    } = useAudioRecorder();
     const [textBeforeRecording, setTextBeforeRecording] = useState('');
 
     const setTextWithDispatch = (newText: string) => {
@@ -615,7 +625,37 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
       return [null, false];
     };
 
+    const toggleVoice = () => {
+      if (voiceAvailable && !disabled && !processing) {
+        if (isRecording) {
+          void stopRecording();
+        } else {
+          void startRecording();
+        }
+
+        return true;
+      }
+      return false;
+    };
+
+    useHotkeys(
+      'alt+v',
+      (e) => {
+        e.preventDefault();
+        toggleVoice();
+      },
+      {
+        enableOnFormTags: true,
+        enabled: voiceAvailable && !disabled && !processing,
+      },
+    );
+
     const keymapExtension = keymap.of([
+      {
+        key: 'Alt-v',
+        preventDefault: true,
+        run: toggleVoice,
+      },
       {
         key: 'Enter',
         preventDefault: true,
@@ -846,7 +886,10 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
               placeholder={question ? t('promptField.questionPlaceholder') : t(`promptField.placeholders.${placeholderIndex}`)}
               editable={!disabled}
               spellCheck={false}
-              className="w-full px-2 py-1 pr-16 border-2 border-border-default-dark rounded-md focus:outline-none focus:border-border-accent text-sm bg-bg-secondary text-text-primary placeholder-text-muted-dark resize-none overflow-y-auto transition-colors duration-200 max-h-[40vh] scrollbar-thin scrollbar-track-bg-secondary-light scrollbar-thumb-bg-fourth hover:scrollbar-thumb-bg-fourth"
+              className={clsx(
+                'w-full px-2 py-1 border-2 border-border-default-dark rounded-md focus:outline-none focus:border-border-accent text-sm bg-bg-secondary text-text-primary placeholder-text-muted-dark resize-none overflow-y-auto transition-colors duration-200 max-h-[40vh] scrollbar-thin scrollbar-track-bg-secondary-light scrollbar-thumb-bg-fourth hover:scrollbar-thumb-bg-fourth',
+                voiceAvailable ? 'pr-20' : 'pr-16',
+              )}
               theme={theme}
               basicSetup={{
                 highlightSelectionMatches: false,
@@ -915,32 +958,34 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
                   onClick={interruptResponse}
                   className="hover:text-text-tertiary hover:bg-bg-tertiary rounded p-1 transition-colors duration-200"
                   data-tooltip-id="prompt-field-tooltip"
-                  data-tooltip-content={t('promptField.stopResponse')}
+                  data-tooltip-content={`${t('promptField.stopResponse')} (Ctrl+C)`}
                 >
                   <MdStop className="w-4 h-4" />
                 </button>
                 <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
               </div>
             ) : (
-              <div className="absolute right-3 top-1/2 -translate-y-[12px] flex items-center space-x-2 text-text-muted-light">
-                <button
-                  onClick={isRecording ? stopRecording : startRecording}
-                  disabled={disabled || isProcessing}
-                  className={clsx(
-                    'text-text-muted-light hover:text-text-tertiary hover:bg-bg-tertiary rounded p-1 transition-all duration-200',
-                    isRecording ? 'text-accent-primary animate-pulse' : '',
-                  )}
-                  data-tooltip-id="prompt-field-tooltip"
-                  data-tooltip-content={isRecording ? t('promptField.stopRecording') : t('promptField.startRecording')}
-                >
-                  {isProcessing ? (
-                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                  ) : isRecording ? (
-                    <MdMicOff className="w-4 h-4" />
-                  ) : (
-                    <MdMic className="w-4 h-4" />
-                  )}
-                </button>
+              <div className="absolute right-2 top-1/2 -translate-y-[12px] flex items-center space-x-1 text-text-muted-light">
+                {voiceAvailable && (
+                  <button
+                    onClick={isRecording ? stopRecording : startRecording}
+                    disabled={disabled || isProcessing}
+                    className={clsx(
+                      'text-text-muted-light hover:text-text-tertiary hover:bg-bg-tertiary rounded p-1 transition-all duration-200',
+                      isRecording ? 'text-accent-primary animate-pulse' : '',
+                    )}
+                    data-tooltip-id="prompt-field-tooltip"
+                    data-tooltip-content={`${isRecording ? t('promptField.stopRecording') : t('promptField.startRecording')} (Alt+V)`}
+                  >
+                    {isProcessing ? (
+                      <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    ) : isRecording ? (
+                      <MdMicOff className="w-4 h-4" />
+                    ) : (
+                      <MdMic className="w-4 h-4" />
+                    )}
+                  </button>
+                )}
                 {text.trim() && !isRecording && (
                   <>
                     <button
