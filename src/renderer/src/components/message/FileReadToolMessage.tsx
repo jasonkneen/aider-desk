@@ -42,11 +42,16 @@ export const FileReadToolMessage = ({ message, onRemove, compact = false }: Prop
       <div className="text-text-muted">
         <RiFileTextLine className="w-4 h-4" />
       </div>
-      <div className="text-xs text-text-primary flex flex-wrap gap-1">
+      <div className="text-xs text-text-primary flex flex-wrap gap-1 align-center">
         <span>{t('toolMessage.power.fileRead.title')}</span>
         <span>
           <CodeInline className="bg-bg-primary-light">{filePath.split(/[/\\]/).pop()}</CodeInline>
         </span>
+        {(lineOffset !== 0 || lineLimit !== 1000) && (
+          <span className="text-text-muted text-2xs mt-[1px]">
+            L#{lineOffset}-{lineOffset + lineLimit}
+          </span>
+        )}
       </div>
       {!content && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light flex-shrink-0" />}
       {content &&
