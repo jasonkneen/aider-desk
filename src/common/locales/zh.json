@@ -35,7 +35,8 @@
     "suffix.million": "百万",
     "suffix.thousand": "千",
     "ok": "确定",
-    "collapse": "收起"
+    "collapse": "收起",
+    "enabled": "已启用"
   },
   "search": {
     "placeholder": "查找...",
@@ -169,7 +170,9 @@
   },
   "modelLibrary": {
     "enableVoiceControl": "启用语音控制",
-    "enableVoiceControlTooltip": "为此提供商启用语音控制。一次只能启用一个提供商。",
+    "enableVoiceControlOnlyOneInfo": "为此提供商启用语音控制。一次只能启用一个提供商。",
+    "voiceControl": "语音控制",
+    "voiceControlDescription": "使用语音转文本功能直接将您的提示语音输入到聊天输入框中。",
     "title": "模型库",
     "search": "搜索模型",
     "providers": "提供商",

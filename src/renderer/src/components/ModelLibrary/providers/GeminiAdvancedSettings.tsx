@@ -38,19 +38,11 @@ export const GeminiAdvancedSettings = ({ provider, onChange }: Props) => {
         className="max-w-[360px]"
       />
       <div className="flex items-center space-x-2">
-        <Checkbox
-          label={<span className="text-sm">{t('gemini.includeThoughts')}</span>}
-          checked={includeThoughts ?? false}
-          onChange={handleIncludeThoughtsChange}
-        />
+        <Checkbox label={t('gemini.includeThoughts')} checked={includeThoughts ?? false} size="md" onChange={handleIncludeThoughtsChange} />
         <InfoIcon tooltip={t('gemini.includeThoughtsTooltip')} />
       </div>
       <div className="flex items-center space-x-2">
-        <Checkbox
-          label={<span className="text-sm">{t('gemini.useSearchGrounding')}</span>}
-          checked={useSearchGrounding ?? false}
-          onChange={handleUseSearchGroundingChange}
-        />
+        <Checkbox label={t('gemini.useSearchGrounding')} checked={useSearchGrounding ?? false} onChange={handleUseSearchGroundingChange} size="md" />
         <InfoIcon tooltip={t('gemini.useSearchGroundingTooltip')} />
       </div>
     </div>

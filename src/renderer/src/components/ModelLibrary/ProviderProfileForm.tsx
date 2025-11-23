@@ -239,7 +239,7 @@ export const ProviderProfileForm = ({ provider, editProfile, providers, onSave, 
 
         {/* Disable streaming checkbox */}
         {parameters && (
-          <div className="mt-4 mx-2">
+          <div className="mt-4">
             <DisableStreaming checked={parameters.disableStreaming ?? false} onChange={handleDisableStreamingChange} />
           </div>
         )}

@@ -35,7 +35,8 @@
     "suffix.million": "M",
     "suffix.thousand": "K",
     "ok": "OK",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "enabled": "Enabled"
   },
   "search": {
     "placeholder": "Search...",
@@ -170,7 +171,9 @@
   },
   "modelLibrary": {
     "enableVoiceControl": "Enable Voice Control",
-    "enableVoiceControlTooltip": "Enable voice control for this provider. Only one provider can be enabled at a time.",
+    "enableVoiceControlOnlyOneInfo": "Only one provider can be enabled at a time.",
+    "voiceControl": "Voice control",
+    "voiceControlDescription": "Use speech-to-text to dictate your prompts directly into the chat input.",
     "title": "Model Library",
     "search": "Search Models",
     "providers": "Providers",

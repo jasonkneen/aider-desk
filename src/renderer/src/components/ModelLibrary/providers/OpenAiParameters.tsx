@@ -3,9 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { OpenAiProvider } from '@common/agent';
 
 import { OpenAiAdvancedSettings } from './OpenAiAdvancedSettings';
+import { EnableVoiceControl } from './EnableVoiceControl';
 
-import { Checkbox } from '@/components/common/Checkbox';
-import { InfoIcon } from '@/components/common/InfoIcon';
 import { Input } from '@/components/common/Input';
 import { useEffectiveEnvironmentVariable } from '@/hooks/useEffectiveEnvironmentVariable';
 
@@ -53,12 +52,9 @@ export const OpenAiParameters = ({ provider, onChange }: Props) => {
         }
       />
 
-      <div className="flex items-center space-x-2">
-        <Checkbox label={<span className="text-sm">{t('modelLibrary.enableVoiceControl')}</span>} checked={voiceEnabled} onChange={handleVoiceEnabledChange} />
-        <InfoIcon tooltip={t('modelLibrary.enableVoiceControlTooltip')} />
-      </div>
-
       <OpenAiAdvancedSettings provider={provider} onChange={onChange} />
+
+      <EnableVoiceControl voiceEnabled={voiceEnabled} onChange={handleVoiceEnabledChange} />
     </div>
   );
 };

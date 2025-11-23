@@ -13,7 +13,7 @@ export const DisableStreaming = ({ checked, onChange }: Props) => {
 
   return (
     <div className="flex items-center space-x-2">
-      <Checkbox label={t('modelLibrary.disableStreaming')} checked={checked} onChange={onChange} />
+      <Checkbox label={t('modelLibrary.disableStreaming')} checked={checked} onChange={onChange} size="md" />
       <InfoIcon tooltip={t('modelLibrary.disableStreamingInfo')} />
     </div>
   );
