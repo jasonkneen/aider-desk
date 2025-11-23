@@ -173,6 +173,7 @@
     "enableVoiceControlOnlyOneInfo": "为此提供商启用语音控制。一次只能启用一个提供商。",
     "voiceControl": "语音控制",
     "voiceControlDescription": "使用语音转文本功能直接将您的提示语音输入到聊天输入框中。",
+    "voiceEnabled": "语音交互已启用",
     "title": "模型库",
     "search": "搜索模型",
     "providers": "提供商",

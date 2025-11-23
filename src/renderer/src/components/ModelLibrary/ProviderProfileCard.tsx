@@ -1,6 +1,6 @@
 import { useState, ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiMic } from 'react-icons/fi';
 import { clsx } from 'clsx';
 import { ProviderProfile } from '@common/types';
 import { LlmProviderName } from '@common/agent';
@@ -115,7 +115,15 @@ export const ProviderProfileCard = ({ provider, error, isSelected, onToggleSelec
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <div className="font-medium text-sm truncate">{name}</div>
+            <div className="font-medium text-sm truncate flex items-center gap-3">
+              {name}
+              {provider.provider.voiceEnabled && (
+                <>
+                  <StyledTooltip id={`provider-voice-tooltip-${provider.id}`} content={t('modelLibrary.voiceEnabled')} />
+                  <FiMic className="w-4 h-4 text-text-secondary" data-tooltip-id={`provider-voice-tooltip-${provider.id}`} />
+                </>
+              )}
+            </div>
             <div className="text-xs text-text-secondary truncate">{provider.id}</div>
           </div>
         </div>
