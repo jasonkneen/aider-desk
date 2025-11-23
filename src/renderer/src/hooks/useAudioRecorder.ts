@@ -14,6 +14,7 @@ export interface UseAudioRecorderType {
   error: string | null;
   resetTranscription: () => void;
   voiceAvailable: boolean;
+  mediaStream: MediaStream | null;
 }
 
 export const useAudioRecorder = (): UseAudioRecorderType => {
@@ -24,6 +25,7 @@ export const useAudioRecorder = (): UseAudioRecorderType => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcription, setTranscription] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
 
   const streamRef = useRef<MediaStream | null>(null);
   const voiceProviderRef = useRef<VoiceProvider | null>(null);
@@ -71,6 +73,7 @@ export const useAudioRecorder = (): UseAudioRecorderType => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
+      setMediaStream(null);
     }
 
     setIsRecording(false);
@@ -93,6 +96,7 @@ export const useAudioRecorder = (): UseAudioRecorderType => {
         video: false,
       });
       streamRef.current = stream;
+      setMediaStream(stream);
 
       // Create voice session
       const session = await api.createVoiceSession(voiceProviderProfile.provider);
@@ -134,5 +138,6 @@ export const useAudioRecorder = (): UseAudioRecorderType => {
     error,
     resetTranscription,
     voiceAvailable,
+    mediaStream,
   };
 };

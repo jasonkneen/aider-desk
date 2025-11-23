@@ -31,6 +31,7 @@ import { useApi } from '@/contexts/ApiContext';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { IconButton } from '@/components/common/IconButton';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
+import { AudioAnalyzer } from '@/components/PromptField/AudioAnalyzer';
 
 const External = Annotation.define<boolean>();
 
@@ -190,6 +191,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
       error: voiceError,
       resetTranscription,
       voiceAvailable,
+      mediaStream,
     } = useAudioRecorder();
     const [textBeforeRecording, setTextBeforeRecording] = useState('');
 
@@ -888,7 +890,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
               spellCheck={false}
               className={clsx(
                 'w-full px-2 py-1 border-2 border-border-default-dark rounded-md focus:outline-none focus:border-border-accent text-sm bg-bg-secondary text-text-primary placeholder-text-muted-dark resize-none overflow-y-auto transition-colors duration-200 max-h-[40vh] scrollbar-thin scrollbar-track-bg-secondary-light scrollbar-thumb-bg-fourth hover:scrollbar-thumb-bg-fourth',
-                voiceAvailable ? 'pr-20' : 'pr-16',
+                voiceAvailable ? (isRecording ? 'pr-24' : 'pr-20') : 'pr-16',
               )}
               theme={theme}
               basicSetup={{
@@ -966,6 +968,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
               </div>
             ) : (
               <div className="absolute right-2 top-1/2 -translate-y-[12px] flex items-center space-x-1 text-text-muted-light">
+                {isRecording && mediaStream && <AudioAnalyzer stream={mediaStream} />}
                 {voiceAvailable && (
                   <button
                     onClick={isRecording ? stopRecording : startRecording}
