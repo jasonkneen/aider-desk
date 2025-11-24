@@ -1,8 +1,10 @@
 import { Font, SettingsData, Theme } from '@common/types';
-import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LlmProviderName } from '@common/agent';
+import { clsx } from 'clsx';
+import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer } from 'react-icons/fa';
+import { MdTerminal } from 'react-icons/md';
 
 import { useApi } from '@/contexts/ApiContext';
 import { AiderSettings } from '@/components/settings/AiderSettings';
@@ -24,6 +26,16 @@ type Props = {
   initialAgentProvider?: LlmProviderName;
 };
 
+type PageId = 'general' | 'aider' | 'agent' | 'server' | 'about';
+
+interface SidebarItem {
+  id: string;
+  label: string;
+  icon?: ReactNode;
+  children?: { id: string; label: string }[];
+  pageId: PageId;
+}
+
 export const Settings = ({
   settings,
   updateSettings,
@@ -37,44 +49,124 @@ export const Settings = ({
 }: Props) => {
   const { t } = useTranslation();
   const api = useApi();
-  const [selectedTabIndex, setSelectedTabIndex] = useState(initialTab);
   const [isServerManagementSupported, setIsServerManagementSupported] = useState(false);
+
+  // Map initialTab index to PageId
+  const getInitialPage = (index: number): PageId => {
+    const pages: PageId[] = ['general', 'aider', 'agent', 'server', 'about'];
+    return pages[index] || 'general';
+  };
+
+  const [activePage, setActivePage] = useState<PageId>(getInitialPage(initialTab));
+  const [expandedPages, setExpandedPages] = useState<Record<string, boolean>>({
+    general: true,
+    aider: true,
+    server: true,
+  });
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setIsServerManagementSupported(api.isManageServerSupported());
   }, [api]);
 
-  const renderTab = (label: string) => (
-    <Tab
-      className={({ selected }) =>
-        `relative px-6 py-3 text-sm font-medium transition-all duration-200 uppercase tracking-wide focus:outline-none ${
-          selected ? 'text-text-primary' : 'text-text-muted  hover:text-text-secondary hover:bg-bg-secondary-light'
-        } first:rounded-tl-lg border-r border-border-default-dark last:border-r-0`
+  const sidebarItems: SidebarItem[] = [
+    {
+      id: 'general',
+      pageId: 'general',
+      label: t('settings.tabs.general'),
+      icon: <FaCog className="w-4 h-4" />,
+      children: [
+        { id: 'general-gui', label: t('settings.gui') },
+        { id: 'general-startup', label: t('settings.startup.title') },
+        { id: 'general-messages', label: t('settings.messages.title') },
+        { id: 'general-prompt', label: t('settings.promptBehavior.title') },
+        {
+          id: 'general-notifications',
+          label: t('settings.notifications.title'),
+        },
+      ],
+    },
+    {
+      id: 'aider',
+      pageId: 'aider',
+      label: t('settings.tabs.aider'),
+      icon: <MdTerminal className="w-4 h-4" />,
+      children: [
+        { id: 'aider-options', label: t('settings.aider.options') },
+        {
+          id: 'aider-env-vars',
+          label: t('settings.aider.environmentVariables'),
+        },
+        { id: 'aider-context', label: t('settings.aider.context') },
+      ],
+    },
+    {
+      id: 'agent',
+      pageId: 'agent',
+      label: t('settings.tabs.agents'),
+      icon: <FaRobot className="w-4 h-4" />,
+    },
+    ...(isServerManagementSupported
+      ? [
+          {
+            id: 'server',
+            pageId: 'server' as PageId,
+            label: t('settings.tabs.server'),
+            icon: <FaServer className="w-4 h-4" />,
+            children: [
+              { id: 'server-auth', label: t('settings.server.authentication') },
+              {
+                id: 'server-control',
+                label: t('settings.server.serverControl'),
+              },
+              {
+                id: 'server-tunnel',
+                label: t('settings.server.tunnelManagement'),
+              },
+            ],
+          },
+        ]
+      : []),
+    {
+      id: 'about',
+      pageId: 'about',
+      label: t('settings.tabs.about'),
+      icon: <FaInfoCircle className="w-4 h-4" />,
+    },
+  ];
+
+  const scrollToSection = (sectionId: string) => {
+    setTimeout(() => {
+      const element = document.getElementById(sectionId);
+      if (element && contentRef.current) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-    >
-      {label}
-    </Tab>
-  );
+    }, 100);
+  };
 
-  const renderTabPanel = (content: ReactNode) => (
-    <TabPanel className="flex flex-col flex-1 min-h-0 bg-bg-secondary backdrop-blur-sm border border-border-default-dark rounded-b-lg shadow-xl">
-      <div className="p-8 flex flex-col flex-1 max-h-[100%] overflow-y-auto scrollbar-thin scrollbar-track-bg-secondary-light-strongest scrollbar-thumb-bg-fourth hover:scrollbar-thumb-bg-fifth">
-        {content}
-      </div>
-    </TabPanel>
-  );
+  const toggleExpand = (id: string) => {
+    setExpandedPages((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
 
-  return (
-    <TabGroup className="flex flex-col flex-1 min-h-0" selectedIndex={selectedTabIndex} onChange={setSelectedTabIndex}>
-      <TabList className="flex bg-bg-secondary backdrop-blur-sm border border-border-default-dark rounded-t-lg shadow-lg">
-        {renderTab(t('settings.tabs.general'))}
-        {renderTab(t('settings.tabs.aider'))}
-        {renderTab(t('settings.tabs.agent'))}
-        {isServerManagementSupported && renderTab(t('settings.tabs.server'))}
-        {renderTab(t('settings.tabs.about'))}
-      </TabList>
-      <TabPanels className="flex flex-col flex-1 overflow-hidden">
-        {renderTabPanel(
+  const handleItemClick = (item: SidebarItem) => {
+    setActivePage(item.pageId);
+    if (item.children) {
+      toggleExpand(item.id);
+    }
+  };
+
+  const handleChildClick = (pageId: PageId, sectionId: string) => {
+    setActivePage(pageId);
+    scrollToSection(sectionId);
+  };
+
+  const renderContent = () => {
+    switch (activePage) {
+      case 'general':
+        return (
           <GeneralSettings
             settings={settings}
             setSettings={updateSettings}
@@ -83,14 +175,88 @@ export const Settings = ({
             onThemeChange={onThemeChange}
             onFontChange={onFontChange}
             onFontSizeChange={onFontSizeChange}
-          />,
-        )}
-        {renderTabPanel(<AiderSettings settings={settings} setSettings={updateSettings} />)}
-        {renderTabPanel(<AgentSettings settings={settings} setSettings={updateSettings} initialProfileId={initialAgentProfileId} />)}
-        {isServerManagementSupported && renderTabPanel(<ServerSettings settings={settings} setSettings={updateSettings} />)}
-        {renderTabPanel(<AboutSettings settings={settings} setSettings={updateSettings} />)}
-      </TabPanels>
-    </TabGroup>
+          />
+        );
+      case 'aider':
+        return <AiderSettings settings={settings} setSettings={updateSettings} />;
+      case 'agent':
+        return <AgentSettings settings={settings} setSettings={updateSettings} initialProfileId={initialAgentProfileId} />;
+      case 'server':
+        return <ServerSettings settings={settings} setSettings={updateSettings} />;
+      case 'about':
+        return <AboutSettings settings={settings} setSettings={updateSettings} />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="flex flex-1 h-full min-h-0 overflow-hidden">
+      {/* Sidebar */}
+      <div className="w-64 flex-shrink-0 overflow-y-auto pt-0 bg-bg-primary border-r border-border-default-dark scrollbar-thin scrollbar-track-transparent scrollbar-thumb-bg-tertiary">
+        <div className="p-2 space-y-1">
+          {sidebarItems.map((item) => (
+            <div key={item.id}>
+              <div
+                className={clsx(
+                  'flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-150 select-none',
+                  activePage === item.pageId ? 'bg-bg-active text-text-primary' : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary',
+                )}
+                onClick={() => handleItemClick(item)}
+              >
+                {item.children && item.children.length > 0 && (
+                  <div
+                    className="mr-2 p-0.5 rounded hover:bg-bg-tertiary-strong transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleExpand(item.id);
+                    }}
+                  >
+                    {expandedPages[item.id] ? <FaChevronDown className="w-3 h-3" /> : <FaChevronRight className="w-3 h-3" />}
+                  </div>
+                )}
+                {!item.children && <span className="w-6" />} {/* Spacer for items without children */}
+                <span className="mr-3">{item.icon}</span>
+                <span className="flex-1 truncate uppercase">{item.label}</span>
+              </div>
+
+              {/* Children */}
+              {item.children && expandedPages[item.id] && (
+                <div className="ml-9 space-y-0.5 mt-0.5 border-l border-border-default pl-2">
+                  {item.children.map((child) => (
+                    <div
+                      key={child.id}
+                      className={clsx(
+                        'px-3 py-1.5 text-xs rounded-md cursor-pointer transition-colors duration-150 select-none truncate',
+                        'text-text-muted hover:text-text-primary hover:bg-bg-tertiary',
+                      )}
+                      onClick={() => handleChildClick(item.pageId, child.id)}
+                    >
+                      {child.label}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <div
+          ref={contentRef}
+          className={clsx(
+            'flex-1 w-full mx-auto',
+            activePage === 'agent'
+              ? 'overflow-hidden p-0 h-full'
+              : 'overflow-y-auto p-8 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-bg-tertiary hover:scrollbar-thumb-bg-tertiary-strong max-w-[1024px]',
+          )}
+        >
+          {renderContent()}
+        </div>
+      </div>
+    </div>
   );
 };
 

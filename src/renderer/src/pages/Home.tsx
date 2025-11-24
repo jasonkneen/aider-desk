@@ -10,7 +10,7 @@ import { NoProjectsOpen } from '@/components/project/NoProjectsOpen';
 import { OpenProjectDialog } from '@/components/project/OpenProjectDialog';
 import { ProjectTabs } from '@/components/project/ProjectTabs';
 import { ProjectView } from '@/components/project/ProjectView';
-import { SettingsDialog } from '@/components/settings/SettingsDialog';
+import { SettingsPage } from '@/components/settings/SettingsPage';
 import { useVersions } from '@/hooks/useVersions';
 import { HtmlInfoDialog } from '@/components/common/HtmlInfoDialog';
 import { ProjectSettingsProvider } from '@/contexts/ProjectSettingsContext';
@@ -18,6 +18,7 @@ import { TelemetryInfoDialog } from '@/components/TelemetryInfoDialog';
 import { showInfoNotification } from '@/utils/notifications';
 import { useApi } from '@/contexts/ApiContext';
 import { ModelLibrary } from '@/components/ModelLibrary';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
 
 let hasShownUpdateNotification = false;
 
@@ -212,6 +213,7 @@ export const Home = () => {
 
   return (
     <div className="flex flex-col h-full p-[4px] bg-gradient-to-b from-bg-primary to-bg-primary-light">
+      <StyledTooltip id="top-bar-tooltip" />
       <div className="flex flex-col h-full border-2 border-border-default relative">
         <div className="flex border-b-2 border-border-default justify-between bg-gradient-to-b from-bg-primary to-bg-primary-light">
           <ProjectTabs
@@ -227,6 +229,7 @@ export const Home = () => {
               <IconButton
                 icon={<MdUpload className="h-5 w-5 text-text-primary animate-pulse animate-slow" />}
                 tooltip={getUpdateTooltip()}
+                tooltipId="top-bar-tooltip"
                 onClick={() => {
                   setShowSettingsTab(4);
                 }}
@@ -236,18 +239,21 @@ export const Home = () => {
             <IconButton
               icon={<PiNotebookFill className="h-5 w-5 text-text-secondary" />}
               tooltip={t('projectBar.modelLibrary')}
+              tooltipId="top-bar-tooltip"
               onClick={() => setIsModelLibraryVisible(true)}
               className="px-4 py-2 hover:bg-bg-tertiary-emphasis transition-colors duration-200"
             />
             <IconButton
               icon={<MdBarChart className="h-5 w-5 text-text-secondary" />}
               tooltip={t('usageDashboard.title')}
+              tooltipId="top-bar-tooltip"
               onClick={() => setIsUsageDashboardVisible(true)}
               className="px-4 py-2 hover:bg-bg-tertiary-emphasis transition-colors duration-200"
             />
             <IconButton
               icon={<MdSettings className="h-5 w-5 text-text-secondary" />}
               tooltip={t('settings.title')}
+              tooltipId="top-bar-tooltip"
               onClick={() => {
                 setShowSettingsTab(0);
               }}
@@ -258,7 +264,7 @@ export const Home = () => {
         {isOpenProjectDialogVisible && (
           <OpenProjectDialog onClose={() => setIsOpenProjectDialogVisible(false)} onAddProject={handleAddProject} openProjects={openProjects} />
         )}
-        {showSettingsTab !== null && <SettingsDialog onClose={() => setShowSettingsTab(null)} initialTab={showSettingsTab} />}
+        {showSettingsTab !== null && <SettingsPage onClose={() => setShowSettingsTab(null)} initialTab={showSettingsTab} />}
         {isUsageDashboardVisible && <UsageDashboard onClose={() => setIsUsageDashboardVisible(false)} />}
         {isModelLibraryVisible && <ModelLibrary onClose={() => setIsModelLibraryVisible(false)} />}
         {releaseNotesContent && versions && (

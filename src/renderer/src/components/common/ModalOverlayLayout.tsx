@@ -6,7 +6,7 @@ import { IconButton } from './IconButton';
 
 type Props = {
   title: string;
-  onClose: () => void;
+  onClose?: () => void;
   children: ReactNode;
 };
 
@@ -18,12 +18,14 @@ export const ModalOverlayLayout = ({ title, onClose, children }: Props) => {
         <div className="flex items-center space-x-4">
           <h2 className="text-md uppercase font-medium text-text-primary">{title}</h2>
         </div>
-        <IconButton
-          icon={<IoMdClose className="h-5 w-5 text-text-secondary" />}
-          onClick={onClose}
-          tooltip={t('common.close')}
-          className="px-4 py-2 hover:text-text-secondary hover:bg-bg-tertiary-emphasis transition-colors duration-200"
-        />
+        {onClose && (
+          <IconButton
+            icon={<IoMdClose className="h-5 w-5 text-text-secondary" />}
+            onClick={onClose}
+            tooltip={t('common.close')}
+            className="px-4 py-2 hover:text-text-secondary hover:bg-bg-tertiary-emphasis transition-colors duration-200"
+          />
+        )}
       </div>
       {children}
     </div>

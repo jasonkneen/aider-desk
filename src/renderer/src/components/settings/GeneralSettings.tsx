@@ -149,7 +149,7 @@ export const GeneralSettings = ({ settings, setSettings, onLanguageChange, onZoo
 
   return (
     <div className="space-y-6">
-      <Section title={t('settings.gui')}>
+      <Section id="general-gui" title={t('settings.gui')}>
         <div className="grid grid-cols-2 gap-4 pt-4 px-4">
           <LanguageSelector language={settings.language} onChange={onLanguageChange} />
           <Select label={t('settings.zoom')} options={ZOOM_OPTIONS} value={String(settings.zoomLevel ?? 1)} onChange={handleZoomChange} />
@@ -161,7 +161,7 @@ export const GeneralSettings = ({ settings, setSettings, onLanguageChange, onZoo
         </div>
       </Section>
 
-      <Section title={t('settings.startup.title')}>
+      <Section id="general-startup" title={t('settings.startup.title')}>
         <div className="px-4 py-3 space-y-3 mt-2">
           <RadioButton
             id="startup-empty"
@@ -183,7 +183,7 @@ export const GeneralSettings = ({ settings, setSettings, onLanguageChange, onZoo
         </div>
       </Section>
 
-      <Section title={t('settings.messages.title')}>
+      <Section id="general-messages" title={t('settings.messages.title')}>
         <div className="px-4 py-5 grid grid-cols-2 gap-x-10 gap-y-6">
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-text-muted">{t('settings.messages.display')}</h4>
@@ -216,7 +216,7 @@ export const GeneralSettings = ({ settings, setSettings, onLanguageChange, onZoo
         </div>
       </Section>
 
-      <Section title={t('settings.promptBehavior.title')}>
+      <Section id="general-prompt" title={t('settings.promptBehavior.title')}>
         <div className="px-4 py-5 grid grid-cols-2 gap-x-10 gap-y-6">
           <div className="space-y-3">
             <h4 className="text-sm font-medium text-text-muted">{t('settings.promptBehavior.showSuggestions')}</h4>
@@ -314,7 +314,7 @@ export const GeneralSettings = ({ settings, setSettings, onLanguageChange, onZoo
         </div>
       </Section>
 
-      <Section title={t('settings.notifications.title')}>
+      <Section id="general-notifications" title={t('settings.notifications.title')}>
         <div className="px-4 py-3 space-y-3 mt-2">
           <Checkbox label={t('settings.notificationsEnabled')} checked={settings.notificationsEnabled ?? false} onChange={handleNotificationsEnabledChange} />
         </div>

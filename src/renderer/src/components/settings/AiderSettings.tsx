@@ -22,7 +22,7 @@ export const AiderSettings = ({ settings, setSettings, initialShowEnvVars = fals
 
   return (
     <div className="space-y-6">
-      <Section title={t('settings.aider.options')}>
+      <Section id="aider-options" title={t('settings.aider.options')}>
         <div className="px-4 py-5 pb-3 space-y-1.5">
           <Checkbox
             label={t('settings.aider.autoCommits')}
@@ -106,7 +106,7 @@ export const AiderSettings = ({ settings, setSettings, initialShowEnvVars = fals
         </div>
       </Section>
 
-      <Section title={t('settings.aider.environmentVariables')}>
+      <Section id="aider-env-vars" title={t('settings.aider.environmentVariables')}>
         <div className="px-4 py-6 pb-3">
           <div className="relative">
             <TextArea
@@ -145,7 +145,7 @@ export const AiderSettings = ({ settings, setSettings, initialShowEnvVars = fals
           </p>
         </div>
       </Section>
-      <Section title={t('settings.aider.context')}>
+      <Section id="aider-context" title={t('settings.aider.context')}>
         <div className="px-4 py-6 pb-3 space-y-1.5">
           <Checkbox
             label={

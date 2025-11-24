@@ -18,7 +18,7 @@ export const AgentProfileItem = ({ profile, isSelected, onClick }: Props) => {
     >
       <div className="flex items-center">
         {profile.subagent.enabled && <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: profile.subagent.color }} />}
-        <span className="flex-1">{profile.name}</span>
+        <span className="flex-1 text-sm">{profile.name}</span>
       </div>
     </div>
   );

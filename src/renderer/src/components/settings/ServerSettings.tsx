@@ -181,7 +181,7 @@ export const ServerSettings = ({ settings, setSettings }: Props) => {
 
   return (
     <div className="space-y-6">
-      <Section title={t('settings.server.authentication')}>
+      <Section id="server-auth" title={t('settings.server.authentication')}>
         <div className="p-4 space-y-4">
           <div>
             <Checkbox
@@ -214,10 +214,10 @@ export const ServerSettings = ({ settings, setSettings }: Props) => {
         </div>
       </Section>
 
-      <Section title={t('settings.server.serverControl')}>
+      <Section id="server-control" title={t('settings.server.serverControl')}>
         <div className="p-4 space-y-4">
           <p className="text-xs text-text-muted">{t('settings.server.description')}</p>
-          <div className="flex items-center justify-between p-3 bg-bg-secondary rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-bg-secondary rounded-md">
             <div>
               <p className="text-sm text-text-muted">
                 {t('settings.server.status')}:{' '}
@@ -234,10 +234,10 @@ export const ServerSettings = ({ settings, setSettings }: Props) => {
       </Section>
 
       {isServerRunning && (
-        <Section title={t('settings.server.tunnelManagement')}>
+        <Section id="server-tunnel" title={t('settings.server.tunnelManagement')}>
           <div className="p-4 space-y-4">
             <p className="text-xs text-text-muted">{t('settings.server.tunnelDescription')}</p>
-            <div className="flex items-center justify-between p-3 bg-bg-secondary">
+            <div className="flex items-center justify-between p-3 bg-bg-secondary rounded-md">
               <div className="flex-1">
                 <p className="text-sm text-text-muted">
                   {t('settings.server.status')}:{' '}

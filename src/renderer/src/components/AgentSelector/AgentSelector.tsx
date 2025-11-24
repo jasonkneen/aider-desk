@@ -17,7 +17,7 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { Accordion } from '@/components/common/Accordion';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
-import { SettingsDialog } from '@/components/settings/SettingsDialog';
+import { SettingsPage } from '@/components/settings/SettingsPage';
 import { useApi } from '@/contexts/ApiContext';
 
 type Props = {
@@ -320,7 +320,7 @@ export const AgentSelector = ({ isActive }: Props) => {
       <StyledTooltip id="agent-selector-tooltip" />
 
       {showAgentProfilesDialog && (
-        <SettingsDialog onClose={() => setShowAgentProfilesDialog(false)} initialTab={2} initialAgentProfileId={projectSettings?.agentProfileId} />
+        <SettingsPage onClose={() => setShowAgentProfilesDialog(false)} initialTab={2} initialAgentProfileId={projectSettings?.agentProfileId} />
       )}
     </div>
   );

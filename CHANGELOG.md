@@ -1,5 +1,9 @@
 # Changelog
 
+## [UNRELEASED]
+
+- redesign settings interface with sidebar navigation
+
 ## [0.41.0]
 
 - added resize functionality to todo window

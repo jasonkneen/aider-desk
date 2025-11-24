@@ -6,8 +6,9 @@ import { LlmProviderName } from '@common/agent';
 
 import { Settings } from '@/pages/Settings';
 import { useSettings } from '@/contexts/SettingsContext';
-import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { ModalOverlayLayout } from '@/components/common/ModalOverlayLayout';
 import { useApi } from '@/contexts/ApiContext';
+import { Button } from '@/components/common/Button';
 
 type Props = {
   onClose: () => void;
@@ -16,7 +17,7 @@ type Props = {
   initialAgentProvider?: LlmProviderName;
 };
 
-export const SettingsDialog = ({ onClose, initialTab = 0, initialAgentProfileId, initialAgentProvider }: Props) => {
+export const SettingsPage = ({ onClose, initialTab = 0, initialAgentProfileId, initialAgentProvider }: Props) => {
   const { t, i18n } = useTranslation();
   const api = useApi();
 
@@ -88,28 +89,31 @@ export const SettingsDialog = ({ onClose, initialTab = 0, initialAgentProfileId,
   };
 
   return (
-    <ConfirmDialog
-      title={t('settings.title')}
-      onCancel={handleCancel}
-      onConfirm={handleSave}
-      confirmButtonText={t('common.save')}
-      width={1000}
-      disabled={!hasChanges}
-    >
-      {localSettings && (
-        <Settings
-          settings={localSettings}
-          updateSettings={setLocalSettings}
-          onLanguageChange={handleLanguageChange}
-          onZoomChange={handleZoomChange}
-          onThemeChange={setTheme}
-          onFontChange={setFont}
-          onFontSizeChange={setFontSize}
-          initialTab={initialTab}
-          initialAgentProfileId={initialAgentProfileId}
-          initialAgentProvider={initialAgentProvider}
-        />
-      )}
-    </ConfirmDialog>
+    <ModalOverlayLayout title={t('settings.title')}>
+      <div className="flex flex-col flex-1 min-h-0">
+        {localSettings && (
+          <Settings
+            settings={localSettings}
+            updateSettings={setLocalSettings}
+            onLanguageChange={handleLanguageChange}
+            onZoomChange={handleZoomChange}
+            onThemeChange={setTheme}
+            onFontChange={setFont}
+            onFontSizeChange={setFontSize}
+            initialTab={initialTab}
+            initialAgentProfileId={initialAgentProfileId}
+            initialAgentProvider={initialAgentProvider}
+          />
+        )}
+      </div>
+      <div className="flex items-center justify-end p-3 gap-3 border-t border-border-default-dark">
+        <Button variant="text" onClick={handleCancel}>
+          {t('common.cancel')}
+        </Button>
+        <Button onClick={handleSave} disabled={!hasChanges}>
+          {t('common.save')}
+        </Button>
+      </div>
+    </ModalOverlayLayout>
   );
 };
