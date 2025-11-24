@@ -299,6 +299,7 @@ src/
             CerebrasParameters.tsx
             DeepseekParameters.tsx
             DefaultModelOverrides.tsx
+            EnableVoiceControl.tsx
             GeminiAdvancedSettings.tsx
             GeminiModelOverrides.tsx
             GeminiParameters.tsx
@@ -357,6 +358,7 @@ src/
           WorktreeMergeButton.tsx
           WorktreeRevertButton.tsx
         PromptField/
+          AudioAnalyzer.tsx
           CommandSuggestion.tsx
           EditFormatSelector.tsx
           index.ts
@@ -477,6 +479,7 @@ src/
         theme-charcoal.scss
         theme-dark.scss
         theme-forest.scss
+        theme-fresh.scss
         theme-lavender.scss
         theme-light.scss
         theme-midnight.scss
@@ -1403,7 +1406,8 @@ File: src/common/locales/en.json
     "suffix.million": "M",
     "suffix.thousand": "K",
     "ok": "OK",
-    "collapse": "Collapse"
+    "collapse": "Collapse",
+    "enabled": "Enabled"
   },
   "search": {
     "placeholder": "Search...",
@@ -1538,7 +1542,10 @@ File: src/common/locales/en.json
   },
   "modelLibrary": {
     "enableVoiceControl": "Enable Voice Control",
-    "enableVoiceControlTooltip": "Enable voice control for this provider. Only one provider can be enabled at a time.",
+    "enableVoiceControlOnlyOneInfo": "Only one provider can be enabled at a time.",
+    "voiceControl": "Voice control",
+    "voiceControlDescription": "Use speech-to-text to dictate your prompts directly into the chat input.",
+    "voiceEnabled": "Voice interaction enabled",
     "title": "Model Library",
     "search": "Search Models",
     "providers": "Providers",
@@ -1849,7 +1856,8 @@ File: src/common/locales/en.json
       "charcoal": "Charcoal",
       "aurora": "Aurora",
       "serenity": "Serenity",
-      "cappuccino": "Cappuccino"
+      "cappuccino": "Cappuccino",
+      "fresh": "Fresh"
     },
     "aiderRestartConfirm": {
       "title": "Restart Required",
@@ -2499,7 +2507,8 @@ File: src/common/locales/zh.json
     "suffix.million": "百万",
     "suffix.thousand": "千",
     "ok": "确定",
-    "collapse": "收起"
+    "collapse": "收起",
+    "enabled": "已启用"
   },
   "search": {
     "placeholder": "查找...",
@@ -2633,7 +2642,10 @@ File: src/common/locales/zh.json
   },
   "modelLibrary": {
     "enableVoiceControl": "启用语音控制",
-    "enableVoiceControlTooltip": "为此提供商启用语音控制。一次只能启用一个提供商。",
+    "enableVoiceControlOnlyOneInfo": "为此提供商启用语音控制。一次只能启用一个提供商。",
+    "voiceControl": "语音控制",
+    "voiceControlDescription": "使用语音转文本功能直接将您的提示语音输入到聊天输入框中。",
+    "voiceEnabled": "语音交互已启用",
     "title": "模型库",
     "search": "搜索模型",
     "providers": "提供商",
@@ -2940,7 +2952,8 @@ File: src/common/locales/zh.json
       "neopunk": "赛博朋克",
       "charcoal": "炭灰",
       "aurora": "极光",
-      "serenity": "宁静"
+      "serenity": "宁静",
+      "fresh": "清新"
     },
     "aiderRestartConfirm": {
       "title": "需要重启",
@@ -3836,7 +3849,6 @@ import {
   VersionsInfo,
   VoiceSession,
 } from '@common/types';
-import { LlmProvider } from '@common/agent';
 ⋮----
 export interface ApplicationAPI {
   isOpenLogsDirectorySupported: () => boolean;
@@ -3920,7 +3932,7 @@ export interface ApplicationAPI {
   getEffectiveEnvironmentVariable: (key: string, baseDir?: string) => Promise<EnvironmentVariable | undefined>;
 
   // Voice API
-  createVoiceSession: (provider: LlmProvider) => Promise<VoiceSession>;
+  createVoiceSession: (provider: ProviderProfile) => Promise<VoiceSession>;
 
   getProviderModels: (reload?: boolean) => Promise<ProviderModelsData>;
   getProviders: () => Promise<ProviderProfile[]>;
@@ -5999,7 +6011,7 @@ File: src/main/models/providers/azure.ts
 import { createAzure } from '@ai-sdk/azure';
 import { Model, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData } from '@common/types';
 import { AzureProvider, isAzureProvider, LlmProvider } from '@common/agent';
-import { type OpenAIChatLanguageModelOptions } from '@ai-sdk/openai';
+import { type OpenAIResponsesProviderOptions } from '@ai-sdk/openai';
 ⋮----
 import type { LanguageModelUsage } from 'ai';
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
@@ -10109,7 +10121,6 @@ import {
   VoiceSession,
 } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
-import { LlmProviderBase } from '@common/agent';
 ⋮----
 import type { BrowserWindow } from 'electron';
 ⋮----
@@ -10145,9 +10156,7 @@ async stopProject(baseDir: string): Promise<void>
 ⋮----
 async restartProject(baseDir: string): Promise<void>
 ⋮----
-async createVoiceSession(provider: LlmProviderBase): Promise<VoiceSession>
-⋮----
-// Find the provider profile from the store
+async createVoiceSession(providerProfile: ProviderProfile): Promise<VoiceSession>
 ⋮----
 async restartTask(baseDir: string, taskId: string): Promise<void>
 ⋮----
@@ -10380,7 +10389,6 @@ File: src/main/ipc-handlers.ts
 ================
 import { EditFormat, FileEdit, McpServerConfig, Mode, Model, ProjectSettings, ProviderProfile, SettingsData, TaskData, TodoItem } from '@common/types';
 import { ipcMain } from 'electron';
-import { LlmProviderBase } from '@common/agent';
 ⋮----
 import { EventsHandler } from './events-handler';
 ⋮----
@@ -10969,7 +10977,6 @@ import {
   VersionsInfo,
   VoiceSession,
 } from '@common/types';
-import { LlmProvider } from '@common/agent';
 import { ApplicationAPI } from '@common/api';
 import axios, { type AxiosInstance } from 'axios';
 import { io, Socket } from 'socket.io-client';
@@ -11123,7 +11130,7 @@ queryUsageData(from: string, to: string): Promise<UsageDataRow[]>
 getEffectiveEnvironmentVariable(key: string, baseDir?: string): Promise<EnvironmentVariable | undefined>
 ⋮----
 // Voice API
-createVoiceSession(provider: LlmProvider): Promise<VoiceSession>
+createVoiceSession(provider: ProviderProfile): Promise<VoiceSession>
 ⋮----
 addSettingsUpdatedListener(callback: (data: SettingsData) => void): () => void
 addResponseChunkListener(baseDir: string, taskId: string, callback: (data: ResponseChunkData) => void): () => void
@@ -13276,6 +13283,18 @@ const handleDisableStreamingChange = (disableStreaming: boolean) =>
 // Remove undefined values
 
 ================
+File: src/renderer/src/components/ModelLibrary/providers/EnableVoiceControl.tsx
+================
+import { useTranslation } from 'react-i18next';
+⋮----
+import { Checkbox } from '@/components/common/Checkbox';
+⋮----
+type Props = {
+  voiceEnabled: boolean;
+  onChange: (enabled: boolean) => void;
+};
+
+================
 File: src/renderer/src/components/ModelLibrary/providers/GeminiAdvancedSettings.tsx
 ================
 import { useTranslation } from 'react-i18next';
@@ -13297,6 +13316,8 @@ const handleIncludeThoughtsChange = (checked: boolean) =>
 const handleUseSearchGroundingChange = (checked: boolean) =>
 ⋮----
 label=
+⋮----
+<Checkbox label=
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/GeminiModelOverrides.tsx
@@ -13333,9 +13354,8 @@ import { useTranslation } from 'react-i18next';
 import { GeminiProvider } from '@common/agent';
 ⋮----
 import { GeminiAdvancedSettings } from './GeminiAdvancedSettings';
+import { EnableVoiceControl } from './EnableVoiceControl';
 ⋮----
-import { Checkbox } from '@/components/common/Checkbox';
-import { InfoIcon } from '@/components/common/InfoIcon';
 import { Input } from '@/components/common/Input';
 import { useEffectiveEnvironmentVariable } from '@/hooks/useEffectiveEnvironmentVariable';
 ⋮----
@@ -13584,9 +13604,8 @@ import { useTranslation } from 'react-i18next';
 import { OpenAiProvider } from '@common/agent';
 ⋮----
 import { OpenAiAdvancedSettings } from './OpenAiAdvancedSettings';
+import { EnableVoiceControl } from './EnableVoiceControl';
 ⋮----
-import { Checkbox } from '@/components/common/Checkbox';
-import { InfoIcon } from '@/components/common/InfoIcon';
 import { Input } from '@/components/common/Input';
 import { useEffectiveEnvironmentVariable } from '@/hooks/useEffectiveEnvironmentVariable';
 ⋮----
@@ -13600,8 +13619,6 @@ const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 const handleVoiceEnabledChange = (checked: boolean) =>
 ⋮----
 label=
-⋮----
-openAiApiKeyEnv
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/OpenRouterAdvancedSettings.tsx
@@ -14149,7 +14166,7 @@ File: src/renderer/src/components/ModelLibrary/ProviderProfileCard.tsx
 ================
 import { useState, ComponentType } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FiEdit2, FiTrash2 } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiMic } from 'react-icons/fi';
 import { clsx } from 'clsx';
 import { ProviderProfile } from '@common/types';
 import { LlmProviderName } from '@common/agent';
@@ -14199,6 +14216,8 @@ const handleEdit = () =>
 const handleDelete = () =>
 ⋮----
 className=
+⋮----
+<StyledTooltip id=
 ⋮----
 {/* Action buttons - shown on hover (desktop) or when showActions is true (mobile) */}
 ⋮----
@@ -15307,6 +15326,36 @@ title=
 confirmButtonText=
 
 ================
+File: src/renderer/src/components/PromptField/AudioAnalyzer.tsx
+================
+import { useEffect, useRef } from 'react';
+⋮----
+type Props = {
+  stream: MediaStream | null;
+  barCount?: number;
+  width?: number;
+};
+⋮----
+export const AudioAnalyzer = (
+⋮----
+// fftSize must be a power of 2 between 32 and 32768
+// The number of frequency bins is fftSize / 2
+// So we need fftSize to be approximately barCount * 2
+⋮----
+// Find the nearest power of 2
+⋮----
+// Clamp to valid range
+⋮----
+const draw = () =>
+⋮----
+// Try to match the theme color
+// We can use the computed style of the canvas element itself or body
+⋮----
+// Scale the height
+⋮----
+// Draw bar
+
+================
 File: src/renderer/src/components/PromptField/CommandSuggestion.tsx
 ================
 import { useTranslation } from 'react-i18next';
@@ -15419,6 +15468,7 @@ import { githubDarkInit } from '@uiw/codemirror-theme-github';
 import CodeMirror, { Annotation, Prec, type ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { useDebounce, useLocalStorage } from '@reactuses/core';
+import { useHotkeys } from 'react-hotkeys-hook';
 import { useTranslation } from 'react-i18next';
 import { BiSend } from 'react-icons/bi';
 import { MdDoneAll, MdPlaylistRemove, MdSave, MdStop, MdMic, MdMicOff } from 'react-icons/md';
@@ -15435,6 +15485,7 @@ import { useApi } from '@/contexts/ApiContext';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { IconButton } from '@/components/common/IconButton';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
+import { AudioAnalyzer } from '@/components/PromptField/AudioAnalyzer';
 ⋮----
 const isPathLike = (input: string): boolean =>
 ⋮----
@@ -15517,15 +15568,17 @@ const getAutocompleteDetailLabel = (item: string): [string | null, boolean] =>
 ⋮----
 // Check if it's a custom command
 ⋮----
+const toggleVoice = () =>
+⋮----
 onClick=
 ⋮----
 placeholder=
 ⋮----
+className=
+⋮----
 paste(event)
 ⋮----
 data-tooltip-content=
-⋮----
-className=
 ⋮----
 onClose=
 
@@ -17033,6 +17086,8 @@ export interface UseAudioRecorderType {
   transcription: string;
   error: string | null;
   resetTranscription: () => void;
+  voiceAvailable: boolean;
+  mediaStream: MediaStream | null;
 }
 ⋮----
 export const useAudioRecorder = (): UseAudioRecorderType =>
@@ -18517,6 +18572,122 @@ File: src/renderer/src/themes/theme-forest.scss
 }
 
 ================
+File: src/renderer/src/themes/theme-fresh.scss
+================
+.theme-fresh {
+  // Background colors
+  --color-bg-primary: #f8fafc;
+  --color-bg-primary-light: #f1f5f9;
+  --color-bg-primary-light-strong: #f1f5f980;
+  --color-bg-secondary: #e2e8f0;
+  --color-bg-secondary-light: #cbd5e1;
+  --color-bg-secondary-light-strongest: #cbd5e1f2;
+  --color-bg-tertiary: #94a3b8;
+  --color-bg-tertiary-emphasis: #94a3b84c;
+  --color-bg-tertiary-strong: #94a3b87f;
+  --color-bg-fourth: #64748b;
+  --color-bg-fourth-muted: #64748b33;
+  --color-bg-fourth-emphasis: #64748b4c;
+  --color-bg-fifth: #475569;
+  --color-bg-selection: #94a3b8;
+  --color-bg-code-block: #f8fafc;
+
+  // Diff viewer colors
+  --color-bg-diff-viewer-old-primary: #fee2e2;
+  --color-bg-diff-viewer-old-secondary: #fecaca;
+  --color-bg-diff-viewer-new-primary: #dcfce7;
+  --color-bg-diff-viewer-new-secondary: #bbf7d0;
+
+  // Text colors
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #334155;
+  --color-text-tertiary: #475569;
+  --color-text-muted-light: #64748b;
+  --color-text-muted: #94a3b8;
+  --color-text-muted-dark: #cbd5e1;
+  --color-text-dark: #e2e8f0;
+
+  // Border colors
+  --color-border-dark: #e2e8f0;
+  --color-border-dark-light: #cbd5e1;
+  --color-border-dark-light-strong: #cbd5e180;
+  --color-border-default-dark: #94a3b8;
+  --color-border-default: #64748b;
+  --color-border-accent: #10b981;
+  --color-border-light: #0f172a;
+
+  // Accent colors
+  --color-accent-primary: #10b981;
+  --color-accent-secondary: #06b6d4;
+  --color-accent-light: #0f172a;
+
+  // Status colors
+  --color-success: #10b981;
+  --color-success-light: #34d399;
+  --color-success-subtle: #10b9811a;
+  --color-success-muted: #10b98133;
+  --color-success-emphasis: #10b9814c;
+
+  --color-warning: #f59e0b;
+  --color-warning-subtle: #f59e0b19;
+  --color-warning-emphasis: #f59e0b4c;
+  --color-warning-light: #fbbf24;
+  --color-warning-text: #0f172a;
+
+  --color-error: #ef4444;
+  --color-error-dark: #dc2626;
+  --color-error-subtle: #ef44441a;
+  --color-error-muted: #ef444426;
+  --color-error-emphasis: #ef44444c;
+  --color-error-strong: #ef444480;
+  --color-error-light: #f87171;
+  --color-error-lighter: #fca5a5;
+  --color-error-lightest: #fecaca;
+
+  --color-info: #3b82f6;
+  --color-info-light: #60a5fa;
+  --color-info-lighter: #93c5fd;
+  --color-info-lightest: #dbeafe;
+  --color-info-subtle: #3b82f61a;
+  --color-info-light-muted: #3b82f633;
+  --color-info-light-emphasis: #3b82f64c;
+
+  // Button colors
+  --color-button-primary: #10b981;
+  --color-button-primary-light: #34d399;
+  --color-button-primary-subtle: #10b98119;
+  --color-button-primary-emphasis: #10b9814c;
+  --color-button-primary-text: #ffffff;
+
+  --color-button-secondary: #3b82f6;
+  --color-button-secondary-light: #60a5fa;
+  --color-button-secondary-subtle: #3b82f61a;
+  --color-button-secondary-emphasis: #3b82f64c;
+  --color-button-secondary-text: #ffffff;
+
+  --color-button-danger: #ef4444;
+  --color-button-danger-light: #f87171;
+  --color-button-danger-subtle: #ef44441a;
+  --color-button-danger-emphasis: #ef44444c;
+  --color-button-danger-text: #ffffff;
+
+  // Input colors
+  --color-input-bg: #f8fafc;
+  --color-input-border: #cbd5e1;
+  --color-input-text: #0f172a;
+
+  // Agent tool colors
+  --color-agent-auto-approve: #10b981;
+  --color-agent-aider-tools: #f59e0b;
+  --color-agent-power-tools: #8b5cf6;
+  --color-agent-todo-tools: #3b82f6;
+  --color-agent-context-files: #06b6d4;
+  --color-agent-repo-map: #10b981;
+  --color-agent-ai-request: #ef4444;
+  --color-agent-sub-agent: #6366f1;
+}
+
+================
 File: src/renderer/src/themes/theme-lavender.scss
 ================
 .theme-lavender {
@@ -19295,6 +19466,7 @@ File: src/renderer/src/themes/themes.scss
 @use 'theme-aurora.scss';
 @use 'theme-serenity.scss';
 @use 'theme-cappuccino.scss';
+@use 'theme-fresh.scss';
 
 ================
 File: src/renderer/src/types/message.ts
@@ -19904,13 +20076,13 @@ File: package.json
   "dependencies": {
     "@ai-sdk/amazon-bedrock": "^3.0.30",
     "@ai-sdk/anthropic": "^2.0.23",
-    "@ai-sdk/azure": "^2.0.70",
+    "@ai-sdk/azure": "^2.0.73",
     "@ai-sdk/cerebras": "^1.0.21",
     "@ai-sdk/deepseek": "^1.0.20",
     "@ai-sdk/google": "^2.0.40",
     "@ai-sdk/google-vertex": "^3.0.34",
     "@ai-sdk/groq": "^2.0.22",
-    "@ai-sdk/openai": "^2.0.42",
+    "@ai-sdk/openai": "^2.0.71",
     "@ai-sdk/provider": "^2.0.0",
     "@aws-crypto/sha256-js": "^5.0.0",
     "@aws-sdk/client-bedrock": "^3.887.0",
@@ -19950,7 +20122,7 @@ File: package.json
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/xterm": "^5.5.0",
-    "ai": "^5.0.86",
+    "ai": "^5.0.98",
     "axios": "^1.8.3",
     "babel-plugin-react-compiler": "^19.1.0-rc.3",
     "better-sqlite3": "^12.0.0",
