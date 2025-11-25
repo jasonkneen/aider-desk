@@ -383,7 +383,7 @@ src/
           GeneralSettings.tsx
           LanguageSelector.tsx
           ServerSettings.tsx
-          SettingsDialog.tsx
+          SettingsPage.tsx
         terminal/
           Terminal.scss
           Terminal.tsx
@@ -1717,7 +1717,7 @@ File: src/common/locales/en.json
       "general": "General",
       "providers": "Providers",
       "aider": "Aider",
-      "agent": "Agent",
+      "agents": "Agents",
       "server": "Server",
       "about": "About"
     },
@@ -2816,7 +2816,7 @@ File: src/common/locales/zh.json
       "general": "通用",
       "providers": "模型提供者",
       "aider": "Aider",
-      "agent": "代理",
+      "agents": "代理",
       "server": "服务器",
       "about": "关于"
     },
@@ -11230,7 +11230,7 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { Accordion } from '@/components/common/Accordion';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
-import { SettingsDialog } from '@/components/settings/SettingsDialog';
+import { SettingsPage } from '@/components/settings/SettingsPage';
 import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type Props = {
@@ -11265,7 +11265,7 @@ onClick=
 ⋮----
 icon=
 ⋮----
-<SettingsDialog onClose=
+<SettingsPage onClose=
 
 ================
 File: src/renderer/src/components/AgentSelector/index.ts
@@ -11808,11 +11808,9 @@ import { IconButton } from './IconButton';
 ⋮----
 type Props = {
   title: string;
-  onClose: () => void;
+  onClose?: () => void;
   children: ReactNode;
 };
-⋮----
-export const ModalOverlayLayout = (
 
 ================
 File: src/renderer/src/components/common/MultiSelect.tsx
@@ -11881,14 +11879,13 @@ import { ReactNode } from 'react';
 import { clsx } from 'clsx';
 ⋮----
 type Props = {
+  id?: string;
   title?: string;
   children: ReactNode;
   className?: string;
 };
 ⋮----
 export const Section = (
-⋮----
-<div className=
 
 ================
 File: src/renderer/src/components/common/Select.tsx
@@ -15760,9 +15757,9 @@ const handleServersConfigSave = (servers: Record<string, McpServerConfig>) =>
 ⋮----
 const handleToolApprovalChange = (toolId: string, approval: ToolApprovalState) =>
 ⋮----
-{/* Left sidebar with profiles and providers */}
+{/* Left List Pane */}
 ⋮----
-{/* Center content area for profile settings */}
+{/* Right Details Pane */}
 ⋮----
 <span>
 ⋮----
@@ -16023,8 +16020,6 @@ type Props = {
   initialShowEnvVars?: boolean;
 };
 ⋮----
-<Section title=
-⋮----
 label=
 ⋮----
 setSettings({
@@ -16085,8 +16080,6 @@ const handleSuggestionModeClick = (value: string) =>
 const handleSuggestionDelayChange = (delay: number) =>
 ⋮----
 const handleCommandConfirmationChange = (command: keyof typeof settings.promptBehavior.requireCommandConfirmation, checked: boolean) =>
-⋮----
-<Section title=
 ⋮----
 <Select label=
 ⋮----
@@ -16172,8 +16165,6 @@ const getButtonText = () =>
 ⋮----
 const getTunnelButtonText = () =>
 ⋮----
-<Section title=
-⋮----
 label=
 ⋮----
 {/* Collapsible Authentication Inputs */}
@@ -16183,7 +16174,7 @@ label=
 tooltip=
 
 ================
-File: src/renderer/src/components/settings/SettingsDialog.tsx
+File: src/renderer/src/components/settings/SettingsPage.tsx
 ================
 import { SettingsData } from '@common/types';
 import { useEffect, useMemo, useState } from 'react';
@@ -16193,8 +16184,9 @@ import { LlmProviderName } from '@common/agent';
 ⋮----
 import { Settings } from '@/pages/Settings';
 import { useSettings } from '@/contexts/SettingsContext';
-import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { ModalOverlayLayout } from '@/components/common/ModalOverlayLayout';
 import { useApi } from '@/contexts/ApiContext';
+import { Button } from '@/components/common/Button';
 ⋮----
 type Props = {
   onClose: () => void;
@@ -16215,7 +16207,7 @@ const handleLanguageChange = (language: string) =>
 ⋮----
 const handleZoomChange = (zoomLevel: number) =>
 ⋮----
-title=
+<ModalOverlayLayout title=
 
 ================
 File: src/renderer/src/components/terminal/Terminal.scss
@@ -17806,7 +17798,7 @@ import { NoProjectsOpen } from '@/components/project/NoProjectsOpen';
 import { OpenProjectDialog } from '@/components/project/OpenProjectDialog';
 import { ProjectTabs } from '@/components/project/ProjectTabs';
 import { ProjectView } from '@/components/project/ProjectView';
-import { SettingsDialog } from '@/components/settings/SettingsDialog';
+import { SettingsPage } from '@/components/settings/SettingsPage';
 import { useVersions } from '@/hooks/useVersions';
 import { HtmlInfoDialog } from '@/components/common/HtmlInfoDialog';
 import { ProjectSettingsProvider } from '@/contexts/ProjectSettingsContext';
@@ -17814,6 +17806,7 @@ import { TelemetryInfoDialog } from '@/components/TelemetryInfoDialog';
 import { showInfoNotification } from '@/utils/notifications';
 import { useApi } from '@/contexts/ApiContext';
 import { ModelLibrary } from '@/components/ModelLibrary';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
 ⋮----
 const handleReorderProjects = async (reorderedProjects: ProjectData[]) =>
 ⋮----
@@ -17892,10 +17885,12 @@ const handleFinish = async () =>
 File: src/renderer/src/pages/Settings.tsx
 ================
 import { Font, SettingsData, Theme } from '@common/types';
-import { Tab, TabGroup, TabList, TabPanel, TabPanels } from '@headlessui/react';
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LlmProviderName } from '@common/agent';
+import { clsx } from 'clsx';
+import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer } from 'react-icons/fa';
+import { MdTerminal } from 'react-icons/md';
 ⋮----
 import { useApi } from '@/contexts/ApiContext';
 import { AiderSettings } from '@/components/settings/AiderSettings';
@@ -17916,6 +17911,42 @@ type Props = {
   initialAgentProfileId?: string;
   initialAgentProvider?: LlmProviderName;
 };
+⋮----
+type PageId = 'general' | 'aider' | 'agent' | 'server' | 'about';
+⋮----
+interface SidebarItem {
+  id: string;
+  label: string;
+  icon?: ReactNode;
+  children?: { id: string; label: string }[];
+  pageId: PageId;
+}
+⋮----
+// Map initialTab index to PageId
+const getInitialPage = (index: number): PageId =>
+⋮----
+const scrollToSection = (sectionId: string) =>
+⋮----
+const toggleExpand = (id: string) =>
+⋮----
+const handleItemClick = (item: SidebarItem) =>
+⋮----
+const handleChildClick = (pageId: PageId, sectionId: string) =>
+⋮----
+const renderContent = () =>
+⋮----
+{/* Sidebar */}
+⋮----
+className=
+⋮----
+e.stopPropagation();
+toggleExpand(item.id);
+⋮----
+{!item.children && <span className="w-6" />} {/* Spacer for items without children */}
+⋮----
+{/* Children */}
+⋮----
+{/* Content */}
 
 ================
 File: src/renderer/src/themes/theme-aurora.scss
@@ -20043,7 +20074,7 @@ File: package.json
 ================
 {
   "name": "aider-desk",
-  "version": "0.41.0-dev",
+  "version": "0.42.0-dev",
   "description": "Aider desktop application wrapper",
   "main": "./out/main/index.js",
   "author": "Hotovo",
