@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { homedir } from 'os';
 
-import { watch, FSWatcher } from 'chokidar';
+import { FSWatcher, watch } from 'chokidar';
 import debounce from 'lodash/debounce';
 import { DEFAULT_AGENT_PROFILES } from '@common/agent';
 
@@ -10,8 +10,12 @@ import type { AgentProfile } from '@common/types';
 
 import { AIDER_DESK_AGENTS_DIR } from '@/constants';
 import logger from '@/logger';
+import { EventManager } from '@/events';
 
-type Listener = (profiles: AgentProfile[]) => void;
+// Helper methods for directory management
+const getGlobalAgentsDir = (): string => path.join(homedir(), AIDER_DESK_AGENTS_DIR);
+const getProjectAgentsDir = (projectDir: string): string => path.join(projectDir, AIDER_DESK_AGENTS_DIR);
+const getAgentsDirForProfile = (profile: AgentProfile): string => (profile.projectDir ? getProjectAgentsDir(profile.projectDir) : getGlobalAgentsDir());
 
 interface AgentProfileContext {
   dirName: string;
@@ -19,112 +23,76 @@ interface AgentProfileContext {
   agentProfile: AgentProfile;
 }
 
-interface ProjectContext {
-  profiles: Map<string, AgentProfileContext>;
-  watchers: FSWatcher[];
-  listeners: Listener[];
-}
-
 export class AgentProfileManager {
-  private globalProfiles: Map<string, AgentProfileContext> = new Map();
-  private projectContexts: Map<string, ProjectContext> = new Map();
-  private globalWatchers: FSWatcher[] = [];
-  private globalListeners: Listener[] = [];
+  // Single profiles map - the core simplification
+  private profiles: Map<string, AgentProfileContext> = new Map();
+
+  // Directory watching (one watcher per directory)
+  private directoryWatchers: Map<string, FSWatcher> = new Map(); // agentsDir → watcher
+
+  constructor(private readonly eventManager: EventManager) {}
 
   public async start(): Promise<void> {
-    await this.initializeGlobalProfiles();
-    await this.setupGlobalFileWatchers();
-  }
-
-  public addListener(listener: Listener): void {
-    this.globalListeners.push(listener);
-  }
-
-  public removeListener(listener: Listener): void {
-    const index = this.globalListeners.indexOf(listener);
-    if (index > -1) {
-      this.globalListeners.splice(index, 1);
-    }
-  }
-
-  public addProjectListener(projectDir: string, listener: Listener): void {
-    const context = this.projectContexts.get(projectDir);
-    if (context) {
-      context.listeners.push(listener);
-    }
-  }
-
-  public removeProjectListener(projectDir: string, listener: Listener): void {
-    const context = this.projectContexts.get(projectDir);
-    if (context) {
-      const index = context.listeners.indexOf(listener);
-      if (index > -1) {
-        context.listeners.splice(index, 1);
-      }
-    }
+    await this.initializeProfiles();
+    await this.setupGlobalFileWatcher();
   }
 
   public async initializeForProject(projectDir: string): Promise<void> {
     logger.info(`Initializing agent profiles for project: ${projectDir}`);
 
-    const context: ProjectContext = {
-      profiles: new Map(),
-      watchers: [],
-      listeners: [],
-    };
-
-    this.projectContexts.set(projectDir, context);
+    const projectAgentsDir = getProjectAgentsDir(projectDir);
 
     // Load project-specific profiles
-    const projectAgentsDir = path.join(projectDir, AIDER_DESK_AGENTS_DIR);
-    await this.loadProfilesFromDir(projectAgentsDir, projectDir, context);
+    await this.loadProfilesFromDirectory(projectAgentsDir);
 
-    // Setup file watchers for project
-    await this.setupWatcherForDirectory(projectAgentsDir, context);
+    // Setup file watcher for project directory
+    await this.setupWatcherForDirectory(projectAgentsDir);
 
-    this.notifyProjectListeners(projectDir);
+    this.notifyListeners();
   }
 
   public removeProject(projectDir: string): void {
     logger.info(`Removing agent profiles for project: ${projectDir}`);
 
-    const context = this.projectContexts.get(projectDir);
-    if (context) {
-      // Clean up watchers
-      context.watchers.forEach((watcher) => watcher.close());
+    const projectAgentsDir = getProjectAgentsDir(projectDir);
 
-      // Remove context
-      this.projectContexts.delete(projectDir);
+    // Remove project profiles from the main profiles map
+    const profilesToRemove: string[] = [];
+    for (const [profileId, context] of this.profiles.entries()) {
+      if (context.agentProfile.projectDir === projectDir) {
+        profilesToRemove.push(profileId);
+      }
+    }
+
+    profilesToRemove.forEach((profileId) => this.profiles.delete(profileId));
+
+    // Clean up directory watcher
+    const watcher = this.directoryWatchers.get(projectAgentsDir);
+    if (watcher) {
+      void watcher.close();
+      this.directoryWatchers.delete(projectAgentsDir);
     }
   }
 
-  private notifyGlobalListeners(): void {
-    const profiles = Array.from(this.globalProfiles.values()).map((ctx) => ctx.agentProfile);
-    this.globalListeners.forEach((listener) => listener(profiles));
+  private notifyListeners(): void {
+    const allProfiles = this.getAllProfiles();
+    this.eventManager.sendAgentProfilesUpdated(allProfiles);
   }
 
-  private notifyProjectListeners(projectDir: string): void {
-    const context = this.projectContexts.get(projectDir);
-    if (context) {
-      const profiles = Array.from(context.profiles.values()).map((ctx) => ctx.agentProfile);
-      context.listeners.forEach((listener) => listener(profiles));
-    }
-  }
-
-  private async initializeGlobalProfiles(ensureDefaults = true): Promise<void> {
-    logger.info('Initializing global agent profiles...');
-    this.globalProfiles.clear();
+  private async initializeProfiles(ensureDefaults = true): Promise<void> {
+    logger.info('Initializing agent profiles...');
+    this.profiles.clear();
 
     // Load global profiles
-    const globalAgentsDir = path.join(homedir(), AIDER_DESK_AGENTS_DIR);
-    await this.loadProfilesFromDir(globalAgentsDir, undefined, undefined);
+    const globalAgentsDir = getGlobalAgentsDir();
+    await this.loadProfilesFromDirectory(globalAgentsDir);
 
     if (ensureDefaults) {
       // Ensure default profiles exist in global directory
       await this.ensureDefaultProfiles(globalAgentsDir);
     }
 
-    this.notifyGlobalListeners();
+    this.notifyListeners();
   }
 
   private async ensureDefaultProfiles(globalAgentsDir: string): Promise<void> {
@@ -143,7 +111,7 @@ export class AgentProfileManager {
     }
 
     for (const defaultProfile of DEFAULT_AGENT_PROFILES) {
-      if (this.globalProfiles.has(defaultProfile.id)) {
+      if (this.profiles.has(defaultProfile.id)) {
         continue;
       }
 
@@ -162,17 +130,19 @@ export class AgentProfileManager {
     }
   }
 
-  private async setupGlobalFileWatchers(): Promise<void> {
-    // Clean up existing watchers
-    this.globalWatchers.forEach((watcher) => watcher.close());
-    this.globalWatchers = [];
+  private async setupGlobalFileWatcher(): Promise<void> {
+    // Clean up existing global watcher
+    const globalAgentsDir = getGlobalAgentsDir();
+    const existingWatcher = this.directoryWatchers.get(globalAgentsDir);
+    if (existingWatcher) {
+      await existingWatcher.close();
+    }
 
     // Watch global agents directory
-    const globalAgentsDir = path.join(homedir(), AIDER_DESK_AGENTS_DIR);
-    await this.setupWatcherForDirectory(globalAgentsDir, undefined);
+    await this.setupWatcherForDirectory(globalAgentsDir);
   }
 
-  private async setupWatcherForDirectory(agentsDir: string, context?: ProjectContext): Promise<void> {
+  private async setupWatcherForDirectory(agentsDir: string): Promise<void> {
     // Create directory if it doesn't exist
     const dirExists = await fs
       .access(agentsDir)
@@ -187,13 +157,19 @@ export class AgentProfileManager {
       }
     }
 
+    // Close existing watcher for this directory if any
+    const existingWatcher = this.directoryWatchers.get(agentsDir);
+    if (existingWatcher) {
+      existingWatcher.close();
+    }
+
     const watcher = watch(agentsDir, {
       persistent: true,
       usePolling: true,
       ignoreInitial: true,
     });
 
-    const reloadFunction = context ? () => this.debounceReloadProjectProfiles(agentsDir, context) : () => this.debounceReloadGlobalProfiles();
+    const reloadFunction = () => this.debounceReloadProfiles(agentsDir);
 
     watcher
       .on('add', async () => {
@@ -209,37 +185,31 @@ export class AgentProfileManager {
         logger.error(`Watcher error for ${agentsDir}: ${error}`);
       });
 
-    if (context) {
-      context.watchers.push(watcher);
-    } else {
-      this.globalWatchers.push(watcher);
-    }
+    this.directoryWatchers.set(agentsDir, watcher);
   }
 
-  private debounceReloadGlobalProfiles = debounce(async () => {
-    await this.reloadGlobalProfiles();
+  private debounceReloadProfiles = debounce(async (agentsDir: string) => {
+    await this.reloadProfiles(agentsDir);
   }, 1000);
 
-  private debounceReloadProjectProfiles = debounce(async (agentsDir: string, context: ProjectContext) => {
-    await this.reloadProjectProfiles(agentsDir, context);
-  }, 1000);
+  private async reloadProfiles(agentsDir: string): Promise<void> {
+    logger.info(`Reloading agent profiles from ${agentsDir}`);
 
-  private async reloadGlobalProfiles(): Promise<void> {
-    logger.info('Reloading global agent profiles...');
-    await this.initializeGlobalProfiles(false);
-  }
-
-  private async reloadProjectProfiles(agentsDir: string, context: ProjectContext): Promise<void> {
-    logger.info(`Reloading project agent profiles from ${agentsDir}`);
-
-    // Find projectDir from context
-    const projectDir = Array.from(this.projectContexts.entries()).find(([_, ctx]) => ctx === context)?.[0];
-
-    if (projectDir) {
-      context.profiles.clear();
-      await this.loadProfilesFromDir(agentsDir, projectDir, context);
-      this.notifyProjectListeners(projectDir);
+    // Clear existing profiles from this directory
+    const profilesToRemove: string[] = [];
+    for (const [profileId, context] of this.profiles.entries()) {
+      if (getAgentsDirForProfile(context.agentProfile) === agentsDir) {
+        profilesToRemove.push(profileId);
+      }
     }
+
+    profilesToRemove.forEach((profileId) => this.profiles.delete(profileId));
+
+    // Reload profiles from directory
+    await this.loadProfilesFromDirectory(agentsDir);
+
+    // Notify listeners
+    this.notifyListeners();
   }
 
   private deriveDirNameFromName(name: string, existingDirNames: Set<string>): string {
@@ -290,7 +260,7 @@ export class AgentProfileManager {
     }
   }
 
-  private async loadProfilesFromDir(agentsDir: string, projectDir?: string, context?: ProjectContext): Promise<void> {
+  private async loadProfilesFromDirectory(agentsDir: string): Promise<void> {
     const dirExists = await fs
       .access(agentsDir)
       .then(() => true)
@@ -311,7 +281,7 @@ export class AgentProfileManager {
       for (const entry of entries) {
         if (entry.isDirectory()) {
           const configPath = path.join(agentsDir, entry.name, 'config.json');
-          const profile = await this.loadProfileFile(configPath, projectDir);
+          const profile = await this.loadProfileFile(configPath);
 
           if (profile) {
             const profileContext: AgentProfileContext = {
@@ -332,18 +302,16 @@ export class AgentProfileManager {
         await this.createDefaultOrderFromProfiles(orderedProfiles, agentsDir);
       }
 
-      // Store profiles in the appropriate location
-      if (context) {
-        context.profiles = orderedProfiles;
-      } else {
-        this.globalProfiles = orderedProfiles;
+      // Add profiles to the main profiles map
+      for (const [profileId, context] of orderedProfiles.entries()) {
+        this.profiles.set(profileId, context);
       }
     } catch (err) {
       logger.error(`Failed to read agents directory ${agentsDir}: ${err}`);
     }
   }
 
-  private async loadProfileFile(filePath: string, projectDir?: string): Promise<AgentProfile | null> {
+  private async loadProfileFile(filePath: string): Promise<AgentProfile | null> {
     try {
       logger.debug(`Loading agent profile from ${filePath}`);
 
@@ -355,13 +323,8 @@ export class AgentProfileManager {
         return null;
       }
 
-      const profileWithDir = {
-        ...profile,
-        projectDir,
-      };
-
       logger.debug(`Loaded agent profile: ${profile.name}`);
-      return profileWithDir;
+      return profile;
     } catch (err) {
       logger.error(`Failed to parse agent profile file ${filePath}: ${err}`);
       return null;
@@ -460,7 +423,7 @@ export class AgentProfileManager {
       throw new Error('Agent profile must have an id');
     }
 
-    const agentsDir = projectDir ? path.join(projectDir, AIDER_DESK_AGENTS_DIR) : path.join(homedir(), AIDER_DESK_AGENTS_DIR);
+    const agentsDir = projectDir ? getProjectAgentsDir(projectDir) : getGlobalAgentsDir();
 
     // Get existing directory names for collision handling
     const existingDirNames = await this.getExistingDirNames(agentsDir);
@@ -476,14 +439,7 @@ export class AgentProfileManager {
     await this.saveProfileToFile(profile, configPath);
 
     // Reload profiles to update the cache
-    if (projectDir) {
-      const context = this.projectContexts.get(projectDir);
-      if (context) {
-        await this.reloadProjectProfiles(agentsDir, context);
-      }
-    } else {
-      await this.reloadGlobalProfiles();
-    }
+    await this.reloadProfiles(agentsDir);
   }
 
   public async updateProfile(profile: AgentProfile): Promise<void> {
@@ -491,68 +447,28 @@ export class AgentProfileManager {
       throw new Error('Agent profile must have an id');
     }
 
-    // Check global profiles first
-    let existingContext = this.globalProfiles.get(profile.id);
-
-    let projectContext: ProjectContext | undefined;
-
-    // If not found globally, check project contexts
-    if (!existingContext) {
-      for (const [_pDir, ctx] of Array.from(this.projectContexts.entries())) {
-        const foundContext = ctx.profiles.get(profile.id);
-        if (foundContext) {
-          existingContext = foundContext;
-          projectContext = ctx;
-          break;
-        }
-      }
-    }
+    const existingContext = this.profiles.get(profile.id);
 
     if (!existingContext) {
       throw new Error(`Agent profile with id ${profile.id} not found`);
     }
 
-    const agentsDir = existingContext.agentProfile.projectDir
-      ? path.join(existingContext.agentProfile.projectDir, AIDER_DESK_AGENTS_DIR)
-      : path.join(homedir(), AIDER_DESK_AGENTS_DIR);
-
+    const agentsDir = getAgentsDirForProfile(existingContext.agentProfile);
     const configPath = path.join(agentsDir, existingContext.dirName, 'config.json');
     await this.saveProfileToFile(profile, configPath);
 
     // Reload profiles to update the cache
-    if (projectContext) {
-      await this.reloadProjectProfiles(agentsDir, projectContext);
-    } else {
-      await this.reloadGlobalProfiles();
-    }
+    await this.reloadProfiles(agentsDir);
   }
 
   public async deleteProfile(profileId: string): Promise<void> {
-    // Check global profiles first
-    let existingContext = this.globalProfiles.get(profileId);
-
-    let projectContext: ProjectContext | undefined;
-
-    // If not found globally, check project contexts
-    if (!existingContext) {
-      for (const [_pDir, ctx] of Array.from(this.projectContexts.entries())) {
-        const foundContext = ctx.profiles.get(profileId);
-        if (foundContext) {
-          existingContext = foundContext;
-          projectContext = ctx;
-          break;
-        }
-      }
-    }
+    const existingContext = this.profiles.get(profileId);
 
     if (!existingContext) {
       throw new Error(`Agent profile with id ${profileId} not found`);
     }
 
-    const agentsDir = existingContext.agentProfile.projectDir
-      ? path.join(existingContext.agentProfile.projectDir, AIDER_DESK_AGENTS_DIR)
-      : path.join(homedir(), AIDER_DESK_AGENTS_DIR);
-
+    const agentsDir = getAgentsDirForProfile(existingContext.agentProfile);
     const profileDir = path.join(agentsDir, existingContext.dirName);
 
     try {
@@ -563,108 +479,102 @@ export class AgentProfileManager {
     }
 
     // Reload profiles to update the cache
-    if (projectContext) {
-      await this.reloadProjectProfiles(agentsDir, projectContext);
-    } else {
-      await this.reloadGlobalProfiles();
-    }
+    await this.reloadProfiles(agentsDir);
   }
 
-  public getProfile(profileId: string, projectDir?: string): AgentProfile | undefined {
-    logger.info(`Getting agent profile ${profileId} for project ${projectDir}`, {
-      projectProfiles: Array.from(this.projectContexts.values()).map((ctx) => Array.from(ctx.profiles.keys())),
-      globalProfiles: Array.from(this.globalProfiles.keys()),
-    });
-    if (projectDir) {
-      const context = this.projectContexts.get(projectDir);
-      if (context) {
-        const profileContext = context.profiles.get(profileId);
-        if (profileContext) {
-          return profileContext.agentProfile;
-        }
-      }
-    }
-
-    // Check global profiles
-    const globalContext = this.globalProfiles.get(profileId);
-    return globalContext?.agentProfile;
+  public getProfile(profileId: string): AgentProfile | undefined {
+    return this.profiles.get(profileId)?.agentProfile;
   }
 
   private getOrderedProfiles(profileContexts: AgentProfileContext[]): AgentProfile[] {
-    return profileContexts.sort((a, b) => a.order - b.order).map((ctx) => ctx.agentProfile);
+    return profileContexts
+      .sort((a, b) => {
+        // First, prioritize project profiles over global profiles
+        const aIsProject = !!a.agentProfile.projectDir;
+        const bIsProject = !!b.agentProfile.projectDir;
+
+        if (aIsProject && !bIsProject) {
+          return -1;
+        }
+        if (!aIsProject && bIsProject) {
+          return 1;
+        }
+
+        // Then sort by order within the same scope
+        return a.order - b.order;
+      })
+      .map((ctx) => ctx.agentProfile);
+  }
+
+  private getGlobalProfiles(): AgentProfile[] {
+    return this.getOrderedProfiles(Array.from(this.profiles.values()).filter((ctx) => !ctx.agentProfile.projectDir));
   }
 
   public getAllProfiles(): AgentProfile[] {
-    const allProfiles = this.getOrderedProfiles(Array.from(this.globalProfiles.values()));
-
-    for (const context of Array.from(this.projectContexts.values())) {
-      allProfiles.push(...this.getOrderedProfiles(Array.from(context.profiles.values())));
-    }
-
-    return allProfiles;
+    return this.getOrderedProfiles(Array.from(this.profiles.values()));
   }
 
   public getProjectProfiles(projectDir: string, includeGlobal = true): AgentProfile[] {
-    const profiles: AgentProfile[] = [];
+    const projectProfiles = Array.from(this.profiles.values()).filter((ctx) => ctx.agentProfile.projectDir === projectDir);
+    const profiles = this.getOrderedProfiles(projectProfiles);
 
-    const context = this.projectContexts.get(projectDir);
-    if (context) {
-      profiles.push(...this.getOrderedProfiles(Array.from(context.profiles.values())));
-    }
     if (includeGlobal) {
-      profiles.push(...this.getOrderedProfiles(Array.from(this.globalProfiles.values())));
+      profiles.push(...this.getGlobalProfiles());
     }
 
     return profiles;
   }
 
-  public async updateAgentProfilesOrder(agentProfiles: AgentProfile[], baseDir?: string): Promise<void> {
-    const agentsDir = baseDir ? path.join(baseDir, AIDER_DESK_AGENTS_DIR) : path.join(homedir(), AIDER_DESK_AGENTS_DIR);
+  public async updateAgentProfilesOrder(agentProfiles: AgentProfile[]): Promise<void> {
+    // Group profiles by their projectDir (undefined/null = global)
+    const profilesByProjectDir = new Map<string | undefined, AgentProfile[]>();
 
-    // Create order map from the provided profiles array
-    const order = new Map<string, number>();
-    agentProfiles.forEach((profile, index) => {
-      order.set(profile.id, index);
+    agentProfiles.forEach((profile) => {
+      const projectDir = profile.projectDir;
+      if (!profilesByProjectDir.has(projectDir)) {
+        profilesByProjectDir.set(projectDir, []);
+      }
+      profilesByProjectDir.get(projectDir)!.push(profile);
     });
 
-    // Save the order file
-    await this.saveOrderFile(agentsDir, order);
+    // Process each group separately
+    for (const [projectDir, profiles] of profilesByProjectDir.entries()) {
+      // Create order map for this group
+      const order = new Map<string, number>();
+      profiles.forEach((profile, index) => {
+        order.set(profile.id, index);
+      });
 
-    // Update the in-memory profiles to match the new order
-    if (baseDir) {
-      const context = this.projectContexts.get(baseDir);
-      if (context) {
-        // Update order in existing contexts
-        for (const [profileId, profileContext] of context.profiles.entries()) {
+      // Determine the agents directory for this group
+      const agentsDir = projectDir ? getProjectAgentsDir(projectDir) : getGlobalAgentsDir();
+
+      // Save the order file for this group
+      await this.saveOrderFile(agentsDir, order);
+
+      // Update the in-memory profiles for this group
+      for (const [profileId, profileContext] of this.profiles.entries()) {
+        const profileAgentsDir = getAgentsDirForProfile(profileContext.agentProfile);
+        if (profileAgentsDir === agentsDir) {
           const newOrder = order.get(profileId);
           if (newOrder !== undefined) {
             profileContext.order = newOrder;
           }
         }
-        this.notifyProjectListeners(baseDir);
       }
-    } else {
-      // Update order in global contexts
-      for (const [profileId, profileContext] of this.globalProfiles.entries()) {
-        const newOrder = order.get(profileId);
-        if (newOrder !== undefined) {
-          profileContext.order = newOrder;
-        }
-      }
-      this.notifyGlobalListeners();
     }
+
+    // Notify listeners
+    this.notifyListeners();
   }
 
-  dispose(): void {
-    // Clean up global watchers and listeners
-    this.globalWatchers.forEach((watcher) => watcher.close());
-    this.globalWatchers = [];
-    this.globalListeners = [];
-
-    // Clean up all project contexts
-    for (const context of Array.from(this.projectContexts.values())) {
-      context.watchers.forEach((watcher) => watcher.close());
+  async dispose(): Promise<void> {
+    // Clean up all directory watchers
+    for (const watcher of this.directoryWatchers.values()) {
+      await watcher.close();
     }
-    this.projectContexts.clear();
+    this.directoryWatchers.clear();
+
+    // Clear profiles
+    this.profiles.clear();
   }
 }

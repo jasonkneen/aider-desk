@@ -1,7 +1,7 @@
-import { AgentProfile, ContextMemoryMode, GenericTool, InvocationMode, McpServerConfig, SettingsData, ToolApprovalState } from '@common/types';
+import { AgentProfile, ContextMemoryMode, GenericTool, InvocationMode, McpServerConfig, ProjectData, SettingsData, ToolApprovalState } from '@common/types';
 import React, { ReactNode, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
 import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat } from 'react-icons/md';
 import { DEFAULT_AGENT_PROFILE, DEFAULT_MODEL_TEMPERATURE } from '@common/agent';
 import { BiTrash } from 'react-icons/bi';
@@ -240,15 +240,22 @@ type Props = {
   agentProfiles: AgentProfile[];
   setAgentProfiles: (profiles: AgentProfile[]) => void;
   initialProfileId?: string;
+  openProjects?: ProjectData[];
 };
 
-export const AgentSettings = ({ settings, setSettings, agentProfiles, setAgentProfiles, initialProfileId }: Props) => {
+export const AgentSettings = ({ settings, setSettings, agentProfiles, setAgentProfiles, initialProfileId, openProjects = [] }: Props) => {
   const { t } = useTranslation();
   const [isAddingMcpServer, setIsAddingMcpServer] = useState(false);
   const [editingMcpServer, setEditingMcpServer] = useState<McpServer | null>(null);
   const [isEditingMcpServersConfig, setIsEditingMcpServersConfig] = useState(false);
   const [mcpServersReloadTrigger, setMcpServersReloadTrigger] = useState(0);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(initialProfileId || DEFAULT_AGENT_PROFILE.id);
+
+  // Profile context state for project-level profiles
+  const contexts = useMemo(() => ['global', ...openProjects.map((p) => p.baseDir)], [openProjects]);
+  const [contextIndex, setContextIndex] = useState(0);
+  const [profileContext, setProfileContext] = useState<'global' | string>('global');
+
   const api = useApi();
 
   const [mcpServersExpanded, setMcpServersExpanded] = useState(false);
@@ -259,6 +266,39 @@ export const AgentSettings = ({ settings, setSettings, agentProfiles, setAgentPr
   const { mcpServers } = settings;
   const selectedProfile = agentProfiles.find((profile) => profile.id === selectedProfileId) || null;
   const defaultProfile = agentProfiles.find((profile) => profile.id === DEFAULT_AGENT_PROFILE.id) || DEFAULT_AGENT_PROFILE;
+
+  // Context navigation logic
+  const navigateContext = (direction: 'prev' | 'next') => {
+    const newIndex = direction === 'prev' ? (contextIndex - 1 + contexts.length) % contexts.length : (contextIndex + 1) % contexts.length;
+    setContextIndex(newIndex);
+    setProfileContext(contexts[newIndex]);
+  };
+
+  // Filter profiles based on current context
+  const filteredProfiles = useMemo(() => {
+    if (profileContext === 'global') {
+      return agentProfiles.filter((p) => !p.projectDir);
+    }
+    return agentProfiles.filter((p) => p.projectDir === profileContext);
+  }, [agentProfiles, profileContext]);
+
+  // Get context display name
+  const getContextDisplayName = () => {
+    if (profileContext === 'global') {
+      return 'Global';
+    }
+    const project = openProjects.find((p) => p.baseDir === profileContext);
+    return project ? project.baseDir.split('/').pop() || project.baseDir : profileContext;
+  };
+
+  // Update filtered profiles when context changes
+  useMemo(() => {
+    if (filteredProfiles.length > 0 && !selectedProfileId) {
+      setSelectedProfileId(filteredProfiles[0].id);
+    } else if (filteredProfiles.length === 0) {
+      setSelectedProfileId(null);
+    }
+  }, [filteredProfiles, selectedProfileId]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -275,13 +315,21 @@ export const AgentSettings = ({ settings, setSettings, agentProfiles, setAgentPr
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      const oldIndex = agentProfiles.findIndex((p) => p.id === active.id);
-      const newIndex = agentProfiles.findIndex((p) => p.id === over.id);
+      const oldIndex = filteredProfiles.findIndex((p) => p.id === active.id);
+      const newIndex = filteredProfiles.findIndex((p) => p.id === over.id);
 
       if (oldIndex !== -1 && newIndex !== -1) {
-        const reorderedProfiles = arrayMove(agentProfiles, oldIndex, newIndex);
-        // Update order using the new API
-        setAgentProfiles(reorderedProfiles);
+        // Get the actual indices in the full agentProfiles array
+        const activeProfile = filteredProfiles[oldIndex];
+        const overProfile = filteredProfiles[newIndex];
+        const actualOldIndex = agentProfiles.findIndex((p) => p.id === activeProfile.id);
+        const actualNewIndex = agentProfiles.findIndex((p) => p.id === overProfile.id);
+
+        if (actualOldIndex !== -1 && actualNewIndex !== -1) {
+          const reorderedProfiles = arrayMove(agentProfiles, actualOldIndex, actualNewIndex);
+          // Update order using the new API
+          setAgentProfiles(reorderedProfiles);
+        }
       }
     }
     setTimeout(() => {
@@ -290,7 +338,7 @@ export const AgentSettings = ({ settings, setSettings, agentProfiles, setAgentPr
   };
 
   // useMemo for project IDs to prevent SortableContext from re-rendering unnecessarily
-  const agentProfileIds = useMemo(() => agentProfiles.map((p) => p.id), [agentProfiles]);
+  const agentProfileIds = useMemo(() => filteredProfiles.map((p) => p.id), [filteredProfiles]);
 
   const getSubagentSummary = (profile: AgentProfile) => {
     if (!profile.subagent.enabled) {
@@ -315,6 +363,7 @@ export const AgentSettings = ({ settings, setSettings, agentProfiles, setAgentPr
       name: t('settings.agent.newProfileName'),
       provider: defaultProfile.provider,
       model: defaultProfile.model,
+      projectDir: profileContext === 'global' ? undefined : profileContext,
     };
     setAgentProfiles([...agentProfiles, newProfile]);
     setSelectedProfileId(newProfileId);
@@ -343,6 +392,14 @@ export const AgentSettings = ({ settings, setSettings, agentProfiles, setAgentPr
 
   const handleProfileChange = (profile: AgentProfile) => {
     setAgentProfiles(agentProfiles.map((p) => (p.id === profile.id ? profile : p)));
+  };
+
+  const handleRemovePreferredModel = (modelId: string) => {
+    const updatedSettings = {
+      ...settings,
+      preferredModels: settings.preferredModels.filter((preferred) => preferred !== modelId),
+    };
+    setSettings(updatedSettings);
   };
 
   const handleToggleServerEnabled = (serverKey: string, checked: boolean) => {
@@ -480,27 +537,54 @@ export const AgentSettings = ({ settings, setSettings, agentProfiles, setAgentPr
     <div className="flex h-full w-full overflow-hidden">
       {/* Left List Pane */}
       <div className="w-[260px] flex-shrink-0 border-r border-border-default flex flex-col">
+        {/* Profile Context Header */}
+        <div className="p-3 border-b border-border-default">
+          <div className="flex items-center justify-between">
+            <IconButton
+              icon={<FaChevronLeft className="w-3 h-3" />}
+              onClick={() => navigateContext('prev')}
+              tooltip={t('settings.agent.previousContext')}
+              disabled={contexts.length <= 1}
+              className="p-1"
+            />
+            <div className="text-xs text-text-secondary truncate flex-1 text-center">{getContextDisplayName()}</div>
+            <IconButton
+              icon={<FaChevronRight className="w-3 h-3" />}
+              onClick={() => navigateContext('next')}
+              tooltip={t('settings.agent.nextContext')}
+              disabled={contexts.length <= 1}
+              className="p-1"
+            />
+          </div>
+        </div>
+
         <div className="flex-1 overflow-y-auto p-2 space-y-0.5 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-bg-tertiary">
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={() => setDragging(true)} onDragEnd={handleDragEnd}>
-            <SortableContext items={agentProfileIds} strategy={verticalListSortingStrategy}>
-              {agentProfiles.map((profile) => (
-                <SortableAgentProfileItem
-                  key={profile.id}
-                  profile={profile}
-                  isSelected={selectedProfileId === profile.id}
-                  onClick={(id) => {
-                    if (!dragging) {
-                      setSelectedProfileId(id);
-                    }
-                  }}
-                />
-              ))}
-            </SortableContext>
-          </DndContext>
+          {filteredProfiles.length === 0 ? (
+            <div className="h-full px-8 text-center flex items-center justify-center py-8 text-text-muted-light text-xs">
+              {t('settings.agent.noProfilesInContext')}
+            </div>
+          ) : (
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={() => setDragging(true)} onDragEnd={handleDragEnd}>
+              <SortableContext items={agentProfileIds} strategy={verticalListSortingStrategy}>
+                {filteredProfiles.map((profile) => (
+                  <SortableAgentProfileItem
+                    key={profile.id}
+                    profile={profile}
+                    isSelected={selectedProfileId === profile.id}
+                    onClick={(id) => {
+                      if (!dragging) {
+                        setSelectedProfileId(id);
+                      }
+                    }}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
+          )}
         </div>
         <div className="p-2 border-t border-border-default flex justify-center">
           <Button onClick={handleCreateNewProfile} className="" variant="text" size="sm" color="primary">
-            <FaPlus className="mr-2 w-3 h-3" /> {t('settings.agent.createNewProfile')}
+            <FaPlus className="mr-2 w-3 h-3" /> {t('settings.agent.createNewProfileInContext')}
           </Button>
         </div>
       </div>
@@ -508,7 +592,7 @@ export const AgentSettings = ({ settings, setSettings, agentProfiles, setAgentPr
       {/* Right Details Pane */}
       <div className="flex-1 flex flex-col h-full min-w-0">
         <div className="flex-1 overflow-y-auto p-6 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-bg-tertiary">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-3xl mx-auto h-full">
             {selectedProfile ? (
               <div className="space-y-4">
                 <Input
@@ -522,7 +606,13 @@ export const AgentSettings = ({ settings, setSettings, agentProfiles, setAgentPr
                   <div className="!mb-4">
                     <label className="block text-sm font-medium text-text-primary mb-1">{t('agentProfiles.model')}</label>
                     <div className="w-full p-2 bg-bg-secondary-light border-2 border-border-default rounded focus-within:outline-none focus-within:border-border-light">
-                      <AgentModelSelector className="w-full justify-between" agentProfile={selectedProfile} onProfileChange={handleProfileChange} />
+                      <AgentModelSelector
+                        className="w-full justify-between"
+                        agentProfile={selectedProfile}
+                        onProfileChange={handleProfileChange}
+                        preferredModelIds={settings.preferredModels || []}
+                        removePreferredModel={handleRemovePreferredModel}
+                      />
                     </div>
                   </div>
                 )}
@@ -907,7 +997,7 @@ export const AgentSettings = ({ settings, setSettings, agentProfiles, setAgentPr
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full">
+              <div className="flex items-center justify-center h-full text-xs">
                 <p className="text-text-muted">{t('settings.agent.selectOrCreateProfile')}</p>
               </div>
             )}

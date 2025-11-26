@@ -48,7 +48,7 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
   const worktreeManager = new WorktreeManager();
 
   // Initialize agent profile manager
-  const agentProfileManager = new AgentProfileManager();
+  const agentProfileManager = new AgentProfileManager(eventManager);
   await agentProfileManager.start();
 
   // Initialize project manager
@@ -104,8 +104,14 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
       versionsManager.destroy();
       dataManager.close();
 
-      await Promise.all([connectorManager.close(), serverController.close(), projectManager.close(), mcpManager.close(), telemetryManager.destroy()]);
-      agentProfileManager.dispose();
+      await Promise.all([
+        connectorManager.close(),
+        serverController.close(),
+        projectManager.close(),
+        mcpManager.close(),
+        telemetryManager.destroy(),
+        agentProfileManager.dispose(),
+      ]);
     } catch (error) {
       logger.error('Error during cleanup:', {
         error: error instanceof Error ? error.message : String(error),

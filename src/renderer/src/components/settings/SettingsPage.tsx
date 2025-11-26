@@ -1,4 +1,4 @@
-import { SettingsData } from '@common/types';
+import { ProjectData, SettingsData } from '@common/types';
 import { useEffect, useMemo, useState } from 'react';
 import { isEqual } from 'lodash';
 import { useTranslation } from 'react-i18next';
@@ -16,9 +16,10 @@ type Props = {
   initialTab?: number;
   initialAgentProfileId?: string;
   initialAgentProvider?: LlmProviderName;
+  openProjects?: ProjectData[];
 };
 
-export const SettingsPage = ({ onClose, initialTab = 0, initialAgentProfileId, initialAgentProvider }: Props) => {
+export const SettingsPage = ({ onClose, initialTab = 0, initialAgentProfileId, initialAgentProvider, openProjects }: Props) => {
   const { t, i18n } = useTranslation();
   const api = useApi();
 
@@ -86,7 +87,7 @@ export const SettingsPage = ({ onClose, initialTab = 0, initialAgentProfileId, i
       // Handle deleted profiles
       for (const profileId of originalProfileIds) {
         if (!currentProfileIds.has(profileId)) {
-          await deleteProfile(profileId);
+          await deleteProfile(profileId, originalAgentProfiles.find((p) => p.id === profileId)?.projectDir);
         }
       }
 
@@ -94,12 +95,12 @@ export const SettingsPage = ({ onClose, initialTab = 0, initialAgentProfileId, i
       for (const profile of agentProfiles) {
         if (!originalProfileIds.has(profile.id)) {
           // New profile
-          await createProfile(profile);
+          await createProfile(profile, profile.projectDir);
         } else {
           // Updated profile - check if it actually changed
           const originalProfile = originalAgentProfiles.find((p) => p.id === profile.id);
           if (originalProfile && !isEqual(originalProfile, profile)) {
-            await updateProfile(profile);
+            await updateProfile(profile, profile.projectDir);
           }
         }
       }
@@ -158,6 +159,7 @@ export const SettingsPage = ({ onClose, initialTab = 0, initialAgentProfileId, i
             initialAgentProvider={initialAgentProvider}
             agentProfiles={agentProfiles}
             setAgentProfiles={setAgentProfiles}
+            openProjects={openProjects}
           />
         )}
       </div>

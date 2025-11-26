@@ -5,11 +5,6 @@ import { BaseApi } from './base-api';
 
 import { EventsHandler } from '@/events-handler';
 
-const GetAgentProfileSchema = z.object({
-  profileId: z.string().min(1, 'Profile ID is required'),
-  baseDir: z.string().optional(),
-});
-
 const CreateAgentProfileSchema = z.object({
   profile: z.any(), // AgentProfile schema
   projectDir: z.string().optional(),
@@ -27,7 +22,6 @@ const DeleteAgentProfileSchema = z.object({
 
 const UpdateAgentProfilesOrderSchema = z.object({
   agentProfiles: z.array(z.any()), // AgentProfile array
-  baseDir: z.string().optional(),
 });
 
 export class AgentApi extends BaseApi {
@@ -42,20 +36,6 @@ export class AgentApi extends BaseApi {
       this.handleRequest(async (_, res) => {
         const profiles = await this.eventsHandler.getAllAgentProfiles();
         res.json(profiles);
-      }),
-    );
-
-    // GET /agent-profile
-    router.get(
-      '/agent-profile',
-      this.handleRequest(async (req, res) => {
-        const { profileId, baseDir } = GetAgentProfileSchema.parse(req.query);
-        const profile = await this.eventsHandler.getAgentProfile(profileId, baseDir);
-        if (!profile) {
-          res.status(404).json({ error: 'Agent profile not found' });
-          return;
-        }
-        res.json(profile);
       }),
     );
 
@@ -93,8 +73,8 @@ export class AgentApi extends BaseApi {
     router.post(
       '/agent-profiles/order',
       this.handleRequest(async (req, res) => {
-        const { agentProfiles, baseDir } = UpdateAgentProfilesOrderSchema.parse(req.body);
-        await this.eventsHandler.updateAgentProfilesOrder(agentProfiles, baseDir);
+        const { agentProfiles } = UpdateAgentProfilesOrderSchema.parse(req.body);
+        await this.eventsHandler.updateAgentProfilesOrder(agentProfiles);
         res.json({ success: true });
       }),
     );

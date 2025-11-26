@@ -99,10 +99,10 @@ export const ModelSelector = forwardRef<ModelSelectorRef, Props>(
     }, [visible, hide, show]);
 
     const onModelSelected = (model: Model) => {
+      hide();
       startTransition(async () => {
         const modelId = getProviderModelId(model);
         setOptimisticSelectedModel(modelId);
-        hide();
         onChange(model);
       });
     };

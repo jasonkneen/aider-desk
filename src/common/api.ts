@@ -1,4 +1,5 @@
 import {
+  AgentProfilesUpdatedData,
   AutocompletionData,
   ClearTaskData,
   CloudflareTunnelStatus,
@@ -152,6 +153,7 @@ export interface ApplicationAPI {
   addVersionsInfoUpdatedListener: (callback: (data: VersionsInfo) => void) => () => void;
   addProviderModelsUpdatedListener: (callback: (data: ProviderModelsData) => void) => () => void;
   addProvidersUpdatedListener: (callback: (data: ProvidersUpdatedData) => void) => () => void;
+  addAgentProfilesUpdatedListener: (callback: (data: AgentProfilesUpdatedData) => void) => () => void;
   addProjectSettingsUpdatedListener: (baseDir: string, callback: (data: { baseDir: string; settings: ProjectSettings }) => void) => () => void;
   addTerminalDataListener: (baseDir: string, callback: (data: TerminalData) => void) => () => void;
   addTerminalExitListener: (baseDir: string, callback: (data: TerminalExitData) => void) => () => void;
@@ -186,9 +188,8 @@ export interface ApplicationAPI {
 
   // Agent profile operations
   getAllAgentProfiles: () => Promise<AgentProfile[]>;
-  getAgentProfile: (profileId: string, baseDir?: string) => Promise<AgentProfile | null>;
   createAgentProfile: (profile: AgentProfile, projectDir?: string) => Promise<AgentProfile[]>;
   updateAgentProfile: (profile: AgentProfile, baseDir?: string) => Promise<AgentProfile[]>;
   deleteAgentProfile: (profileId: string, baseDir?: string) => Promise<AgentProfile[]>;
-  updateAgentProfilesOrder: (agentProfiles: AgentProfile[], baseDir?: string) => Promise<void>;
+  updateAgentProfilesOrder: (agentProfiles: AgentProfile[]) => Promise<void>;
 }

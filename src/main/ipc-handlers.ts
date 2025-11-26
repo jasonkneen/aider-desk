@@ -383,10 +383,6 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     return await eventsHandler.getAllAgentProfiles();
   });
 
-  ipcMain.handle('get-agent-profile', async (_, profileId: string, baseDir?: string) => {
-    return await eventsHandler.getAgentProfile(profileId, baseDir);
-  });
-
   ipcMain.handle('create-agent-profile', async (_, profile: AgentProfile, projectDir?: string) => {
     return await eventsHandler.createAgentProfile(profile, projectDir);
   });
@@ -399,7 +395,7 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     return await eventsHandler.deleteAgentProfile(profileId);
   });
 
-  ipcMain.handle('update-agent-profiles-order', async (_, agentProfiles: AgentProfile[], baseDir?: string) => {
-    return await eventsHandler.updateAgentProfilesOrder(agentProfiles, baseDir);
+  ipcMain.handle('update-agent-profiles-order', async (_, agentProfiles: AgentProfile[]) => {
+    return await eventsHandler.updateAgentProfilesOrder(agentProfiles);
   });
 };

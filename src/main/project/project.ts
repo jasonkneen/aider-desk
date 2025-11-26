@@ -1,11 +1,11 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-import { CustomCommand, ProjectStartMode, SettingsData, TaskData } from '@common/types';
+import { CustomCommand, SettingsData, TaskData } from '@common/types';
 import { fileExists } from '@common/utils';
 import { v4 as uuidv4 } from 'uuid';
 
-import { McpManager, AgentProfileManager } from '@/agent';
+import { AgentProfileManager, McpManager } from '@/agent';
 import { Connector } from '@/connector';
 import { DataManager } from '@/data-manager';
 import logger from '@/logger';
@@ -45,7 +45,7 @@ export class Project {
     this.tasksLoadingPromise = this.loadTasks();
   }
 
-  public async start(_startupMode?: ProjectStartMode) {
+  public async start() {
     await this.customCommandManager.start();
     await this.agentProfileManager.initializeForProject(this.baseDir);
     await this.sendInputHistoryUpdatedEvent();
@@ -241,8 +241,8 @@ export class Project {
     return this.customCommandManager.getAllCommands();
   }
 
-  public sendCustomCommandsUpdated(taskId: string, commands: CustomCommand[]) {
-    this.eventManager.sendCustomCommandsUpdated(this.baseDir, taskId, commands);
+  public sendCustomCommandsUpdated(commands: CustomCommand[]) {
+    this.eventManager.sendCustomCommandsUpdated(this.baseDir, INTERNAL_TASK_ID, commands);
   }
 
   public async deleteTask(taskId: string): Promise<void> {

@@ -23,6 +23,8 @@ import {
   TaskData,
   ClearTaskData,
   ProjectSettings,
+  AgentProfile,
+  AgentProfilesUpdatedData,
 } from '@common/types';
 
 import type { BrowserWindow } from 'electron';
@@ -238,6 +240,15 @@ export class EventManager {
     const data = { baseDir, settings };
     this.sendToMainWindow('project-settings-updated', data);
     this.broadcastToEventConnectors('project-settings-updated', data);
+  }
+
+  // Agent profile events
+  sendAgentProfilesUpdated(profiles: AgentProfile[]): void {
+    const data: AgentProfilesUpdatedData = {
+      profiles,
+    };
+    this.sendToMainWindow('agent-profiles-updated', data);
+    this.broadcastToEventConnectors('agent-profiles-updated', data);
   }
 
   // Task lifecycle events

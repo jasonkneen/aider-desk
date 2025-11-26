@@ -117,7 +117,7 @@ export class Task {
       return null;
     }
 
-    const profile = this.agentProfileManager.getProfile(projectSettings.agentProfileId, this.project.baseDir);
+    const profile = this.agentProfileManager.getProfile(projectSettings.agentProfileId);
 
     if (!profile) {
       logger.warn(`Agent profile with id ${projectSettings.agentProfileId} not found`);

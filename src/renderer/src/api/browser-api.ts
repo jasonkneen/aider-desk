@@ -1,4 +1,5 @@
 import {
+  AgentProfilesUpdatedData,
   AutocompletionData,
   ClearTaskData,
   CloudflareTunnelStatus,
@@ -68,6 +69,7 @@ type EventDataMap = {
   'provider-models-updated': ProviderModelsData;
   'providers-updated': ProvidersUpdatedData;
   'project-settings-updated': { baseDir: string; settings: ProjectSettings };
+  'agent-profiles-updated': AgentProfilesUpdatedData;
   'task-created': TaskData;
   'task-initialized': TaskData;
   'task-updated': TaskData;
@@ -136,6 +138,7 @@ export class BrowserApi implements ApplicationAPI {
       'task-deleted': new Map(),
       'task-completed': new Map(),
       'task-cancelled': new Map(),
+      'agent-profiles-updated': new Map(),
     };
     this.apiClient = axios.create({
       baseURL: `${baseUrl}/api`,
@@ -595,6 +598,10 @@ export class BrowserApi implements ApplicationAPI {
     return this.addListener('providers-updated', callback);
   }
 
+  addAgentProfilesUpdatedListener(callback: (data: AgentProfilesUpdatedData) => void): () => void {
+    return this.addListener('agent-profiles-updated', callback);
+  }
+
   addProjectSettingsUpdatedListener(baseDir: string, callback: (data: { baseDir: string; settings: ProjectSettings }) => void): () => void {
     return this.addListener('project-settings-updated', callback, baseDir);
   }
@@ -746,10 +753,6 @@ export class BrowserApi implements ApplicationAPI {
     return this.get('/agent-profiles', { baseDir });
   }
 
-  getAgentProfile(profileId: string, baseDir?: string): Promise<AgentProfile> {
-    return this.get('/agent-profile', { profileId, baseDir });
-  }
-
   createAgentProfile(profile: AgentProfile, projectDir?: string): Promise<AgentProfile[]> {
     return this.post('/agent-profile/create', {
       profile,
@@ -771,10 +774,9 @@ export class BrowserApi implements ApplicationAPI {
     });
   }
 
-  updateAgentProfilesOrder(agentProfiles: AgentProfile[], baseDir?: string): Promise<void> {
+  updateAgentProfilesOrder(agentProfiles: AgentProfile[]): Promise<void> {
     return this.post('/agent-profiles/order', {
       agentProfiles,
-      baseDir,
     });
   }
 }

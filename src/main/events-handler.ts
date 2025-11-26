@@ -766,10 +766,6 @@ export class EventsHandler {
     return this.agentProfileManager.getAllProfiles();
   }
 
-  async getAgentProfile(profileId: string, baseDir?: string) {
-    return this.agentProfileManager.getProfile(profileId, baseDir);
-  }
-
   async createAgentProfile(profile: AgentProfile, projectDir?: string) {
     await this.agentProfileManager.createProfile(profile, projectDir);
     return this.agentProfileManager.getAllProfiles();
@@ -785,7 +781,7 @@ export class EventsHandler {
     return this.agentProfileManager.getAllProfiles();
   }
 
-  async updateAgentProfilesOrder(agentProfiles: AgentProfile[], baseDir?: string) {
-    await this.agentProfileManager.updateAgentProfilesOrder(agentProfiles, baseDir);
+  async updateAgentProfilesOrder(agentProfiles: AgentProfile[]) {
+    await this.agentProfileManager.updateAgentProfilesOrder(agentProfiles);
   }
 }

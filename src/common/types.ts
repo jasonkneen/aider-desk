@@ -466,6 +466,10 @@ export interface ProvidersUpdatedData {
   providers: ProviderProfile[];
 }
 
+export interface AgentProfilesUpdatedData {
+  profiles: AgentProfile[];
+}
+
 export interface VoiceSession {
   ephemeralToken: string;
   model: string;

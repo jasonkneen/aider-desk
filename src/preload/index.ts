@@ -535,11 +535,15 @@ const api: ApplicationAPI = {
 
   // Agent profile operations
   getAllAgentProfiles: () => ipcRenderer.invoke('get-agent-profiles'),
-  getAgentProfile: (profileId, baseDir) => ipcRenderer.invoke('get-agent-profile', profileId, baseDir),
   createAgentProfile: (profile, projectDir) => ipcRenderer.invoke('create-agent-profile', profile, projectDir),
   updateAgentProfile: (profile, baseDir) => ipcRenderer.invoke('update-agent-profile', profile, baseDir),
   deleteAgentProfile: (profileId, baseDir) => ipcRenderer.invoke('delete-agent-profile', profileId, baseDir),
-  updateAgentProfilesOrder: (agentProfiles, baseDir) => ipcRenderer.invoke('update-agent-profiles-order', agentProfiles, baseDir),
+  updateAgentProfilesOrder: (agentProfiles) => ipcRenderer.invoke('update-agent-profiles-order', agentProfiles),
+  addAgentProfilesUpdatedListener: (callback) => {
+    const listener = (_, data) => callback(data);
+    ipcRenderer.on('agent-profiles-updated', listener);
+    return () => ipcRenderer.off('agent-profiles-updated', listener);
+  },
 };
 
 if (process.contextIsolated) {

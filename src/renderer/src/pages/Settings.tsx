@@ -1,4 +1,4 @@
-import { Font, SettingsData, Theme, AgentProfile } from '@common/types';
+import { Font, ProjectData, SettingsData, Theme, AgentProfile } from '@common/types';
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LlmProviderName } from '@common/agent';
@@ -26,9 +26,10 @@ type Props = {
   initialAgentProvider?: LlmProviderName;
   agentProfiles?: AgentProfile[];
   setAgentProfiles?: (profiles: AgentProfile[]) => void;
+  openProjects?: ProjectData[];
 };
 
-type PageId = 'general' | 'aider' | 'agent' | 'server' | 'about';
+type PageId = 'general' | 'aider' | 'agents' | 'server' | 'about';
 
 interface SidebarItem {
   id: string;
@@ -50,6 +51,7 @@ export const Settings = ({
   initialAgentProfileId,
   agentProfiles,
   setAgentProfiles,
+  openProjects,
 }: Props) => {
   const { t } = useTranslation();
   const api = useApi();
@@ -57,7 +59,7 @@ export const Settings = ({
 
   // Map initialTab index to PageId
   const getInitialPage = (index: number): PageId => {
-    const pages: PageId[] = ['general', 'aider', 'agent', 'server', 'about'];
+    const pages: PageId[] = ['general', 'aider', 'agents', 'server', 'about'];
     return pages[index] || 'general';
   };
 
@@ -105,8 +107,8 @@ export const Settings = ({
       ],
     },
     {
-      id: 'agent',
-      pageId: 'agent',
+      id: 'agents',
+      pageId: 'agents',
       label: t('settings.tabs.agents'),
       icon: <FaRobot className="w-4 h-4" />,
     },
@@ -158,7 +160,10 @@ export const Settings = ({
   const handleItemClick = (item: SidebarItem) => {
     setActivePage(item.pageId);
     if (item.children) {
-      toggleExpand(item.id);
+      setExpandedPages((prev) => ({
+        ...prev,
+        [item.id]: true,
+      }));
     }
   };
 
@@ -183,7 +188,7 @@ export const Settings = ({
         );
       case 'aider':
         return <AiderSettings settings={settings} setSettings={updateSettings} />;
-      case 'agent':
+      case 'agents':
         return (
           <AgentSettings
             settings={settings}
@@ -191,6 +196,7 @@ export const Settings = ({
             agentProfiles={agentProfiles || []}
             setAgentProfiles={setAgentProfiles || (() => {})}
             initialProfileId={initialAgentProfileId}
+            openProjects={openProjects}
           />
         );
       case 'server':
@@ -212,7 +218,9 @@ export const Settings = ({
               <div
                 className={clsx(
                   'flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-150 select-none',
-                  activePage === item.pageId ? 'bg-bg-active text-text-primary' : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary',
+                  activePage === item.pageId
+                    ? 'bg-bg-active text-text-primary bg-bg-secondary'
+                    : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary',
                 )}
                 onClick={() => handleItemClick(item)}
               >
@@ -260,7 +268,7 @@ export const Settings = ({
           ref={contentRef}
           className={clsx(
             'flex-1 w-full mx-auto',
-            activePage === 'agent'
+            activePage === 'agents'
               ? 'overflow-hidden p-0 h-full'
               : 'overflow-y-auto p-8 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-bg-tertiary hover:scrollbar-thumb-bg-tertiary-strong max-w-[1024px]',
           )}

@@ -433,7 +433,14 @@
         "descriptionRequiredForAutomatic": "需要设置描述才能自动使用此子代理，否则只能在用户明确请求时使用该子代理。",
         "on-demand": "仅在明确请求时按需使用",
         "automatic": "在适当时自动使用"
-      }
+      },
+      "profileContext": "配置上下文",
+      "globalProfiles": "全局配置",
+      "projectProfiles": "项目配置: {{projectName}}",
+      "previousContext": "上一个项目",
+      "nextContext": "下一个项目",
+      "noProfilesInContext": "此上下文中没有配置",
+      "createNewProfileInContext": "创建新配置"
     },
     "aider": {
       "options": "选项",

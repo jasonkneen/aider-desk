@@ -268,7 +268,7 @@ export const Home = () => {
         {isOpenProjectDialogVisible && (
           <OpenProjectDialog onClose={() => setIsOpenProjectDialogVisible(false)} onAddProject={handleAddProject} openProjects={openProjects} />
         )}
-        {showSettingsTab !== null && <SettingsPage onClose={() => setShowSettingsTab(null)} initialTab={showSettingsTab} />}
+        {showSettingsTab !== null && <SettingsPage onClose={() => setShowSettingsTab(null)} initialTab={showSettingsTab} openProjects={openProjects} />}
         {isUsageDashboardVisible && <UsageDashboard onClose={() => setIsUsageDashboardVisible(false)} />}
         {isModelLibraryVisible && <ModelLibrary onClose={() => setIsModelLibraryVisible(false)} />}
         {releaseNotesContent && versions && (

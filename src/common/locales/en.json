@@ -436,7 +436,14 @@
         "descriptionRequiredForAutomatic": "Description needs to be set in order to use this subagent automatically, otherwise the subagent can only be used when explicitly requested by the user.",
         "on-demand": "Used as subagent on user demand",
         "automatic": "Used as subagent automatically"
-      }
+      },
+      "profileContext": "Profile Context",
+      "globalProfiles": "Global Profiles",
+      "projectProfiles": "Project Profiles: {{projectName}}",
+      "previousContext": "Previous project",
+      "nextContext": "Next project",
+      "noProfilesInContext": "No profiles found in this context",
+      "createNewProfileInContext": "Create New Profile"
     },
     "aider": {
       "options": "Options",

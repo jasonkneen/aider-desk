@@ -14,10 +14,11 @@ type Props = {
   onProfileChange?: (profile: AgentProfile) => void;
   preferredModelIds?: string[];
   removePreferredModel?: (modelId: string) => void;
+  addPreferredModel?: (modelId: string) => void;
 };
 
 export const AgentModelSelector = forwardRef<ModelSelectorRef, Props>(
-  ({ className, agentProfile, onProfileChange, preferredModelIds = [], removePreferredModel = () => {} }, ref) => {
+  ({ className, agentProfile, onProfileChange, preferredModelIds = [], removePreferredModel = () => {}, addPreferredModel = () => {} }, ref) => {
     const { t } = useTranslation();
     const { providers, models } = useModelProviders();
 
@@ -82,8 +83,9 @@ export const AgentModelSelector = forwardRef<ModelSelectorRef, Props>(
         };
 
         onProfileChange(updatedProfile);
+        addPreferredModel(selectedModelId);
       },
-      [providers, onProfileChange, t, agentProfile],
+      [providers, onProfileChange, t, agentProfile, addPreferredModel],
     );
 
     if (!agentProfile) {
