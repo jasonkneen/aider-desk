@@ -2,7 +2,7 @@ import { createServer } from 'http';
 
 import type { BrowserWindow } from 'electron';
 
-import { McpManager } from '@/agent';
+import { McpManager, AgentProfileManager } from '@/agent';
 import { CloudflareTunnelManager, ServerController } from '@/server';
 import { ConnectorManager } from '@/connector';
 import { ProjectManager } from '@/project';
@@ -47,8 +47,12 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
 
   const worktreeManager = new WorktreeManager();
 
+  // Initialize agent profile manager
+  const agentProfileManager = new AgentProfileManager();
+  await agentProfileManager.start();
+
   // Initialize project manager
-  const projectManager = new ProjectManager(store, mcpManager, telemetryManager, dataManager, eventManager, modelManager, worktreeManager);
+  const projectManager = new ProjectManager(store, mcpManager, telemetryManager, dataManager, eventManager, modelManager, worktreeManager, agentProfileManager);
 
   // Initialize terminal manager
   const terminalManager = new TerminalManager(eventManager, telemetryManager);
@@ -75,6 +79,7 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
     terminalManager,
     cloudflareTunnelManager,
     eventManager,
+    agentProfileManager,
   );
 
   // Create and initialize REST API controller with the server
@@ -100,6 +105,7 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
       dataManager.close();
 
       await Promise.all([connectorManager.close(), serverController.close(), projectManager.close(), mcpManager.close(), telemetryManager.destroy()]);
+      agentProfileManager.dispose();
     } catch (error) {
       logger.error('Error during cleanup:', {
         error: error instanceof Error ? error.message : String(error),

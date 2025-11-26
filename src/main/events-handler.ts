@@ -24,12 +24,13 @@ import {
   UsageDataRow,
   VersionsInfo,
   VoiceSession,
+  AgentProfile,
 } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
 
 import type { BrowserWindow } from 'electron';
 
-import { McpManager } from '@/agent';
+import { McpManager, AgentProfileManager } from '@/agent';
 import { ModelManager } from '@/models';
 import { ProjectManager } from '@/project';
 import { CloudflareTunnelManager } from '@/server';
@@ -56,6 +57,7 @@ export class EventsHandler {
     private terminalManager: TerminalManager,
     private cloudflareTunnelManager: CloudflareTunnelManager,
     private eventManager: EventManager,
+    private readonly agentProfileManager: AgentProfileManager,
   ) {}
 
   loadSettings(): SettingsData {
@@ -67,7 +69,7 @@ export class EventsHandler {
     this.store.saveSettings(newSettings);
 
     this.mcpManager.settingsChanged(oldSettings, newSettings);
-    this.projectManager.settingsChanged(oldSettings, newSettings);
+    void this.projectManager.settingsChanged(oldSettings, newSettings);
     this.telemetryManager.settingsChanged(oldSettings, newSettings);
 
     return this.store.getSettings();
@@ -758,5 +760,32 @@ export class EventsHandler {
 
   getCloudflareTunnelStatus(): CloudflareTunnelStatus {
     return this.cloudflareTunnelManager.getStatus();
+  }
+
+  async getAllAgentProfiles() {
+    return this.agentProfileManager.getAllProfiles();
+  }
+
+  async getAgentProfile(profileId: string, baseDir?: string) {
+    return this.agentProfileManager.getProfile(profileId, baseDir);
+  }
+
+  async createAgentProfile(profile: AgentProfile, projectDir?: string) {
+    await this.agentProfileManager.createProfile(profile, projectDir);
+    return this.agentProfileManager.getAllProfiles();
+  }
+
+  async updateAgentProfile(profile: AgentProfile) {
+    await this.agentProfileManager.updateProfile(profile);
+    return this.agentProfileManager.getAllProfiles();
+  }
+
+  async deleteAgentProfile(profileId: string) {
+    await this.agentProfileManager.deleteProfile(profileId);
+    return this.agentProfileManager.getAllProfiles();
+  }
+
+  async updateAgentProfilesOrder(agentProfiles: AgentProfile[], baseDir?: string) {
+    await this.agentProfileManager.updateAgentProfilesOrder(agentProfiles, baseDir);
   }
 }

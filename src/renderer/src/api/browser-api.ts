@@ -39,6 +39,7 @@ import {
   UserMessageData,
   VersionsInfo,
   VoiceSession,
+  AgentProfile,
 } from '@common/types';
 import { ApplicationAPI } from '@common/api';
 import axios, { type AxiosInstance } from 'axios';
@@ -737,6 +738,43 @@ export class BrowserApi implements ApplicationAPI {
     return this.post('/project/worktree/revert-last-merge', {
       projectDir: baseDir,
       taskId,
+    });
+  }
+
+  // Agent profile operations
+  getAllAgentProfiles(baseDir?: string): Promise<AgentProfile[]> {
+    return this.get('/agent-profiles', { baseDir });
+  }
+
+  getAgentProfile(profileId: string, baseDir?: string): Promise<AgentProfile> {
+    return this.get('/agent-profile', { profileId, baseDir });
+  }
+
+  createAgentProfile(profile: AgentProfile, projectDir?: string): Promise<AgentProfile[]> {
+    return this.post('/agent-profile/create', {
+      profile,
+      projectDir,
+    });
+  }
+
+  updateAgentProfile(profile: AgentProfile, baseDir?: string): Promise<AgentProfile[]> {
+    return this.post('/agent-profile/update', {
+      profile,
+      baseDir,
+    });
+  }
+
+  deleteAgentProfile(profileId: string, baseDir?: string): Promise<AgentProfile[]> {
+    return this.post('/agent-profile/delete', {
+      profileId,
+      baseDir,
+    });
+  }
+
+  updateAgentProfilesOrder(agentProfiles: AgentProfile[], baseDir?: string): Promise<void> {
+    return this.post('/agent-profiles/order', {
+      agentProfiles,
+      baseDir,
     });
   }
 }

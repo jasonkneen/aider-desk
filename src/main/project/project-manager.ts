@@ -2,7 +2,7 @@ import { normalizeBaseDir } from '@common/utils';
 import { SettingsData, ProjectStartMode } from '@common/types';
 
 import { TelemetryManager } from '@/telemetry';
-import { McpManager } from '@/agent';
+import { McpManager, AgentProfileManager } from '@/agent';
 import { DataManager } from '@/data-manager';
 import logger from '@/logger';
 import { Project } from '@/project';
@@ -22,6 +22,7 @@ export class ProjectManager {
     private readonly eventManager: EventManager,
     private readonly modelManager: ModelManager,
     private readonly worktreeManager: WorktreeManager,
+    private readonly agentProfileManager: AgentProfileManager,
   ) {}
 
   private findProject(baseDir: string): Project | undefined {
@@ -39,6 +40,7 @@ export class ProjectManager {
       this.eventManager,
       this.modelManager,
       this.worktreeManager,
+      this.agentProfileManager,
     );
     this.projects.push(project);
     return project;
@@ -86,9 +88,9 @@ export class ProjectManager {
     this.projects = [];
   }
 
-  settingsChanged(oldSettings: SettingsData, newSettings: SettingsData) {
+  async settingsChanged(oldSettings: SettingsData, newSettings: SettingsData) {
     this.projects.forEach((project) => {
-      project.settingsChanged(oldSettings, newSettings);
+      void project.settingsChanged(oldSettings, newSettings);
     });
   }
 

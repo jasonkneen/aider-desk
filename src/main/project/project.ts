@@ -5,7 +5,7 @@ import { CustomCommand, ProjectStartMode, SettingsData, TaskData } from '@common
 import { fileExists } from '@common/utils';
 import { v4 as uuidv4 } from 'uuid';
 
-import { McpManager } from '@/agent';
+import { McpManager, AgentProfileManager } from '@/agent';
 import { Connector } from '@/connector';
 import { DataManager } from '@/data-manager';
 import logger from '@/logger';
@@ -37,6 +37,7 @@ export class Project {
     private readonly eventManager: EventManager,
     private readonly modelManager: ModelManager,
     private readonly worktreeManager: WorktreeManager,
+    private readonly agentProfileManager: AgentProfileManager,
   ) {
     this.customCommandManager = new CustomCommandManager(this);
     // initialize global task
@@ -46,6 +47,7 @@ export class Project {
 
   public async start(_startupMode?: ProjectStartMode) {
     await this.customCommandManager.start();
+    await this.agentProfileManager.initializeForProject(this.baseDir);
     await this.sendInputHistoryUpdatedEvent();
 
     this.eventManager.sendProjectStarted(this.baseDir);
@@ -72,6 +74,7 @@ export class Project {
       this.store,
       this.mcpManager,
       this.customCommandManager,
+      this.agentProfileManager,
       this.telemetryManager,
       this.dataManager,
       this.eventManager,
@@ -297,14 +300,15 @@ export class Project {
     this.tasks.forEach(callback);
   }
 
-  settingsChanged(oldSettings: SettingsData, newSettings: SettingsData) {
+  async settingsChanged(oldSettings: SettingsData, newSettings: SettingsData) {
     this.tasks.forEach((task) => {
-      task.settingsChanged(oldSettings, newSettings);
+      void task.settingsChanged(oldSettings, newSettings);
     });
   }
 
   async close() {
     this.customCommandManager.dispose();
+    this.agentProfileManager.removeProject(this.baseDir);
     await Promise.all(Array.from(this.tasks.values()).map((task) => task.close()));
     await this.worktreeManager.close(this.baseDir);
   }

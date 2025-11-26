@@ -1,7 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
-import { AgentProfile, ProviderProfile, ProjectData, ProjectSettings, SettingsData, ProjectStartMode, SuggestionMode, WindowState, Model } from '@common/types';
+import { ProviderProfile, ProjectData, ProjectSettings, SettingsData, ProjectStartMode, SuggestionMode, WindowState, Model } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
-import { DEFAULT_AGENT_PROFILE, DEFAULT_AGENT_PROFILES, DEFAULT_PROVIDER_MODEL } from '@common/agent';
 
 import { migrateSettingsV0toV1 } from './migrations/v0-to-v1';
 import { migrateSettingsV1toV2 } from './migrations/v1-to-v2';
@@ -22,6 +21,7 @@ import logger from '@/logger';
 import { migrateProvidersV13toV14 } from '@/store/migrations/v13-to-v14';
 import { migrateSettingsV14toV15 } from '@/store/migrations/v14-to-v15';
 import { migrateSettingsV15toV16 } from '@/store/migrations/v15-to-v16';
+import { migrateSettingsV16toV17 } from '@/store/migrations/v16-to-v17';
 
 export const DEFAULT_SETTINGS: SettingsData = {
   language: 'en',
@@ -43,7 +43,6 @@ export const DEFAULT_SETTINGS: SettingsData = {
     confirmBeforeEdit: false,
   },
   preferredModels: [],
-  agentProfiles: DEFAULT_AGENT_PROFILES,
   mcpServers: {},
   llmProviders: {},
   telemetryEnabled: true,
@@ -74,7 +73,7 @@ export const getDefaultProjectSettings = (store: Store, providerModels: Model[],
     weakModel: determineWeakModel(baseDir),
     modelEditFormats: {},
     currentMode: 'code',
-    agentProfileId: DEFAULT_AGENT_PROFILE.id,
+    agentProfileId: 'default',
   };
 };
 
@@ -93,7 +92,7 @@ interface StoreSchema {
   userId?: string;
 }
 
-const CURRENT_SETTINGS_VERSION = 16;
+const CURRENT_SETTINGS_VERSION = 17;
 
 export class Store {
   // @ts-expect-error expected to be initialized
@@ -109,7 +108,7 @@ export class Store {
     const openProjects = this.store.get('openProjects');
     const providers = this.store.get('providers');
     if (settings) {
-      this.migrateSettings(settings, openProjects, providers);
+      await this.migrateSettings(settings, openProjects, providers);
     }
   }
 
@@ -135,28 +134,6 @@ export class Store {
       return this.createDefaultSettings();
     }
 
-    const getAgentProfiles = () => {
-      const mergeDefaultProperties = (agentProfile: AgentProfile) => ({
-        ...DEFAULT_AGENT_PROFILE,
-        ...agentProfile,
-        toolApprovals: {
-          ...DEFAULT_AGENT_PROFILE.toolApprovals,
-          ...agentProfile.toolApprovals,
-        },
-        subagent: {
-          ...DEFAULT_AGENT_PROFILE.subagent,
-          ...agentProfile.subagent,
-        },
-      });
-
-      const defaultProfile = settings.agentProfiles?.find((profile) => profile.id === DEFAULT_AGENT_PROFILE.id);
-      if (!defaultProfile) {
-        return [DEFAULT_AGENT_PROFILE, ...(settings.agentProfiles || []).map(mergeDefaultProperties)];
-      }
-
-      return settings.agentProfiles.map(mergeDefaultProperties);
-    };
-
     // Ensure proper merging for nested objects
     return {
       ...DEFAULT_SETTINGS,
@@ -173,14 +150,13 @@ export class Store {
           ...settings?.promptBehavior?.requireCommandConfirmation,
         },
       },
-      agentProfiles: getAgentProfiles(),
       mcpServers: settings.mcpServers || DEFAULT_SETTINGS.mcpServers,
       server: settings.server || DEFAULT_SETTINGS.server,
     };
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private migrateSettings(settings: any, openProjects: any, providers: any): SettingsData {
+  private async migrateSettings(settings: any, openProjects: any, providers: any): Promise<SettingsData> {
     let settingsVersion = this.store.get('settingsVersion') ?? this.findOutCurrentVersion(settings);
 
     if (settingsVersion < CURRENT_SETTINGS_VERSION) {
@@ -267,6 +243,11 @@ export class Store {
         settingsVersion = 16;
       }
 
+      if (settingsVersion === 16) {
+        settings = await migrateSettingsV16toV17(settings);
+        settingsVersion = 17;
+      }
+
       this.store.set('settings', settings as SettingsData);
       this.store.set('openProjects', openProjects || []);
       this.store.set('providers', providers);
@@ -284,8 +265,12 @@ export class Store {
     if (settings.mcpAgent && !settings.agentConfig) {
       return 2;
     }
-    if (!settings.agentProfiles || !settings.llmProviders) {
+    if (!settings.llmProviders) {
       return 3;
+    }
+    // Check if agentProfiles still exists in settings (pre-v17)
+    if (settings.agentProfiles) {
+      return 16;
     }
     return CURRENT_SETTINGS_VERSION;
   }
@@ -320,37 +305,6 @@ export class Store {
 
     this.setOpenProjects(orderedProjects);
     return orderedProjects;
-  }
-
-  async updateProviderModelInAgentProfiles(providerModels: Model[]) {
-    const settings = this.getSettings();
-    const providers = this.getProviders();
-
-    const updatedAgentProfiles = settings.agentProfiles.map((agentProfile) => {
-      const agentProviderModels = providerModels.filter((model) => model.providerId === agentProfile.provider);
-
-      if (agentProviderModels.length === 0) {
-        // Provider not configured, find the first available configured provider
-        for (const provider of providers) {
-          const models = providerModels.filter((model) => model.providerId === provider.id);
-          const defaultModel = DEFAULT_PROVIDER_MODEL[provider.provider.name];
-          if (defaultModel || models.length > 0) {
-            return {
-              ...agentProfile,
-              provider: provider.id,
-              model: defaultModel || models[0].id,
-            };
-          }
-        }
-      }
-      return agentProfile;
-    });
-
-    // Update settings with modified agent profiles
-    this.saveSettings({
-      ...settings,
-      agentProfiles: updatedAgentProfiles,
-    });
   }
 
   getRecentProjects(): string[] {
@@ -436,11 +390,6 @@ export class Store {
 
   setReleaseNotes(releaseNotes: string) {
     this.store.set('releaseNotes', releaseNotes);
-  }
-
-  getAgentProfile(profileId: string): AgentProfile | undefined {
-    const settings = this.getSettings();
-    return settings.agentProfiles.find((profile) => profile.id === profileId);
   }
 
   getProviders(): ProviderProfile[] {

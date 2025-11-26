@@ -38,6 +38,10 @@ export const Home = () => {
 
   const activeProject = openProjects.find((project) => project.active) || openProjects[0];
 
+  const handleShowSettingsPage = useCallback((tab?: number) => {
+    setShowSettingsTab(tab ?? null);
+  }, []);
+
   const handleReorderProjects = async (reorderedProjects: ProjectData[]) => {
     setOpenProjects(reorderedProjects);
     try {
@@ -185,7 +189,7 @@ export const Home = () => {
             display: activeProject?.baseDir === project.baseDir ? 'block' : 'none',
           }}
         >
-          <ProjectView project={project} isActive={activeProject?.baseDir === project.baseDir} />
+          <ProjectView project={project} isActive={activeProject?.baseDir === project.baseDir} showSettingsPage={handleShowSettingsPage} />
         </div>
       </ProjectSettingsProvider>
     ));

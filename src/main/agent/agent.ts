@@ -58,6 +58,7 @@ import { ModelManager } from '@/models/model-manager';
 import { TelemetryManager } from '@/telemetry/telemetry-manager';
 import { ResponseMessage } from '@/messages';
 import { createSubagentsToolset } from '@/agent/tools/subagents';
+import { AgentProfileManager } from '@/agent/agent-profile-manager';
 
 const MAX_RETRIES = 3;
 
@@ -67,6 +68,7 @@ export class Agent {
 
   constructor(
     private readonly store: Store,
+    private readonly agentProfileManager: AgentProfileManager,
     private readonly mcpManager: McpManager,
     private readonly modelManager: ModelManager,
     private readonly telemetryManager: TelemetryManager,
@@ -323,7 +325,15 @@ export class Agent {
     }
 
     if (profile.useSubagents) {
-      const subagentsToolset = createSubagentsToolset(this.store.getSettings(), task, profile, abortSignal, messages, resultMessages);
+      const subagentsToolset = await createSubagentsToolset(
+        this.store.getSettings(),
+        task,
+        this.agentProfileManager,
+        profile,
+        abortSignal,
+        messages,
+        resultMessages,
+      );
       Object.assign(toolSet, subagentsToolset);
     }
 
@@ -489,6 +499,7 @@ export class Agent {
     abortSignal?: AbortSignal,
   ): Promise<ContextMessage[]> {
     const settings = this.store.getSettings();
+    const projectProfiles = this.agentProfileManager.getProjectProfiles(task.getProjectDir());
 
     const providers = this.store.getProviders();
     const provider = providers.find((p) => p.id === profile.provider);
@@ -744,7 +755,7 @@ export class Agent {
             providerOptions,
             model,
             system: systemPrompt,
-            messages: optimizeMessages(profile, initialUserRequestMessageIndex, messages, cacheControl, settings),
+            messages: optimizeMessages(profile, projectProfiles, initialUserRequestMessageIndex, messages, cacheControl),
             tools: toolSet,
             abortSignal: effectiveAbortSignal,
             maxOutputTokens: effectiveMaxOutputTokens,
@@ -768,7 +779,7 @@ export class Agent {
               }),
             }),
             system: systemPrompt,
-            messages: optimizeMessages(profile, initialUserRequestMessageIndex, messages, cacheControl, settings),
+            messages: optimizeMessages(profile, projectProfiles, initialUserRequestMessageIndex, messages, cacheControl, task.task),
             tools: toolSet,
             abortSignal: effectiveAbortSignal,
             maxOutputTokens: effectiveMaxOutputTokens,
@@ -1002,7 +1013,6 @@ export class Agent {
 
   async estimateTokens(task: Task, profile: AgentProfile): Promise<number> {
     try {
-      const settings = this.store.getSettings();
       const providers = this.store.getProviders();
       const provider = providers.find((p) => p.id === profile.provider);
       if (!provider) {
@@ -1019,7 +1029,13 @@ export class Agent {
       const lastUserIndex = messages.map((m) => m.role).lastIndexOf('user');
       const userRequestMessageIndex = lastUserIndex >= 0 ? lastUserIndex : 0;
 
-      const optimizedMessages = optimizeMessages(profile, userRequestMessageIndex, messages, cacheControl, settings, task.task);
+      const optimizedMessages = optimizeMessages(
+        profile,
+        this.agentProfileManager.getProjectProfiles(task.getProjectDir()),
+        userRequestMessageIndex,
+        messages,
+        cacheControl,
+      );
 
       // Format tools for the prompt
       const toolDefinitions = Object.entries(toolSet).map(([name, tool]) => ({

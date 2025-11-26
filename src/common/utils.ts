@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 
 import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 
-import { OS, ProjectSettings, SettingsData, UsageReportData } from './types';
+import { OS, UsageReportData } from './types';
 
 type TextContent =
   | string
@@ -163,13 +163,4 @@ export const isURL = (url: string): boolean => {
   } catch {
     return false;
   }
-};
-
-export const getActiveAgentProfile = (settings: SettingsData | null, projectSettings: ProjectSettings | null) => {
-  if (!settings || !projectSettings) {
-    return null;
-  }
-
-  const activeProfile = settings.agentProfiles.find((profile) => profile.id === projectSettings.agentProfileId);
-  return activeProfile || null;
 };

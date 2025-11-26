@@ -2,9 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { HiArrowRight, HiArrowLeft } from 'react-icons/hi2';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { isEqual } from 'lodash';
 import { SettingsData } from '@common/types';
 
 import { useSettings } from '@/contexts/SettingsContext';
+import { useAgents } from '@/contexts/AgentsContext';
 import { AiderSettings } from '@/components/settings/AiderSettings';
 import { LanguageSelector } from '@/components/settings/LanguageSelector';
 import { OnboardingProviderSetup } from '@/components/onboarding/OnboardingProviderSetup';
@@ -18,7 +20,9 @@ export const Onboarding = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { settings: originalSettings, saveSettings } = useSettings();
+  const { profiles: originalAgentProfiles, createProfile, updateProfile, deleteProfile, updateProfilesOrder } = useAgents();
   const [localSettings, setLocalSettings] = useState<SettingsData | null>(originalSettings);
+  const [agentProfiles, setAgentProfiles] = useState(originalAgentProfiles);
   const [step, setStep] = useState(1);
   const [isNavigating, setIsNavigating] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -28,6 +32,10 @@ export const Onboarding = () => {
       setLocalSettings(originalSettings);
     }
   }, [originalSettings]);
+
+  useEffect(() => {
+    setAgentProfiles(originalAgentProfiles);
+  }, [originalAgentProfiles]);
 
   const steps = [
     { title: t('onboarding.steps.welcome') },
@@ -91,6 +99,47 @@ export const Onboarding = () => {
         ...localSettings,
         onboardingFinished: true,
       });
+
+      // Save agent profile changes
+      try {
+        // Find profiles that were added, updated, or deleted
+        const originalProfileIds = new Set(originalAgentProfiles.map((p) => p.id));
+        const currentProfileIds = new Set(agentProfiles.map((p) => p.id));
+
+        // Handle deleted profiles
+        for (const profileId of originalProfileIds) {
+          if (!currentProfileIds.has(profileId)) {
+            await deleteProfile(profileId);
+          }
+        }
+
+        // Handle added and updated profiles
+        for (const profile of agentProfiles) {
+          if (!originalProfileIds.has(profile.id)) {
+            // New profile
+            await createProfile(profile);
+          } else {
+            // Updated profile - check if it actually changed
+            const originalProfile = originalAgentProfiles.find((p) => p.id === profile.id);
+            if (originalProfile && !isEqual(originalProfile, profile)) {
+              await updateProfile(profile);
+            }
+          }
+        }
+
+        // Update profile order if needed
+        if (
+          !isEqual(
+            agentProfiles.map((p) => p.id),
+            originalAgentProfiles.map((p) => p.id),
+          )
+        ) {
+          await updateProfilesOrder(agentProfiles);
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to save agent profiles:', error);
+      }
 
       showInfoNotification(t('onboarding.complete.success'));
       navigate(ROUTES.Home);
@@ -212,7 +261,7 @@ export const Onboarding = () => {
           <div className="space-y-4">
             <h2 className="text-xl font-bold text-text-primary uppercase">{t('onboarding.agent.configureTitle')}</h2>
             <p className="text-text-tertiary text-sm">{t('onboarding.agent.configureDescription')}</p>
-            <AgentSettings settings={localSettings!} setSettings={setLocalSettings} />
+            <AgentSettings settings={localSettings!} setSettings={setLocalSettings} agentProfiles={agentProfiles} setAgentProfiles={setAgentProfiles} />
           </div>
         );
       case 6:

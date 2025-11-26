@@ -39,6 +39,7 @@ import {
   UserMessageData,
   VersionsInfo,
   VoiceSession,
+  AgentProfile,
 } from '@common/types';
 
 export interface ApplicationAPI {
@@ -182,4 +183,12 @@ export interface ApplicationAPI {
   mergeWorktreeToMain: (baseDir: string, taskId: string, squash: boolean) => Promise<void>;
   applyUncommittedChanges: (baseDir: string, taskId: string) => Promise<void>;
   revertLastMerge: (baseDir: string, taskId: string) => Promise<void>;
+
+  // Agent profile operations
+  getAllAgentProfiles: () => Promise<AgentProfile[]>;
+  getAgentProfile: (profileId: string, baseDir?: string) => Promise<AgentProfile | null>;
+  createAgentProfile: (profile: AgentProfile, projectDir?: string) => Promise<AgentProfile[]>;
+  updateAgentProfile: (profile: AgentProfile, baseDir?: string) => Promise<AgentProfile[]>;
+  deleteAgentProfile: (profileId: string, baseDir?: string) => Promise<AgentProfile[]>;
+  updateAgentProfilesOrder: (agentProfiles: AgentProfile[], baseDir?: string) => Promise<void>;
 }

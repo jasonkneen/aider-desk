@@ -6,6 +6,7 @@ import { LlmProviderName } from '@common/agent';
 
 import { Settings } from '@/pages/Settings';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useAgents } from '@/contexts/AgentsContext';
 import { ModalOverlayLayout } from '@/components/common/ModalOverlayLayout';
 import { useApi } from '@/contexts/ApiContext';
 import { Button } from '@/components/common/Button';
@@ -22,18 +23,25 @@ export const SettingsPage = ({ onClose, initialTab = 0, initialAgentProfileId, i
   const api = useApi();
 
   const { settings: originalSettings, saveSettings, setTheme, setFont, setFontSize } = useSettings();
+  const { profiles: originalAgentProfiles, createProfile, updateProfile, deleteProfile, updateProfilesOrder } = useAgents();
   const [localSettings, setLocalSettings] = useState<SettingsData | null>(originalSettings);
+  const [agentProfiles, setAgentProfiles] = useState(originalAgentProfiles);
 
   useEffect(() => {
     if (originalSettings) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLocalSettings(originalSettings);
     }
   }, [originalSettings]);
 
+  useEffect(() => {
+    setAgentProfiles(originalAgentProfiles);
+  }, [originalAgentProfiles]);
+
   const hasChanges = useMemo(() => {
-    return localSettings && originalSettings && !isEqual(localSettings, originalSettings);
-  }, [localSettings, originalSettings]);
+    const settingsChanged = localSettings && originalSettings && !isEqual(localSettings, originalSettings);
+    const agentProfilesChanged = !isEqual(agentProfiles, originalAgentProfiles);
+    return settingsChanged || agentProfilesChanged;
+  }, [localSettings, originalSettings, agentProfiles, originalAgentProfiles]);
 
   const handleCancel = () => {
     if (originalSettings && localSettings?.language !== originalSettings.language) {
@@ -58,14 +66,59 @@ export const SettingsPage = ({ onClose, initialTab = 0, initialAgentProfileId, i
     if (originalSettings && localSettings && !isEqual(localSettings.mcpServers, originalSettings.mcpServers)) {
       void api.reloadMcpServers(originalSettings.mcpServers || {});
     }
+
+    // Reset agent profiles to original
+    setAgentProfiles(originalAgentProfiles);
     onClose();
   };
 
   const handleSave = async () => {
     if (localSettings) {
       await saveSettings(localSettings);
-      onClose();
     }
+
+    // Save agent profile changes
+    try {
+      // Find profiles that were added, updated, or deleted
+      const originalProfileIds = new Set(originalAgentProfiles.map((p) => p.id));
+      const currentProfileIds = new Set(agentProfiles.map((p) => p.id));
+
+      // Handle deleted profiles
+      for (const profileId of originalProfileIds) {
+        if (!currentProfileIds.has(profileId)) {
+          await deleteProfile(profileId);
+        }
+      }
+
+      // Handle added and updated profiles
+      for (const profile of agentProfiles) {
+        if (!originalProfileIds.has(profile.id)) {
+          // New profile
+          await createProfile(profile);
+        } else {
+          // Updated profile - check if it actually changed
+          const originalProfile = originalAgentProfiles.find((p) => p.id === profile.id);
+          if (originalProfile && !isEqual(originalProfile, profile)) {
+            await updateProfile(profile);
+          }
+        }
+      }
+
+      // Update profile order if needed
+      if (
+        !isEqual(
+          agentProfiles.map((p) => p.id),
+          originalAgentProfiles.map((p) => p.id),
+        )
+      ) {
+        await updateProfilesOrder(agentProfiles);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to save agent profiles:', error);
+    }
+
+    onClose();
   };
 
   const handleLanguageChange = (language: string) => {
@@ -103,6 +156,8 @@ export const SettingsPage = ({ onClose, initialTab = 0, initialAgentProfileId, i
             initialTab={initialTab}
             initialAgentProfileId={initialAgentProfileId}
             initialAgentProvider={initialAgentProvider}
+            agentProfiles={agentProfiles}
+            setAgentProfiles={setAgentProfiles}
           />
         )}
       </div>

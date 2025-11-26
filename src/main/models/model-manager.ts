@@ -296,7 +296,7 @@ export class ModelManager {
     });
 
     // Update agent profiles with the new models
-    await this.store.updateProviderModelInAgentProfiles(Object.values(this.providerModels).flat());
+    // Note: agent profiles are now file-based, so this update is handled differently
     this.eventManager.sendSettingsUpdated(this.store.getSettings());
   }
 

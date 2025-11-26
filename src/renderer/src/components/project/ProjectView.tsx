@@ -15,9 +15,10 @@ import { showInfoNotification } from '@/utils/notifications';
 type Props = {
   project: ProjectData;
   isActive?: boolean;
+  showSettingsPage?: (tab?: number) => void;
 };
 
-export const ProjectView = ({ project, isActive = false }: Props) => {
+export const ProjectView = ({ project, isActive = false, showSettingsPage }: Props) => {
   const { t } = useTranslation();
   const { settings } = useSettings();
   const { projectSettings } = useProjectSettings();
@@ -305,6 +306,7 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
               updateTask={(updates, useOptimistic) => handleUpdateTask(activeTask.id, updates, useOptimistic)}
               inputHistory={inputHistory}
               isActive={isActive}
+              showSettingsPage={showSettingsPage}
             />
           )}
         </div>

@@ -1,4 +1,4 @@
-import { type AgentProfile, InvocationMode, type SettingsData, type TaskData } from '@common/types';
+import { type AgentProfile, InvocationMode, type TaskData } from '@common/types';
 import { isSubagentEnabled } from '@common/agent';
 import { cloneDeep } from 'lodash';
 import { type ModelMessage, type ToolContent, type ToolResultPart, type UserModelMessage } from 'ai';
@@ -21,11 +21,11 @@ import { CacheControl } from '@/models';
  */
 export const optimizeMessages = (
   profile: AgentProfile,
+  projectProfiles: AgentProfile[],
   userRequestMessageIndex: number,
   messages: ModelMessage[],
   cacheControl: CacheControl,
-  settings: SettingsData,
-  _task?: TaskData,
+  task?: TaskData,
 ) => {
   if (messages.length === 0) {
     return [];
@@ -33,7 +33,7 @@ export const optimizeMessages = (
 
   let optimizedMessages = cloneDeep(messages);
 
-  optimizedMessages = addImportantReminders(profile, userRequestMessageIndex, optimizedMessages, settings, _task);
+  optimizedMessages = addImportantReminders(profile, projectProfiles, userRequestMessageIndex, optimizedMessages, task);
   optimizedMessages = convertImageToolResults(optimizedMessages);
   optimizedMessages = removeDoubleToolCalls(optimizedMessages);
   optimizedMessages = optimizeAiderMessages(optimizedMessages);
@@ -64,9 +64,9 @@ export const optimizeMessages = (
 
 const addImportantReminders = (
   profile: AgentProfile,
+  projectProfiles: AgentProfile[],
   userRequestMessageIndex: number,
   messages: ModelMessage[],
-  settings: SettingsData,
   task?: TaskData,
 ): ModelMessage[] => {
   const userRequestMessage = messages[userRequestMessageIndex] as UserModelMessage;
@@ -79,8 +79,8 @@ const addImportantReminders = (
   }
 
   // Add reminder about automatic subagents
-  if (profile.useSubagents && settings.agentProfiles) {
-    const enabledSubagents = settings.agentProfiles.filter((agentProfile) => isSubagentEnabled(agentProfile, profile.id));
+  if (profile.useSubagents) {
+    const enabledSubagents = projectProfiles.filter((agentProfile) => isSubagentEnabled(agentProfile, profile.id));
     const automaticSubagents = enabledSubagents.filter(
       (agentProfile) => agentProfile.subagent.invocationMode === InvocationMode.Automatic && agentProfile.subagent.description,
     );

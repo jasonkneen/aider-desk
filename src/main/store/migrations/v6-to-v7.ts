@@ -1,7 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { AgentProfile, SettingsData, ToolApprovalState } from '@common/types';
 
 export const migrateV6ToV7 = (settings: SettingsData): SettingsData => {
-  const updatedAgentProfiles: AgentProfile[] = settings.agentProfiles.map((profile) => {
+  const agentProfiles = (settings as any).agentProfiles as AgentProfile[] | undefined;
+  if (!agentProfiles) {
+    return settings;
+  }
+
+  const updatedAgentProfiles: AgentProfile[] = agentProfiles.map((profile) => {
     const newToolApprovals: Record<string, ToolApprovalState> = { ...profile.toolApprovals };
 
     // Update AIDER_TOOL_ADD_CONTEXT_FILE to AIDER_TOOL_ADD_CONTEXT_FILES
@@ -25,5 +31,5 @@ export const migrateV6ToV7 = (settings: SettingsData): SettingsData => {
   return {
     ...settings,
     agentProfiles: updatedAgentProfiles,
-  };
+  } as any;
 };

@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap } from 'react-icons/md';
 import { RiToolsFill } from 'react-icons/ri';
 import { clsx } from 'clsx';
 import { AgentProfile, ToolApprovalState } from '@common/types';
-import { getActiveAgentProfile } from '@common/utils';
 import { BiCog } from 'react-icons/bi';
 import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -17,38 +16,40 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { Accordion } from '@/components/common/Accordion';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
-import { SettingsPage } from '@/components/settings/SettingsPage';
 import { useApi } from '@/contexts/ApiContext';
+import { useAgents } from '@/contexts/AgentsContext';
 
 type Props = {
+  projectDir: string;
   isActive: boolean;
+  showSettingsPage?: (tab?: number) => void;
 };
 
-export const AgentSelector = ({ isActive }: Props) => {
+export const AgentSelector = ({ projectDir, isActive, showSettingsPage }: Props) => {
   const { t } = useTranslation();
-  const { settings, saveSettings } = useSettings();
+  const { settings } = useSettings();
   const { projectSettings, saveProjectSettings } = useProjectSettings();
+  const { getProfiles, updateProfile } = useAgents();
   const [selectorVisible, setSelectorVisible] = useState(false);
-  const [showAgentProfilesDialog, setShowAgentProfilesDialog] = useState(false);
   const [enabledToolsCount, setEnabledToolsCount] = useState<number | null>(null);
   const selectorRef = useRef<HTMLDivElement>(null);
   const api = useApi();
 
-  const activeProfile = getActiveAgentProfile(settings, projectSettings);
-  const { agentProfiles = [], mcpServers = {} } = settings || {};
+  const profiles = useMemo(() => getProfiles(projectDir), [getProfiles, projectDir]);
+  const activeProfile = useMemo(() => {
+    return profiles.find((profile) => profile.id === projectSettings?.agentProfileId);
+  }, [projectSettings?.agentProfileId, profiles]);
+  const { mcpServers = {} } = settings || {};
   const { enabledServers = [], toolApprovals = {} } = activeProfile || {};
 
   const handleToggleProfileSetting = useCallback(
     (setting: keyof AgentProfile, value: boolean) => {
-      if (activeProfile && settings) {
+      if (activeProfile) {
         const updatedProfile = { ...activeProfile, [setting]: value };
-        void saveSettings({
-          ...settings,
-          agentProfiles: settings.agentProfiles.map((profile) => (profile.id === activeProfile.id ? updatedProfile : profile)),
-        });
+        void updateProfile(updatedProfile);
       }
     },
-    [activeProfile, settings, saveSettings],
+    [activeProfile, updateProfile],
   );
 
   useClickOutside(selectorRef, () => setSelectorVisible(false));
@@ -133,7 +134,7 @@ export const AgentSelector = ({ isActive }: Props) => {
   };
 
   const handleSwitchProfile = (profileId: string) => {
-    const newActiveProfile = settings!.agentProfiles.find((p) => p.id === profileId);
+    const newActiveProfile = profiles.find((p) => p.id === profileId);
     if (newActiveProfile && projectSettings) {
       void saveProjectSettings({
         agentProfileId: newActiveProfile.id,
@@ -143,7 +144,7 @@ export const AgentSelector = ({ isActive }: Props) => {
   };
 
   const handleToggleServer = (serverName: string) => {
-    if (activeProfile && settings) {
+    if (activeProfile) {
       const currentEnabledServers = activeProfile.enabledServers || [];
       const isEnabled = currentEnabledServers.includes(serverName);
 
@@ -167,15 +168,12 @@ export const AgentSelector = ({ isActive }: Props) => {
         enabledServers: newEnabledServers,
         toolApprovals: newToolApprovals,
       };
-      void saveSettings({
-        ...settings,
-        agentProfiles: settings.agentProfiles.map((profile) => (profile.id === activeProfile.id ? updatedProfile : profile)),
-      });
+      void updateProfile(updatedProfile);
     }
   };
 
   const handleOpenAgentProfiles = () => {
-    setShowAgentProfilesDialog(true);
+    showSettingsPage?.(2);
     setSelectorVisible(false);
   };
 
@@ -217,7 +215,7 @@ export const AgentSelector = ({ isActive }: Props) => {
               />
             </div>
             <div className="max-h-[250px] overflow-y-auto scrollbar-thin scrollbar-thumb-bg-secondary-light scrollbar-track-bg-primary-light">
-              {agentProfiles.map((profile) => (
+              {profiles.map((profile) => (
                 <div
                   key={profile.id}
                   className={clsx(
@@ -318,10 +316,6 @@ export const AgentSelector = ({ isActive }: Props) => {
       )}
 
       <StyledTooltip id="agent-selector-tooltip" />
-
-      {showAgentProfilesDialog && (
-        <SettingsPage onClose={() => setShowAgentProfilesDialog(false)} initialTab={2} initialAgentProfileId={projectSettings?.agentProfileId} />
-      )}
     </div>
   );
 };

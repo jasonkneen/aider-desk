@@ -123,6 +123,7 @@ type Props = {
   terminalVisible?: boolean;
   scrollToBottom?: () => void;
   onAutoApproveChanged?: (autoApprove: boolean) => void;
+  showSettingsPage?: (tab?: number) => void;
 };
 
 export const PromptField = forwardRef<PromptFieldRef, Props>(
@@ -160,6 +161,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
       terminalVisible = false,
       scrollToBottom,
       onAutoApproveChanged,
+      showSettingsPage,
     }: Props,
     ref,
   ) => {
@@ -1018,7 +1020,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
             <ModeSelector mode={mode} onModeChange={onModeChanged} />
             {mode === 'agent' && (
               <>
-                <AgentSelector isActive={isActive} />
+                <AgentSelector projectDir={baseDir} isActive={isActive} showSettingsPage={showSettingsPage} />
                 <div
                   className="flex items-center ml-1 group"
                   data-tooltip-id="prompt-field-tooltip"

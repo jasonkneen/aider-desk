@@ -6,6 +6,7 @@ import { SUBAGENTS_TOOL_GROUP_NAME, SUBAGENTS_TOOL_RUN_TASK, TOOL_GROUP_NAME_SEP
 import { DEFAULT_AGENT_PROFILE, isSubagentEnabled } from '@common/agent';
 import { extractServerNameToolName } from '@common/utils';
 
+import { AgentProfileManager } from '@/agent/agent-profile-manager';
 import { Task } from '@/task';
 import logger from '@/logger';
 
@@ -13,15 +14,17 @@ const getSubagentId = (subagent: AgentProfile): string => {
   return subagent.name.toLowerCase().replace(/\s+/g, '-');
 };
 
-export const createSubagentsToolset = (
-  settings: SettingsData,
+export const createSubagentsToolset = async (
+  _settings: SettingsData,
   task: Task,
+  agentProfileManager: AgentProfileManager,
   mainAgentProfile: AgentProfile,
   abortSignal?: AbortSignal,
   contextMessages: ContextMessage[] = [],
   currentMessages: ContextMessage[] = [],
-): ToolSet => {
-  const enabledSubagents = settings.agentProfiles.filter((agentProfile) => isSubagentEnabled(agentProfile, mainAgentProfile.id));
+): Promise<ToolSet> => {
+  const allProfiles = agentProfileManager.getProjectProfiles(task.getProjectDir());
+  const enabledSubagents = allProfiles.filter((agentProfile) => isSubagentEnabled(agentProfile, mainAgentProfile.id));
 
   const generateSubagentsRunTaskDescription = (): string => {
     const automaticSubagents = enabledSubagents.filter((agentProfile) => agentProfile.subagent.invocationMode === InvocationMode.Automatic);

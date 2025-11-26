@@ -3,6 +3,7 @@
 ## [UNRELEASED]
 
 - redesign settings interface with sidebar navigation
+- agent profiles are now file based for better extensibility
 
 ## [0.41.0]
 

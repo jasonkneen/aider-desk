@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { CgSpinner } from 'react-icons/cg';
 import { ResizableBox } from 'react-resizable';
 import { clsx } from 'clsx';
-import { getActiveAgentProfile } from '@common/utils';
 import { getProviderModelId } from '@common/agent';
 
 import { isLogMessage, isResponseMessage, isToolMessage, isUserMessage, Message } from '@/types/message';
@@ -27,6 +26,7 @@ import { useApi } from '@/contexts/ApiContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useModelProviders } from '@/contexts/ModelProviderContext';
 import { useTask } from '@/contexts/TaskContext';
+import { useAgents } from '@/contexts/AgentsContext';
 
 type AddFileDialogOptions = {
   readOnly: boolean;
@@ -42,9 +42,10 @@ type Props = {
   updateTask: (updates: Partial<TaskData>, useOptimistic?: boolean) => void;
   inputHistory: string[];
   isActive?: boolean;
+  showSettingsPage?: (tab?: number) => void;
 };
 
-export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateTask, inputHistory, isActive = false }, ref) => {
+export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateTask, inputHistory, isActive = false, showSettingsPage }, ref) => {
   const { t } = useTranslation();
   const { settings } = useSettings();
   const { projectSettings, saveProjectSettings } = useProjectSettings();
@@ -52,6 +53,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
   const api = useApi();
   const { models } = useModelProviders();
   const { getTaskState, clearSession, restartTask, setMessages, setTodoItems, setAiderModelsData, answerQuestion, interruptResponse } = useTask();
+  const { getProfiles } = useAgents();
 
   const taskState = getTaskState(task.id);
   const aiderModelsData = taskState?.aiderModelsData || null;
@@ -68,6 +70,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
   const [messagesPending, startMessagesTransition] = useTransition();
   const [transitionMessages, setTransitionMessages] = useState<Message[]>([]);
   const [searchContainer, setSearchContainer] = useState<HTMLElement | null>(null);
+  const activeAgentProfile = getProfiles(project.baseDir).find((p) => p.id === projectSettings?.agentProfileId);
 
   const { renderSearchInput } = useSearchText(searchContainer, 'absolute top-1 left-1');
 
@@ -80,7 +83,6 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
   const currentModel = useMemo(() => {
     let model: Model | undefined;
     if (projectSettings?.currentMode === 'agent') {
-      const activeAgentProfile = getActiveAgentProfile(settings, projectSettings);
       if (activeAgentProfile) {
         model = models.find((m) => m.id === activeAgentProfile.model && m.providerId === activeAgentProfile.provider);
       }
@@ -89,7 +91,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
     }
 
     return model;
-  }, [projectSettings, settings, models, aiderModelsData?.mainModel]);
+  }, [projectSettings?.currentMode, activeAgentProfile, models, aiderModelsData?.mainModel]);
   const maxInputTokens = currentModel?.maxInputTokens || 0;
 
   useEffect(() => {
@@ -99,8 +101,8 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
   }, [taskState?.messages]);
 
   const todoListVisible = useMemo(() => {
-    return projectSettings?.currentMode === 'agent' && getActiveAgentProfile(settings, projectSettings)?.useTodoTools;
-  }, [projectSettings, settings]);
+    return projectSettings?.currentMode === 'agent' && activeAgentProfile?.useTodoTools;
+  }, [activeAgentProfile?.useTodoTools, projectSettings?.currentMode]);
 
   const renderLoading = (message: string) => (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-bg-primary to-bg-primary-light z-10">
@@ -470,6 +472,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
               terminalVisible={terminalVisible}
               scrollToBottom={handleScrollToBottom}
               onAutoApproveChanged={handleAutoApproveChanged}
+              showSettingsPage={showSettingsPage}
             />
           </div>
         </div>

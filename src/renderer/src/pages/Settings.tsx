@@ -1,4 +1,4 @@
-import { Font, SettingsData, Theme } from '@common/types';
+import { Font, SettingsData, Theme, AgentProfile } from '@common/types';
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LlmProviderName } from '@common/agent';
@@ -24,6 +24,8 @@ type Props = {
   initialTab?: number;
   initialAgentProfileId?: string;
   initialAgentProvider?: LlmProviderName;
+  agentProfiles?: AgentProfile[];
+  setAgentProfiles?: (profiles: AgentProfile[]) => void;
 };
 
 type PageId = 'general' | 'aider' | 'agent' | 'server' | 'about';
@@ -46,6 +48,8 @@ export const Settings = ({
   onFontSizeChange,
   initialTab = 0,
   initialAgentProfileId,
+  agentProfiles,
+  setAgentProfiles,
 }: Props) => {
   const { t } = useTranslation();
   const api = useApi();
@@ -180,7 +184,15 @@ export const Settings = ({
       case 'aider':
         return <AiderSettings settings={settings} setSettings={updateSettings} />;
       case 'agent':
-        return <AgentSettings settings={settings} setSettings={updateSettings} initialProfileId={initialAgentProfileId} />;
+        return (
+          <AgentSettings
+            settings={settings}
+            setSettings={updateSettings}
+            agentProfiles={agentProfiles || []}
+            setAgentProfiles={setAgentProfiles || (() => {})}
+            initialProfileId={initialAgentProfileId}
+          />
+        );
       case 'server':
         return <ServerSettings settings={settings} setSettings={updateSettings} />;
       case 'about':

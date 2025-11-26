@@ -1,7 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { AgentProfile, SettingsData } from '@common/types';
 
 export const migrateV7ToV8 = (settings: SettingsData): SettingsData => {
-  const updatedAgentProfiles: AgentProfile[] = settings.agentProfiles.map((profile) => {
+  const agentProfiles = (settings as any).agentProfiles as AgentProfile[] | undefined;
+  if (!agentProfiles) {
+    return settings;
+  }
+
+  const updatedAgentProfiles: AgentProfile[] = agentProfiles.map((profile) => {
     // Add temperature field with default value of 0.7 if it doesn't exist
     return {
       ...profile,
@@ -12,5 +18,5 @@ export const migrateV7ToV8 = (settings: SettingsData): SettingsData => {
   return {
     ...settings,
     agentProfiles: updatedAgentProfiles,
-  };
+  } as any;
 };

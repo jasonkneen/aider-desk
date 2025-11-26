@@ -532,6 +532,14 @@ const api: ApplicationAPI = {
   mergeWorktreeToMain: (baseDir, taskId, squash) => ipcRenderer.invoke('merge-worktree-to-main', baseDir, taskId, squash),
   applyUncommittedChanges: (baseDir, taskId) => ipcRenderer.invoke('apply-uncommitted-changes', baseDir, taskId),
   revertLastMerge: (baseDir, taskId) => ipcRenderer.invoke('revert-last-merge', baseDir, taskId),
+
+  // Agent profile operations
+  getAllAgentProfiles: () => ipcRenderer.invoke('get-agent-profiles'),
+  getAgentProfile: (profileId, baseDir) => ipcRenderer.invoke('get-agent-profile', profileId, baseDir),
+  createAgentProfile: (profile, projectDir) => ipcRenderer.invoke('create-agent-profile', profile, projectDir),
+  updateAgentProfile: (profile, baseDir) => ipcRenderer.invoke('update-agent-profile', profile, baseDir),
+  deleteAgentProfile: (profileId, baseDir) => ipcRenderer.invoke('delete-agent-profile', profileId, baseDir),
+  updateAgentProfilesOrder: (agentProfiles, baseDir) => ipcRenderer.invoke('update-agent-profiles-order', agentProfiles, baseDir),
 };
 
 if (process.contextIsolated) {

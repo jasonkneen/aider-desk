@@ -335,6 +335,7 @@ export type ToolSettings = BashToolSettings;
 
 export interface AgentProfile {
   id: string;
+  projectDir?: string; // If specified, it's a project-level profile, otherwise global
   name: string;
   provider: string;
   model: string;
@@ -424,7 +425,7 @@ export interface SettingsData {
     confirmBeforeEdit: boolean;
   };
   preferredModels: string[];
-  agentProfiles: AgentProfile[];
+
   mcpServers: Record<string, McpServerConfig>;
   llmProviders: {
     openai?: OpenAiProvider;

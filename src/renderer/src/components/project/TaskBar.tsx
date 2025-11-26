@@ -20,6 +20,7 @@ import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
 import { useApi } from '@/contexts/ApiContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useModelProviders } from '@/contexts/ModelProviderContext';
+import { useAgents } from '@/contexts/AgentsContext';
 
 export type TaskBarRef = {
   openMainModelSelector: (model?: string) => void;
@@ -59,9 +60,10 @@ export const TaskBar = React.forwardRef<TaskBarRef, Props>(({ baseDir, task, mod
   const mainModelSelectorRef = useRef<ModelSelectorRef>(null);
   const architectModelSelectorRef = useRef<ModelSelectorRef>(null);
 
+  const { profiles: agentProfiles } = useAgents();
   const activeAgentProfile = useMemo(() => {
-    return settings?.agentProfiles.find((profile) => profile.id === projectSettings?.agentProfileId);
-  }, [projectSettings?.agentProfileId, settings?.agentProfiles]);
+    return agentProfiles.find((profile) => profile.id === projectSettings?.agentProfileId);
+  }, [projectSettings?.agentProfileId, agentProfiles]);
   const showAiderInfo = mode !== 'agent' || activeAgentProfile?.useAiderTools === true;
 
   useImperativeHandle(ref, () => ({
@@ -336,7 +338,7 @@ export const TaskBar = React.forwardRef<TaskBarRef, Props>(({ baseDir, task, mod
                 <div className="flex items-center space-x-1">
                   <RiRobot2Line className="w-4 h-4 text-text-primary mr-1" data-tooltip-id="agent-tooltip" />
                   <StyledTooltip id="agent-tooltip" content={t('modelSelector.agentModel')} />
-                  <AgentModelSelector ref={agentModelSelectorRef} settings={settings} agentProfile={activeAgentProfile} saveSettings={saveSettings} />
+                  <AgentModelSelector ref={agentModelSelectorRef} agentProfile={activeAgentProfile} />
                 </div>
               </div>
 
@@ -351,7 +353,7 @@ export const TaskBar = React.forwardRef<TaskBarRef, Props>(({ baseDir, task, mod
                   <div className="flex items-center space-x-1">
                     <RiRobot2Line className="w-4 h-4 text-text-primary mr-1" data-tooltip-id="agent-tooltip" />
                     <StyledTooltip id="agent-tooltip" content={t('modelSelector.agentModel')} />
-                    <AgentModelSelector ref={agentModelSelectorRef} settings={settings} agentProfile={activeAgentProfile} saveSettings={saveSettings} />
+                    <AgentModelSelector ref={agentModelSelectorRef} agentProfile={activeAgentProfile} />
                   </div>
                   {showAiderInfo && <div className="h-3 w-px bg-bg-fourth"></div>}
                 </>

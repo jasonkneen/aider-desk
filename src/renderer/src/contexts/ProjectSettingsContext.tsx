@@ -1,8 +1,6 @@
 import { ProjectSettings } from '@common/types';
-import { createContext, useContext, useState, useEffect, ReactNode, useOptimistic, startTransition } from 'react';
-import { DEFAULT_AGENT_PROFILE } from '@common/agent';
+import { createContext, ReactNode, startTransition, useContext, useEffect, useOptimistic, useState } from 'react';
 
-import { useSettings } from '@/contexts/SettingsContext';
 import { useApi } from '@/contexts/ApiContext';
 
 type ProjectSettingsContextType = {
@@ -18,7 +16,6 @@ type ProjectSettingsProviderProps = {
 };
 
 export const ProjectSettingsProvider = ({ baseDir, children }: ProjectSettingsProviderProps) => {
-  const { settings } = useSettings();
   const [projectSettings, setProjectSettings] = useState<ProjectSettings | null>(null);
   const [optimisticProjectSettings, setOptimisticProjectSettings] = useOptimistic(projectSettings);
   const api = useApi();
@@ -36,17 +33,6 @@ export const ProjectSettingsProvider = ({ baseDir, children }: ProjectSettingsPr
       }
     });
   };
-
-  if (projectSettings && settings) {
-    // check if active agent profile still exists in settings
-    const activeProfile = settings.agentProfiles.find((profile) => profile.id === projectSettings.agentProfileId);
-
-    if (!activeProfile) {
-      void saveProjectSettings({
-        agentProfileId: DEFAULT_AGENT_PROFILE.id,
-      });
-    }
-  }
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -68,7 +54,14 @@ export const ProjectSettingsProvider = ({ baseDir, children }: ProjectSettingsPr
   }, [baseDir, api]);
 
   return (
-    <ProjectSettingsContext.Provider value={{ projectSettings: optimisticProjectSettings, saveProjectSettings }}>{children}</ProjectSettingsContext.Provider>
+    <ProjectSettingsContext.Provider
+      value={{
+        projectSettings: optimisticProjectSettings,
+        saveProjectSettings,
+      }}
+    >
+      {children}
+    </ProjectSettingsContext.Provider>
   );
 };
 

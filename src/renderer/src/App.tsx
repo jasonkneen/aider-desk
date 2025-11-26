@@ -16,6 +16,7 @@ import '@/i18n';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { ApiProvider } from '@/contexts/ApiContext';
 import { ModelProviderProvider } from '@/contexts/ModelProviderContext';
+import { AgentsProvider } from '@/contexts/AgentsContext';
 
 const ThemeAndFontManager = () => {
   const { theme, font = 'Sono', fontSize = 16 } = useSettings();
@@ -96,11 +97,13 @@ const App = () => {
         <ApiProvider>
           <ModelProviderProvider>
             <SettingsProvider>
-              <ContextMenuProvider>
-                <ThemeAndFontManager />
-                <AnimatedRoutes />
-                <ToastContainer />
-              </ContextMenuProvider>
+              <AgentsProvider>
+                <ContextMenuProvider>
+                  <ThemeAndFontManager />
+                  <AnimatedRoutes />
+                  <ToastContainer />
+                </ContextMenuProvider>
+              </AgentsProvider>
             </SettingsProvider>
           </ModelProviderProvider>
         </ApiProvider>

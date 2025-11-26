@@ -1,3 +1,4 @@
+export * from './agent-api';
 export * from './context-api';
 export * from './prompt-api';
 export * from './settings-api';

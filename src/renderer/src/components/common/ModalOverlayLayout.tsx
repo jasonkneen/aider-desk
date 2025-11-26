@@ -13,7 +13,7 @@ type Props = {
 export const ModalOverlayLayout = ({ title, onClose, children }: Props) => {
   const { t } = useTranslation();
   return (
-    <div className="absolute inset-0 bg-bg-primary-light z-50 flex flex-col overflow-hidden">
+    <div className="fixed inset-[6px] bg-bg-primary-light z-50 flex flex-col overflow-hidden">
       <div className="flex items-center border-b-2 border-border-default justify-between bg-gradient-to-b from-bg-primary to-bg-primary-light min-h-[40px] pl-4">
         <div className="flex items-center space-x-4">
           <h2 className="text-md uppercase font-medium text-text-primary">{title}</h2>

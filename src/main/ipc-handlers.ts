@@ -1,4 +1,16 @@
-import { EditFormat, FileEdit, McpServerConfig, Mode, Model, ProjectSettings, ProviderProfile, SettingsData, TaskData, TodoItem } from '@common/types';
+import {
+  EditFormat,
+  FileEdit,
+  McpServerConfig,
+  Mode,
+  Model,
+  ProjectSettings,
+  ProviderProfile,
+  SettingsData,
+  TaskData,
+  TodoItem,
+  AgentProfile,
+} from '@common/types';
 import { ipcMain } from 'electron';
 
 import { EventsHandler } from './events-handler';
@@ -364,5 +376,30 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
   ipcMain.handle('delete-model', async (_, providerId: string, modelId: string) => {
     await eventsHandler.deleteModel(providerId, modelId);
     return await eventsHandler.getProviderModels();
+  });
+
+  // Agent profile handlers
+  ipcMain.handle('get-agent-profiles', async () => {
+    return await eventsHandler.getAllAgentProfiles();
+  });
+
+  ipcMain.handle('get-agent-profile', async (_, profileId: string, baseDir?: string) => {
+    return await eventsHandler.getAgentProfile(profileId, baseDir);
+  });
+
+  ipcMain.handle('create-agent-profile', async (_, profile: AgentProfile, projectDir?: string) => {
+    return await eventsHandler.createAgentProfile(profile, projectDir);
+  });
+
+  ipcMain.handle('update-agent-profile', async (_, profile: AgentProfile) => {
+    return await eventsHandler.updateAgentProfile(profile);
+  });
+
+  ipcMain.handle('delete-agent-profile', async (_, profileId: string) => {
+    return await eventsHandler.deleteAgentProfile(profileId);
+  });
+
+  ipcMain.handle('update-agent-profiles-order', async (_, agentProfiles: AgentProfile[], baseDir?: string) => {
+    return await eventsHandler.updateAgentProfilesOrder(agentProfiles, baseDir);
   });
 };

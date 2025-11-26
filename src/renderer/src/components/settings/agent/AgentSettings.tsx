@@ -237,10 +237,12 @@ const getMcpServersSummary = (profile: AgentProfile, mcpServers: Record<string, 
 type Props = {
   settings: SettingsData;
   setSettings: (settings: SettingsData) => void;
+  agentProfiles: AgentProfile[];
+  setAgentProfiles: (profiles: AgentProfile[]) => void;
   initialProfileId?: string;
 };
 
-export const AgentSettings = ({ settings, setSettings, initialProfileId }: Props) => {
+export const AgentSettings = ({ settings, setSettings, agentProfiles, setAgentProfiles, initialProfileId }: Props) => {
   const { t } = useTranslation();
   const [isAddingMcpServer, setIsAddingMcpServer] = useState(false);
   const [editingMcpServer, setEditingMcpServer] = useState<McpServer | null>(null);
@@ -254,7 +256,7 @@ export const AgentSettings = ({ settings, setSettings, initialProfileId }: Props
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [dragging, setDragging] = useState(false);
 
-  const { agentProfiles, mcpServers } = settings;
+  const { mcpServers } = settings;
   const selectedProfile = agentProfiles.find((profile) => profile.id === selectedProfileId) || null;
   const defaultProfile = agentProfiles.find((profile) => profile.id === DEFAULT_AGENT_PROFILE.id) || DEFAULT_AGENT_PROFILE;
 
@@ -278,10 +280,8 @@ export const AgentSettings = ({ settings, setSettings, initialProfileId }: Props
 
       if (oldIndex !== -1 && newIndex !== -1) {
         const reorderedProfiles = arrayMove(agentProfiles, oldIndex, newIndex);
-        setSettings({
-          ...settings,
-          agentProfiles: reorderedProfiles,
-        });
+        // Update order using the new API
+        setAgentProfiles(reorderedProfiles);
       }
     }
     setTimeout(() => {
@@ -316,10 +316,7 @@ export const AgentSettings = ({ settings, setSettings, initialProfileId }: Props
       provider: defaultProfile.provider,
       model: defaultProfile.model,
     };
-    setSettings({
-      ...settings,
-      agentProfiles: [...agentProfiles, newProfile],
-    });
+    setAgentProfiles([...agentProfiles, newProfile]);
     setSelectedProfileId(newProfileId);
     setTimeout(() => {
       const profileNameInput = profileNameInputRef.current;
@@ -332,23 +329,20 @@ export const AgentSettings = ({ settings, setSettings, initialProfileId }: Props
 
   const handleDeleteProfile = () => {
     if (selectedProfileId && selectedProfileId !== DEFAULT_AGENT_PROFILE.id) {
-      const updatedProfiles = agentProfiles.filter((profile) => profile.id !== selectedProfileId);
-
-      setSettings({
-        ...settings,
-        agentProfiles: updatedProfiles,
-      });
+      setAgentProfiles(agentProfiles.filter((p) => p.id !== selectedProfileId));
       setSelectedProfileId(DEFAULT_AGENT_PROFILE.id);
     }
   };
 
   const handleProfileSettingChange = <K extends keyof AgentProfile>(field: K, value: AgentProfile[K]) => {
     if (selectedProfile) {
-      setSettings({
-        ...settings,
-        agentProfiles: agentProfiles.map((profile) => (profile.id === selectedProfile.id ? { ...profile, [field]: value } : profile)),
-      });
+      const updatedProfile = { ...selectedProfile, [field]: value };
+      setAgentProfiles(agentProfiles.map((p) => (p.id === selectedProfile.id ? updatedProfile : p)));
     }
+  };
+
+  const handleProfileChange = (profile: AgentProfile) => {
+    setAgentProfiles(agentProfiles.map((p) => (p.id === profile.id ? profile : p)));
   };
 
   const handleToggleServerEnabled = (serverKey: string, checked: boolean) => {
@@ -528,7 +522,7 @@ export const AgentSettings = ({ settings, setSettings, initialProfileId }: Props
                   <div className="!mb-4">
                     <label className="block text-sm font-medium text-text-primary mb-1">{t('agentProfiles.model')}</label>
                     <div className="w-full p-2 bg-bg-secondary-light border-2 border-border-default rounded focus-within:outline-none focus-within:border-border-light">
-                      <AgentModelSelector className="w-full justify-between" settings={settings} agentProfile={selectedProfile} saveSettings={setSettings} />
+                      <AgentModelSelector className="w-full justify-between" agentProfile={selectedProfile} onProfileChange={handleProfileChange} />
                     </div>
                   </div>
                 )}
