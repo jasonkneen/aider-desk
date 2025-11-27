@@ -1,7 +1,7 @@
 import { AgentProfile, ContextMemoryMode, GenericTool, InvocationMode, McpServerConfig, ProjectData, SettingsData, ToolApprovalState } from '@common/types';
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { FaChevronLeft, FaChevronRight, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaPaste, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
 import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat } from 'react-icons/md';
 import { DEFAULT_AGENT_PROFILE, DEFAULT_MODEL_TEMPERATURE } from '@common/agent';
 import { BiTrash } from 'react-icons/bi';
@@ -283,6 +283,7 @@ export const AgentSettings = ({
   const profileNameInputRef = useRef<HTMLInputElement>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [clipboardProfile, setClipboardProfile] = useState<{ profile: AgentProfile; action: 'copy' | 'cut' } | null>(null);
 
   const { mcpServers } = settings;
   const selectedProfile = agentProfiles.find((profile) => profile.id === selectedProfileId) || null;
@@ -401,6 +402,47 @@ export const AgentSettings = ({
     if (selectedProfileId && selectedProfileId !== DEFAULT_AGENT_PROFILE.id) {
       setAgentProfiles(agentProfiles.filter((p) => p.id !== selectedProfileId));
       setSelectedProfileId(DEFAULT_AGENT_PROFILE.id);
+    }
+  };
+
+  const handleCopyProfile = (profile: AgentProfile) => {
+    setClipboardProfile({ profile: { ...profile }, action: 'copy' });
+  };
+
+  const handleCutProfile = (profile: AgentProfile) => {
+    if (profile.id !== DEFAULT_AGENT_PROFILE.id) {
+      setClipboardProfile({ profile: { ...profile }, action: 'cut' });
+    }
+  };
+
+  const handlePasteProfile = () => {
+    if (clipboardProfile) {
+      const newProfileId = uuidv4();
+      const newProfile: AgentProfile = {
+        ...clipboardProfile.profile,
+        id: newProfileId,
+        name: clipboardProfile.profile.name,
+        projectDir: profileContext === 'global' ? undefined : profileContext,
+      };
+
+      // If this was a cut operation, remove the original and add new one
+      if (clipboardProfile.action === 'cut') {
+        setAgentProfiles(agentProfiles.filter((p) => p.id !== clipboardProfile.profile.id).concat(newProfile));
+        setClipboardProfile(null);
+      } else {
+        // For copy operation, just add the new profile
+        setAgentProfiles([...agentProfiles, newProfile]);
+      }
+
+      setSelectedProfileId(newProfileId);
+
+      setTimeout(() => {
+        const profileNameInput = profileNameInputRef.current;
+        if (profileNameInput) {
+          profileNameInput.focus();
+          profileNameInput.select();
+        }
+      }, 0);
     }
   };
 
@@ -597,16 +639,27 @@ export const AgentSettings = ({
                         setSelectedProfileId(id);
                       }
                     }}
+                    onCopy={handleCopyProfile}
+                    onCut={handleCutProfile}
+                    isCut={clipboardProfile?.action === 'cut' && clipboardProfile.profile.id === profile.id}
                   />
                 ))}
               </SortableContext>
             </DndContext>
           )}
         </div>
-        <div className="p-2 border-t border-border-default flex justify-center">
+        <div className="p-2 border-t border-border-default flex items-center justify-center gap-2">
           <Button onClick={handleCreateNewProfile} className="" variant="text" size="sm" color="primary">
             <FaPlus className="mr-2 w-3 h-3" /> {t('settings.agent.createNewProfileInContext')}
           </Button>
+          {clipboardProfile && (
+            <IconButton
+              onClick={handlePasteProfile}
+              icon={<FaPaste className="w-4 h-4 text-button-primary" />}
+              tooltip={t('settings.agent.pasteProfile')}
+              className="p-2 rounded hover:bg-button-primary-subtle"
+            />
+          )}
         </div>
       </div>
 

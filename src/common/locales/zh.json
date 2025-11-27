@@ -441,7 +441,10 @@
       "previousContext": "上一个项目",
       "nextContext": "下一个项目",
       "noProfilesInContext": "此上下文中没有配置",
-      "createNewProfileInContext": "创建新配置"
+      "createNewProfileInContext": "创建新配置",
+      "copyProfile": "复制配置",
+      "cutProfile": "剪切配置",
+      "pasteProfile": "粘贴配置"
     },
     "aider": {
       "options": "选项",

@@ -4,6 +4,8 @@
 
 - redesign settings interface with sidebar navigation
 - agent profiles are now file based for better extensibility
+- agent profiles can now be created per project
+- agent profiles can be cut and pasted between projects via Settings
 
 ## [0.41.0]
 

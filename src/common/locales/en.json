@@ -444,7 +444,10 @@
       "previousContext": "Previous project",
       "nextContext": "Next project",
       "noProfilesInContext": "No profiles found in this context",
-      "createNewProfileInContext": "Create New Profile"
+      "createNewProfileInContext": "Create New Profile",
+      "copyProfile": "Copy Profile",
+      "cutProfile": "Cut Profile",
+      "pasteProfile": "Paste Profile"
     },
     "aider": {
       "options": "Options",
