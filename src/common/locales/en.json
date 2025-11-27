@@ -440,6 +440,7 @@
       "profileContext": "Profile Context",
       "globalProfiles": "Global Profiles",
       "projectProfiles": "Project Profiles: {{projectName}}",
+      "global": "Global",
       "previousContext": "Previous project",
       "nextContext": "Next project",
       "noProfilesInContext": "No profiles found in this context",

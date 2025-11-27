@@ -437,6 +437,7 @@
       "profileContext": "配置上下文",
       "globalProfiles": "全局配置",
       "projectProfiles": "项目配置: {{projectName}}",
+      "global": "全局",
       "previousContext": "上一个项目",
       "nextContext": "下一个项目",
       "noProfilesInContext": "此上下文中没有配置",

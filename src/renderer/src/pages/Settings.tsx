@@ -64,9 +64,11 @@ export const Settings = ({
   };
 
   const [activePage, setActivePage] = useState<PageId>(getInitialPage(initialTab));
+  const [selectedProfileContext, setSelectedProfileContext] = useState<string>('global');
   const [expandedPages, setExpandedPages] = useState<Record<string, boolean>>({
     general: true,
     aider: true,
+    agents: true,
     server: true,
   });
   const contentRef = useRef<HTMLDivElement>(null);
@@ -111,6 +113,12 @@ export const Settings = ({
       pageId: 'agents',
       label: t('settings.tabs.agents'),
       icon: <FaRobot className="w-4 h-4" />,
+      children: [
+        ...(openProjects || []).map((project) => ({
+          id: `agent-${project.baseDir}`,
+          label: project.baseDir.split('/').pop() || project.baseDir,
+        })),
+      ],
     },
     ...(isServerManagementSupported
       ? [
@@ -158,6 +166,7 @@ export const Settings = ({
   };
 
   const handleItemClick = (item: SidebarItem) => {
+    setSelectedProfileContext('global');
     setActivePage(item.pageId);
     if (item.children) {
       setExpandedPages((prev) => ({
@@ -169,7 +178,15 @@ export const Settings = ({
 
   const handleChildClick = (pageId: PageId, sectionId: string) => {
     setActivePage(pageId);
-    scrollToSection(sectionId);
+
+    // Handle agent context selection
+    if (pageId === 'agents' && sectionId.startsWith('agent-')) {
+      // Extract project baseDir from sectionId (format: agent-{baseDir})
+      const projectBaseDir = sectionId.replace('agent-', '');
+      setSelectedProfileContext(projectBaseDir);
+    } else {
+      scrollToSection(sectionId);
+    }
   };
 
   const renderContent = () => {
@@ -197,6 +214,7 @@ export const Settings = ({
             setAgentProfiles={setAgentProfiles || (() => {})}
             initialProfileId={initialAgentProfileId}
             openProjects={openProjects}
+            selectedProfileContext={selectedProfileContext}
           />
         );
       case 'server':

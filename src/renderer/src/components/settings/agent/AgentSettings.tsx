@@ -1,5 +1,5 @@
 import { AgentProfile, ContextMemoryMode, GenericTool, InvocationMode, McpServerConfig, ProjectData, SettingsData, ToolApprovalState } from '@common/types';
-import React, { ReactNode, useMemo, useRef, useState } from 'react';
+import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { FaChevronLeft, FaChevronRight, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
 import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat } from 'react-icons/md';
@@ -241,9 +241,18 @@ type Props = {
   setAgentProfiles: (profiles: AgentProfile[]) => void;
   initialProfileId?: string;
   openProjects?: ProjectData[];
+  selectedProfileContext?: 'global' | string;
 };
 
-export const AgentSettings = ({ settings, setSettings, agentProfiles, setAgentProfiles, initialProfileId, openProjects = [] }: Props) => {
+export const AgentSettings = ({
+  settings,
+  setSettings,
+  agentProfiles,
+  setAgentProfiles,
+  initialProfileId,
+  openProjects = [],
+  selectedProfileContext,
+}: Props) => {
   const { t } = useTranslation();
   const [isAddingMcpServer, setIsAddingMcpServer] = useState(false);
   const [editingMcpServer, setEditingMcpServer] = useState<McpServer | null>(null);
@@ -254,9 +263,21 @@ export const AgentSettings = ({ settings, setSettings, agentProfiles, setAgentPr
   // Profile context state for project-level profiles
   const contexts = useMemo(() => ['global', ...openProjects.map((p) => p.baseDir)], [openProjects]);
   const [contextIndex, setContextIndex] = useState(0);
-  const [profileContext, setProfileContext] = useState<'global' | string>('global');
+  const [profileContext, setProfileContext] = useState<'global' | string>(selectedProfileContext || 'global');
 
   const api = useApi();
+
+  // Sync internal profileContext with selectedProfileContext prop
+  useEffect(() => {
+    if (selectedProfileContext !== undefined) {
+      setProfileContext(selectedProfileContext);
+      // Update contextIndex to match the selected context
+      const newIndex = contexts.indexOf(selectedProfileContext);
+      if (newIndex !== -1) {
+        setContextIndex(newIndex);
+      }
+    }
+  }, [selectedProfileContext, contexts]);
 
   const [mcpServersExpanded, setMcpServersExpanded] = useState(false);
   const profileNameInputRef = useRef<HTMLInputElement>(null);
