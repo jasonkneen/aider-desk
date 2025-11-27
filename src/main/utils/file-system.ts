@@ -2,8 +2,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { simpleGit } from 'simple-git';
+import filenamifyImport from 'filenamify';
+import slugify from 'slugify';
 
 import logger from '@/logger';
+// @ts-expect-error filenamify is not typed properly
+const filenamify = filenamifyImport.default;
 
 export const getFilePathSuggestions = async (currentPath: string, directoriesOnly = false): Promise<string[]> => {
   try {
@@ -143,4 +147,29 @@ export const getAllFiles = async (baseDir: string): Promise<string[]> => {
     logger.warn('Failed to get tracked files from Git', { error, baseDir });
     return []; // Return empty array if Git command fails
   }
+};
+
+export const deriveDirName = (name: string, existingDirNames: Set<string>): string => {
+  // First slugify the name to create a clean URL-friendly slug
+  const slug = slugify(name, {
+    lower: true,
+    strict: true, // remove special characters except for hyphens and underscores
+    trim: true, // trim leading and trailing whitespace
+  });
+
+  // Then filenamify to ensure it's safe as a directory name across all platforms
+  const baseDirName = filenamify(slug, {
+    replacement: '-', // use hyphens as replacement for invalid characters
+    maxLength: 100, // reasonable length limit
+  });
+
+  let dirName = baseDirName;
+  let suffix = 1;
+
+  while (existingDirNames.has(dirName)) {
+    suffix++;
+    dirName = `${baseDirName}-${suffix}`;
+  }
+
+  return dirName;
 };

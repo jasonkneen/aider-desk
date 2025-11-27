@@ -11,6 +11,7 @@ import type { AgentProfile } from '@common/types';
 import { AIDER_DESK_AGENTS_DIR } from '@/constants';
 import logger from '@/logger';
 import { EventManager } from '@/events';
+import { deriveDirName } from '@/utils';
 
 // Helper methods for directory management
 const getGlobalAgentsDir = (): string => path.join(homedir(), AIDER_DESK_AGENTS_DIR);
@@ -83,14 +84,14 @@ export class AgentProfileManager {
     logger.info('Initializing agent profiles...');
     this.profiles.clear();
 
-    // Load global profiles
     const globalAgentsDir = getGlobalAgentsDir();
-    await this.loadProfilesFromDirectory(globalAgentsDir);
-
     if (ensureDefaults) {
       // Ensure default profiles exist in global directory
       await this.ensureDefaultProfiles(globalAgentsDir);
     }
+
+    // Load global profiles
+    await this.loadProfilesFromDirectory(globalAgentsDir);
 
     this.notifyListeners();
   }
@@ -115,7 +116,7 @@ export class AgentProfileManager {
         continue;
       }
 
-      const dirName = this.deriveDirNameFromName(defaultProfile.name, new Set());
+      const dirName = deriveDirName(defaultProfile.name, new Set());
       const profileDir = path.join(globalAgentsDir, dirName);
       const configPath = path.join(profileDir, 'config.json');
 
@@ -128,6 +129,8 @@ export class AgentProfileManager {
         logger.info(`Created default agent profile: ${defaultProfile.id} in directory: ${dirName}`);
       }
     }
+
+    await this.saveOrderFile(globalAgentsDir, new Map(DEFAULT_AGENT_PROFILES.map((p, index) => [p.id, index])));
   }
 
   private async setupGlobalFileWatcher(): Promise<void> {
@@ -160,7 +163,7 @@ export class AgentProfileManager {
     // Close existing watcher for this directory if any
     const existingWatcher = this.directoryWatchers.get(agentsDir);
     if (existingWatcher) {
-      existingWatcher.close();
+      await existingWatcher.close();
     }
 
     const watcher = watch(agentsDir, {
@@ -210,19 +213,6 @@ export class AgentProfileManager {
 
     // Notify listeners
     this.notifyListeners();
-  }
-
-  private deriveDirNameFromName(name: string, existingDirNames: Set<string>): string {
-    const baseDirName = name.toLowerCase().replace(/\s+/g, '-');
-    let dirName = baseDirName;
-    let suffix = 1;
-
-    while (existingDirNames.has(dirName)) {
-      suffix++;
-      dirName = `${baseDirName}-${suffix}`;
-    }
-
-    return dirName;
   }
 
   private async getExistingDirNames(agentsDir: string): Promise<Set<string>> {
@@ -429,7 +419,7 @@ export class AgentProfileManager {
     const existingDirNames = await this.getExistingDirNames(agentsDir);
 
     // Derive unique directory name
-    const dirName = this.deriveDirNameFromName(profile.name, existingDirNames);
+    const dirName = deriveDirName(profile.name, existingDirNames);
 
     // Create directory and save config.json
     const profileDir = path.join(agentsDir, dirName);

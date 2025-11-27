@@ -7,19 +7,7 @@ import { SettingsData, AgentProfile } from '@common/types';
 
 import { AIDER_DESK_AGENTS_DIR } from '@/constants';
 import logger from '@/logger';
-
-const deriveDirNameFromName = (name: string, existingDirNames: Set<string>): string => {
-  const baseDirName = name.toLowerCase().replace(/\s+/g, '-');
-  let dirName = baseDirName;
-  let suffix = 1;
-
-  while (existingDirNames.has(dirName)) {
-    suffix++;
-    dirName = `${baseDirName}-${suffix}`;
-  }
-
-  return dirName;
-};
+import { deriveDirName } from '@/utils';
 
 const getExistingDirNames = async (agentsDir: string): Promise<Set<string>> => {
   const dirNames = new Set<string>();
@@ -71,7 +59,7 @@ export const migrateSettingsV16toV17 = async (settings: SettingsData): Promise<S
 
     for (const profile of agentProfiles) {
       // Derive unique directory name from profile name
-      const dirName = deriveDirNameFromName(profile.name, existingDirNames);
+      const dirName = deriveDirName(profile.name, existingDirNames);
       const profileDir = path.join(globalAgentsDir, dirName);
       const configPath = path.join(profileDir, 'config.json');
 
