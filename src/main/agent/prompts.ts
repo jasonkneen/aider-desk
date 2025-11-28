@@ -26,12 +26,13 @@ import {
   TOOL_GROUP_NAME_SEPARATOR,
 } from '@common/tools';
 
+import logger from '@/logger';
 import { AIDER_DESK_PROJECT_RULES_DIR } from '@/constants';
 import { Task } from '@/task';
 
 export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, autoApprove = task.task.autoApprove, additionalInstructions?: string) => {
   const { useAiderTools, usePowerTools, useTodoTools, useSubagents } = agentProfile;
-  const rulesFilesXml = getRulesContent(task.getProjectDir());
+  const rulesFilesXml = getRulesContent(task.getProjectDir(), agentProfile);
   const customInstructions = [agentProfile.customInstructions, additionalInstructions].filter(Boolean).join('\n\n').trim();
 
   // Check individual power tool permissions
@@ -276,7 +277,7 @@ ${customInstructions ? `    <CustomInstructions><![CDATA[\n${customInstructions}
 `.trim();
 };
 
-const getRulesContent = (projectDir: string) => {
+const getRulesContent = (projectDir: string, agentProfile?: AgentProfile) => {
   const ruleFilesDir = path.join(projectDir, AIDER_DESK_PROJECT_RULES_DIR);
   const ruleFiles = fs.existsSync(ruleFilesDir) ? fs.readdirSync(ruleFilesDir) : [];
   const agentsFilePath = path.join(projectDir, 'AGENTS.md');
@@ -289,11 +290,25 @@ const getRulesContent = (projectDir: string) => {
     })
     .filter(Boolean);
 
+  // Agent profile-specific rule files
+  const agentRuleFilesContent: string[] = [];
+  if (agentProfile && agentProfile.ruleFiles && agentProfile.ruleFiles.length > 0) {
+    for (const ruleFilePath of agentProfile.ruleFiles) {
+      try {
+        const content = fs.readFileSync(ruleFilePath, 'utf8');
+        const fileName = path.basename(ruleFilePath);
+        agentRuleFilesContent.push(`      <File name="${fileName}"><![CDATA[\n${content}\n]]></File>`);
+      } catch (err) {
+        logger.warn(`Failed to read agent rule file ${ruleFilePath}: ${err}`);
+      }
+    }
+  }
+
   const agentsFileContent = fs.existsSync(agentsFilePath)
     ? `      <File name="AGENTS.md"><![CDATA[\n${fs.readFileSync(agentsFilePath, 'utf8')}\n]]></File>`
     : '';
 
-  return [...ruleFilesContent, agentsFileContent].filter(Boolean).join('\n');
+  return [agentsFileContent, ...ruleFilesContent, ...agentRuleFilesContent].filter(Boolean).join('\n');
 };
 
 export const getInitProjectPrompt = () => {

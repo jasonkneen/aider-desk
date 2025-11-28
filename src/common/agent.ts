@@ -280,6 +280,7 @@ export const DEFAULT_AGENT_PROFILE: AgentProfile = {
     description: '',
     contextMemory: ContextMemoryMode.Off,
   },
+  ruleFiles: [],
 };
 
 export const DEFAULT_AGENT_PROFILES: AgentProfile[] = [

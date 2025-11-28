@@ -6,6 +6,7 @@
 - agent profiles are now file based for better extensibility
 - agent profiles can now be created per project
 - agent profiles can be cut and pasted between projects via Settings
+- agent profiles can now have its own rules directory with rule files
 
 ## [0.41.0]
 

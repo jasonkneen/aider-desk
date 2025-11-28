@@ -355,6 +355,7 @@ export interface AgentProfile {
   customInstructions: string;
   subagent: SubagentConfig;
   isSubagent?: boolean; // flag to indicate if this profile is being used as a subagent
+  ruleFiles?: string[]; // Array of absolute paths to rule files for this agent profile
 }
 
 export interface EnvironmentVariable {
