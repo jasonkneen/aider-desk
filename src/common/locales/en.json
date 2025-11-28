@@ -36,7 +36,8 @@
     "suffix.thousand": "K",
     "ok": "OK",
     "collapse": "Collapse",
-    "enabled": "Enabled"
+    "enabled": "Enabled",
+    "noFiles": "No files"
   },
   "search": {
     "placeholder": "Search...",
@@ -668,7 +669,9 @@
     "dropAll": "Drop all context files",
     "globalRule": "Global rule file included automatically",
     "projectRule": "Project rule file included automatically",
-    "agentRule": "Agent profile rule file included automatically"
+    "agentRule": "Agent profile rule file included automatically",
+    "projectFiles": "Project Files",
+    "rules": "Rule Files"
   },
   "modelSelector": {
     "mainModel": "Main model",

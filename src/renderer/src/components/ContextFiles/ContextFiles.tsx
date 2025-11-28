@@ -4,13 +4,14 @@ import objectHash from 'object-hash';
 import { ControlledTreeEnvironment, Tree } from 'react-complex-tree';
 import { HiChevronDown, HiChevronRight, HiOutlineTrash, HiPlus, HiX } from 'react-icons/hi';
 import { BiCollapseVertical, BiExpandVertical } from 'react-icons/bi';
-import { LuFolderTree } from 'react-icons/lu';
 import { TbPencilOff } from 'react-icons/tb';
 import { MdOutlinePublic } from 'react-icons/md';
 import { RiRobot2Line } from 'react-icons/ri';
 import { VscFileCode } from 'react-icons/vsc';
 import { useTranslation } from 'react-i18next';
 import { useLocalStorage, usePrevious } from '@reactuses/core';
+import { motion, AnimatePresence } from 'framer-motion';
+import { clsx } from 'clsx';
 
 import { StyledTooltip } from '../common/StyledTooltip';
 
@@ -20,9 +21,9 @@ import { useApi } from '@/contexts/ApiContext';
 import './ContextFiles.css';
 
 interface TreeItem {
-  index: string;
-  isFolder: boolean;
-  children: string[];
+  index: string | number;
+  isFolder?: boolean;
+  children?: (string | number)[];
   data: string;
   file?: ContextFile;
 }
@@ -31,15 +32,15 @@ const normalizePath = (path: string): string => {
   return path.replace(/\\/g, '/');
 };
 
-const createFileTree = (files: ContextFile[]) => {
+const createFileTree = (files: ContextFile[], rootId = 'root') => {
   const tree: Record<string, TreeItem> = {
-    root: { index: 'root', children: [], isFolder: true, data: 'root' },
+    [rootId]: { index: rootId, children: [], isFolder: true, data: rootId },
   };
 
   files.forEach((file) => {
     const pathParts = file.path.split(/[\\/]/);
 
-    let currentNode = tree.root;
+    let currentNode = tree[rootId];
     pathParts.forEach((part, partIndex) => {
       const isLastPart = partIndex === pathParts.length - 1;
       const nodeId = pathParts.slice(0, partIndex + 1).join('/');
@@ -61,6 +62,8 @@ const createFileTree = (files: ContextFile[]) => {
       if (isLastPart) {
         tree[nodeId].data = part;
         tree[nodeId].isFolder = false;
+        // Ensure file data is updated if it exists
+        tree[nodeId].file = file;
       }
 
       currentNode = tree[nodeId];
@@ -96,15 +99,22 @@ type Props = {
   tokensInfo?: TokensInfoData | null;
 };
 
+type SectionType = 'project' | 'context' | 'rules';
+
 export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFileDialog, tokensInfo }: Props) => {
   const { t } = useTranslation();
   const os = useOS();
   const api = useApi();
   const prevContextFiles = usePrevious(contextFiles);
 
+  const [activeSection, setActiveSection] = useLocalStorage<SectionType>(`context-files-active-section-${baseDir}`, 'context');
   const [newlyAddedFiles, setNewlyAddedFiles] = useState<string[]>([]);
-  const [showAllFiles, setShowAllFiles] = useLocalStorage(`context-files-show-all-${baseDir}`, false);
-  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+
+  // Separate expanded items for each tree
+  const [projectExpandedItems, setProjectExpandedItems] = useState<string[]>([]);
+  const [contextExpandedItems, setContextExpandedItems] = useState<string[]>([]);
+  const [rulesExpandedItems, setRulesExpandedItems] = useState<string[]>([]);
+
   const [isDragging, setIsDragging] = useState(false);
 
   const handleFileDrop = useCallback(
@@ -132,9 +142,26 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
     [api, baseDir, taskId],
   );
 
-  const sortedFiles = useMemo(() => {
-    return [...contextFiles].sort((a, b) => a.path.localeCompare(b.path));
+  const { rulesFiles, userContextFiles } = useMemo(() => {
+    const rules: ContextFile[] = [];
+    const user: ContextFile[] = [];
+    contextFiles.forEach((file) => {
+      if (file.source === 'global-rule' || file.source === 'project-rule' || file.source === 'agent-rule') {
+        rules.push(file);
+      } else {
+        user.push(file);
+      }
+    });
+    return { rulesFiles: rules, userContextFiles: user };
   }, [contextFiles]);
+
+  const sortedUserFiles = useMemo(() => {
+    return [...userContextFiles].sort((a, b) => a.path.localeCompare(b.path));
+  }, [userContextFiles]);
+
+  const sortedRulesFiles = useMemo(() => {
+    return [...rulesFiles].sort((a, b) => a.path.localeCompare(b.path));
+  }, [rulesFiles]);
 
   const sortedAllFiles = useMemo(() => {
     return [...allFiles].sort((a, b) => a.localeCompare(b));
@@ -147,64 +174,61 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
       setTimeout(() => {
         setNewlyAddedFiles((prev) => prev.filter((path) => !newFiles.some((f) => normalizePath(f.path) === normalizePath(path))));
       }, 2000);
+
+      // Auto-switch to context view if new files added (optional, maybe distracting)
+      // setActiveSection('context');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contextFiles, taskId]);
 
-  const treeKey = useMemo(() => {
-    if (showAllFiles) {
-      return objectHash(sortedAllFiles);
-    } else {
-      return objectHash(sortedFiles.map((file) => file.path));
-    }
-  }, [showAllFiles, sortedFiles, sortedAllFiles]);
+  // Tree Data Generators
+  const projectTreeData = useMemo(() => {
+    const allFileObjects: ContextFile[] = sortedAllFiles.map((path) => ({
+      path,
+      // Check if readOnly in context files
+      readOnly: contextFiles.find((file) => normalizePath(file.path) === normalizePath(path))?.readOnly,
+    }));
+    return createFileTree(allFileObjects, 'root');
+  }, [sortedAllFiles, contextFiles]);
 
-  const treeData = useMemo(() => {
-    if (showAllFiles) {
-      const allFileObjects: ContextFile[] = sortedAllFiles.map((path) => ({
-        path,
-        readOnly: sortedFiles.find((file) => normalizePath(file.path) === normalizePath(path))?.readOnly,
-      }));
-      return createFileTree(allFileObjects);
-    } else {
-      return createFileTree(sortedFiles);
-    }
-  }, [showAllFiles, sortedFiles, sortedAllFiles]);
+  const contextTreeData = useMemo(() => {
+    return createFileTree(sortedUserFiles, 'root');
+  }, [sortedUserFiles]);
 
+  const rulesTreeData = useMemo(() => {
+    return createFileTree(sortedRulesFiles, 'root');
+  }, [sortedRulesFiles]);
+
+  // Expand logic for Context Tree (auto-expand folders with files)
   useEffect(() => {
-    const foldersToExpand = Object.keys(treeData).filter((key) => {
-      const node = treeData[key];
-      if (!node.isFolder) {
-        return false;
-      }
-
-      const checkChild = (childKey: string) => {
-        const childNode = treeData[childKey];
-        if (!childNode) {
+    const expandFolders = (treeData: Record<string, TreeItem>, files: ContextFile[], currentExpanded: string[], setExpanded: (items: string[]) => void) => {
+      const foldersToExpand = Object.keys(treeData).filter((key) => {
+        const node = treeData[key];
+        if (!node.isFolder) {
           return false;
         }
-        if (!childNode.isFolder) {
-          return contextFiles.some((f) => normalizePath(f.path) === normalizePath(childNode.file?.path || ''));
-        }
-        return childNode.children.some(checkChild);
-      };
 
-      // Check if any descendant file of this folder is in the context files list
-      return node.children.some(checkChild);
-    });
+        const checkChild = (childKey: string | number) => {
+          const childNode = treeData[String(childKey)];
+          if (!childNode) {
+            return false;
+          }
+          if (!childNode.isFolder) {
+            return files.some((f) => normalizePath(f.path) === normalizePath(childNode.file?.path || ''));
+          }
+          return childNode.children?.some(checkChild) || false;
+        };
+        return node.children?.some(checkChild) || false;
+      });
 
-    setExpandedItems((expandedItems) => {
-      return Array.from(new Set([...expandedItems, ...foldersToExpand]));
-    });
-  }, [treeData, contextFiles]);
+      setExpanded(Array.from(new Set([...currentExpanded, ...foldersToExpand])));
+    };
 
-  const handleExpandAll = () => {
-    setExpandedItems(Object.keys(treeData));
-  };
-
-  const handleCollapseAll = () => {
-    setExpandedItems(['root']);
-  };
+    // Only auto-expand context and rules trees
+    expandFolders(contextTreeData, userContextFiles, contextExpandedItems, setContextExpandedItems);
+    expandFolders(rulesTreeData, rulesFiles, rulesExpandedItems, setRulesExpandedItems);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contextTreeData, rulesTreeData, userContextFiles, rulesFiles]);
 
   const handleDropAllFiles = () => {
     api.runCommand(baseDir, taskId, 'drop');
@@ -222,7 +246,7 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
 
   const dropFile = (item: TreeItem) => (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
-    const file = (item as TreeItem).file;
+    const file = item.file;
     if (file) {
       let pathToDrop = file.path;
       if (pathToDrop.startsWith(baseDir + '/') || pathToDrop.startsWith(baseDir + '\\') || pathToDrop === baseDir) {
@@ -230,7 +254,7 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
       }
       api.dropFile(baseDir, taskId, pathToDrop);
     } else if (item.isFolder) {
-      api.dropFile(baseDir, taskId, item.index as string);
+      api.dropFile(baseDir, taskId, String(item.index));
     }
   };
 
@@ -240,13 +264,9 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
     const pathToAdd = item.file ? item.file.path : item.index;
 
     if (shouldBeReadOnly) {
-      api.addFile(baseDir, taskId, pathToAdd, true);
+      api.addFile(baseDir, taskId, String(pathToAdd), true);
     } else {
-      api.addFile(baseDir, taskId, pathToAdd);
-    }
-
-    if (item.isFolder) {
-      setExpandedItems((prev) => (prev.includes(item.index) ? prev : [...prev, item.index]));
+      api.addFile(baseDir, taskId, String(pathToAdd));
     }
   };
 
@@ -264,218 +284,281 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
     [tokensInfo, t],
   );
 
+  const renderTreeItem = (
+    { item, title, children, context: _context }: { item: TreeItem; title: React.ReactNode; children: React.ReactNode; context: unknown },
+    type: SectionType,
+    _treeData: Record<string, TreeItem>,
+    expandedItems: string[],
+    setExpandedItems: (items: string[]) => void,
+  ) => {
+    const treeItem = item as TreeItem;
+    const source = treeItem.file?.source;
+    const isRuleFile = source === 'global-rule' || source === 'project-rule' || source === 'agent-rule';
+    const filePath = treeItem.file?.path;
+    const isContextFile = filePath ? contextFiles.some((f) => normalizePath(f.path) === normalizePath(filePath)) : false;
+
+    // Actions logic
+    const showAdd = type === 'project' && !isContextFile && !isRuleFile;
+    const showRemove = (type === 'context' || (type === 'project' && isContextFile)) && !isRuleFile;
+    const showRuleIcon = isRuleFile;
+
+    return (
+      <>
+        <div className="flex space-between items-center w-full pr-1 h-6 group/item">
+          <div className="flex items-center flex-grow min-w-0">
+            {treeItem.isFolder ? (
+              <span
+                className="flex items-center justify-center cursor-pointer"
+                onClick={() => {
+                  const isExpanded = expandedItems.includes(String(treeItem.index));
+                  if (isExpanded) {
+                    setExpandedItems(expandedItems.filter((id) => id !== String(treeItem.index)));
+                  } else {
+                    setExpandedItems([...expandedItems, String(treeItem.index)]);
+                  }
+                }}
+              >
+                {expandedItems.includes(String(treeItem.index)) ? (
+                  <HiChevronDown className="w-3 h-3 text-text-muted-dark" />
+                ) : (
+                  <HiChevronRight className="w-3 h-3 text-text-muted-dark" />
+                )}
+              </span>
+            ) : (
+              <span className="w-3 h-3 inline-block" />
+            )}
+            <span
+              className={clsx(
+                'select-none text-2xs overflow-hidden',
+                treeItem.isFolder ? 'context-dimmed' : 'text-text-primary font-semibold',
+                type === 'project' && isContextFile && 'text-text-muted',
+              )}
+              {...(treeItem.isFolder
+                ? {
+                    onClick: () => {
+                      const isExpanded = expandedItems.includes(String(treeItem.index));
+                      if (isExpanded) {
+                        setExpandedItems(expandedItems.filter((id) => id !== String(treeItem.index)));
+                      } else {
+                        setExpandedItems([...expandedItems, String(treeItem.index)]);
+                      }
+                    },
+                  }
+                : {})}
+              data-tooltip-id="context-files-tooltip"
+              data-tooltip-content={getFileTokenTooltip(treeItem)}
+              data-tooltip-delay-show={800}
+            >
+              {title}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
+            {showRuleIcon && (
+              <>
+                {source === 'global-rule' && <MdOutlinePublic className="w-4 h-4 text-text-muted-light" />}
+                {source === 'project-rule' && <VscFileCode className="w-4 h-4 text-text-muted-light" />}
+                {source === 'agent-rule' && <RiRobot2Line className="w-4 h-4 text-text-muted-light" />}
+              </>
+            )}
+
+            {treeItem.file?.readOnly && !isRuleFile && <TbPencilOff className="w-4 h-4 text-text-muted-light" />}
+
+            {showRemove && (
+              <button onClick={dropFile(treeItem)} className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-error-dark">
+                <HiX className="w-4 h-4" />
+              </button>
+            )}
+
+            {showAdd && (
+              <button
+                onClick={addFile(treeItem)}
+                className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-text-primary"
+                data-tooltip-id="context-files-tooltip"
+                data-tooltip-content={os === OS.MacOS ? t('contextFiles.addFileTooltip.cmd') : t('contextFiles.addFileTooltip.ctrl')}
+              >
+                <HiPlus className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+        {children}
+      </>
+    );
+  };
+
+  const renderSection = (
+    section: SectionType,
+    title: string,
+    count: number,
+    treeData: Record<string, TreeItem>,
+    expandedItems: string[],
+    setExpandedItems: React.Dispatch<React.SetStateAction<string[]>>,
+    actions?: React.ReactNode,
+    isFirst?: boolean,
+    _isLast?: boolean,
+  ) => {
+    const isOpen = activeSection === section;
+    const treeId = `tree-${section}`;
+
+    return (
+      <motion.div
+        className={clsx('flex flex-col flex-grow overflow-hidden', !isFirst && 'border-t border-border-dark-light')}
+        initial={false}
+        animate={{
+          flexGrow: isOpen ? 1 : 0,
+          flexShrink: isOpen ? 1 : 0,
+          minHeight: isOpen ? 0 : 40,
+        }}
+        transition={{
+          duration: 0.3,
+          ease: 'easeIn',
+        }}
+      >
+        <div
+          className={clsx(
+            'flex items-center px-2 cursor-pointer select-none h-[40px] shrink-0 bg-bg-primary-light',
+            isOpen && 'border-b border-border-dark-light',
+          )}
+          onClick={() => setActiveSection(section)}
+        >
+          <motion.div initial={false} animate={{ rotate: isOpen ? 0 : -90 }} transition={{ duration: 0.1 }} className="mr-1">
+            <HiChevronDown className="w-4 h-4 text-text-muted" />
+          </motion.div>
+
+          <span className="text-xs font-semibold uppercase flex-grow text-text-secondary">{title}</span>
+
+          <span className="text-2xs text-text-tertiary mr-2 bg-bg-secondary-light px-1.5 rounded-full">{count}</span>
+
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            {actions}
+          </div>
+        </div>
+
+        <AnimatePresence initial={false}>
+          {isOpen && (
+            <motion.div
+              className="flex-grow w-full overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-bg-tertiary scrollbar-track-bg-primary-light scrollbar-rounded px-1 pb-2 bg-bg-primary-light-strong relative"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+            >
+              {Object.keys(treeData).length > 1 ? (
+                <ControlledTreeEnvironment
+                  key={objectHash(treeData)} // Force re-render if data structure changes drastically
+                  items={treeData}
+                  getItemTitle={(item) => item.data}
+                  renderItemTitle={({ title, item }) => {
+                    const treeItem = item as TreeItem;
+                    const filePath = treeItem.file?.path;
+                    const isNewlyAdded = filePath && newlyAddedFiles.includes(filePath);
+                    const isContextFile = filePath ? contextFiles.some((f) => normalizePath(f.path) === normalizePath(filePath)) : false;
+                    const dimmed = section === 'project' && !isContextFile;
+
+                    return (
+                      <div className={`px-1 ${isNewlyAdded ? 'flash-highlight' : ''} flex items-center gap-1 h-6 whitespace-nowrap`}>
+                        <span className={dimmed ? 'context-dimmed' : undefined}>{title}</span>
+                      </div>
+                    );
+                  }}
+                  renderItemArrow={() => null} // Handled in renderItem
+                  viewState={{
+                    [treeId]: {
+                      expandedItems,
+                    },
+                  }}
+                  onExpandItem={(item) => setExpandedItems([...expandedItems, item.index as string])}
+                  onCollapseItem={(item) => setExpandedItems(expandedItems.filter((expandedItemIndex) => expandedItemIndex !== item.index))}
+                  renderItem={(props) => renderTreeItem(props, section, treeData, expandedItems, setExpandedItems)}
+                  canDragAndDrop={false}
+                  canDropOnFolder={false}
+                  canReorderItems={false}
+                >
+                  <Tree treeId={treeId} rootItem="root" />
+                </ControlledTreeEnvironment>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-center text-text-muted text-2xs">{t('common.noFiles')}</div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+    );
+  };
+
   return (
     <div
-      className={`context-files-root flex-grow w-full h-full flex flex-col pb-2 overflow-hidden bg-bg-primary-light-strong ${isDragging ? 'drag-over' : ''}`}
+      className={`context-files-root flex-grow w-full h-full flex flex-col overflow-hidden bg-bg-primary-light-strong ${isDragging ? 'drag-over' : ''}`}
       onDrop={handleFileDrop}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
     >
       <StyledTooltip id="context-files-tooltip" />
-      <div className="flex items-center mb-2 flex-shrink-0 p-2 bg-bg-primary-light border-b border-border-dark-light h-10">
-        <h3 className="text-sm font-semibold uppercase pl-1 flex-grow h-5">{t('contextFiles.title')}</h3>
-        <button
-          onClick={handleDropAllFiles}
-          className="p-1.5 hover:bg-bg-tertiary rounded-md disabled:text-text-muted-dark disabled:hover:bg-transparent"
-          data-tooltip-id="context-files-tooltip"
-          data-tooltip-content={t('contextFiles.dropAll')}
-          data-tooltip-delay-show={500}
-          disabled={contextFiles.length === 0}
-        >
-          <HiOutlineTrash className="w-4 h-4" />
-        </button>
-        {showAllFiles && (
-          <>
-            <button
-              onClick={handleExpandAll}
-              className="p-1.5 hover:bg-bg-tertiary rounded-md"
-              data-tooltip-id="context-files-tooltip"
-              data-tooltip-content={t('contextFiles.expandAll')}
-              data-tooltip-delay-show={500}
-            >
-              <BiExpandVertical className="w-4 h-4" />
-            </button>
-            <button
-              onClick={handleCollapseAll}
-              className="p-1.5 hover:bg-bg-tertiary rounded-md"
-              data-tooltip-id="context-files-tooltip"
-              data-tooltip-content={t('contextFiles.collapseAll')}
-              data-tooltip-delay-show={500}
-            >
-              <BiCollapseVertical className="w-4 h-4" />
-            </button>
-          </>
-        )}
-        <button
-          onClick={() => setShowAllFiles(!showAllFiles)}
-          className="p-1.5 hover:bg-bg-tertiary rounded-md group"
-          data-tooltip-id="context-files-tooltip"
-          data-tooltip-content={showAllFiles ? t('contextFiles.hideAllFiles') : t('contextFiles.showAllFiles')}
-          data-tooltip-delay-show={500}
-        >
-          <LuFolderTree className={`w-4 h-4 ${showAllFiles ? 'text-text-primary' : 'text-text-dark group-hover:text-text-muted'}`} />
-        </button>
-        <button
-          onClick={showFileDialog}
-          className="p-1 hover:bg-bg-tertiary rounded-md"
-          data-tooltip-id="context-files-tooltip"
-          data-tooltip-content={t('contextFiles.add')}
-          data-tooltip-delay-show={500}
-        >
-          <HiPlus className="w-5 h-5" />
-        </button>
-      </div>
-      <div className="flex-grow w-full overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-bg-tertiary scrollbar-track-bg-primary-light scrollbar-rounded px-1">
-        <ControlledTreeEnvironment
-          key={treeKey}
-          items={treeData}
-          getItemTitle={(item) => item.data}
-          renderItemTitle={({ title, item }) => {
-            const treeItem = item as TreeItem;
-            const filePath = treeItem.file?.path;
-            const isNewlyAdded = filePath && newlyAddedFiles.includes(filePath);
-            const isContextFile = filePath ? contextFiles.some((f) => normalizePath(f.path) === normalizePath(filePath)) : false;
-            const dimmed = showAllFiles && filePath && !isContextFile;
 
-            return (
-              <div className={`px-1 ${isNewlyAdded ? 'flash-highlight' : ''} flex items-center gap-1 h-6 whitespace-nowrap`}>
-                <span className={dimmed ? 'context-dimmed' : undefined}>{title}</span>
-              </div>
-            );
-          }}
-          renderItemArrow={() => null}
-          viewState={{
-            ['contextFiles']: {
-              expandedItems,
-            },
-          }}
-          onExpandItem={(item) => setExpandedItems([...expandedItems, item.index as string])}
-          onCollapseItem={(item) => setExpandedItems(expandedItems.filter((expandedItemIndex) => expandedItemIndex !== item.index))}
-          renderItem={({ item, title, children, context }) => {
-            const source = (item as TreeItem).file?.source;
-            const isRuleFile = source === 'global-rule' || source === 'project-rule' || source === 'agent-rule';
+      {/* Context Files Section */}
+      {renderSection(
+        'context',
+        t('contextFiles.title'),
+        userContextFiles.length,
+        contextTreeData,
+        contextExpandedItems,
+        setContextExpandedItems,
+        <>
+          <button
+            onClick={handleDropAllFiles}
+            className="p-1.5 hover:bg-bg-tertiary rounded-md text-text-muted hover:text-error transition-colors disabled:opacity-50"
+            data-tooltip-id="context-files-tooltip"
+            data-tooltip-content={t('contextFiles.dropAll')}
+            disabled={userContextFiles.length === 0}
+          >
+            <HiOutlineTrash className="w-4 h-4" />
+          </button>
+          <button
+            onClick={showFileDialog}
+            className="p-1 hover:bg-bg-tertiary rounded-md text-text-muted hover:text-text-primary transition-colors"
+            data-tooltip-id="context-files-tooltip"
+            data-tooltip-content={t('contextFiles.add')}
+          >
+            <HiPlus className="w-5 h-5" />
+          </button>
+        </>,
+        true,
+        false,
+      )}
 
-            return (
-              <>
-                <div className="flex space-between items-center w-full pr-1 h-6">
-                  <div className="flex items-center flex-grow min-w-0">
-                    {item.isFolder ? (
-                      <span className="flex items-center justify-center" {...context.arrowProps}>
-                        {context.isExpanded ? (
-                          <HiChevronDown className="w-3 h-3 text-text-muted-dark" />
-                        ) : (
-                          <HiChevronRight className="w-3 h-3 text-text-muted-dark" />
-                        )}
-                      </span>
-                    ) : (
-                      <span className="w-3 h-3 inline-block" />
-                    )}
-                    <span
-                      className={`select-none text-2xs overflow-hidden ${item.isFolder ? 'context-dimmed' : 'text-text-primary font-semibold'}`}
-                      {...(item.isFolder ? { onClick: context.arrowProps.onClick } : {})}
-                      data-tooltip-id="context-files-tooltip"
-                      data-tooltip-content={getFileTokenTooltip(item as TreeItem)}
-                      data-tooltip-delay-show={800}
-                    >
-                      {title}
-                    </span>
-                  </div>
-                  {item.isFolder ? (
-                    <>
-                      {showAllFiles ? (
-                        <>
-                          <button
-                            onClick={dropFile(item as TreeItem)}
-                            className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-error-dark"
-                          >
-                            <HiX className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={addFile(item as TreeItem)}
-                            className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-text-primary"
-                            data-tooltip-id="context-files-tooltip"
-                            data-tooltip-content={os === OS.MacOS ? t('contextFiles.addFileTooltip.cmd') : t('contextFiles.addFileTooltip.ctrl')}
-                          >
-                            <HiPlus className="w-4 h-4" />
-                          </button>
-                        </>
-                      ) : null}
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-1 flex-shrink-0">
-                      {(item as TreeItem).file?.source && (
-                        <>
-                          {(item as TreeItem).file?.source === 'global-rule' && (
-                            <MdOutlinePublic
-                              className="w-4 h-4 text-text-muted-light"
-                              data-tooltip-id="context-files-tooltip"
-                              data-tooltip-content={t('contextFiles.globalRule')}
-                            />
-                          )}
-                          {(item as TreeItem).file?.source === 'project-rule' && (
-                            <VscFileCode
-                              className="w-4 h-4 text-text-muted-light"
-                              data-tooltip-id="context-files-tooltip"
-                              data-tooltip-content={t('contextFiles.projectRule')}
-                            />
-                          )}
-                          {(item as TreeItem).file?.source === 'agent-rule' && (
-                            <RiRobot2Line
-                              className="w-4 h-4 text-text-muted-light"
-                              data-tooltip-id="context-files-tooltip"
-                              data-tooltip-content={t('contextFiles.agentRule')}
-                            />
-                          )}
-                        </>
-                      )}
-                      {(item as TreeItem).file?.readOnly && !isRuleFile && (
-                        <TbPencilOff
-                          className="w-4 h-4 text-text-muted-light"
-                          data-tooltip-id="context-files-tooltip"
-                          data-tooltip-content={t('contextFiles.readOnly')}
-                        />
-                      )}
-                      {showAllFiles ? (
-                        contextFiles.some((f) => normalizePath(f.path) === normalizePath((item as TreeItem).file?.path || '')) ? (
-                          <button
-                            onClick={dropFile(item as TreeItem)}
-                            className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-error-dark"
-                            disabled={!!(item as TreeItem).file?.source}
-                          >
-                            <HiX className="w-4 h-4" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={addFile(item as TreeItem)}
-                            className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-text-primary"
-                            data-tooltip-id="context-files-tooltip"
-                            data-tooltip-content={os === OS.MacOS ? t('contextFiles.addFileTooltip.cmd') : t('contextFiles.addFileTooltip.ctrl')}
-                          >
-                            <HiPlus className="w-4 h-4" />
-                          </button>
-                        )
-                      ) : isRuleFile ? null : (
-                        <button
-                          onClick={dropFile(item as TreeItem)}
-                          className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-error-dark"
-                        >
-                          <HiX className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-                {children}
-              </>
-            );
-          }}
-          canDragAndDrop={false}
-          canDropOnFolder={false}
-          canReorderItems={false}
-        >
-          <Tree treeId="contextFiles" rootItem="root" />
-        </ControlledTreeEnvironment>
-      </div>
+      {/* Project Files Section */}
+      {renderSection(
+        'project',
+        t('contextFiles.projectFiles'),
+        allFiles.length,
+        projectTreeData,
+        projectExpandedItems,
+        setProjectExpandedItems,
+        <>
+          <button
+            onClick={() => setProjectExpandedItems(Object.keys(projectTreeData))}
+            className="p-1.5 hover:bg-bg-tertiary rounded-md text-text-muted hover:text-text-primary transition-colors"
+            data-tooltip-id="context-files-tooltip"
+            data-tooltip-content={t('contextFiles.expandAll')}
+          >
+            <BiExpandVertical className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => setProjectExpandedItems(['root'])}
+            className="p-1.5 hover:bg-bg-tertiary rounded-md text-text-muted hover:text-text-primary transition-colors"
+            data-tooltip-id="context-files-tooltip"
+            data-tooltip-content={t('contextFiles.collapseAll')}
+          >
+            <BiCollapseVertical className="w-4 h-4" />
+          </button>
+        </>,
+        false,
+        false,
+      )}
+
+      {/* Rules Section */}
+      {renderSection('rules', t('contextFiles.rules'), rulesFiles.length, rulesTreeData, rulesExpandedItems, setRulesExpandedItems, undefined, false, true)}
     </div>
   );
 };

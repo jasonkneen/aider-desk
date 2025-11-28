@@ -36,7 +36,8 @@
     "suffix.thousand": "千",
     "ok": "确定",
     "collapse": "收起",
-    "enabled": "已启用"
+    "enabled": "已启用",
+    "noFiles": "没有找到文件"
   },
   "search": {
     "placeholder": "查找...",
@@ -624,7 +625,9 @@
     "dropAll": "删除所有上下文文件",
     "globalRule": "全局规则文件自动包含",
     "projectRule": "项目规则文件自动包含",
-    "agentRule": "代理配置规则文件自动包含"
+    "agentRule": "代理配置规则文件自动包含",
+    "projectFiles": "项目文件",
+    "rules": "规则文件"
   },
   "modelSelector": {
     "mainModel": "主模型",
