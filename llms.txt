@@ -76,6 +76,7 @@ src/
         power.ts
         subagents.ts
         todo.ts
+      agent-profile-manager.ts
       agent.ts
       index.ts
       mcp-manager.ts
@@ -126,6 +127,7 @@ src/
       project.ts
     server/
       rest-api/
+        agent-api.ts
         base-api.ts
         commands-api.ts
         context-api.ts
@@ -152,6 +154,7 @@ src/
         v13-to-v14.ts
         v14-to-v15.ts
         v15-to-v16.ts
+        v16-to-v17.ts
         v2-to-v3.ts
         v3-to-v4.ts
         v4-to-v5.ts
@@ -254,6 +257,7 @@ src/
           Table.tsx
           TextArea.tsx
           TriStateCheckbox.tsx
+          VerticalDotsMenu.tsx
           VirtualTable.tsx
           WarningIcon.tsx
         ContextFiles/
@@ -403,6 +407,7 @@ src/
         TelemetryInfoDialog.tsx
         TokenUsageBar.tsx
       contexts/
+        AgentsContext.tsx
         ApiContext.tsx
         ContextMenuContext.tsx
         ModelProviderContext.tsx
@@ -1807,7 +1812,18 @@ File: src/common/locales/en.json
         "descriptionRequiredForAutomatic": "Description needs to be set in order to use this subagent automatically, otherwise the subagent can only be used when explicitly requested by the user.",
         "on-demand": "Used as subagent on user demand",
         "automatic": "Used as subagent automatically"
-      }
+      },
+      "profileContext": "Profile Context",
+      "globalProfiles": "Global Profiles",
+      "projectProfiles": "Project Profiles: {{projectName}}",
+      "global": "Global",
+      "previousContext": "Previous project",
+      "nextContext": "Next project",
+      "noProfilesInContext": "No profiles found in this context",
+      "createNewProfileInContext": "Create New Profile",
+      "copyProfile": "Copy Profile",
+      "cutProfile": "Cut Profile",
+      "pasteProfile": "Paste Profile"
     },
     "aider": {
       "options": "Options",
@@ -2905,7 +2921,18 @@ File: src/common/locales/zh.json
         "descriptionRequiredForAutomatic": "需要设置描述才能自动使用此子代理，否则只能在用户明确请求时使用该子代理。",
         "on-demand": "仅在明确请求时按需使用",
         "automatic": "在适当时自动使用"
-      }
+      },
+      "profileContext": "配置上下文",
+      "globalProfiles": "全局配置",
+      "projectProfiles": "项目配置: {{projectName}}",
+      "global": "全局",
+      "previousContext": "上一个项目",
+      "nextContext": "下一个项目",
+      "noProfilesInContext": "此上下文中没有配置",
+      "createNewProfileInContext": "创建新配置",
+      "copyProfile": "复制配置",
+      "cutProfile": "剪切配置",
+      "pasteProfile": "粘贴配置"
     },
     "aider": {
       "options": "选项",
@@ -3808,6 +3835,7 @@ export const getProviderModelId = (model: Model): string =>
 File: src/common/api.ts
 ================
 import {
+  AgentProfilesUpdatedData,
   AutocompletionData,
   ClearTaskData,
   CloudflareTunnelStatus,
@@ -3848,6 +3876,7 @@ import {
   UserMessageData,
   VersionsInfo,
   VoiceSession,
+  AgentProfile,
 } from '@common/types';
 ⋮----
 export interface ApplicationAPI {
@@ -3960,6 +3989,7 @@ export interface ApplicationAPI {
   addVersionsInfoUpdatedListener: (callback: (data: VersionsInfo) => void) => () => void;
   addProviderModelsUpdatedListener: (callback: (data: ProviderModelsData) => void) => () => void;
   addProvidersUpdatedListener: (callback: (data: ProvidersUpdatedData) => void) => () => void;
+  addAgentProfilesUpdatedListener: (callback: (data: AgentProfilesUpdatedData) => void) => () => void;
   addProjectSettingsUpdatedListener: (baseDir: string, callback: (data: { baseDir: string; settings: ProjectSettings }) => void) => () => void;
   addTerminalDataListener: (baseDir: string, callback: (data: TerminalData) => void) => () => void;
   addTerminalExitListener: (baseDir: string, callback: (data: TerminalExitData) => void) => () => void;
@@ -3991,6 +4021,13 @@ export interface ApplicationAPI {
   mergeWorktreeToMain: (baseDir: string, taskId: string, squash: boolean) => Promise<void>;
   applyUncommittedChanges: (baseDir: string, taskId: string) => Promise<void>;
   revertLastMerge: (baseDir: string, taskId: string) => Promise<void>;
+
+  // Agent profile operations
+  getAllAgentProfiles: () => Promise<AgentProfile[]>;
+  createAgentProfile: (profile: AgentProfile, projectDir?: string) => Promise<AgentProfile[]>;
+  updateAgentProfile: (profile: AgentProfile, baseDir?: string) => Promise<AgentProfile[]>;
+  deleteAgentProfile: (profileId: string, baseDir?: string) => Promise<AgentProfile[]>;
+  updateAgentProfilesOrder: (agentProfiles: AgentProfile[]) => Promise<void>;
 }
 ⋮----
 // Todo operations
@@ -4002,6 +4039,8 @@ export interface ApplicationAPI {
 // Terminal operations
 ⋮----
 // Worktree merge operations
+⋮----
+// Agent profile operations
 
 ================
 File: src/common/tools.ts
@@ -4323,6 +4362,7 @@ export type ToolSettings = BashToolSettings;
 ⋮----
 export interface AgentProfile {
   id: string;
+  projectDir?: string; // If specified, it's a project-level profile, otherwise global
   name: string;
   provider: string;
   model: string;
@@ -4343,6 +4383,8 @@ export interface AgentProfile {
   subagent: SubagentConfig;
   isSubagent?: boolean; // flag to indicate if this profile is being used as a subagent
 }
+⋮----
+projectDir?: string; // If specified, it's a project-level profile, otherwise global
 ⋮----
 maxTokens?: number; // Optional: overrides model maxOutputTokens when set
 minTimeBetweenToolCalls: number; // in milliseconds
@@ -4381,7 +4423,7 @@ export interface SettingsData {
     confirmBeforeEdit: boolean;
   };
   preferredModels: string[];
-  agentProfiles: AgentProfile[];
+
   mcpServers: Record<string, McpServerConfig>;
   llmProviders: {
     openai?: OpenAiProvider;
@@ -4420,6 +4462,10 @@ export interface ProviderProfile {
 ⋮----
 export interface ProvidersUpdatedData {
   providers: ProviderProfile[];
+}
+⋮----
+export interface AgentProfilesUpdatedData {
+  profiles: AgentProfile[];
 }
 ⋮----
 export interface VoiceSession {
@@ -4649,7 +4695,7 @@ import fs from 'fs/promises';
 ⋮----
 import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 ⋮----
-import { OS, ProjectSettings, SettingsData, UsageReportData } from './types';
+import { OS, UsageReportData } from './types';
 ⋮----
 type TextContent =
   | string
@@ -4701,8 +4747,6 @@ export const getLanguageFromPath = (path: string | undefined): string =>
 return 'text'; // Default to plain text
 ⋮----
 export const isURL = (url: string): boolean =>
-⋮----
-export const getActiveAgentProfile = (settings: SettingsData | null, projectSettings: ProjectSettings | null) =>
 
 ================
 File: src/main/agent/middlewares/extract-reasoning-middleware.ts
@@ -4922,19 +4966,21 @@ import { SUBAGENTS_TOOL_GROUP_NAME, SUBAGENTS_TOOL_RUN_TASK, TOOL_GROUP_NAME_SEP
 import { DEFAULT_AGENT_PROFILE, isSubagentEnabled } from '@common/agent';
 import { extractServerNameToolName } from '@common/utils';
 ⋮----
+import { AgentProfileManager } from '@/agent/agent-profile-manager';
 import { Task } from '@/task';
 import logger from '@/logger';
 ⋮----
 const getSubagentId = (subagent: AgentProfile): string =>
 ⋮----
-export const createSubagentsToolset = (
-  settings: SettingsData,
+export const createSubagentsToolset = async (
+  _settings: SettingsData,
   task: Task,
+  agentProfileManager: AgentProfileManager,
   mainAgentProfile: AgentProfile,
   abortSignal?: AbortSignal,
   contextMessages: ContextMessage[] = [],
   currentMessages: ContextMessage[] = [],
-): ToolSet =>
+): Promise<ToolSet> =>
 ⋮----
 const generateSubagentsRunTaskDescription = (): string =>
 ⋮----
@@ -4982,6 +5028,192 @@ import { ApprovalManager } from './approval-manager';
 import { Task } from '@/task';
 ⋮----
 export const createTodoToolset = (task: Task, profile: AgentProfile, promptContext?: PromptContext): ToolSet =>
+
+================
+File: src/main/agent/agent-profile-manager.ts
+================
+import fs from 'fs/promises';
+import path from 'path';
+import { homedir } from 'os';
+⋮----
+import { FSWatcher, watch } from 'chokidar';
+import debounce from 'lodash/debounce';
+import { DEFAULT_AGENT_PROFILES } from '@common/agent';
+⋮----
+import type { AgentProfile } from '@common/types';
+⋮----
+import { AIDER_DESK_AGENTS_DIR } from '@/constants';
+import logger from '@/logger';
+import { EventManager } from '@/events';
+import { deriveDirName } from '@/utils';
+⋮----
+// Helper methods for directory management
+const getGlobalAgentsDir = (): string
+const getProjectAgentsDir = (projectDir: string): string
+const getAgentsDirForProfile = (profile: AgentProfile): string
+⋮----
+interface AgentProfileContext {
+  dirName: string;
+  order: number;
+  agentProfile: AgentProfile;
+}
+⋮----
+export class AgentProfileManager
+⋮----
+// Single profiles map - the core simplification
+⋮----
+// Directory watching (one watcher per directory)
+private directoryWatchers: Map<string, FSWatcher> = new Map(); // agentsDir → watcher
+⋮----
+constructor(private readonly eventManager: EventManager)
+⋮----
+public async start(): Promise<void>
+⋮----
+public async initializeForProject(projectDir: string): Promise<void>
+⋮----
+// Load project-specific profiles
+⋮----
+// Setup file watcher for project directory
+⋮----
+public removeProject(projectDir: string): void
+⋮----
+// Remove project profiles from the main profiles map
+⋮----
+// Clean up directory watcher
+⋮----
+private notifyListeners(): void
+⋮----
+private async initializeProfiles(ensureDefaults = true): Promise<void>
+⋮----
+// Ensure default profiles exist in global directory
+⋮----
+// Load global profiles
+⋮----
+private async ensureDefaultProfiles(globalAgentsDir: string): Promise<void>
+⋮----
+// Only create default profiles if the directory is empty
+⋮----
+// Config file doesn't exist, create it
+⋮----
+private async setupGlobalFileWatcher(): Promise<void>
+⋮----
+// Clean up existing global watcher
+⋮----
+// Watch global agents directory
+⋮----
+private async setupWatcherForDirectory(agentsDir: string): Promise<void>
+⋮----
+// Create directory if it doesn't exist
+⋮----
+// Close existing watcher for this directory if any
+⋮----
+const reloadFunction = ()
+⋮----
+private async reloadProfiles(agentsDir: string): Promise<void>
+⋮----
+// Clear existing profiles from this directory
+⋮----
+// Reload profiles from directory
+⋮----
+// Notify listeners
+⋮----
+private async getExistingDirNames(agentsDir: string): Promise<Set<string>>
+⋮----
+// Directory doesn't exist or can't be read
+⋮----
+private async isAgentsDirectoryEmpty(agentsDir: string): Promise<boolean>
+⋮----
+// Check if there are any directories (profiles)
+⋮----
+return false; // Found at least one profile directory
+⋮----
+return true; // No profile directories found
+⋮----
+// Directory doesn't exist or can't be read, treat as empty
+⋮----
+private async loadProfilesFromDirectory(agentsDir: string): Promise<void>
+⋮----
+// Load order first
+⋮----
+order: 0, // Will be set by order file
+⋮----
+// Apply order to profiles
+⋮----
+// If no order file exists, create one based on current order
+⋮----
+// Add profiles to the main profiles map
+⋮----
+private async loadProfileFile(filePath: string): Promise<AgentProfile | null>
+⋮----
+private async saveProfileToFile(profile: AgentProfile, filePath: string): Promise<void>
+⋮----
+private async loadOrderFile(agentsDir: string): Promise<Map<string, number>>
+⋮----
+private async saveOrderFile(agentsDir: string, order: Map<string, number>): Promise<void>
+⋮----
+private applyOrderToProfiles(profilesMap: Map<string, AgentProfileContext>, order: Map<string, number>): Map<string, AgentProfileContext>
+⋮----
+// If both have order, use it
+⋮----
+// If only one has order, the one with order comes first
+⋮----
+// If neither has order, maintain original order (by name as fallback)
+⋮----
+private async createDefaultOrderFromProfiles(profilesMap: Map<string, AgentProfileContext>, agentsDir: string): Promise<void>
+⋮----
+public async createProfile(profile: AgentProfile, projectDir?: string): Promise<void>
+⋮----
+// Get existing directory names for collision handling
+⋮----
+// Derive unique directory name
+⋮----
+// Create directory and save config.json
+⋮----
+// Reload profiles to update the cache
+⋮----
+public async updateProfile(profile: AgentProfile): Promise<void>
+⋮----
+// Reload profiles to update the cache
+⋮----
+public async deleteProfile(profileId: string): Promise<void>
+⋮----
+// Reload profiles to update the cache
+⋮----
+public getProfile(profileId: string): AgentProfile | undefined
+⋮----
+private getOrderedProfiles(profileContexts: AgentProfileContext[]): AgentProfile[]
+⋮----
+// First, prioritize project profiles over global profiles
+⋮----
+// Then sort by order within the same scope
+⋮----
+private getGlobalProfiles(): AgentProfile[]
+⋮----
+public getAllProfiles(): AgentProfile[]
+⋮----
+public getProjectProfiles(projectDir: string, includeGlobal = true): AgentProfile[]
+⋮----
+public async updateAgentProfilesOrder(agentProfiles: AgentProfile[]): Promise<void>
+⋮----
+// Group profiles by their projectDir (undefined/null = global)
+⋮----
+// Process each group separately
+⋮----
+// Create order map for this group
+⋮----
+// Determine the agents directory for this group
+⋮----
+// Save the order file for this group
+⋮----
+// Update the in-memory profiles for this group
+⋮----
+// Notify listeners
+⋮----
+async dispose(): Promise<void>
+⋮----
+// Clean up all directory watchers
+⋮----
+// Clear profiles
 
 ================
 File: src/main/agent/agent.ts
@@ -5046,6 +5278,7 @@ import { ModelManager } from '@/models/model-manager';
 import { TelemetryManager } from '@/telemetry/telemetry-manager';
 import { ResponseMessage } from '@/messages';
 import { createSubagentsToolset } from '@/agent/tools/subagents';
+import { AgentProfileManager } from '@/agent/agent-profile-manager';
 ⋮----
 export class Agent
 ⋮----
@@ -5348,7 +5581,7 @@ private compareServerConfig(config: McpServerConfig, otherConfig: McpServerConfi
 ================
 File: src/main/agent/optimizer.ts
 ================
-import { type AgentProfile, InvocationMode, type SettingsData, type TaskData } from '@common/types';
+import { type AgentProfile, InvocationMode, type TaskData } from '@common/types';
 import { isSubagentEnabled } from '@common/agent';
 import { cloneDeep } from 'lodash';
 import { type ModelMessage, type ToolContent, type ToolResultPart, type UserModelMessage } from 'ai';
@@ -5371,18 +5604,18 @@ import { CacheControl } from '@/models';
  */
 export const optimizeMessages = (
   profile: AgentProfile,
+  projectProfiles: AgentProfile[],
   userRequestMessageIndex: number,
   messages: ModelMessage[],
   cacheControl: CacheControl,
-  settings: SettingsData,
-  _task?: TaskData,
+  task?: TaskData,
 ) =>
 ⋮----
 const addImportantReminders = (
   profile: AgentProfile,
+  projectProfiles: AgentProfile[],
   userRequestMessageIndex: number,
   messages: ModelMessage[],
-  settings: SettingsData,
   task?: TaskData,
 ): ModelMessage[] =>
 ⋮----
@@ -5821,6 +6054,8 @@ import {
   TaskData,
   ClearTaskData,
   ProjectSettings,
+  AgentProfile,
+  AgentProfilesUpdatedData,
 } from '@common/types';
 ⋮----
 import type { BrowserWindow } from 'electron';
@@ -5905,6 +6140,9 @@ sendProvidersUpdated(providers: ProviderProfile[]): void
 sendProviderModelsUpdated(data: ProviderModelsData): void
 ⋮----
 sendProjectSettingsUpdated(baseDir: string, settings: ProjectSettings): void
+⋮----
+// Agent profile events
+sendAgentProfilesUpdated(profiles: AgentProfile[]): void
 ⋮----
 // Task lifecycle events
 sendTaskCreated(task: TaskData): void
@@ -7060,6 +7298,7 @@ const loadModels = async () =>
 // Emit the updated provider models event
 ⋮----
 // Update agent profiles with the new models
+// Note: agent profiles are now file-based, so this update is handled differently
 ⋮----
 private enrichWithModelInfo(models: Model[], profile: ProviderProfile, strategy: LlmProviderStrategy): Model[]
 ⋮----
@@ -7348,10 +7587,10 @@ const migrateSessionFile = async (project: Project, sessionsDirPath: string, tas
 File: src/main/project/project-manager.ts
 ================
 import { normalizeBaseDir } from '@common/utils';
-import { SettingsData, ProjectStartMode } from '@common/types';
+import { SettingsData } from '@common/types';
 ⋮----
 import { TelemetryManager } from '@/telemetry';
-import { McpManager } from '@/agent';
+import { AgentProfileManager, McpManager } from '@/agent';
 import { DataManager } from '@/data-manager';
 import logger from '@/logger';
 import { Project } from '@/project';
@@ -7370,7 +7609,7 @@ private createProject(baseDir: string)
 ⋮----
 public getProject(baseDir: string)
 ⋮----
-public async startProject(baseDir: string, startupMode?: ProjectStartMode)
+public async startProject(baseDir: string)
 ⋮----
 public async closeProject(baseDir: string)
 ⋮----
@@ -7378,7 +7617,7 @@ public async restartProject(baseDir: string): Promise<void>
 ⋮----
 public async close(): Promise<void>
 ⋮----
-settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
+async settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
 ⋮----
 modelsUpdated()
 ⋮----
@@ -7390,11 +7629,11 @@ File: src/main/project/project.ts
 import fs from 'fs/promises';
 import path from 'path';
 ⋮----
-import { CustomCommand, ProjectStartMode, SettingsData, TaskData } from '@common/types';
+import { CustomCommand, SettingsData, TaskData } from '@common/types';
 import { fileExists } from '@common/utils';
 import { v4 as uuidv4 } from 'uuid';
 ⋮----
-import { McpManager } from '@/agent';
+import { AgentProfileManager, McpManager } from '@/agent';
 import { Connector } from '@/connector';
 import { DataManager } from '@/data-manager';
 import logger from '@/logger';
@@ -7418,11 +7657,12 @@ constructor(
     private readonly eventManager: EventManager,
     private readonly modelManager: ModelManager,
     private readonly worktreeManager: WorktreeManager,
+    private readonly agentProfileManager: AgentProfileManager,
 )
 ⋮----
 // initialize global task
 ⋮----
-public async start(_startupMode?: ProjectStartMode)
+public async start()
 ⋮----
 public async createNewTask()
 ⋮----
@@ -7450,7 +7690,7 @@ private async sendInputHistoryUpdatedEvent()
 ⋮----
 public getCustomCommands()
 ⋮----
-public sendCustomCommandsUpdated(taskId: string, commands: CustomCommand[])
+public sendCustomCommandsUpdated(commands: CustomCommand[])
 ⋮----
 public async deleteTask(taskId: string): Promise<void>
 ⋮----
@@ -7464,9 +7704,41 @@ async getTasks(): Promise<TaskData[]>
 ⋮----
 forEachTask(callback: (task: Task) => void)
 ⋮----
-settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
+async settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
 ⋮----
 async close()
+
+================
+File: src/main/server/rest-api/agent-api.ts
+================
+import { Router } from 'express';
+import { z } from 'zod';
+⋮----
+import { BaseApi } from './base-api';
+⋮----
+import { EventsHandler } from '@/events-handler';
+⋮----
+profile: z.any(), // AgentProfile schema
+⋮----
+profile: z.any(), // AgentProfile schema
+⋮----
+agentProfiles: z.array(z.any()), // AgentProfile array
+⋮----
+export class AgentApi extends BaseApi
+⋮----
+constructor(private eventsHandler: EventsHandler)
+⋮----
+registerRoutes(router: Router): void
+⋮----
+// GET /agent-profiles
+⋮----
+// POST /agent-profile/create
+⋮----
+// POST /agent-profile/update
+⋮----
+// POST /agent-profile/delete
+⋮----
+// POST /agent-profiles/order
 
 ================
 File: src/main/server/rest-api/base-api.ts
@@ -7872,7 +8144,7 @@ import { join } from 'path';
 import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 ⋮----
-import { CommandsApi, ContextApi, McpApi, ProjectApi, PromptApi, ProvidersApi, SettingsApi, SystemApi, TodoApi, UsageApi } from '@/server/rest-api';
+import { AgentApi, CommandsApi, ContextApi, McpApi, ProjectApi, PromptApi, ProvidersApi, SettingsApi, SystemApi, TodoApi, UsageApi } from '@/server/rest-api';
 import { AUTH_PASSWORD, AUTH_USERNAME, SERVER_PORT } from '@/constants';
 import logger from '@/logger';
 import { ProjectManager } from '@/project';
@@ -8015,6 +8287,46 @@ export const migrateSettingsV15toV16 = (settings: any): SettingsData =>
 // Ensure toolSettings from DEFAULT_AGENT_PROFILE are included in existing agent profiles
 
 ================
+File: src/main/store/migrations/v16-to-v17.ts
+================
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import fs from 'fs/promises';
+import path from 'path';
+import { homedir } from 'os';
+⋮----
+import { SettingsData, AgentProfile } from '@common/types';
+⋮----
+import { AIDER_DESK_AGENTS_DIR } from '@/constants';
+import logger from '@/logger';
+import { deriveDirName } from '@/utils';
+⋮----
+const getExistingDirNames = async (agentsDir: string): Promise<Set<string>> =>
+⋮----
+// Directory doesn't exist or can't be read
+⋮----
+const saveProfileToFile = async (profile: any, filePath: string): Promise<void> =>
+⋮----
+export const migrateSettingsV16toV17 = async (settings: SettingsData): Promise<SettingsData> =>
+⋮----
+// Create global agents directory
+⋮----
+// Migrate existing agent profiles from settings to directory structure
+⋮----
+// Get existing directory names for collision handling
+⋮----
+// Derive unique directory name from profile name
+⋮----
+// Check if directory already exists (don't overwrite existing directories)
+⋮----
+// Directory doesn't exist, create it
+⋮----
+existingDirNames.add(dirName); // Add to set to avoid collisions in same loop
+⋮----
+// Create order.json file using profile IDs
+⋮----
+// Remove agentProfiles from settings (they're now file-based)
+
+================
 File: src/main/store/migrations/v2-to-v3.ts
 ================
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -8058,6 +8370,7 @@ export const migrateSettingsV5toV6 = (settingsV5: any): SettingsData =>
 ================
 File: src/main/store/migrations/v6-to-v7.ts
 ================
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { AgentProfile, SettingsData, ToolApprovalState } from '@common/types';
 ⋮----
 export const migrateV6ToV7 = (settings: SettingsData): SettingsData =>
@@ -8069,6 +8382,7 @@ export const migrateV6ToV7 = (settings: SettingsData): SettingsData =>
 ================
 File: src/main/store/migrations/v7-to-v8.ts
 ================
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { AgentProfile, SettingsData } from '@common/types';
 ⋮----
 export const migrateV7ToV8 = (settings: SettingsData): SettingsData =>
@@ -8100,9 +8414,8 @@ File: src/main/store/index.ts
 File: src/main/store/store.ts
 ================
 import { v4 as uuidv4 } from 'uuid';
-import { AgentProfile, ProviderProfile, ProjectData, ProjectSettings, SettingsData, ProjectStartMode, SuggestionMode, WindowState, Model } from '@common/types';
+import { ProviderProfile, ProjectData, ProjectSettings, SettingsData, ProjectStartMode, SuggestionMode, WindowState, Model } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
-import { DEFAULT_AGENT_PROFILE, DEFAULT_AGENT_PROFILES, DEFAULT_PROVIDER_MODEL } from '@common/agent';
 ⋮----
 import { migrateSettingsV0toV1 } from './migrations/v0-to-v1';
 import { migrateSettingsV1toV2 } from './migrations/v1-to-v2';
@@ -8123,6 +8436,7 @@ import logger from '@/logger';
 import { migrateProvidersV13toV14 } from '@/store/migrations/v13-to-v14';
 import { migrateSettingsV14toV15 } from '@/store/migrations/v14-to-v15';
 import { migrateSettingsV15toV16 } from '@/store/migrations/v15-to-v16';
+import { migrateSettingsV16toV17 } from '@/store/migrations/v16-to-v17';
 ⋮----
 export const getDefaultProjectSettings = (store: Store, providerModels: Model[], baseDir: string): ProjectSettings =>
 ⋮----
@@ -8153,17 +8467,15 @@ createDefaultSettings(): SettingsData
 ⋮----
 getSettings(): SettingsData
 ⋮----
-const getAgentProfiles = () =>
-⋮----
-const mergeDefaultProperties = (agentProfile: AgentProfile) => (
-⋮----
 // Ensure proper merging for nested objects
 ⋮----
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-private migrateSettings(settings: any, openProjects: any, providers: any): SettingsData
+private async migrateSettings(settings: any, openProjects: any, providers: any): Promise<SettingsData>
 ⋮----
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 private findOutCurrentVersion(settings: any): number
+⋮----
+// Check if agentProfiles still exists in settings (pre-v17)
 ⋮----
 saveSettings(settings: SettingsData): void
 ⋮----
@@ -8175,12 +8487,6 @@ updateOpenProjectsOrder(baseDirs: string[]): ProjectData[]
 ⋮----
 // This case should ideally not happen if baseDirs comes from the existing open projects.
 // If it can happen, we might need to decide how to handle it (e.g., log a warning).
-⋮----
-async updateProviderModelInAgentProfiles(providerModels: Model[])
-⋮----
-// Provider not configured, find the first available configured provider
-⋮----
-// Update settings with modified agent profiles
 ⋮----
 getRecentProjects(): string[]
 ⋮----
@@ -8203,8 +8509,6 @@ getReleaseNotes(): string | null
 clearReleaseNotes(): void
 ⋮----
 setReleaseNotes(releaseNotes: string)
-⋮----
-getAgentProfile(profileId: string): AgentProfile | undefined
 ⋮----
 getProviders(): ProviderProfile[]
 ⋮----
@@ -8525,7 +8829,7 @@ import {
   WorkingMode,
   ModelInfo,
 } from '@common/types';
-import { extractTextContent, fileExists, getActiveAgentProfile, parseUsageReport } from '@common/utils';
+import { extractTextContent, fileExists, parseUsageReport } from '@common/utils';
 import { COMPACT_CONVERSATION_AGENT_PROFILE, INIT_PROJECT_AGENTS_PROFILE } from '@common/agent';
 import { v4 as uuidv4 } from 'uuid';
 import debounce from 'lodash/debounce';
@@ -8536,7 +8840,7 @@ import type { SimpleGit } from 'simple-git';
 import { getAllFiles } from '@/utils/file-system';
 import { getCompactConversationPrompt, getGenerateCommitMessagePrompt, getInitProjectPrompt, getSystemPrompt } from '@/agent/prompts';
 import { AIDER_DESK_TASKS_DIR, AIDER_DESK_TODOS_FILE, WORKTREE_BRANCH_PREFIX } from '@/constants';
-import { Agent, McpManager } from '@/agent';
+import { Agent, AgentProfileManager, McpManager } from '@/agent';
 import { Connector } from '@/connector';
 import { DataManager } from '@/data-manager';
 import logger from '@/logger';
@@ -8561,12 +8865,15 @@ constructor(
     private readonly store: Store,
     private readonly mcpManager: McpManager,
     private readonly customCommandManager: CustomCommandManager,
+    private readonly agentProfileManager: AgentProfileManager,
     private readonly telemetryManager: TelemetryManager,
     private readonly dataManager: DataManager,
     private readonly eventManager: EventManager,
     private readonly modelManager: ModelManager,
     private readonly worktreeManager: WorktreeManager,
 )
+⋮----
+private async getActiveAgentProfile(): Promise<AgentProfile | null>
 ⋮----
 private async loadTaskData()
 ⋮----
@@ -8831,13 +9138,15 @@ private async reloadConnectorMessages()
 public async compactConversation(
     mode: Mode,
     customInstructions?: string,
-    profile: AgentProfile | null = getActiveAgentProfile(this.store.getSettings(), this.store.getProjectSettings(this.project.baseDir)),
+    profile: AgentProfile | null = null,
     contextMessages: ContextMessage[] = this.contextManager.getContextMessages(),
     promptContext?: PromptContext,
     abortSignal?: AbortSignal,
     waitForAgentCompletion = true,
     logMessage = 'Compacting conversation...',
 )
+⋮----
+// Get profile if not provided
 ⋮----
 const extractSummary = (content: string): string =>
 ⋮----
@@ -8859,9 +9168,21 @@ public async updateAutocompletionData(words?: string[], force = false)
 ⋮----
 async updateAgentEstimatedTokens(checkContextFilesIncluded = false, checkRepoMapIncluded = false)
 ⋮----
-settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
+async settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
+⋮----
+// For old profile, we can't easily get it from old settings since they're now file-based
+// We'll just use null for old profile comparison
+// Note: agent profile changes are now handled differently since profiles are file-based
 ⋮----
 // Check for changes in agent config properties that affect token count
+const modelChanged = false; // oldAgentProfile is null, so no change
+const disabledServersChanged = false; // oldAgentProfile is null, so no change
+const toolApprovalsChanged = false; // oldAgentProfile is null, so no change
+const includeContextFilesChanged = false; // oldAgentProfile is null, so no change
+const includeRepoMapChanged = false; // oldAgentProfile is null, so no change
+const useAiderToolsChanged = false; // oldAgentProfile is null, so no change
+const usePowerToolsChanged = false; // oldAgentProfile is null, so no change
+const customInstructionsChanged = false; // oldAgentProfile is null, so no change
 ⋮----
 // Check for changes in Aider
 ⋮----
@@ -9198,8 +9519,11 @@ export const isFileNotFoundError = (error: unknown): boolean =>
 File: src/main/utils/file-system.ts
 ================
 import { simpleGit } from 'simple-git';
+import filenamifyImport from 'filenamify';
+import slugify from 'slugify';
 ⋮----
 import logger from '@/logger';
+// @ts-expect-error filenamify is not typed properly
 ⋮----
 export const getFilePathSuggestions = async (currentPath: string, directoriesOnly = false): Promise<string[]> =>
 ⋮----
@@ -9236,6 +9560,18 @@ export const filterIgnoredFiles = async (projectBaseDir: string, filePaths: stri
 export const getAllFiles = async (baseDir: string): Promise<string[]> =>
 ⋮----
 return []; // Return empty array if Git command fails
+⋮----
+export const deriveDirName = (name: string, existingDirNames: Set<string>): string =>
+⋮----
+// First slugify the name to create a clean URL-friendly slug
+⋮----
+strict: true, // remove special characters except for hyphens and underscores
+trim: true, // trim leading and trailing whitespace
+⋮----
+// Then filenamify to ensure it's safe as a directory name across all platforms
+⋮----
+replacement: '-', // use hyphens as replacement for invalid characters
+maxLength: 100, // reasonable length limit
 
 ================
 File: src/main/utils/index.ts
@@ -10119,12 +10455,13 @@ import {
   UsageDataRow,
   VersionsInfo,
   VoiceSession,
+  AgentProfile,
 } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
 ⋮----
 import type { BrowserWindow } from 'electron';
 ⋮----
-import { McpManager } from '@/agent';
+import { McpManager, AgentProfileManager } from '@/agent';
 import { ModelManager } from '@/models';
 import { ProjectManager } from '@/project';
 import { CloudflareTunnelManager } from '@/server';
@@ -10329,6 +10666,16 @@ async startCloudflareTunnel(): Promise<CloudflareTunnelStatus | null>
 stopCloudflareTunnel(): void
 ⋮----
 getCloudflareTunnelStatus(): CloudflareTunnelStatus
+⋮----
+async getAllAgentProfiles()
+⋮----
+async createAgentProfile(profile: AgentProfile, projectDir?: string)
+⋮----
+async updateAgentProfile(profile: AgentProfile)
+⋮----
+async deleteAgentProfile(profileId: string)
+⋮----
+async updateAgentProfilesOrder(agentProfiles: AgentProfile[])
 
 ================
 File: src/main/index.ts
@@ -10387,7 +10734,19 @@ updateProgress = () =>
 ================
 File: src/main/ipc-handlers.ts
 ================
-import { EditFormat, FileEdit, McpServerConfig, Mode, Model, ProjectSettings, ProviderProfile, SettingsData, TaskData, TodoItem } from '@common/types';
+import {
+  EditFormat,
+  FileEdit,
+  McpServerConfig,
+  Mode,
+  Model,
+  ProjectSettings,
+  ProviderProfile,
+  SettingsData,
+  TaskData,
+  TodoItem,
+  AgentProfile,
+} from '@common/types';
 import { ipcMain } from 'electron';
 ⋮----
 import { EventsHandler } from './events-handler';
@@ -10405,6 +10764,8 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
 // Server control handlers
 ⋮----
 // Cloudflare tunnel handlers
+⋮----
+// Agent profile handlers
 
 ================
 File: src/main/logger.ts
@@ -10423,7 +10784,7 @@ import { createServer } from 'http';
 ⋮----
 import type { BrowserWindow } from 'electron';
 ⋮----
-import { McpManager } from '@/agent';
+import { McpManager, AgentProfileManager } from '@/agent';
 import { CloudflareTunnelManager, ServerController } from '@/server';
 import { ConnectorManager } from '@/connector';
 import { ProjectManager } from '@/project';
@@ -10456,6 +10817,8 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
 // Initialize model manager
 ⋮----
 // Initialize data manager
+⋮----
+// Initialize agent profile manager
 ⋮----
 // Initialize project manager
 ⋮----
@@ -10930,12 +11293,15 @@ const listener = (_: Electron.IpcRendererEvent, data: SettingsData) =>
 ⋮----
 // Worktree merge operations
 ⋮----
+// Agent profile operations
+⋮----
 // eslint-disable-next-line no-console
 
 ================
 File: src/renderer/src/api/browser-api.ts
 ================
 import {
+  AgentProfilesUpdatedData,
   AutocompletionData,
   ClearTaskData,
   CloudflareTunnelStatus,
@@ -10976,6 +11342,7 @@ import {
   UserMessageData,
   VersionsInfo,
   VoiceSession,
+  AgentProfile,
 } from '@common/types';
 import { ApplicationAPI } from '@common/api';
 import axios, { type AxiosInstance } from 'axios';
@@ -11004,6 +11371,7 @@ type EventDataMap = {
   'provider-models-updated': ProviderModelsData;
   'providers-updated': ProvidersUpdatedData;
   'project-settings-updated': { baseDir: string; settings: ProjectSettings };
+  'agent-profiles-updated': AgentProfilesUpdatedData;
   'task-created': TaskData;
   'task-initialized': TaskData;
   'task-updated': TaskData;
@@ -11156,6 +11524,8 @@ addProviderModelsUpdatedListener(callback: (data: ProviderModelsData) => void): 
 ⋮----
 addProvidersUpdatedListener(callback: (data: ProvidersUpdatedData) => void): () => void
 ⋮----
+addAgentProfilesUpdatedListener(callback: (data: AgentProfilesUpdatedData) => void): () => void
+⋮----
 addProjectSettingsUpdatedListener(baseDir: string, callback: (data:
 ⋮----
 // Task lifecycle event listeners
@@ -11207,17 +11577,27 @@ mergeWorktreeToMain(baseDir: string, taskId: string, squash: boolean): Promise<v
 applyUncommittedChanges(baseDir: string, taskId: string): Promise<void>
 ⋮----
 revertLastMerge(baseDir: string, taskId: string): Promise<void>
+⋮----
+// Agent profile operations
+getAllAgentProfiles(baseDir?: string): Promise<AgentProfile[]>
+⋮----
+createAgentProfile(profile: AgentProfile, projectDir?: string): Promise<AgentProfile[]>
+⋮----
+updateAgentProfile(profile: AgentProfile, baseDir?: string): Promise<AgentProfile[]>
+⋮----
+deleteAgentProfile(profileId: string, baseDir?: string): Promise<AgentProfile[]>
+⋮----
+updateAgentProfilesOrder(agentProfiles: AgentProfile[]): Promise<void>
 
 ================
 File: src/renderer/src/components/AgentSelector/AgentSelector.tsx
 ================
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap } from 'react-icons/md';
 import { RiToolsFill } from 'react-icons/ri';
 import { clsx } from 'clsx';
 import { AgentProfile, ToolApprovalState } from '@common/types';
-import { getActiveAgentProfile } from '@common/utils';
 import { BiCog } from 'react-icons/bi';
 import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -11230,11 +11610,13 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { Accordion } from '@/components/common/Accordion';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
-import { SettingsPage } from '@/components/settings/SettingsPage';
 import { useApi } from '@/contexts/ApiContext';
+import { useAgents } from '@/contexts/AgentsContext';
 ⋮----
 type Props = {
+  projectDir: string;
   isActive: boolean;
+  showSettingsPage?: (tab?: number) => void;
 };
 ⋮----
 const calculateEnabledTools = async () =>
@@ -11245,7 +11627,7 @@ const calculateEnabledTools = async () =>
 ⋮----
 const toggleSelectorVisible = () =>
 ⋮----
-if (activeProfile && settings)
+if (activeProfile)
 ⋮----
 // Remove tool approvals for this server
 ⋮----
@@ -11264,8 +11646,6 @@ onClick=
 <MdOutlineChecklist className=
 ⋮----
 icon=
-⋮----
-<SettingsPage onClose=
 
 ================
 File: src/renderer/src/components/AgentSelector/index.ts
@@ -12026,6 +12406,39 @@ type Props = InputHTMLAttributes<HTMLInputElement> & {
   className?: string;
 };
 ⋮----
+onClick=
+
+================
+File: src/renderer/src/components/common/VerticalDotsMenu.tsx
+================
+import React, { useRef, useState } from 'react';
+import { FaEllipsisVertical } from 'react-icons/fa6';
+import { clsx } from 'clsx';
+⋮----
+import { useClickOutside } from '@/hooks/useClickOutside';
+⋮----
+export type MenuOption = {
+  label: string;
+  action: () => void;
+  icon?: React.ReactNode;
+  disabled?: boolean;
+};
+⋮----
+type Props = {
+  options: MenuOption[];
+  className?: string;
+};
+⋮----
+const handleMenuClick = () =>
+⋮----
+const handleOptionClick = (option: MenuOption) =>
+⋮----
+<div className=
+⋮----
+className={clsx(
+            'transition-opacity p-1.5 rounded-md hover:bg-bg-tertiary text-text-muted hover:text-text-primary',
+            !isMenuOpen && 'opacity-0 group-hover:opacity-100',
+          )}
 onClick=
 
 ================
@@ -14708,6 +15121,7 @@ import { showInfoNotification } from '@/utils/notifications';
 type Props = {
   project: ProjectData;
   isActive?: boolean;
+  showSettingsPage?: (tab?: number) => void;
 };
 ⋮----
 // when there is active task and is new we don't need to create new one
@@ -14829,6 +15243,7 @@ import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
 import { useApi } from '@/contexts/ApiContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useModelProviders } from '@/contexts/ModelProviderContext';
+import { useAgents } from '@/contexts/AgentsContext';
 ⋮----
 export type TaskBarRef = {
   openMainModelSelector: (model?: string) => void;
@@ -15031,7 +15446,6 @@ import { useTranslation } from 'react-i18next';
 import { CgSpinner } from 'react-icons/cg';
 import { ResizableBox } from 'react-resizable';
 import { clsx } from 'clsx';
-import { getActiveAgentProfile } from '@common/utils';
 import { getProviderModelId } from '@common/agent';
 ⋮----
 import { isLogMessage, isResponseMessage, isToolMessage, isUserMessage, Message } from '@/types/message';
@@ -15054,6 +15468,7 @@ import { useApi } from '@/contexts/ApiContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useModelProviders } from '@/contexts/ModelProviderContext';
 import { useTask } from '@/contexts/TaskContext';
+import { useAgents } from '@/contexts/AgentsContext';
 ⋮----
 type AddFileDialogOptions = {
   readOnly: boolean;
@@ -15069,6 +15484,7 @@ type Props = {
   updateTask: (updates: Partial<TaskData>, useOptimistic?: boolean) => void;
   inputHistory: string[];
   isActive?: boolean;
+  showSettingsPage?: (tab?: number) => void;
 };
 ⋮----
 const renderLoading = (message: string) => (
@@ -15525,6 +15941,7 @@ type Props = {
   terminalVisible?: boolean;
   scrollToBottom?: () => void;
   onAutoApproveChanged?: (autoApprove: boolean) => void;
+  showSettingsPage?: (tab?: number) => void;
 };
 ⋮----
 const setTextWithDispatch = (newText: string) =>
@@ -15611,12 +16028,19 @@ const handleWorkingModeChanged = async (mode: WorkingMode) =>
 File: src/renderer/src/components/settings/agent/AgentProfileItem.tsx
 ================
 import { AgentProfile } from '@common/types';
+import { BiCopy, BiCut } from 'react-icons/bi';
 import { clsx } from 'clsx';
+import { useTranslation } from 'react-i18next';
+⋮----
+import { VerticalDotsMenu, type MenuOption } from '@/components/common/VerticalDotsMenu';
 ⋮----
 type Props = {
   profile: AgentProfile;
   isSelected: boolean;
   onClick: (id: string) => void;
+  onCopy?: (profile: AgentProfile) => void;
+  onCut?: (profile: AgentProfile) => void;
+  isCut?: boolean;
 };
 ⋮----
 export const AgentProfileItem = (
@@ -15640,10 +16064,10 @@ type AgentRulesProps = {
 ================
 File: src/renderer/src/components/settings/agent/AgentSettings.tsx
 ================
-import { AgentProfile, ContextMemoryMode, GenericTool, InvocationMode, McpServerConfig, SettingsData, ToolApprovalState } from '@common/types';
-import React, { ReactNode, useMemo, useRef, useState } from 'react';
+import { AgentProfile, ContextMemoryMode, GenericTool, InvocationMode, McpServerConfig, ProjectData, SettingsData, ToolApprovalState } from '@common/types';
+import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaPaste, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
 import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat } from 'react-icons/md';
 import { DEFAULT_AGENT_PROFILE, DEFAULT_MODEL_TEMPERATURE } from '@common/agent';
 import { BiTrash } from 'react-icons/bi';
@@ -15714,10 +16138,34 @@ const getMcpServersSummary = (profile: AgentProfile, mcpServers: Record<string, 
 type Props = {
   settings: SettingsData;
   setSettings: (settings: SettingsData) => void;
+  agentProfiles: AgentProfile[];
+  setAgentProfiles: (profiles: AgentProfile[]) => void;
   initialProfileId?: string;
+  openProjects?: ProjectData[];
+  selectedProfileContext?: 'global' | string;
 };
 ⋮----
+// Profile context state for project-level profiles
+⋮----
+// Sync internal profileContext with selectedProfileContext prop
+⋮----
+// Update contextIndex to match the selected context
+⋮----
+// Context navigation logic
+const navigateContext = (direction: 'prev' | 'next') =>
+⋮----
+// Filter profiles based on current context
+⋮----
+// Get context display name
+const getContextDisplayName = () =>
+⋮----
+// Update filtered profiles when context changes
+⋮----
 const handleDragEnd = (event: DragEndEvent) =>
+⋮----
+// Get the actual indices in the full agentProfiles array
+⋮----
+// Update order using the new API
 ⋮----
 // useMemo for project IDs to prevent SortableContext from re-rendering unnecessarily
 ⋮----
@@ -15729,7 +16177,21 @@ const handleCreateNewProfile = () =>
 ⋮----
 const handleDeleteProfile = () =>
 ⋮----
+const handleCopyProfile = (profile: AgentProfile) =>
+⋮----
+const handleCutProfile = (profile: AgentProfile) =>
+⋮----
+const handlePasteProfile = () =>
+⋮----
+// If this was a cut operation, remove the original and add new one
+⋮----
+// For copy operation, just add the new profile
+⋮----
 const handleProfileSettingChange = <K extends keyof AgentProfile>(field: K, value: AgentProfile[K]) =>
+⋮----
+const handleProfileChange = (profile: AgentProfile) =>
+⋮----
+const handleRemovePreferredModel = (modelId: string) =>
 ⋮----
 const handleToggleServerEnabled = (serverKey: string, checked: boolean) =>
 ⋮----
@@ -15759,13 +16221,15 @@ const handleToolApprovalChange = (toolId: string, approval: ToolApprovalState) =
 ⋮----
 {/* Left List Pane */}
 ⋮----
+{/* Profile Context Header */}
+⋮----
+onClick=
+⋮----
 {/* Right Details Pane */}
 ⋮----
 <span>
 ⋮----
 {/* Temperature Column */}
-⋮----
-onClick=
 ⋮----
 {/* Max Tokens Column */}
 ⋮----
@@ -15959,6 +16423,9 @@ type SortableAgentProfileItemProps = {
   profile: AgentProfile;
   isSelected: boolean;
   onClick: (id: string) => void;
+  onCopy?: (profile: AgentProfile) => void;
+  onCut?: (profile: AgentProfile) => void;
+  isCut?: boolean;
 };
 ⋮----
 export const SortableAgentProfileItem = (
@@ -16176,7 +16643,7 @@ tooltip=
 ================
 File: src/renderer/src/components/settings/SettingsPage.tsx
 ================
-import { SettingsData } from '@common/types';
+import { ProjectData, SettingsData } from '@common/types';
 import { useEffect, useMemo, useState } from 'react';
 import { isEqual } from 'lodash';
 import { useTranslation } from 'react-i18next';
@@ -16184,6 +16651,7 @@ import { LlmProviderName } from '@common/agent';
 ⋮----
 import { Settings } from '@/pages/Settings';
 import { useSettings } from '@/contexts/SettingsContext';
+import { useAgents } from '@/contexts/AgentsContext';
 import { ModalOverlayLayout } from '@/components/common/ModalOverlayLayout';
 import { useApi } from '@/contexts/ApiContext';
 import { Button } from '@/components/common/Button';
@@ -16193,15 +16661,32 @@ type Props = {
   initialTab?: number;
   initialAgentProfileId?: string;
   initialAgentProvider?: LlmProviderName;
+  openProjects?: ProjectData[];
 };
-⋮----
-// eslint-disable-next-line react-hooks/set-state-in-effect
 ⋮----
 const handleCancel = () =>
 ⋮----
 // Updated to use settings.mcpServers directly
 ⋮----
+// Reset agent profiles to original
+⋮----
 const handleSave = async () =>
+⋮----
+// Save agent profile changes
+⋮----
+// Find profiles that were added, updated, or deleted
+⋮----
+// Handle deleted profiles
+⋮----
+// Handle added and updated profiles
+⋮----
+// New profile
+⋮----
+// Updated profile - check if it actually changed
+⋮----
+// Update profile order if needed
+⋮----
+// eslint-disable-next-line no-console
 ⋮----
 const handleLanguageChange = (language: string) =>
 ⋮----
@@ -16595,7 +17080,7 @@ File: src/renderer/src/components/AgentModelSelector.tsx
 import { forwardRef, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AVAILABLE_PROVIDERS, getProviderModelId } from '@common/agent';
-import { AgentProfile, Model, SettingsData } from '@common/types';
+import { AgentProfile, Model } from '@common/types';
 ⋮----
 import { ModelSelector, ModelSelectorRef } from './ModelSelector';
 ⋮----
@@ -16604,9 +17089,11 @@ import { showErrorNotification } from '@/utils/notifications';
 ⋮----
 type Props = {
   className?: string;
-  settings: SettingsData | null;
   agentProfile: AgentProfile | undefined;
-  saveSettings: (settings: SettingsData) => void;
+  onProfileChange?: (profile: AgentProfile) => void;
+  preferredModelIds?: string[];
+  removePreferredModel?: (modelId: string) => void;
+  addPreferredModel?: (modelId: string) => void;
 };
 ⋮----
 // Add the currently selected model if it's not in the known list (custom model)
@@ -16767,6 +17254,42 @@ className=
 ⋮----
 
 ================
+File: src/renderer/src/contexts/AgentsContext.tsx
+================
+import { createContext, useContext, useEffect, useOptimistic, startTransition, ReactNode, useCallback, useState } from 'react';
+import { AgentProfile } from '@common/types';
+⋮----
+import { useApi } from '@/contexts/ApiContext';
+⋮----
+interface AgentsContextType {
+  profiles: AgentProfile[];
+  loading: boolean;
+  error: string | null;
+  getProfiles: (projectDir: string) => AgentProfile[];
+  createProfile: (profile: AgentProfile, projectDir?: string) => Promise<void>;
+  updateProfile: (profile: AgentProfile, projectDir?: string) => Promise<void>;
+  deleteProfile: (profileId: string, projectDir?: string) => Promise<void>;
+  refreshProfiles: (projectDir?: string) => Promise<void>;
+  updateProfilesOrder: (agentProfiles: AgentProfile[]) => Promise<void>;
+}
+⋮----
+interface AgentsProviderProps {
+  children: ReactNode;
+}
+⋮----
+const createProfile = async (profile: AgentProfile, projectDir?: string) =>
+⋮----
+const updateProfile = async (profile: AgentProfile, projectDir?: string) =>
+⋮----
+const deleteProfile = async (profileId: string, projectDir?: string) =>
+⋮----
+const updateProfilesOrder = async (agentProfiles: AgentProfile[]): Promise<void> =>
+⋮----
+// Register event listener for agent profiles updates
+⋮----
+export const useAgents = (): AgentsContextType =>
+
+================
 File: src/renderer/src/contexts/ApiContext.tsx
 ================
 import { createContext, useMemo, ReactNode, useContext } from 'react';
@@ -16857,10 +17380,8 @@ export const useModelProviders = (): ModelProviderContextType =>
 File: src/renderer/src/contexts/ProjectSettingsContext.tsx
 ================
 import { ProjectSettings } from '@common/types';
-import { createContext, useContext, useState, useEffect, ReactNode, useOptimistic, startTransition } from 'react';
-import { DEFAULT_AGENT_PROFILE } from '@common/agent';
+import { createContext, ReactNode, startTransition, useContext, useEffect, useOptimistic, useState } from 'react';
 ⋮----
-import { useSettings } from '@/contexts/SettingsContext';
 import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type ProjectSettingsContextType = {
@@ -16882,8 +17403,6 @@ const saveProjectSettings = async (updated: Partial<ProjectSettings>) =>
 setProjectSettings(updatedSettings); // Ensure state is in sync with backend
 ⋮----
 // eslint-disable-next-line no-console
-⋮----
-// check if active agent profile still exists in settings
 ⋮----
 const loadSettings = async () =>
 ⋮----
@@ -17830,7 +18349,13 @@ const handleCloseOtherProjects = async (baseDir: string) =>
 ⋮----
 const handleCloseAllProjects = async () =>
 ⋮----
+const renderProjectPanels = ()
+⋮----
+const getUpdateTooltip = () =>
+⋮----
 return ''; // Should not happen if showUpdateIcon is true
+⋮----
+const handleCloseReleaseNotes = async () =>
 ⋮----
 setShowSettingsTab(4);
 ⋮----
@@ -17848,9 +18373,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { HiArrowRight, HiArrowLeft } from 'react-icons/hi2';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { isEqual } from 'lodash';
 import { SettingsData } from '@common/types';
 ⋮----
 import { useSettings } from '@/contexts/SettingsContext';
+import { useAgents } from '@/contexts/AgentsContext';
 import { AiderSettings } from '@/components/settings/AiderSettings';
 import { LanguageSelector } from '@/components/settings/LanguageSelector';
 import { OnboardingProviderSetup } from '@/components/onboarding/OnboardingProviderSetup';
@@ -17870,6 +18397,22 @@ const handleBack = () =>
 ⋮----
 const handleFinish = async () =>
 ⋮----
+// Save agent profile changes
+⋮----
+// Find profiles that were added, updated, or deleted
+⋮----
+// Handle deleted profiles
+⋮----
+// Handle added and updated profiles
+⋮----
+// New profile
+⋮----
+// Updated profile - check if it actually changed
+⋮----
+// Update profile order if needed
+⋮----
+// eslint-disable-next-line no-console
+⋮----
 // eslint-disable-next-line no-console
 ⋮----
 {/* Language Selector in top-right corner */}
@@ -17884,7 +18427,7 @@ const handleFinish = async () =>
 ================
 File: src/renderer/src/pages/Settings.tsx
 ================
-import { Font, SettingsData, Theme } from '@common/types';
+import { Font, ProjectData, SettingsData, Theme, AgentProfile } from '@common/types';
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LlmProviderName } from '@common/agent';
@@ -17910,9 +18453,12 @@ type Props = {
   initialTab?: number;
   initialAgentProfileId?: string;
   initialAgentProvider?: LlmProviderName;
+  agentProfiles?: AgentProfile[];
+  setAgentProfiles?: (profiles: AgentProfile[]) => void;
+  openProjects?: ProjectData[];
 };
 ⋮----
-type PageId = 'general' | 'aider' | 'agent' | 'server' | 'about';
+type PageId = 'general' | 'aider' | 'agents' | 'server' | 'about';
 ⋮----
 interface SidebarItem {
   id: string;
@@ -17932,6 +18478,10 @@ const toggleExpand = (id: string) =>
 const handleItemClick = (item: SidebarItem) =>
 ⋮----
 const handleChildClick = (pageId: PageId, sectionId: string) =>
+⋮----
+// Handle agent context selection
+⋮----
+// Extract project baseDir from sectionId (format: agent-{baseDir})
 ⋮----
 const renderContent = () =>
 ⋮----
@@ -19756,6 +20306,7 @@ import { ROUTES } from '@/utils/routes';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { ApiProvider } from '@/contexts/ApiContext';
 import { ModelProviderProvider } from '@/contexts/ModelProviderContext';
+import { AgentsProvider } from '@/contexts/AgentsContext';
 ⋮----
 const ThemeAndFontManager = () =>
 ⋮----
@@ -20167,6 +20718,7 @@ File: package.json
     "env-paths": "^3.0.0",
     "express": "^4.21.2",
     "file-type": "^21.0.0",
+    "filenamify": "^7.0.1",
     "fix-path": "^4.0.0",
     "focus-trap-react": "^11.0.3",
     "framer-motion": "^11.18.2",
@@ -20208,6 +20760,7 @@ File: package.json
     "rehype-slug": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "simple-git": "^3.27.0",
+    "slugify": "^1.6.6",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "tailwind-merge": "^3.3.1",
