@@ -51,7 +51,7 @@ export const createAiderToolset = (task: Task, profile: AgentProfile, promptCont
         return `Getting context files denied by user. Reason: ${userInput}`;
       }
 
-      const files = task.getContextFiles();
+      const files = await task.getContextFiles();
       return JSON.stringify(files);
     },
   });

@@ -79,7 +79,8 @@ export class ContextApi extends BaseApi {
           return;
         }
 
-        const contextFiles = validatedProject.getTask(taskId)?.getContextFiles() || [];
+        const task = validatedProject.getTask(taskId);
+        const contextFiles = task ? await task.getContextFiles() : [];
         res.status(200).json(contextFiles);
       }),
     );

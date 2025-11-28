@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-import { CustomCommand, SettingsData, TaskData } from '@common/types';
+import { CustomCommand, ProjectSettings, SettingsData, TaskData } from '@common/types';
 import { fileExists } from '@common/utils';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -58,11 +58,13 @@ export class Project {
     this.eventManager.sendTaskCreated(task.task);
     await task.init();
 
-    this.getTask(INTERNAL_TASK_ID)
-      ?.getContextFiles()
-      ?.forEach((file) => {
+    const internalTask = this.getTask(INTERNAL_TASK_ID);
+    if (internalTask) {
+      const contextFiles = await internalTask.getContextFiles();
+      contextFiles.forEach((file) => {
         task.addFile(file);
       });
+    }
 
     return task.task;
   }
@@ -303,6 +305,12 @@ export class Project {
   async settingsChanged(oldSettings: SettingsData, newSettings: SettingsData) {
     this.tasks.forEach((task) => {
       void task.settingsChanged(oldSettings, newSettings);
+    });
+  }
+
+  async projectSettingsChanged(oldSettings: ProjectSettings, newSettings: ProjectSettings) {
+    this.tasks.forEach((task) => {
+      void task.projectSettingsChanged(oldSettings, newSettings);
     });
   }
 

@@ -493,11 +493,15 @@ export class Agent {
     profile: AgentProfile,
     prompt: string,
     promptContext?: PromptContext,
-    contextMessages: ContextMessage[] = task.getContextMessages(),
-    contextFiles: ContextFile[] = task.getContextFiles(),
+    initialContextMessages?: ContextMessage[],
+    initialContextFiles?: ContextFile[],
     systemPrompt?: string,
     abortSignal?: AbortSignal,
   ): Promise<ContextMessage[]> {
+    // Set default values inside function body since await can't be used in parameter initializers
+    const contextMessages = initialContextMessages ?? task.getContextMessages();
+    const contextFiles = initialContextFiles ?? (await task.getContextFiles());
+
     const settings = this.store.getSettings();
     const projectProfiles = this.agentProfileManager.getProjectProfiles(task.getProjectDir());
 
@@ -1020,7 +1024,7 @@ export class Agent {
         return 0;
       }
 
-      const messages = await this.prepareMessages(task, profile, task.getContextMessages(), task.getContextFiles());
+      const messages = await this.prepareMessages(task, profile, task.getContextMessages(), await task.getContextFiles());
       const toolSet = await this.getAvailableTools(task, profile, provider);
       const systemPrompt = await getSystemPrompt(task, profile);
 

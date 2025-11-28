@@ -7,6 +7,7 @@
 - agent profiles can now be created per project
 - agent profiles can be cut and pasted between projects via Settings
 - agent profiles can now have its own rules directory with rule files
+- showing rule files in context files tree in Agent mode
 
 ## [0.41.0]
 

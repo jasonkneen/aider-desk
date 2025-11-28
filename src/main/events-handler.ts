@@ -80,11 +80,15 @@ export class EventsHandler {
   }
 
   patchProjectSettings(baseDir: string, settings: Partial<ProjectSettings>): ProjectSettings {
-    const projectSettings = this.store.getProjectSettings(baseDir);
-    return this.store.saveProjectSettings(baseDir, {
-      ...projectSettings,
+    const oldProjectSettings = this.store.getProjectSettings(baseDir);
+    const updatedSettings = this.store.saveProjectSettings(baseDir, {
+      ...oldProjectSettings,
       ...settings,
     });
+
+    this.projectManager.projectSettingsChanged(baseDir, oldProjectSettings, updatedSettings);
+
+    return updatedSettings;
   }
 
   async startProject(baseDir: string) {

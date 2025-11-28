@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs';
+import fsPromises from 'fs/promises';
 
 import { AgentProfile, ToolApprovalState } from '@common/types';
 import {
@@ -27,12 +28,11 @@ import {
 } from '@common/tools';
 
 import logger from '@/logger';
-import { AIDER_DESK_PROJECT_RULES_DIR } from '@/constants';
 import { Task } from '@/task';
 
 export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, autoApprove = task.task.autoApprove, additionalInstructions?: string) => {
   const { useAiderTools, usePowerTools, useTodoTools, useSubagents } = agentProfile;
-  const rulesFilesXml = getRulesContent(task.getProjectDir(), agentProfile);
+  const rulesFilesXml = await getRulesContent(task, agentProfile);
   const customInstructions = [agentProfile.customInstructions, additionalInstructions].filter(Boolean).join('\n\n').trim();
 
   // Check individual power tool permissions
@@ -277,38 +277,39 @@ ${customInstructions ? `    <CustomInstructions><![CDATA[\n${customInstructions}
 `.trim();
 };
 
-const getRulesContent = (projectDir: string, agentProfile?: AgentProfile) => {
-  const ruleFilesDir = path.join(projectDir, AIDER_DESK_PROJECT_RULES_DIR);
-  const ruleFiles = fs.existsSync(ruleFilesDir) ? fs.readdirSync(ruleFilesDir) : [];
-  const agentsFilePath = path.join(projectDir, 'AGENTS.md');
+const getRulesContent = async (task: Task, agentProfile?: AgentProfile) => {
+  const ruleFiles = await task.getRuleFilesAsContextFiles(agentProfile);
+  const agentsFilePath = path.join(task.getProjectDir(), 'AGENTS.md');
 
-  const ruleFilesContent = ruleFiles
-    .map((file) => {
-      const filePath = path.join(ruleFilesDir, file);
-      const content = fs.readFileSync(filePath, 'utf8');
-      return `      <File name="${file}"><![CDATA[\n${content}\n]]></File>`;
-    })
-    .filter(Boolean);
-
-  // Agent profile-specific rule files
-  const agentRuleFilesContent: string[] = [];
-  if (agentProfile && agentProfile.ruleFiles && agentProfile.ruleFiles.length > 0) {
-    for (const ruleFilePath of agentProfile.ruleFiles) {
+  const ruleFilesContent = await Promise.all(
+    ruleFiles.map(async (file) => {
       try {
-        const content = fs.readFileSync(ruleFilePath, 'utf8');
-        const fileName = path.basename(ruleFilePath);
-        agentRuleFilesContent.push(`      <File name="${fileName}"><![CDATA[\n${content}\n]]></File>`);
+        // Resolve path - handle ~/ prefix and relative paths
+        let absolutePath: string;
+        if (file.path.startsWith('~/')) {
+          const homeDir = (await import('os')).homedir();
+          absolutePath = path.join(homeDir, file.path.slice(2));
+        } else if (path.isAbsolute(file.path)) {
+          absolutePath = file.path;
+        } else {
+          absolutePath = path.join(task.getProjectDir(), file.path);
+        }
+
+        const content = await fsPromises.readFile(absolutePath, 'utf8');
+        const fileName = path.basename(file.path);
+        return `      <File name="${fileName}"><![CDATA[\n${content}\n]]></File>`;
       } catch (err) {
-        logger.warn(`Failed to read agent rule file ${ruleFilePath}: ${err}`);
+        logger.warn(`Failed to read rule file ${file.path}: ${err}`);
+        return null;
       }
-    }
-  }
+    }),
+  );
 
   const agentsFileContent = fs.existsSync(agentsFilePath)
     ? `      <File name="AGENTS.md"><![CDATA[\n${fs.readFileSync(agentsFilePath, 'utf8')}\n]]></File>`
     : '';
 
-  return [agentsFileContent, ...ruleFilesContent, ...agentRuleFilesContent].filter(Boolean).join('\n');
+  return [agentsFileContent, ...ruleFilesContent].filter(Boolean).join('\n');
 };
 
 export const getInitProjectPrompt = () => {

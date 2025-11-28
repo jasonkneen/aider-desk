@@ -621,7 +621,10 @@
     "hideAllFiles": "隐藏所有文件",
     "expandAll": "全部展开",
     "collapseAll": "全部折叠",
-    "dropAll": "删除所有上下文文件"
+    "dropAll": "删除所有上下文文件",
+    "globalRule": "全局规则文件自动包含",
+    "projectRule": "项目规则文件自动包含",
+    "agentRule": "代理配置规则文件自动包含"
   },
   "modelSelector": {
     "mainModel": "主模型",

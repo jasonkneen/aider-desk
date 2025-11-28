@@ -6,6 +6,9 @@ import { HiChevronDown, HiChevronRight, HiOutlineTrash, HiPlus, HiX } from 'reac
 import { BiCollapseVertical, BiExpandVertical } from 'react-icons/bi';
 import { LuFolderTree } from 'react-icons/lu';
 import { TbPencilOff } from 'react-icons/tb';
+import { MdOutlinePublic } from 'react-icons/md';
+import { RiRobot2Line } from 'react-icons/ri';
+import { VscFileCode } from 'react-icons/vsc';
 import { useTranslation } from 'react-i18next';
 import { useLocalStorage, usePrevious } from '@reactuses/core';
 
@@ -348,93 +351,124 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
           }}
           onExpandItem={(item) => setExpandedItems([...expandedItems, item.index as string])}
           onCollapseItem={(item) => setExpandedItems(expandedItems.filter((expandedItemIndex) => expandedItemIndex !== item.index))}
-          renderItem={({ item, title, children, context }) => (
-            <>
-              <div className="flex space-between items-center w-full pr-1 h-6">
-                <div className="flex items-center flex-grow min-w-0">
-                  {item.isFolder ? (
-                    <span className="flex items-center justify-center" {...context.arrowProps}>
-                      {context.isExpanded ? (
-                        <HiChevronDown className="w-3 h-3 text-text-muted-dark" />
-                      ) : (
-                        <HiChevronRight className="w-3 h-3 text-text-muted-dark" />
-                      )}
-                    </span>
-                  ) : (
-                    <span className="w-3 h-3 inline-block" />
-                  )}
-                  <span
-                    className={`select-none text-2xs overflow-hidden ${item.isFolder ? 'context-dimmed' : 'text-text-primary font-semibold'}`}
-                    {...(item.isFolder ? { onClick: context.arrowProps.onClick } : {})}
-                    data-tooltip-id="context-files-tooltip"
-                    data-tooltip-content={getFileTokenTooltip(item as TreeItem)}
-                    data-tooltip-delay-show={800}
-                  >
-                    {title}
-                  </span>
-                </div>
-                {item.isFolder ? (
-                  <>
-                    {showAllFiles ? (
-                      <>
-                        <button
-                          onClick={dropFile(item as TreeItem)}
-                          className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-error-dark"
-                        >
-                          <HiX className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={addFile(item as TreeItem)}
-                          className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-text-primary"
-                          data-tooltip-id="context-files-tooltip"
-                          data-tooltip-content={os === OS.MacOS ? t('contextFiles.addFileTooltip.cmd') : t('contextFiles.addFileTooltip.ctrl')}
-                        >
-                          <HiPlus className="w-4 h-4" />
-                        </button>
-                      </>
-                    ) : null}
-                  </>
-                ) : (
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {(item as TreeItem).file?.readOnly && (
-                      <TbPencilOff
-                        className="w-4 h-4 text-text-muted-light"
-                        data-tooltip-id="context-files-tooltip"
-                        data-tooltip-content={t('contextFiles.readOnly')}
-                      />
-                    )}
-                    {showAllFiles ? (
-                      contextFiles.some((f) => normalizePath(f.path) === normalizePath((item as TreeItem).file?.path || '')) ? (
-                        <button
-                          onClick={dropFile(item as TreeItem)}
-                          className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-error-dark"
-                        >
-                          <HiX className="w-4 h-4" />
-                        </button>
-                      ) : (
-                        <button
-                          onClick={addFile(item as TreeItem)}
-                          className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-text-primary"
-                          data-tooltip-id="context-files-tooltip"
-                          data-tooltip-content={os === OS.MacOS ? t('contextFiles.addFileTooltip.cmd') : t('contextFiles.addFileTooltip.ctrl')}
-                        >
-                          <HiPlus className="w-4 h-4" />
-                        </button>
-                      )
+          renderItem={({ item, title, children, context }) => {
+            const source = (item as TreeItem).file?.source;
+            const isRuleFile = source === 'global-rule' || source === 'project-rule' || source === 'agent-rule';
+
+            return (
+              <>
+                <div className="flex space-between items-center w-full pr-1 h-6">
+                  <div className="flex items-center flex-grow min-w-0">
+                    {item.isFolder ? (
+                      <span className="flex items-center justify-center" {...context.arrowProps}>
+                        {context.isExpanded ? (
+                          <HiChevronDown className="w-3 h-3 text-text-muted-dark" />
+                        ) : (
+                          <HiChevronRight className="w-3 h-3 text-text-muted-dark" />
+                        )}
+                      </span>
                     ) : (
-                      <button
-                        onClick={dropFile(item as TreeItem)}
-                        className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-error-dark"
-                      >
-                        <HiX className="w-4 h-4" />
-                      </button>
+                      <span className="w-3 h-3 inline-block" />
                     )}
+                    <span
+                      className={`select-none text-2xs overflow-hidden ${item.isFolder ? 'context-dimmed' : 'text-text-primary font-semibold'}`}
+                      {...(item.isFolder ? { onClick: context.arrowProps.onClick } : {})}
+                      data-tooltip-id="context-files-tooltip"
+                      data-tooltip-content={getFileTokenTooltip(item as TreeItem)}
+                      data-tooltip-delay-show={800}
+                    >
+                      {title}
+                    </span>
                   </div>
-                )}
-              </div>
-              {children}
-            </>
-          )}
+                  {item.isFolder ? (
+                    <>
+                      {showAllFiles ? (
+                        <>
+                          <button
+                            onClick={dropFile(item as TreeItem)}
+                            className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-error-dark"
+                          >
+                            <HiX className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={addFile(item as TreeItem)}
+                            className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-text-primary"
+                            data-tooltip-id="context-files-tooltip"
+                            data-tooltip-content={os === OS.MacOS ? t('contextFiles.addFileTooltip.cmd') : t('contextFiles.addFileTooltip.ctrl')}
+                          >
+                            <HiPlus className="w-4 h-4" />
+                          </button>
+                        </>
+                      ) : null}
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      {(item as TreeItem).file?.source && (
+                        <>
+                          {(item as TreeItem).file?.source === 'global-rule' && (
+                            <MdOutlinePublic
+                              className="w-4 h-4 text-text-muted-light"
+                              data-tooltip-id="context-files-tooltip"
+                              data-tooltip-content={t('contextFiles.globalRule')}
+                            />
+                          )}
+                          {(item as TreeItem).file?.source === 'project-rule' && (
+                            <VscFileCode
+                              className="w-4 h-4 text-text-muted-light"
+                              data-tooltip-id="context-files-tooltip"
+                              data-tooltip-content={t('contextFiles.projectRule')}
+                            />
+                          )}
+                          {(item as TreeItem).file?.source === 'agent-rule' && (
+                            <RiRobot2Line
+                              className="w-4 h-4 text-text-muted-light"
+                              data-tooltip-id="context-files-tooltip"
+                              data-tooltip-content={t('contextFiles.agentRule')}
+                            />
+                          )}
+                        </>
+                      )}
+                      {(item as TreeItem).file?.readOnly && !isRuleFile && (
+                        <TbPencilOff
+                          className="w-4 h-4 text-text-muted-light"
+                          data-tooltip-id="context-files-tooltip"
+                          data-tooltip-content={t('contextFiles.readOnly')}
+                        />
+                      )}
+                      {showAllFiles ? (
+                        contextFiles.some((f) => normalizePath(f.path) === normalizePath((item as TreeItem).file?.path || '')) ? (
+                          <button
+                            onClick={dropFile(item as TreeItem)}
+                            className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-error-dark"
+                            disabled={!!(item as TreeItem).file?.source}
+                          >
+                            <HiX className="w-4 h-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={addFile(item as TreeItem)}
+                            className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-text-primary"
+                            data-tooltip-id="context-files-tooltip"
+                            data-tooltip-content={os === OS.MacOS ? t('contextFiles.addFileTooltip.cmd') : t('contextFiles.addFileTooltip.ctrl')}
+                          >
+                            <HiPlus className="w-4 h-4" />
+                          </button>
+                        )
+                      ) : isRuleFile ? null : (
+                        <button
+                          onClick={dropFile(item as TreeItem)}
+                          className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-error-dark"
+                        >
+                          <HiX className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {children}
+              </>
+            );
+          }}
           canDragAndDrop={false}
           canDropOnFolder={false}
           canReorderItems={false}

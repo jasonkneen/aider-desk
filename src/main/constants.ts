@@ -1,4 +1,5 @@
 import path from 'path';
+import { homedir } from 'os';
 
 import { getDataDir, getResourceDir } from './paths';
 
@@ -28,6 +29,7 @@ export const AIDER_DESK_TASKS_DIR = path.join(AIDER_DESK_DIR, 'tasks');
 export const AIDER_DESK_TODOS_FILE = 'todos.json';
 export const AIDER_DESK_RULES_DIR = 'rules';
 export const AIDER_DESK_PROJECT_RULES_DIR = path.join(AIDER_DESK_DIR, AIDER_DESK_RULES_DIR);
+export const AIDER_DESK_GLOBAL_RULES_DIR = path.join(homedir(), AIDER_DESK_DIR, AIDER_DESK_RULES_DIR);
 export const AIDER_DESK_COMMANDS_DIR = path.join(AIDER_DESK_DIR, 'commands');
 export const AIDER_DESK_AGENTS_DIR = path.join(AIDER_DESK_DIR, 'agents');
 export const AIDER_DESK_TMP_DIR = path.join(AIDER_DESK_DIR, 'tmp');

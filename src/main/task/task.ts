@@ -1,5 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { homedir } from 'os';
 
 import { simpleGit } from 'simple-git';
 import YAML from 'yaml';
@@ -16,6 +17,7 @@ import {
   MessageRole,
   Mode,
   ModelsData,
+  ProjectSettings,
   PromptContext,
   QuestionData,
   ResponseChunkData,
@@ -41,7 +43,7 @@ import type { SimpleGit } from 'simple-git';
 
 import { getAllFiles } from '@/utils/file-system';
 import { getCompactConversationPrompt, getGenerateCommitMessagePrompt, getInitProjectPrompt, getSystemPrompt } from '@/agent/prompts';
-import { AIDER_DESK_TASKS_DIR, AIDER_DESK_TODOS_FILE, WORKTREE_BRANCH_PREFIX } from '@/constants';
+import { AIDER_DESK_TASKS_DIR, AIDER_DESK_TODOS_FILE, WORKTREE_BRANCH_PREFIX, AIDER_DESK_PROJECT_RULES_DIR, AIDER_DESK_GLOBAL_RULES_DIR } from '@/constants';
 import { Agent, AgentProfileManager, McpManager } from '@/agent';
 import { Connector } from '@/connector';
 import { DataManager } from '@/data-manager';
@@ -272,9 +274,10 @@ export class Task {
 
     await this.init();
 
+    const mode = this.store.getProjectSettings(this.project.baseDir).currentMode;
     return {
       messages: this.contextManager.getContextMessagesData(),
-      files: this.contextManager.getContextFiles(),
+      files: await this.getContextFiles(mode === 'agent'),
       todoItems: await this.getTodos(),
       question: this.currentQuestion,
       workingMode: this.task.workingMode || 'local',
@@ -288,7 +291,7 @@ export class Task {
     });
 
     await this.contextManager.load();
-    this.sendContextFilesUpdated();
+    await this.sendContextFilesUpdated();
   }
 
   public addConnector(connector: Connector) {
@@ -328,7 +331,7 @@ export class Task {
       this.sendUpdateEnvVars(environmentVariables);
     }
     if (connector.listenTo.includes('request-context-info')) {
-      connector.sendRequestTokensInfoMessage(this.contextManager.toConnectorMessages(), this.getContextFiles());
+      connector.sendRequestTokensInfoMessage(this.contextManager.toConnectorMessages(), this.contextManager.getContextFiles());
     }
   }
 
@@ -820,7 +823,7 @@ export class Task {
       this.sendAddFile(addedFile);
     }
 
-    this.sendContextFilesUpdated();
+    await this.sendContextFilesUpdated();
     await this.updateContextInfo(true, true);
 
     return true;
@@ -840,7 +843,7 @@ export class Task {
       this.sendDropFile(droppedFile.path, droppedFile.readOnly);
     }
 
-    this.sendContextFilesUpdated();
+    void this.sendContextFilesUpdated();
     void this.updateContextInfo(true, true);
   }
 
@@ -853,8 +856,11 @@ export class Task {
     this.findMessageConnectors('drop-file').forEach((connector) => connector.sendDropFileMessage(pathToSend, noUpdate));
   }
 
-  private sendContextFilesUpdated() {
-    this.eventManager.sendContextFilesUpdated(this.project.baseDir, this.taskId, this.contextManager.getContextFiles());
+  private async sendContextFilesUpdated() {
+    const mode = this.store.getProjectSettings(this.project.baseDir).currentMode;
+    const allFiles = await this.getContextFiles(mode === 'agent');
+
+    this.eventManager.sendContextFilesUpdated(this.project.baseDir, this.taskId, allFiles);
   }
 
   public async runCommand(command: string, addToHistory = true) {
@@ -872,7 +878,7 @@ export class Task {
 
     if (command.trim() === 'drop' || command.trim() === 'reset') {
       this.contextManager.clearContextFiles();
-      this.sendContextFilesUpdated();
+      void this.sendContextFilesUpdated();
     }
 
     if (command.trim() === 'reset') {
@@ -928,7 +934,7 @@ export class Task {
 
   public updateContextFiles(contextFiles: ContextFile[]) {
     this.contextManager.setContextFiles(contextFiles, false);
-    this.sendContextFilesUpdated();
+    void this.sendContextFilesUpdated();
     void this.updateContextInfo(true, true);
   }
 
@@ -1092,7 +1098,7 @@ export class Task {
   }
 
   public async getAddableFiles(searchRegex?: string): Promise<string[]> {
-    const contextFilePaths = new Set(this.getContextFiles().map((file) => file.path));
+    const contextFilePaths = new Set((await this.getContextFiles()).map((file) => file.path));
     let files = (await getAllFiles(this.getTaskDir())).filter((file) => !contextFilePaths.has(file));
 
     if (searchRegex) {
@@ -1110,8 +1116,89 @@ export class Task {
     return files;
   }
 
-  public getContextFiles(): ContextFile[] {
-    return this.contextManager.getContextFiles();
+  public async getContextFiles(includeRuleFiles = false): Promise<ContextFile[]> {
+    const contextFiles = this.contextManager.getContextFiles();
+
+    if (!includeRuleFiles) {
+      return contextFiles;
+    }
+
+    const profile = await this.getActiveAgentProfile();
+    const ruleFiles = await this.getRuleFilesAsContextFiles(profile || undefined);
+    return [...contextFiles, ...ruleFiles];
+  }
+
+  public async getRuleFilesAsContextFiles(profile?: AgentProfile): Promise<ContextFile[]> {
+    const ruleFiles: ContextFile[] = [];
+    const homeDir = homedir();
+
+    // Get global rule files
+    try {
+      const globalRulesDir = AIDER_DESK_GLOBAL_RULES_DIR;
+      const globalRuleFileNames = await fs.readdir(globalRulesDir);
+      for (const fileName of globalRuleFileNames) {
+        if (fileName.endsWith('.md')) {
+          const absolutePath = path.join(globalRulesDir, fileName);
+          // Convert to relative path with ~/ prefix
+          const relativePath = path.join('~', path.relative(homeDir, absolutePath));
+          ruleFiles.push({
+            path: relativePath,
+            readOnly: true,
+            source: 'global-rule',
+          });
+        }
+      }
+    } catch (error) {
+      // Global rules directory doesn't exist or can't be read
+      logger.debug('Could not read global rules directory', { error });
+    }
+
+    // Get project rule files
+    try {
+      const projectRulesDir = path.join(this.project.baseDir, AIDER_DESK_PROJECT_RULES_DIR);
+      const projectRuleFileNames = await fs.readdir(projectRulesDir);
+      for (const fileName of projectRuleFileNames) {
+        if (fileName.endsWith('.md')) {
+          const relativePath = path.join(AIDER_DESK_PROJECT_RULES_DIR, fileName);
+          ruleFiles.push({
+            path: relativePath,
+            readOnly: true,
+            source: 'project-rule',
+          });
+        }
+      }
+    } catch (error) {
+      // Project rules directory doesn't exist or can't be read
+      logger.debug('Could not read project rules directory', { error });
+    }
+
+    // Get agent profile rule files
+    if (profile && profile.ruleFiles && profile.ruleFiles.length > 0) {
+      for (const ruleFilePath of profile.ruleFiles) {
+        try {
+          await fs.access(ruleFilePath);
+          // Convert to relative path with ~/ prefix if in home directory
+          let displayPath: string;
+          if (ruleFilePath.startsWith(this.project.baseDir)) {
+            displayPath = path.relative(this.project.baseDir, ruleFilePath);
+          } else if (ruleFilePath.startsWith(homeDir)) {
+            displayPath = path.join('~', path.relative(homeDir, ruleFilePath));
+          } else {
+            displayPath = ruleFilePath;
+          }
+          ruleFiles.push({
+            path: displayPath,
+            readOnly: true,
+            source: 'agent-rule',
+          });
+        } catch (error) {
+          // Rule file doesn't exist or can't be accessed
+          logger.debug('Could not access agent rule file', { ruleFilePath, error });
+        }
+      }
+    }
+
+    return ruleFiles;
   }
 
   public getRepoMap(): string {
@@ -1472,9 +1559,10 @@ export class Task {
     await this.updateAgentEstimatedTokens(checkContextFilesIncluded, checkRepoMapIncluded);
   }
 
-  private sendRequestContextInfo() {
+  private async sendRequestContextInfo() {
+    const contextFiles = await this.getContextFiles();
     this.findMessageConnectors('request-context-info').forEach((connector) =>
-      connector.sendRequestTokensInfoMessage(this.contextManager.toConnectorMessages(), this.getContextFiles()),
+      connector.sendRequestTokensInfoMessage(this.contextManager.toConnectorMessages(), contextFiles),
     );
   }
 
@@ -1575,6 +1663,15 @@ export class Task {
 
   async modelsUpdated() {
     await this.sendUpdateModelsInfo();
+  }
+
+  async projectSettingsChanged(oldSettings: ProjectSettings, newSettings: ProjectSettings) {
+    const modeChanged = oldSettings.currentMode !== newSettings.currentMode;
+    const agentProfileIdChanged = oldSettings.agentProfileId !== newSettings.agentProfileId;
+
+    if (agentProfileIdChanged || modeChanged) {
+      void this.sendContextFilesUpdated();
+    }
   }
 
   private sendUpdateEnvVars(environmentVariables: Record<string, unknown>) {
@@ -2098,7 +2195,7 @@ ${error.stderr}`,
     });
 
     // Copy context files
-    const contextFiles = sourceTask.getContextFiles();
+    const contextFiles = await sourceTask.getContextFiles();
     for (const file of contextFiles) {
       await this.addFile(file);
     }

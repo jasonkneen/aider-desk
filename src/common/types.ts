@@ -228,6 +228,7 @@ export type ContextMessage = ContextUserMessage | ContextAssistantMessage | Cont
 export interface ContextFile {
   path: string;
   readOnly?: boolean;
+  source?: 'global-rule' | 'project-rule' | 'agent-rule';
 }
 
 export interface WindowState {

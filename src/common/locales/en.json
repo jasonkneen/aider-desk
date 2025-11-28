@@ -665,7 +665,10 @@
     "hideAllFiles": "Hide all files",
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
-    "dropAll": "Drop all context files"
+    "dropAll": "Drop all context files",
+    "globalRule": "Global rule file included automatically",
+    "projectRule": "Project rule file included automatically",
+    "agentRule": "Agent profile rule file included automatically"
   },
   "modelSelector": {
     "mainModel": "Main model",
