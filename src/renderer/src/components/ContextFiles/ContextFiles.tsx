@@ -438,7 +438,7 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
         <AnimatePresence initial={false}>
           {isOpen && (
             <motion.div
-              className="flex-grow w-full overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-bg-tertiary scrollbar-track-bg-primary-light scrollbar-rounded px-1 pb-2 bg-bg-primary-light-strong relative"
+              className="flex-grow w-full overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-bg-tertiary scrollbar-track-bg-primary-light scrollbar-rounded pl-1 py-1 bg-bg-primary-light-strong relative"
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
