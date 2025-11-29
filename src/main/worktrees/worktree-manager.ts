@@ -1268,6 +1268,8 @@ export class WorktreeManager {
             worktree,
             error: error instanceof Error ? error.message : String(error),
           });
+          // in case of failure, try to remove the directory manually
+          await rm(worktree.path, { recursive: true, force: true });
         }
       }
     }
