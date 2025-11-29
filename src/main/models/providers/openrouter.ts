@@ -227,13 +227,16 @@ export const getOpenRouterUsageReport = (
 };
 
 // === Configuration Helper Functions ===
-export const getOpenRouterCacheControl = (profile: AgentProfile, llmProvider: LlmProvider): CacheControl => {
+export const getOpenRouterCacheControl = (profile: AgentProfile, llmProvider: LlmProvider): CacheControl | undefined => {
   if (isOpenRouterProvider(llmProvider)) {
     if (profile.model?.startsWith('anthropic/')) {
       return {
-        openrouter: {
-          cacheControl: { type: 'ephemeral' },
+        providerOptions: {
+          openrouter: {
+            cacheControl: { type: 'ephemeral' },
+          },
         },
+        placement: 'message-part',
       };
     }
   }

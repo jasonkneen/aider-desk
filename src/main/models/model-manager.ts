@@ -587,7 +587,7 @@ export class ModelManager {
     return strategy.getUsageReport(task, provider, modelObj, usage, providerMetadata);
   }
 
-  getCacheControl(profile: AgentProfile, llmProvider: LlmProvider): CacheControl {
+  getCacheControl(profile: AgentProfile, llmProvider: LlmProvider): CacheControl | undefined {
     const strategy = this.providerRegistry[llmProvider.name];
     if (!strategy?.getCacheControl) {
       return undefined;

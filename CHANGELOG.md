@@ -8,6 +8,7 @@
 - agent profiles can be cut and pasted between projects via Settings
 - agent profiles can now have its own rules directory with rule files
 - showing rule files in context files tree in Agent mode
+- fixed issue with caching when using OpenRouter provider and Anthropic models
 
 ## [0.41.0]
 

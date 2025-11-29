@@ -14,7 +14,7 @@ import {
 import { extractTextContent } from '@common/utils';
 
 import logger from '@/logger';
-import { CacheControl } from '@/models';
+import { type CacheControl } from '@/models';
 
 /**
  * Optimizes the messages before sending them to the LLM. This should reduce the token count and improve the performance.
@@ -24,7 +24,7 @@ export const optimizeMessages = (
   projectProfiles: AgentProfile[],
   userRequestMessageIndex: number,
   messages: ModelMessage[],
-  cacheControl: CacheControl,
+  cacheControl: CacheControl | undefined,
   task?: TaskData,
 ) => {
   if (messages.length === 0) {
@@ -53,10 +53,24 @@ export const optimizeMessages = (
   const lastMessage = optimizedMessages[messages.length - 1];
 
   if (cacheControl) {
-    lastMessage.providerOptions = {
-      ...lastMessage.providerOptions,
-      ...cacheControl,
-    };
+    const placement = cacheControl.placement ?? 'message';
+
+    if (placement === 'message-part') {
+      if (Array.isArray(lastMessage.content) && lastMessage.content.length > 0) {
+        const lastContent = lastMessage.content[lastMessage.content.length - 1];
+        if (lastContent && typeof lastContent === 'object') {
+          lastContent.providerOptions = {
+            ...lastContent.providerOptions,
+            ...cacheControl.providerOptions,
+          };
+        }
+      }
+    } else {
+      lastMessage.providerOptions = {
+        ...lastMessage.providerOptions,
+        ...cacheControl.providerOptions,
+      };
+    }
   }
 
   return optimizedMessages;

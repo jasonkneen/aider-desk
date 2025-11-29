@@ -153,11 +153,14 @@ export const getMinimaxUsageReport = (
 };
 
 // === Configuration Helper Functions ===
-export const getMinimaxCacheControl = (): CacheControl => {
+export const getMinimaxCacheControl = (): CacheControl | undefined => {
   return {
-    anthropic: {
-      cacheControl: { type: 'ephemeral' },
+    providerOptions: {
+      anthropic: {
+        cacheControl: { type: 'ephemeral' },
+      },
     },
+    placement: 'message',
   };
 };
 

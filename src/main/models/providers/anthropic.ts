@@ -163,11 +163,14 @@ export const getAnthropicUsageReport = (
 };
 
 // === Configuration Helper Functions ===
-export const getAnthropicCacheControl = (): CacheControl => {
+export const getAnthropicCacheControl = (): CacheControl | undefined => {
   return {
-    anthropic: {
-      cacheControl: { type: 'ephemeral' },
+    providerOptions: {
+      anthropic: {
+        cacheControl: { type: 'ephemeral' },
+      },
     },
+    placement: 'message',
   };
 };
 

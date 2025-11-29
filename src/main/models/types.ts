@@ -6,7 +6,10 @@ import type { LanguageModelUsage, ToolSet } from 'ai';
 
 import { Task } from '@/task';
 
-export type CacheControl = SharedV2ProviderOptions | undefined;
+export interface CacheControl {
+  providerOptions: SharedV2ProviderOptions;
+  placement?: 'message' | 'message-part';
+}
 
 export interface AiderModelMapping {
   modelName: string;
@@ -61,7 +64,7 @@ export interface LlmProviderStrategy {
   /**
    * Returns provider-specific cache control configuration
    */
-  getCacheControl?: (profile: AgentProfile, provider: LlmProvider) => CacheControl;
+  getCacheControl?: (profile: AgentProfile, provider: LlmProvider) => CacheControl | undefined;
 
   /**
    * Returns provider-specific options for model instantiation

@@ -193,6 +193,10 @@ export const getRequestyUsageReport = (
 
   // Extract cache tokens from provider metadata
   const { requesty } = providerMetadata as RequestyProviderMetadata;
+  logger.info('Requesty usage report', {
+    requesty,
+    usage,
+  });
   const cacheWriteTokens = requesty?.usage?.cachingTokens ?? 0;
   const cacheReadTokens = requesty?.usage?.cachedTokens ?? 0;
 
@@ -214,13 +218,16 @@ export const getRequestyUsageReport = (
 };
 
 // === Configuration Helper Functions ===
-export const getRequestyCacheControl = (profile: AgentProfile, llmProvider: LlmProvider): CacheControl => {
+export const getRequestyCacheControl = (profile: AgentProfile, llmProvider: LlmProvider): CacheControl | undefined => {
   if (isRequestyProvider(llmProvider) && !llmProvider.useAutoCache) {
     if (profile.model?.startsWith('anthropic/')) {
       return {
-        requesty: {
-          cacheControl: { type: 'ephemeral' },
+        providerOptions: {
+          requesty: {
+            cacheControl: { type: 'ephemeral' },
+          },
         },
+        placement: 'message',
       };
     }
   }
