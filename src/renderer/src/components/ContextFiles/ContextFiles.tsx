@@ -428,11 +428,13 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
 
           <span className="text-xs font-semibold uppercase flex-grow text-text-secondary">{title}</span>
 
-          <span className="text-2xs text-text-tertiary mr-2 bg-bg-secondary-light px-1.5 rounded-full">{count}</span>
+          {!isOpen && <span className="text-2xs text-text-tertiary mr-2 bg-bg-secondary-light px-1.5 rounded-full">{count}</span>}
 
-          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-            {actions}
-          </div>
+          {isOpen && (
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+              {actions}
+            </div>
+          )}
         </div>
 
         <AnimatePresence initial={false}>
