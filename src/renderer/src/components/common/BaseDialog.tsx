@@ -11,9 +11,10 @@ type Props = {
   footer?: ReactNode;
   width?: number;
   closeOnEscape?: boolean;
+  closeButtonText?: string;
 };
 
-export const BaseDialog = ({ title, onClose, children, contentClass, footer, width = 500, closeOnEscape = true }: Props) => {
+export const BaseDialog = ({ title, onClose, children, contentClass, footer, width = 500, closeOnEscape = true, closeButtonText }: Props) => {
   const { t } = useTranslation();
   const dialogRef = useRef<HTMLDivElement>(null);
 
@@ -58,7 +59,7 @@ export const BaseDialog = ({ title, onClose, children, contentClass, footer, wid
           <div className="px-6 py-4 border-t border-bg-tertiary-strong flex justify-end space-x-3 flex-shrink-0">
             {footer || (
               <button onClick={onClose} className="bg-bg-fourth text-text-primary px-4 py-2 rounded hover:bg-bg-fifth">
-                {t('common.cancel')}
+                {closeButtonText || t('common.cancel')}
               </button>
             )}
           </div>
