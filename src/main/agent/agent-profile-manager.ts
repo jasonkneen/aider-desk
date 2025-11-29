@@ -5,6 +5,7 @@ import { homedir } from 'os';
 import { FSWatcher, watch } from 'chokidar';
 import debounce from 'lodash/debounce';
 import { DEFAULT_AGENT_PROFILES } from '@common/agent';
+import { fileExists } from '@common/utils';
 
 import type { AgentProfile } from '@common/types';
 
@@ -381,6 +382,10 @@ export class AgentProfileManager {
 
   private async loadProfileFile(filePath: string, dirName: string): Promise<AgentProfile | null> {
     try {
+      if (!(await fileExists(filePath))) {
+        return null;
+      }
+
       logger.debug(`Loading agent profile from ${filePath}`);
 
       const content = await fs.readFile(filePath, 'utf-8');

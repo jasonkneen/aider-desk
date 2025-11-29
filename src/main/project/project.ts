@@ -17,6 +17,7 @@ import { EventManager } from '@/events';
 import { Task } from '@/task';
 import { migrateSessionsToTasks } from '@/project/migrations';
 import { WorktreeManager } from '@/worktrees';
+import { AIDER_DESK_WATCH_FILES_LOCK } from '@/constants';
 
 const INTERNAL_TASK_ID = 'internal';
 
@@ -319,5 +320,17 @@ export class Project {
     this.agentProfileManager.removeProject(this.baseDir);
     await Promise.all(Array.from(this.tasks.values()).map((task) => task.close()));
     await this.worktreeManager.close(this.baseDir);
+
+    // Remove watch-files lock file if it exists
+    const lockFilePath = path.join(this.baseDir, AIDER_DESK_WATCH_FILES_LOCK);
+    try {
+      await fs.unlink(lockFilePath);
+      logger.debug('Removed watch-files lock file', { lockFilePath });
+    } catch (error) {
+      // Ignore error if file doesn't exist
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        logger.warn('Failed to remove watch-files lock file', { lockFilePath, error });
+      }
+    }
   }
 }

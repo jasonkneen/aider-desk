@@ -23,6 +23,7 @@ from concurrent.futures import ThreadPoolExecutor, Future
 import nest_asyncio
 import litellm
 import types
+import fcntl
 
 class PromptContext:
   def __init__(self, id: str, group=None, auto_approve=False, deny_commands=False):
@@ -554,21 +555,47 @@ class ConnectorInputOutput(InputOutput):
 
   def interrupt_input(self):
     async def process_changes():
-      # Generate a new prompt ID for file watcher changes
-      await self.connector.prompt_executor.run_prompt(prompt, prompt_context, "code", files=[{"path": file_path, "readOnly": False} for file_path in sorted(self.connector.file_watcher.changed_files)])
+      lock_file_path = Path(self.connector.base_dir) / '.aider-desk' / 'watch-files.lock'
+      lock_file = None
 
-      # Wait for completion by awaiting the task
-      if prompt_context.id in self.connector.prompt_executor.active_prompts:
-        task = self.connector.prompt_executor.active_prompts[prompt_context.id]
+      try:
+        # Create lock file directory if it doesn't exist
+        lock_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Try to acquire lock file
+        lock_file = open(lock_file_path, 'w')
         try:
-          await task
-          await self.connector.send_add_context_files()
-        except asyncio.CancelledError:
-          pass # The task was cancelled, which is an expected way for it to end.
-        finally:
-          prompt_context.group["finished"] = True
-          await self.connector.send_log_message("loading", "", True, prompt_context)
-          self.connector.file_watcher.start()
+          # Try to acquire exclusive lock (non-blocking)
+          fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+          # Successfully acquired lock, proceed with processing
+          await self.connector.send_log_message("loading", "Processing request...", False, prompt_context)
+          await self.connector.prompt_executor.run_prompt(prompt, prompt_context, "code", files=[{"path": file_path, "readOnly": False} for file_path in sorted(self.connector.file_watcher.changed_files)])
+
+          # Wait for completion by awaiting the task
+          if prompt_context.id in self.connector.prompt_executor.active_prompts:
+            task = self.connector.prompt_executor.active_prompts[prompt_context.id]
+            try:
+              await task
+              await self.connector.send_add_context_files()
+            except asyncio.CancelledError:
+              pass # The task was cancelled, which is an expected way for it to end.
+            finally:
+              prompt_context.group["finished"] = True
+              await self.connector.send_log_message("loading", "", True, prompt_context)
+              self.connector.file_watcher.start()
+
+        except (IOError, BlockingIOError):
+          # Lock is held by another process, skip processing
+          self.connector.coder.io.tool_output("File changes already being processed by another task, skipping...")
+          return
+
+      except Exception as e:
+        self.connector.coder.io.tool_error(f"Error in file changes processing: {str(e)}")
+      finally:
+        # Explicitly close the lock file to release the lock
+        if lock_file:
+          lock_file.close()
 
     if self.connector.file_watcher:
       prompt = self.connector.file_watcher.process_changes()
@@ -581,7 +608,6 @@ class ConnectorInputOutput(InputOutput):
         }
         prompt_context = PromptContext(str(uuid.uuid4()), group)
 
-        wait_for_async(self.connector, self.connector.send_log_message("loading", "Processing request...", False, prompt_context))
         self.connector.loop.create_task(process_changes())
 
 def clone_coder(connector, coder, prompt_context=None, messages=None, files=None, **kwargs):

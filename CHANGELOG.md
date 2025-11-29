@@ -9,6 +9,7 @@
 - agent profiles can now have its own rules directory with rule files
 - showing rule files in context files tree in Agent mode
 - fixed issue with caching when using OpenRouter provider and Anthropic models
+- watch files functionality now correctly only triggers once per project
 
 ## [0.41.0]
 
