@@ -22,7 +22,7 @@ import { useAgents } from '@/contexts/AgentsContext';
 type Props = {
   projectDir: string;
   isActive: boolean;
-  showSettingsPage?: (tab?: number) => void;
+  showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
 };
 
 export const AgentSelector = ({ projectDir, isActive, showSettingsPage }: Props) => {
@@ -173,7 +173,7 @@ export const AgentSelector = ({ projectDir, isActive, showSettingsPage }: Props)
   };
 
   const handleOpenAgentProfiles = () => {
-    showSettingsPage?.(2);
+    showSettingsPage?.('agents', { agentProfileId: activeProfile.id });
     setSelectorVisible(false);
   };
 

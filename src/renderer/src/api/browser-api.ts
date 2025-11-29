@@ -648,7 +648,7 @@ export class BrowserApi implements ApplicationAPI {
     void callback;
     return () => {};
   }
-  addOpenSettingsListener(callback: (tabIndex: number) => void): () => void {
+  addOpenSettingsListener(callback: (pageId: string) => void): () => void {
     void callback;
     return () => {};
   }

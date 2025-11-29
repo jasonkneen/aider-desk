@@ -158,7 +158,7 @@ export interface ApplicationAPI {
   addTerminalDataListener: (baseDir: string, callback: (data: TerminalData) => void) => () => void;
   addTerminalExitListener: (baseDir: string, callback: (data: TerminalExitData) => void) => () => void;
   addContextMenuListener: (callback: (params: Electron.ContextMenuParams) => void) => () => void;
-  addOpenSettingsListener: (callback: (tabIndex: number) => void) => () => void;
+  addOpenSettingsListener: (callback: (pageId: string) => void) => () => void;
 
   // Task lifecycle event listeners
   addTaskCreatedListener: (baseDir: string, callback: (data: TaskData) => void) => () => void;

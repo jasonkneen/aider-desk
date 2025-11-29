@@ -22,6 +22,11 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 
 let hasShownUpdateNotification = false;
 
+type ShowSettingsInfo = {
+  pageId: string;
+  options?: Record<string, unknown>;
+};
+
 export const Home = () => {
   const { t } = useTranslation();
   const { versions } = useVersions();
@@ -31,15 +36,22 @@ export const Home = () => {
   const [isOpenProjectDialogVisible, setIsOpenProjectDialogVisible] = useState(false);
   const [isCtrlPressed, setIsCtrlPressed] = useState(false);
   const [isTabbing, setIsTabbing] = useState(false);
-  const [showSettingsTab, setShowSettingsTab] = useState<number | null>(null);
+  const [showSettingsInfo, setShowSettingsInfo] = useState<ShowSettingsInfo | null>(null);
   const [releaseNotesContent, setReleaseNotesContent] = useState<string | null>(null);
   const [isUsageDashboardVisible, setIsUsageDashboardVisible] = useState(false);
   const [isModelLibraryVisible, setIsModelLibraryVisible] = useState(false);
 
   const activeProject = openProjects.find((project) => project.active) || openProjects[0];
 
-  const handleShowSettingsPage = useCallback((tab?: number) => {
-    setShowSettingsTab(tab ?? null);
+  const handleShowSettingsPage = useCallback((pageId?: string, options?: Record<string, unknown>) => {
+    if (pageId) {
+      setShowSettingsInfo({
+        pageId,
+        options,
+      });
+    } else {
+      setShowSettingsInfo(null);
+    }
   }, []);
 
   const handleReorderProjects = async (reorderedProjects: ProjectData[]) => {
@@ -80,8 +92,10 @@ export const Home = () => {
   }, [api]);
 
   useEffect(() => {
-    const handleOpenSettings = (tabIndex: number) => {
-      setShowSettingsTab(tabIndex);
+    const handleOpenSettings = (pageId: string) => {
+      setShowSettingsInfo({
+        pageId,
+      });
     };
 
     const removeListener = api.addOpenSettingsListener(handleOpenSettings);
@@ -235,7 +249,9 @@ export const Home = () => {
                 tooltip={getUpdateTooltip()}
                 tooltipId="top-bar-tooltip"
                 onClick={() => {
-                  setShowSettingsTab(4);
+                  setShowSettingsInfo({
+                    pageId: 'about',
+                  });
                 }}
                 className="px-4 py-2 hover:bg-bg-tertiary-emphasis transition-colors duration-200"
               />
@@ -259,7 +275,9 @@ export const Home = () => {
               tooltip={t('settings.title')}
               tooltipId="top-bar-tooltip"
               onClick={() => {
-                setShowSettingsTab(0);
+                setShowSettingsInfo({
+                  pageId: 'general',
+                });
               }}
               className="px-4 py-2 hover:bg-bg-tertiary-emphasis transition-colors duration-200"
             />
@@ -268,7 +286,14 @@ export const Home = () => {
         {isOpenProjectDialogVisible && (
           <OpenProjectDialog onClose={() => setIsOpenProjectDialogVisible(false)} onAddProject={handleAddProject} openProjects={openProjects} />
         )}
-        {showSettingsTab !== null && <SettingsPage onClose={() => setShowSettingsTab(null)} initialTab={showSettingsTab} openProjects={openProjects} />}
+        {showSettingsInfo !== null && (
+          <SettingsPage
+            onClose={() => setShowSettingsInfo(null)}
+            initialPageId={showSettingsInfo.pageId}
+            initialOptions={showSettingsInfo.options}
+            openProjects={openProjects}
+          />
+        )}
         {isUsageDashboardVisible && <UsageDashboard onClose={() => setIsUsageDashboardVisible(false)} />}
         {isModelLibraryVisible && <ModelLibrary onClose={() => setIsModelLibraryVisible(false)} />}
         {releaseNotesContent && versions && (

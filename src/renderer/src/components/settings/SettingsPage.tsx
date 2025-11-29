@@ -2,7 +2,6 @@ import { ProjectData, SettingsData } from '@common/types';
 import { useEffect, useMemo, useState } from 'react';
 import { isEqual } from 'lodash';
 import { useTranslation } from 'react-i18next';
-import { LlmProviderName } from '@common/agent';
 
 import { Settings } from '@/pages/Settings';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -13,13 +12,12 @@ import { Button } from '@/components/common/Button';
 
 type Props = {
   onClose: () => void;
-  initialTab?: number;
-  initialAgentProfileId?: string;
-  initialAgentProvider?: LlmProviderName;
+  initialPageId?: string;
+  initialOptions?: Record<string, unknown>;
   openProjects?: ProjectData[];
 };
 
-export const SettingsPage = ({ onClose, initialTab = 0, initialAgentProfileId, initialAgentProvider, openProjects }: Props) => {
+export const SettingsPage = ({ onClose, initialPageId, initialOptions, openProjects }: Props) => {
   const { t, i18n } = useTranslation();
   const api = useApi();
 
@@ -154,9 +152,8 @@ export const SettingsPage = ({ onClose, initialTab = 0, initialAgentProfileId, i
             onThemeChange={setTheme}
             onFontChange={setFont}
             onFontSizeChange={setFontSize}
-            initialTab={initialTab}
-            initialAgentProfileId={initialAgentProfileId}
-            initialAgentProvider={initialAgentProvider}
+            initialPageId={initialPageId}
+            initialOptions={initialOptions}
             agentProfiles={agentProfiles}
             setAgentProfiles={setAgentProfiles}
             openProjects={openProjects}

@@ -42,7 +42,7 @@ type Props = {
   updateTask: (updates: Partial<TaskData>, useOptimistic?: boolean) => void;
   inputHistory: string[];
   isActive?: boolean;
-  showSettingsPage?: (tab?: number) => void;
+  showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
 };
 
 export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateTask, inputHistory, isActive = false, showSettingsPage }, ref) => {

@@ -279,6 +279,27 @@ export const AgentSettings = ({
     }
   }, [selectedProfileContext, contexts]);
 
+  // Handle initial profile ID - set context and select profile
+  useEffect(() => {
+    if (initialProfileId && agentProfiles.length > 0) {
+      const initialProfile = agentProfiles.find((p) => p.id === initialProfileId);
+      if (initialProfile) {
+        // Set the profile context based on the initial profile's projectDir
+        const targetContext = initialProfile.projectDir || 'global';
+        setProfileContext(targetContext);
+
+        // Update contextIndex to match the target context
+        const newIndex = contexts.indexOf(targetContext);
+        if (newIndex !== -1) {
+          setContextIndex(newIndex);
+        }
+
+        // Select the initial profile
+        setSelectedProfileId(initialProfileId);
+      }
+    }
+  }, [initialProfileId, agentProfiles, contexts]);
+
   const [mcpServersExpanded, setMcpServersExpanded] = useState(false);
   const profileNameInputRef = useRef<HTMLInputElement>(null);
   const [showColorPicker, setShowColorPicker] = useState(false);

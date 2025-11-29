@@ -123,7 +123,7 @@ type Props = {
   terminalVisible?: boolean;
   scrollToBottom?: () => void;
   onAutoApproveChanged?: (autoApprove: boolean) => void;
-  showSettingsPage?: (tab?: number) => void;
+  showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
 };
 
 export const PromptField = forwardRef<PromptFieldRef, Props>(

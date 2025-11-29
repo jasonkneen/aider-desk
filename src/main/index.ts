@@ -50,31 +50,31 @@ const setupCustomMenu = (): void => {
         {
           label: 'General',
           click: () => {
-            BrowserWindow.getFocusedWindow()?.webContents.send('open-settings', 0);
+            BrowserWindow.getFocusedWindow()?.webContents.send('open-settings', 'general');
           },
         },
         {
           label: 'Aider',
           click: () => {
-            BrowserWindow.getFocusedWindow()?.webContents.send('open-settings', 1);
+            BrowserWindow.getFocusedWindow()?.webContents.send('open-settings', 'aider');
           },
         },
         {
           label: 'Agent',
           click: () => {
-            BrowserWindow.getFocusedWindow()?.webContents.send('open-settings', 2);
+            BrowserWindow.getFocusedWindow()?.webContents.send('open-settings', 'agents');
           },
         },
         {
           label: 'Server',
           click: () => {
-            BrowserWindow.getFocusedWindow()?.webContents.send('open-settings', 3);
+            BrowserWindow.getFocusedWindow()?.webContents.send('open-settings', 'server');
           },
         },
         {
           label: 'About',
           click: () => {
-            BrowserWindow.getFocusedWindow()?.webContents.send('open-settings', 4);
+            BrowserWindow.getFocusedWindow()?.webContents.send('open-settings', 'about');
           },
         },
       ],

@@ -1,7 +1,6 @@
 import { Font, ProjectData, SettingsData, Theme, AgentProfile } from '@common/types';
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LlmProviderName } from '@common/agent';
 import { clsx } from 'clsx';
 import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer } from 'react-icons/fa';
 import { MdTerminal } from 'react-icons/md';
@@ -21,9 +20,8 @@ type Props = {
   onThemeChange: (theme: Theme) => void;
   onFontChange: (fontName: Font) => void;
   onFontSizeChange: (fontSize: number) => void;
-  initialTab?: number;
-  initialAgentProfileId?: string;
-  initialAgentProvider?: LlmProviderName;
+  initialPageId?: string;
+  initialOptions?: Record<string, unknown>;
   agentProfiles?: AgentProfile[];
   setAgentProfiles?: (profiles: AgentProfile[]) => void;
   openProjects?: ProjectData[];
@@ -47,8 +45,8 @@ export const Settings = ({
   onThemeChange,
   onFontChange,
   onFontSizeChange,
-  initialTab = 0,
-  initialAgentProfileId,
+  initialPageId,
+  initialOptions,
   agentProfiles,
   setAgentProfiles,
   openProjects,
@@ -57,13 +55,7 @@ export const Settings = ({
   const api = useApi();
   const [isServerManagementSupported, setIsServerManagementSupported] = useState(false);
 
-  // Map initialTab index to PageId
-  const getInitialPage = (index: number): PageId => {
-    const pages: PageId[] = ['general', 'aider', 'agents', 'server', 'about'];
-    return pages[index] || 'general';
-  };
-
-  const [activePage, setActivePage] = useState<PageId>(getInitialPage(initialTab));
+  const [activePage, setActivePage] = useState<PageId>((initialPageId as PageId) || 'general');
   const [selectedProfileContext, setSelectedProfileContext] = useState<string>('global');
   const [expandedPages, setExpandedPages] = useState<Record<string, boolean>>({
     general: true,
@@ -212,7 +204,7 @@ export const Settings = ({
             setSettings={updateSettings}
             agentProfiles={agentProfiles || []}
             setAgentProfiles={setAgentProfiles || (() => {})}
-            initialProfileId={initialAgentProfileId}
+            initialProfileId={initialOptions?.agentProfileId as string | undefined}
             openProjects={openProjects}
             selectedProfileContext={selectedProfileContext}
           />

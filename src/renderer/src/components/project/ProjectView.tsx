@@ -15,7 +15,7 @@ import { showInfoNotification } from '@/utils/notifications';
 type Props = {
   project: ProjectData;
   isActive?: boolean;
-  showSettingsPage?: (tab?: number) => void;
+  showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
 };
 
 export const ProjectView = ({ project, isActive = false, showSettingsPage }: Props) => {

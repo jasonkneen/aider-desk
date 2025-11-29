@@ -509,7 +509,7 @@ const api: ApplicationAPI = {
   },
 
   addOpenSettingsListener: (callback) => {
-    const listener = (_: Electron.IpcRendererEvent, tabIndex: number) => callback(tabIndex);
+    const listener = (_: Electron.IpcRendererEvent, pageId: string) => callback(pageId);
     ipcRenderer.on('open-settings', listener);
     return () => {
       ipcRenderer.removeListener('open-settings', listener);
