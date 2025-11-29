@@ -668,11 +668,7 @@ async def process_changes()
 ⋮----
 # Generate a new prompt ID for file watcher changes
 ⋮----
-# Wait for completion by awaiting the task
-⋮----
 task = self.connector.prompt_executor.active_prompts[prompt_context.id]
-⋮----
-pass # The task was cancelled, which is an expected way for it to end.
 ⋮----
 prompt = self.connector.file_watcher.process_changes()
 ⋮----
@@ -735,7 +731,6 @@ def _patched_prepare_to_edit(coder_instance, edits)
 original_cmd_test = coder.commands.cmd_test
 def _patched_cmd_test(coder_commands_instance, args)
 ⋮----
-# self here is the Connector instance
 # coder_commands_instance is the Commands instance (coder.commands)
 ⋮----
 result = original_cmd_test(args)
@@ -1007,116 +1002,36 @@ langfuse_host = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
 ================
 File: scripts/before-pack.js
 ================
-console.log(`Preparing uv binary for macOS ${arch}...`);
-⋮----
-const sourceDir = path.join(__dirname, '..', 'resources', `macos-${arch}`);
-const targetDir = path.join(__dirname, '..', 'resources', 'macos');
-const sourceFile = path.join(sourceDir, 'uv');
-const targetFile = path.join(targetDir, 'uv');
-⋮----
-if (!fs.existsSync(targetDir)) {
-fs.mkdirSync(targetDir, { recursive: true });
-⋮----
-if (fs.existsSync(sourceFile)) {
-fs.copyFileSync(sourceFile, targetFile);
-console.log(`uv binary for macOS ${arch} copied successfully.`);
-⋮----
-console.error(`uv binary for macOS ${arch} not found at ${sourceFile}`);
+
 
 ================
 File: scripts/download-uv.mjs
 ================
-const streamPipeline = promisify(pipeline);
-⋮----
-async function downloadAndExtractUVForPlatform(target) {
-⋮----
-const extractPath = join(RESOURCES_DIR, extractSubdir);
-const uvDestinationPath = join(extractPath, uvExeName);
+async function downloadAndExtractUVForPlatform(target)
 ⋮----
 // Ensure the specific platform directory exists
-if (!existsSync(extractPath)) {
-mkdirSync(extractPath, { recursive: true });
 ⋮----
 // Check if uv already exists for this platform
-if (existsSync(uvDestinationPath)) {
-console.log(`uv executable for ${platform}-${arch} already exists at ${uvDestinationPath}. Skipping download.`);
-⋮----
-const tempFilePath = join(RESOURCES_DIR, filename);
-console.log(`Downloading uv for ${platform}-${arch} from ${url} to ${tempFilePath}`);
-⋮----
-const response = await fetch(url);
-⋮----
-throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
-⋮----
-await streamPipeline(response.body, createWriteStream(tempFilePath));
-⋮----
-console.log(`Downloaded ${filename}. Extracting...`);
-⋮----
-if (filename.endsWith('.tar.gz')) {
-await extract({
 ⋮----
 strip: 0 // Do not strip any components from the file path initially
 ⋮----
 // The uv executable might be inside a directory like uv-x86_64-unknown-linux-gnu/uv
-const extractedDirName = filename.replace('.tar.gz', '');
-const uvInExtractedDir = join(extractPath, extractedDirName, uvExeName);
-const uvAtTopLevel = join(extractPath, uvExeName);
 ⋮----
-if (existsSync(uvInExtractedDir)) {
-⋮----
-unlinkSync(uvDestinationPath);
-⋮----
-renameSync(uvInExtractedDir, uvDestinationPath);
-console.log(`Moved ${uvExeName} to ${uvDestinationPath}`);
 // Clean up the extracted directory
-rmdirSync(join(extractPath, extractedDirName), { recursive: true });
-} else if (existsSync(uvAtTopLevel)) {
+⋮----
 // If not found in extractedDir, check the top level (for older releases or different structures)
 ⋮----
-renameSync(uvAtTopLevel, uvDestinationPath);
-⋮----
-throw new Error(`Could not find ${uvExeName} executable in the extracted archive for ${platform}.`);
-⋮----
-} else if (filename.endsWith('.zip')) {
-const zip = new AdmZip(tempFilePath);
 zip.extractAllTo(extractPath, true); // Overwrite existing files
 ⋮----
-console.log(`uv for ${platform}-${arch} downloaded and extracted successfully.`);
-⋮----
-console.error(`Error downloading or extracting uv for ${platform}-${arch}: ${error.message}`);
 // Do not exit on error for one platform, try others.
 ⋮----
 // Clean up the temporary archive file
-if (existsSync(tempFilePath)) {
-unlinkSync(tempFilePath);
 ⋮----
-async function downloadAllUVs() {
+async function downloadAllUVs()
+⋮----
 // Ensure the base resources directory exists
-if (!existsSync(RESOURCES_DIR)) {
-mkdirSync(RESOURCES_DIR, { recursive: true });
-⋮----
-await downloadAndExtractUVForPlatform(target);
-⋮----
-console.log("All necessary uv executables processed.");
 ⋮----
 // After downloading all, copy the correct one for the current platform if it's macOS
-⋮----
-const sourceDir = join(RESOURCES_DIR, `macos-${arch}`);
-const targetDir = join(RESOURCES_DIR, 'macos');
-const sourceFile = join(sourceDir, 'uv');
-const targetFile = join(targetDir, 'uv');
-⋮----
-if (!existsSync(targetDir)) {
-mkdirSync(targetDir, { recursive: true });
-⋮----
-if (existsSync(sourceFile)) {
-console.log(`Copying uv for local development on macOS ${arch}...`);
-fs.copyFileSync(sourceFile, targetFile);
-console.log('uv copied successfully for local development.');
-⋮----
-console.error(`uv binary for macOS ${arch} not found at ${sourceFile}, skipping copy for local development.`);
-⋮----
-downloadAllUVs();
 
 ================
 File: src/common/locales/en.json
@@ -14820,13 +14735,7 @@ File: tailwind.config.js
 ⋮----
 // Theme-based colors
 ⋮----
-const extractColorVars = (colorObj, colorGroup = '') => {
-return Object.keys(colorObj).reduce((vars, colorKey) => {
-⋮----
-: extractColorVars(value, `-${colorKey}`);
-⋮----
-addBase({
-':root': extractColorVars(theme('colors')),
+const extractColorVars = (colorObj, colorGroup = '') =>
 
 
 
