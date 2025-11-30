@@ -776,9 +776,23 @@ def interrupt_input(self)
 ⋮----
 async def process_changes()
 ⋮----
-# Generate a new prompt ID for file watcher changes
+lock_file_path = Path(self.connector.base_dir) / '.aider-desk' / 'watch-files.lock'
+lock_file = None
+⋮----
+# Create lock file directory if it doesn't exist
+⋮----
+# Try to acquire lock file
+lock_file = open(lock_file_path, 'w')
+⋮----
+# Try to acquire exclusive lock (non-blocking)
+⋮----
+# Successfully acquired lock, proceed with processing
 ⋮----
 task = self.connector.prompt_executor.active_prompts[prompt_context.id]
+⋮----
+# Lock is held by another process, skip processing
+⋮----
+# Explicitly close the lock file to release the lock
 ⋮----
 prompt = self.connector.file_watcher.process_changes()
 ⋮----
@@ -1249,7 +1263,8 @@ File: src/common/locales/en.json
     "suffix.thousand": "K",
     "ok": "OK",
     "collapse": "Collapse",
-    "enabled": "Enabled"
+    "enabled": "Enabled",
+    "noFiles": "No files"
   },
   "search": {
     "placeholder": "Search...",
@@ -1878,7 +1893,12 @@ File: src/common/locales/en.json
     "hideAllFiles": "Hide all files",
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
-    "dropAll": "Drop all context files"
+    "dropAll": "Drop all context files",
+    "globalRule": "Global rule file included automatically",
+    "projectRule": "Project rule file included automatically",
+    "agentRule": "Agent profile rule file included automatically",
+    "projectFiles": "Project Files",
+    "rules": "Rule Files"
   },
   "modelSelector": {
     "mainModel": "Main model",
@@ -2361,7 +2381,8 @@ File: src/common/locales/zh.json
     "suffix.thousand": "千",
     "ok": "确定",
     "collapse": "收起",
-    "enabled": "已启用"
+    "enabled": "已启用",
+    "noFiles": "没有找到文件"
   },
   "search": {
     "placeholder": "查找...",
@@ -2946,7 +2967,12 @@ File: src/common/locales/zh.json
     "hideAllFiles": "隐藏所有文件",
     "expandAll": "全部展开",
     "collapseAll": "全部折叠",
-    "dropAll": "删除所有上下文文件"
+    "dropAll": "删除所有上下文文件",
+    "globalRule": "全局规则文件自动包含",
+    "projectRule": "项目规则文件自动包含",
+    "agentRule": "代理配置规则文件自动包含",
+    "projectFiles": "项目文件",
+    "rules": "规则文件"
   },
   "modelSelector": {
     "mainModel": "主模型",
@@ -3831,7 +3857,7 @@ export interface ApplicationAPI {
   addTerminalDataListener: (baseDir: string, callback: (data: TerminalData) => void) => () => void;
   addTerminalExitListener: (baseDir: string, callback: (data: TerminalExitData) => void) => () => void;
   addContextMenuListener: (callback: (params: Electron.ContextMenuParams) => void) => () => void;
-  addOpenSettingsListener: (callback: (tabIndex: number) => void) => () => void;
+  addOpenSettingsListener: (callback: (pageId: string) => void) => () => void;
 
   // Task lifecycle event listeners
   addTaskCreatedListener: (baseDir: string, callback: (data: TaskData) => void) => () => void;
@@ -4105,6 +4131,7 @@ export type ContextMessage = ContextUserMessage | ContextAssistantMessage | Cont
 export interface ContextFile {
   path: string;
   readOnly?: boolean;
+  source?: 'global-rule' | 'project-rule' | 'agent-rule';
 }
 ⋮----
 export interface WindowState {
@@ -4219,6 +4246,7 @@ export interface AgentProfile {
   customInstructions: string;
   subagent: SubagentConfig;
   isSubagent?: boolean; // flag to indicate if this profile is being used as a subagent
+  ruleFiles?: string[]; // Array of absolute paths to rule files for this agent profile
 }
 ⋮----
 projectDir?: string; // If specified, it's a project-level profile, otherwise global
@@ -4228,6 +4256,7 @@ minTimeBetweenToolCalls: number; // in milliseconds
 temperature?: number; // Optional: overrides model temperature when set
 ⋮----
 isSubagent?: boolean; // flag to indicate if this profile is being used as a subagent
+ruleFiles?: string[]; // Array of absolute paths to rule files for this agent profile
 ⋮----
 export interface EnvironmentVariable {
   value: string;
@@ -4876,10 +4905,11 @@ import { homedir } from 'os';
 import { FSWatcher, watch } from 'chokidar';
 import debounce from 'lodash/debounce';
 import { DEFAULT_AGENT_PROFILES } from '@common/agent';
+import { fileExists } from '@common/utils';
 ⋮----
 import type { AgentProfile } from '@common/types';
 ⋮----
-import { AIDER_DESK_AGENTS_DIR } from '@/constants';
+import { AIDER_DESK_AGENTS_DIR, AIDER_DESK_RULES_DIR } from '@/constants';
 import logger from '@/logger';
 import { EventManager } from '@/events';
 import { deriveDirName } from '@/utils';
@@ -4888,6 +4918,19 @@ import { deriveDirName } from '@/utils';
 const getGlobalAgentsDir = (): string
 const getProjectAgentsDir = (projectDir: string): string
 const getAgentsDirForProfile = (profile: AgentProfile): string
+⋮----
+// Helper methods for rule file discovery
+const getAgentRulesDir = (agentsDir: string, agentDirName: string): string
+⋮----
+const getRuleFilesForAgent = async (agentDirName: string, agentsDir: string): Promise<string[]> =>
+⋮----
+// Rules directory doesn't exist or can't be read
+⋮----
+const getAllRuleFilesForProfile = async (profile: AgentProfile, dirName: string): Promise<string[]> =>
+⋮----
+// Get rule files from the profile's own directory
+⋮----
+// If this is a project-level profile, also check for global profile with same ID
 ⋮----
 interface AgentProfileContext {
   dirName: string;
@@ -4944,7 +4987,11 @@ private async setupWatcherForDirectory(agentsDir: string): Promise<void>
 ⋮----
 // Close existing watcher for this directory if any
 ⋮----
+// Also watch rules subdirectories within each agent directory
+⋮----
 const reloadFunction = ()
+⋮----
+// Set up rules watcher event handlers
 ⋮----
 private async reloadProfiles(agentsDir: string): Promise<void>
 ⋮----
@@ -4974,15 +5021,22 @@ private async loadProfilesFromDirectory(agentsDir: string): Promise<void>
 ⋮----
 order: 0, // Will be set by order file
 ⋮----
+// If no config.json exists, check if this is a project-level directory
+// and if there's a corresponding global profile, merge project-level rule files
+⋮----
 // Apply order to profiles
 ⋮----
 // If no order file exists, create one based on current order
 ⋮----
 // Add profiles to the main profiles map
 ⋮----
-private async loadProfileFile(filePath: string): Promise<AgentProfile | null>
+private async loadProfileFile(filePath: string, dirName: string): Promise<AgentProfile | null>
+⋮----
+// Discover and load rule files for this profile
 ⋮----
 private async saveProfileToFile(profile: AgentProfile, filePath: string): Promise<void>
+⋮----
+// Create a copy of the profile without ruleFiles since they are dynamically discovered
 ⋮----
 private async loadOrderFile(agentsDir: string): Promise<Map<string, number>>
 ⋮----
@@ -5045,6 +5099,20 @@ public async updateAgentProfilesOrder(agentProfiles: AgentProfile[]): Promise<vo
 // Update the in-memory profiles for this group
 ⋮----
 // Notify listeners
+⋮----
+private async mergeProjectRuleFilesIntoGlobalProfile(agentDirName: string, projectAgentsDir: string): Promise<void>
+⋮----
+// Check if there are project-level rule files
+⋮----
+return; // No project-level rule files to merge
+⋮----
+// Find the corresponding global profile by directory name
+⋮----
+return; // No global profile found with matching directory name
+⋮----
+// Create a new profile object with merged rule files
+⋮----
+// Update the profile context
 ⋮----
 async dispose(): Promise<void>
 ⋮----
@@ -5216,11 +5284,13 @@ async runAgent(
     profile: AgentProfile,
     prompt: string,
     promptContext?: PromptContext,
-    contextMessages: ContextMessage[] = task.getContextMessages(),
-    contextFiles: ContextFile[] = task.getContextFiles(),
+    initialContextMessages?: ContextMessage[],
+    initialContextFiles?: ContextFile[],
     systemPrompt?: string,
     abortSignal?: AbortSignal,
 ): Promise<ContextMessage[]>
+⋮----
+// Set default values inside function body since await can't be used in parameter initializers
 ⋮----
 // Create new abort controller for this run only if abortSignal is not provided
 ⋮----
@@ -5434,7 +5504,7 @@ import {
 import { extractTextContent } from '@common/utils';
 ⋮----
 import logger from '@/logger';
-import { CacheControl } from '@/models';
+import { type CacheControl } from '@/models';
 ⋮----
 /**
  * Optimizes the messages before sending them to the LLM. This should reduce the token count and improve the performance.
@@ -5444,7 +5514,7 @@ export const optimizeMessages = (
   projectProfiles: AgentProfile[],
   userRequestMessageIndex: number,
   messages: ModelMessage[],
-  cacheControl: CacheControl,
+  cacheControl: CacheControl | undefined,
   task?: TaskData,
 ) =>
 ⋮----
@@ -5525,6 +5595,7 @@ File: src/main/agent/prompts.ts
 ================
 import path from 'path';
 import fs from 'fs';
+import fsPromises from 'fs/promises';
 ⋮----
 import { AgentProfile, ToolApprovalState } from '@common/types';
 import {
@@ -5551,7 +5622,7 @@ import {
   TOOL_GROUP_NAME_SEPARATOR,
 } from '@common/tools';
 ⋮----
-import { AIDER_DESK_PROJECT_RULES_DIR } from '@/constants';
+import logger from '@/logger';
 import { Task } from '@/task';
 ⋮----
 export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, autoApprove = task.task.autoApprove, additionalInstructions?: string) =>
@@ -5560,7 +5631,9 @@ export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, au
 ⋮----
 // Check if any power tools are allowed
 ⋮----
-const getRulesContent = (projectDir: string) =>
+const getRulesContent = async (task: Task, agentProfile?: AgentProfile) =>
+⋮----
+// Resolve path - handle ~/ prefix and relative paths
 ⋮----
 export const getInitProjectPrompt = () =>
 ⋮----
@@ -6070,7 +6143,7 @@ export const getAnthropicUsageReport = (
 // Calculate cost internally with already deducted sentTokens
 ⋮----
 // === Configuration Helper Functions ===
-export const getAnthropicCacheControl = (): CacheControl =>
+export const getAnthropicCacheControl = (): CacheControl | undefined =>
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -6543,7 +6616,7 @@ export const getMinimaxUsageReport = (
 // Calculate cost internally with already deducted sentTokens
 ⋮----
 // === Configuration Helper Functions ===
-export const getMinimaxCacheControl = (): CacheControl =>
+export const getMinimaxCacheControl = (): CacheControl | undefined =>
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -6796,7 +6869,7 @@ export const getOpenRouterUsageReport = (
 // Use cost from provider metadata if available, otherwise calculate
 ⋮----
 // === Configuration Helper Functions ===
-export const getOpenRouterCacheControl = (profile: AgentProfile, llmProvider: LlmProvider): CacheControl =>
+export const getOpenRouterCacheControl = (profile: AgentProfile, llmProvider: LlmProvider): CacheControl | undefined =>
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -6880,7 +6953,7 @@ export const getRequestyUsageReport = (
 // Calculate cost internally with already deducted sentTokens
 ⋮----
 // === Configuration Helper Functions ===
-export const getRequestyCacheControl = (profile: AgentProfile, llmProvider: LlmProvider): CacheControl =>
+export const getRequestyCacheControl = (profile: AgentProfile, llmProvider: LlmProvider): CacheControl | undefined =>
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -7178,7 +7251,7 @@ getUsageReport(task: Task, provider: ProviderProfile, model: string | Model, usa
 ⋮----
 // Resolve Model object
 ⋮----
-getCacheControl(profile: AgentProfile, llmProvider: LlmProvider): CacheControl
+getCacheControl(profile: AgentProfile, llmProvider: LlmProvider): CacheControl | undefined
 ⋮----
 isStreamingDisabled(provider: ProviderProfile, modelId: string): boolean
 ⋮----
@@ -7218,7 +7291,10 @@ import type { LanguageModelUsage, ToolSet } from 'ai';
 ⋮----
 import { Task } from '@/task';
 ⋮----
-export type CacheControl = SharedV2ProviderOptions | undefined;
+export interface CacheControl {
+  providerOptions: SharedV2ProviderOptions;
+  placement?: 'message' | 'message-part';
+}
 ⋮----
 export interface AiderModelMapping {
   modelName: string;
@@ -7273,7 +7349,7 @@ export interface LlmProviderStrategy {
   /**
    * Returns provider-specific cache control configuration
    */
-  getCacheControl?: (profile: AgentProfile, provider: LlmProvider) => CacheControl;
+  getCacheControl?: (profile: AgentProfile, provider: LlmProvider) => CacheControl | undefined;
 
   /**
    * Returns provider-specific options for model instantiation
@@ -7424,7 +7500,7 @@ const migrateSessionFile = async (project: Project, sessionsDirPath: string, tas
 File: src/main/project/project-manager.ts
 ================
 import { normalizeBaseDir } from '@common/utils';
-import { SettingsData } from '@common/types';
+import { ProjectSettings, SettingsData } from '@common/types';
 ⋮----
 import { TelemetryManager } from '@/telemetry';
 import { AgentProfileManager, McpManager } from '@/agent';
@@ -7458,6 +7534,8 @@ async settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
 ⋮----
 modelsUpdated()
 ⋮----
+projectSettingsChanged(baseDir: string, oldSettings: ProjectSettings, newSettings: ProjectSettings)
+⋮----
 public getCustomCommands(baseDir: string)
 
 ================
@@ -7466,7 +7544,7 @@ File: src/main/project/project.ts
 import fs from 'fs/promises';
 import path from 'path';
 ⋮----
-import { CustomCommand, SettingsData, TaskData } from '@common/types';
+import { CustomCommand, ProjectSettings, SettingsData, TaskData } from '@common/types';
 import { fileExists } from '@common/utils';
 import { v4 as uuidv4 } from 'uuid';
 ⋮----
@@ -7482,6 +7560,7 @@ import { EventManager } from '@/events';
 import { Task } from '@/task';
 import { migrateSessionsToTasks } from '@/project/migrations';
 import { WorktreeManager } from '@/worktrees';
+import { AIDER_DESK_WATCH_FILES_LOCK } from '@/constants';
 ⋮----
 export class Project
 ⋮----
@@ -7543,7 +7622,13 @@ forEachTask(callback: (task: Task) => void)
 ⋮----
 async settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
 ⋮----
+async projectSettingsChanged(oldSettings: ProjectSettings, newSettings: ProjectSettings)
+⋮----
 async close()
+⋮----
+// Remove watch-files lock file if it exists
+⋮----
+// Ignore error if file doesn't exist
 
 ================
 File: src/main/server/rest-api/agent-api.ts
@@ -8635,6 +8720,7 @@ File: src/main/task/task.ts
 ================
 import fs from 'fs/promises';
 import path from 'path';
+import { homedir } from 'os';
 ⋮----
 import { simpleGit } from 'simple-git';
 import YAML from 'yaml';
@@ -8651,6 +8737,7 @@ import {
   MessageRole,
   Mode,
   ModelsData,
+  ProjectSettings,
   PromptContext,
   QuestionData,
   ResponseChunkData,
@@ -8676,7 +8763,7 @@ import type { SimpleGit } from 'simple-git';
 ⋮----
 import { getAllFiles } from '@/utils/file-system';
 import { getCompactConversationPrompt, getGenerateCommitMessagePrompt, getInitProjectPrompt, getSystemPrompt } from '@/agent/prompts';
-import { AIDER_DESK_TASKS_DIR, AIDER_DESK_TODOS_FILE, WORKTREE_BRANCH_PREFIX } from '@/constants';
+import { AIDER_DESK_TASKS_DIR, AIDER_DESK_TODOS_FILE, WORKTREE_BRANCH_PREFIX, AIDER_DESK_PROJECT_RULES_DIR, AIDER_DESK_GLOBAL_RULES_DIR } from '@/constants';
 import { Agent, AgentProfileManager, McpManager } from '@/agent';
 import { Connector } from '@/connector';
 import { DataManager } from '@/data-manager';
@@ -8857,7 +8944,7 @@ public dropFile(filePath: string)
 ⋮----
 public sendDropFile(filePath: string, readOnly?: boolean, noUpdate?: boolean): void
 ⋮----
-private sendContextFilesUpdated()
+private async sendContextFilesUpdated()
 ⋮----
 public async runCommand(command: string, addToHistory = true)
 ⋮----
@@ -8913,7 +9000,25 @@ const extractModelInfo = (modelName: string | null | undefined) =>
 ⋮----
 public async getAddableFiles(searchRegex?: string): Promise<string[]>
 ⋮----
-public getContextFiles(): ContextFile[]
+public async getContextFiles(includeRuleFiles = false): Promise<ContextFile[]>
+⋮----
+public async getRuleFilesAsContextFiles(profile?: AgentProfile): Promise<ContextFile[]>
+⋮----
+// Get global rule files
+⋮----
+// Convert to relative path with ~/ prefix
+⋮----
+// Global rules directory doesn't exist or can't be read
+⋮----
+// Get project rule files
+⋮----
+// Project rules directory doesn't exist or can't be read
+⋮----
+// Get agent profile rule files
+⋮----
+// Convert to relative path with ~/ prefix if in home directory
+⋮----
+// Rule file doesn't exist or can't be accessed
 ⋮----
 public getRepoMap(): string
 ⋮----
@@ -8999,7 +9104,7 @@ updateTokensInfo(data: Partial<TokensInfoData>)
 ⋮----
 async updateContextInfo(checkContextFilesIncluded = false, checkRepoMapIncluded = false)
 ⋮----
-private sendRequestContextInfo()
+private async sendRequestContextInfo()
 ⋮----
 public async updateAutocompletionData(words?: string[], force = false)
 ⋮----
@@ -9024,6 +9129,8 @@ const customInstructionsChanged = false; // oldAgentProfile is null, so no chang
 // Check for changes in Aider
 ⋮----
 async modelsUpdated()
+⋮----
+async projectSettingsChanged(oldSettings: ProjectSettings, newSettings: ProjectSettings)
 ⋮----
 private sendUpdateEnvVars(environmentVariables: Record<string, unknown>)
 ⋮----
@@ -10237,6 +10344,8 @@ async revertMerge(projectPath: string, taskId: string, worktreePath: string, mer
 ⋮----
 private async pruneDeleted(projectDir: string): Promise<void>
 ⋮----
+// in case of failure, try to remove the directory manually
+⋮----
 async close(projectDir: string)
 
 ================
@@ -10258,6 +10367,7 @@ export const isDev = (): boolean =>
 File: src/main/constants.ts
 ================
 import path from 'path';
+import { homedir } from 'os';
 ⋮----
 import { getDataDir, getResourceDir } from './paths';
 ⋮----
@@ -11382,7 +11492,7 @@ addTaskDeletedListener(baseDir: string, callback: (data: TaskData) => void): () 
 addTerminalDataListener(baseDir: string, callback: (data: TerminalData) => void): () => void
 addTerminalExitListener(baseDir: string, callback: (data: TerminalExitData) => void): () => void
 addContextMenuListener(callback: (params: Electron.ContextMenuParams) => void): () => void
-addOpenSettingsListener(callback: (tabIndex: number) => void): () => void
+addOpenSettingsListener(callback: (pageId: string) => void): () => void
 getCustomCommands(baseDir: string): Promise<CustomCommand[]>
 runCustomCommand(baseDir: string, taskId: string, commandName: string, args: string[], mode: Mode): Promise<void>
 isTerminalSupported(): boolean
@@ -11453,7 +11563,7 @@ import { useAgents } from '@/contexts/AgentsContext';
 type Props = {
   projectDir: string;
   isActive: boolean;
-  showSettingsPage?: (tab?: number) => void;
+  showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
 };
 ⋮----
 const calculateEnabledTools = async () =>
@@ -11670,6 +11780,7 @@ type Props = {
   footer?: ReactNode;
   width?: number;
   closeOnEscape?: boolean;
+  closeButtonText?: string;
 };
 ⋮----
 const handleKeyDown = (event: KeyboardEvent) =>
@@ -11899,6 +12010,8 @@ type Props = {
 ================
 File: src/renderer/src/components/common/HtmlInfoDialog.tsx
 ================
+import { useTranslation } from 'react-i18next';
+⋮----
 import { BaseDialog } from '@/components/common/BaseDialog';
 ⋮----
 type Props = {
@@ -12005,6 +12118,7 @@ const handleItemSelect = (value: T) =>
 File: src/renderer/src/components/common/MarkdownInfoDialog.tsx
 ================
 import ReactMarkdown from 'react-markdown';
+import { useTranslation } from 'react-i18next';
 ⋮----
 import { BaseDialog } from '@/components/common/BaseDialog';
 ⋮----
@@ -12370,10 +12484,14 @@ import objectHash from 'object-hash';
 import { ControlledTreeEnvironment, Tree } from 'react-complex-tree';
 import { HiChevronDown, HiChevronRight, HiOutlineTrash, HiPlus, HiX } from 'react-icons/hi';
 import { BiCollapseVertical, BiExpandVertical } from 'react-icons/bi';
-import { LuFolderTree } from 'react-icons/lu';
 import { TbPencilOff } from 'react-icons/tb';
+import { MdOutlinePublic } from 'react-icons/md';
+import { RiRobot2Line } from 'react-icons/ri';
+import { VscFileCode } from 'react-icons/vsc';
 import { useTranslation } from 'react-i18next';
 import { useLocalStorage, usePrevious } from '@reactuses/core';
+import { motion, AnimatePresence } from 'framer-motion';
+import { clsx } from 'clsx';
 ⋮----
 import { StyledTooltip } from '../common/StyledTooltip';
 ⋮----
@@ -12381,16 +12499,18 @@ import { useOS } from '@/hooks/useOS';
 import { useApi } from '@/contexts/ApiContext';
 ⋮----
 interface TreeItem {
-  index: string;
-  isFolder: boolean;
-  children: string[];
+  index: string | number;
+  isFolder?: boolean;
+  children?: (string | number)[];
   data: string;
   file?: ContextFile;
 }
 ⋮----
 const normalizePath = (path: string): string =>
 ⋮----
-const createFileTree = (files: ContextFile[]) =>
+const createFileTree = (files: ContextFile[], rootId = 'root') =>
+⋮----
+// Ensure file data is updated if it exists
 ⋮----
 // Sort children: folders first, then files, both alphabetically
 ⋮----
@@ -12403,17 +12523,28 @@ type Props = {
   tokensInfo?: TokensInfoData | null;
 };
 ⋮----
-export const ContextFiles = (
+type SectionType = 'project' | 'context' | 'rules';
+⋮----
+// Separate expanded items for each tree
+⋮----
+// Auto-switch to context view if new files added (optional, maybe distracting)
+// setActiveSection('context');
 ⋮----
 // eslint-disable-next-line react-hooks/exhaustive-deps
 ⋮----
-const checkChild = (childKey: string) =>
+// Tree Data Generators
 ⋮----
-// Check if any descendant file of this folder is in the context files list
+// Check if readOnly in context files
 ⋮----
-const handleExpandAll = () =>
+// Expand logic for Context Tree (auto-expand folders with files)
 ⋮----
-const handleCollapseAll = () =>
+const expandFolders = (treeData: Record<string, TreeItem>, files: ContextFile[], currentExpanded: string[], setExpanded: (items: string[]) => void) =>
+⋮----
+const checkChild = (childKey: string | number) =>
+⋮----
+// Only auto-expand context and rules trees
+⋮----
+// eslint-disable-next-line react-hooks/exhaustive-deps
 ⋮----
 const handleDropAllFiles = () =>
 ⋮----
@@ -12425,9 +12556,38 @@ const dropFile = (item: TreeItem) => (e: React.MouseEvent<HTMLButtonElement>) =>
 ⋮----
 const addFile = (item: TreeItem) => (event: React.MouseEvent<HTMLButtonElement>) =>
 ⋮----
-data-tooltip-content=
+// Actions logic
+⋮----
+const isExpanded = expandedItems.includes(String(treeItem.index));
+if (isExpanded)
+setExpandedItems(expandedItems.filter((id)
+⋮----
+className={clsx(
+                'select-none text-2xs overflow-hidden',
+                treeItem.isFolder ? 'context-dimmed' : 'text-text-primary font-semibold',
+                type === 'project' && isContextFile && 'text-text-muted',
+              )}
+              {...(treeItem.isFolder
+                ? {
+onClick: () =>
+⋮----
+<button onClick=
 ⋮----
 onClick=
+⋮----
+data-tooltip-content=
+⋮----
+key={objectHash(treeData)} // Force re-render if data structure changes drastically
+⋮----
+renderItemArrow={() => null} // Handled in renderItem
+⋮----
+renderItem=
+⋮----
+{/* Context Files Section */}
+⋮----
+{/* Project Files Section */}
+⋮----
+{/* Rules Section */}
 
 ================
 File: src/renderer/src/components/ContextFiles/index.ts
@@ -14958,7 +15118,7 @@ import { showInfoNotification } from '@/utils/notifications';
 type Props = {
   project: ProjectData;
   isActive?: boolean;
-  showSettingsPage?: (tab?: number) => void;
+  showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
 };
 ⋮----
 // when there is active task and is new we don't need to create new one
@@ -15321,7 +15481,7 @@ type Props = {
   updateTask: (updates: Partial<TaskData>, useOptimistic?: boolean) => void;
   inputHistory: string[];
   isActive?: boolean;
-  showSettingsPage?: (tab?: number) => void;
+  showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
 };
 ⋮----
 const renderLoading = (message: string) => (
@@ -15778,7 +15938,7 @@ type Props = {
   terminalVisible?: boolean;
   scrollToBottom?: () => void;
   onAutoApproveChanged?: (autoApprove: boolean) => void;
-  showSettingsPage?: (tab?: number) => void;
+  showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
 };
 ⋮----
 const setTextWithDispatch = (newText: string) =>
@@ -15987,6 +16147,14 @@ type Props = {
 // Sync internal profileContext with selectedProfileContext prop
 ⋮----
 // Update contextIndex to match the selected context
+⋮----
+// Handle initial profile ID - set context and select profile
+⋮----
+// Set the profile context based on the initial profile's projectDir
+⋮----
+// Update contextIndex to match the target context
+⋮----
+// Select the initial profile
 ⋮----
 // Context navigation logic
 const navigateContext = (direction: 'prev' | 'next') =>
@@ -16484,7 +16652,6 @@ import { ProjectData, SettingsData } from '@common/types';
 import { useEffect, useMemo, useState } from 'react';
 import { isEqual } from 'lodash';
 import { useTranslation } from 'react-i18next';
-import { LlmProviderName } from '@common/agent';
 ⋮----
 import { Settings } from '@/pages/Settings';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -16495,9 +16662,8 @@ import { Button } from '@/components/common/Button';
 ⋮----
 type Props = {
   onClose: () => void;
-  initialTab?: number;
-  initialAgentProfileId?: string;
-  initialAgentProvider?: LlmProviderName;
+  initialPageId?: string;
+  initialOptions?: Record<string, unknown>;
   openProjects?: ProjectData[];
 };
 ⋮----
@@ -18164,13 +18330,18 @@ import { useApi } from '@/contexts/ApiContext';
 import { ModelLibrary } from '@/components/ModelLibrary';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 ⋮----
+type ShowSettingsInfo = {
+  pageId: string;
+  options?: Record<string, unknown>;
+};
+⋮----
 const handleReorderProjects = async (reorderedProjects: ProjectData[]) =>
 ⋮----
 const loadProjects = async () =>
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
-const handleOpenSettings = (tabIndex: number) =>
+const handleOpenSettings = (pageId: string) =>
 ⋮----
 const checkReleaseNotes = async () =>
 ⋮----
@@ -18194,13 +18365,19 @@ return ''; // Should not happen if showUpdateIcon is true
 ⋮----
 const handleCloseReleaseNotes = async () =>
 ⋮----
-setShowSettingsTab(4);
+setShowSettingsInfo({
+                    pageId: 'about',
+                  });
 ⋮----
 tooltip=
 ⋮----
-setShowSettingsTab(0);
+setShowSettingsInfo({
+                  pageId: 'general',
+                });
 ⋮----
 <OpenProjectDialog onClose=
+⋮----
+onClose=
 ⋮----
 
 ================
@@ -18267,7 +18444,6 @@ File: src/renderer/src/pages/Settings.tsx
 import { Font, ProjectData, SettingsData, Theme, AgentProfile } from '@common/types';
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LlmProviderName } from '@common/agent';
 import { clsx } from 'clsx';
 import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer } from 'react-icons/fa';
 import { MdTerminal } from 'react-icons/md';
@@ -18287,9 +18463,8 @@ type Props = {
   onThemeChange: (theme: Theme) => void;
   onFontChange: (fontName: Font) => void;
   onFontSizeChange: (fontSize: number) => void;
-  initialTab?: number;
-  initialAgentProfileId?: string;
-  initialAgentProvider?: LlmProviderName;
+  initialPageId?: string;
+  initialOptions?: Record<string, unknown>;
   agentProfiles?: AgentProfile[];
   setAgentProfiles?: (profiles: AgentProfile[]) => void;
   openProjects?: ProjectData[];
@@ -18304,9 +18479,6 @@ interface SidebarItem {
   children?: { id: string; label: string }[];
   pageId: PageId;
 }
-⋮----
-// Map initialTab index to PageId
-const getInitialPage = (index: number): PageId =>
 ⋮----
 const scrollToSection = (sectionId: string) =>
 ⋮----
@@ -20493,15 +20665,15 @@ File: package.json
     "start:server": "AIDER_DESK_HEADLESS=true node out/server/runner.js"
   },
   "dependencies": {
-    "@ai-sdk/amazon-bedrock": "^3.0.30",
-    "@ai-sdk/anthropic": "^2.0.23",
-    "@ai-sdk/azure": "^2.0.73",
-    "@ai-sdk/cerebras": "^1.0.21",
-    "@ai-sdk/deepseek": "^1.0.20",
-    "@ai-sdk/google": "^2.0.40",
-    "@ai-sdk/google-vertex": "^3.0.34",
-    "@ai-sdk/groq": "^2.0.22",
-    "@ai-sdk/openai": "^2.0.71",
+    "@ai-sdk/amazon-bedrock": "^3.0.62",
+    "@ai-sdk/anthropic": "^2.0.50",
+    "@ai-sdk/azure": "^2.0.76",
+    "@ai-sdk/cerebras": "^1.0.32",
+    "@ai-sdk/deepseek": "^1.0.30",
+    "@ai-sdk/google": "^2.0.44",
+    "@ai-sdk/google-vertex": "^3.0.81",
+    "@ai-sdk/groq": "^2.0.32",
+    "@ai-sdk/openai": "^2.0.74",
     "@ai-sdk/provider": "^2.0.0",
     "@aws-crypto/sha256-js": "^5.0.0",
     "@aws-sdk/client-bedrock": "^3.887.0",
@@ -20519,14 +20691,14 @@ File: package.json
     "@google/genai": "^1.30.0",
     "@headlessui/react": "^2.2.0",
     "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
-    "@openrouter/ai-sdk-provider": "^1.2.0",
+    "@openrouter/ai-sdk-provider": "^1.2.8",
     "@opentelemetry/auto-instrumentations-node": "^0.62.0",
     "@opentelemetry/sdk-node": "^0.203.0",
     "@opentelemetry/sdk-trace-base": "^2.0.1",
     "@probelabs/probe": "^0.6.0-rc161",
     "@reactuses/core": "^6.0.6",
     "@replit/codemirror-vim": "^6.3.0",
-    "@requesty/ai-sdk": "^2.0.4",
+    "@requesty/ai-sdk": "^2.1.0",
     "@smithy/eventstream-codec": "^2.0.0",
     "@smithy/protocol-http": "^3.3.0",
     "@smithy/signature-v4": "^2.0.0",
@@ -20541,7 +20713,7 @@ File: package.json
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/xterm": "^5.5.0",
-    "ai": "^5.0.98",
+    "ai": "^5.0.104",
     "axios": "^1.8.3",
     "babel-plugin-react-compiler": "^19.1.0-rc.3",
     "better-sqlite3": "^12.0.0",
@@ -20572,7 +20744,7 @@ File: package.json
     "mark.js": "^8.11.1",
     "match-sorter": "^8.0.0",
     "object-hash": "^3.0.0",
-    "ollama-ai-provider-v2": "^1.4.1",
+    "ollama-ai-provider-v2": "^1.5.5",
     "openai": "^6.9.1",
     "os-name": "^6.0.0",
     "patch-package": "^8.0.0",
