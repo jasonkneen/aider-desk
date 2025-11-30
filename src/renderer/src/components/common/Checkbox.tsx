@@ -37,7 +37,6 @@ export const Checkbox = ({ label, checked, onChange, className = '', size = 'sm'
         <input
           type="checkbox"
           checked={checked}
-          onChange={() => onChange(!checked)}
           className="sr-only" // Hide the actual input but keep it accessible
           {...props}
         />

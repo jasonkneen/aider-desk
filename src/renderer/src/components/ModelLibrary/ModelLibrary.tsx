@@ -18,7 +18,18 @@ type Props = {
 
 export const ModelLibrary = ({ onClose }: Props) => {
   const { t } = useTranslation();
-  const { models, providers, saveProvider, deleteProvider, upsertModel, deleteModel, errors: providerErrors, refresh, modelsLoading } = useModelProviders();
+  const {
+    models,
+    providers,
+    saveProvider,
+    deleteProvider,
+    upsertModel,
+    deleteModel,
+    updateModels,
+    errors: providerErrors,
+    refresh,
+    modelsLoading,
+  } = useModelProviders();
   const [selectedProviderIds, setSelectedProviderIds] = useState<string[]>([]);
   const [configuringProvider, setConfiguringProvider] = useState<LlmProviderName | null>(null);
   const [editingProfile, setEditingProfile] = useState<ProviderProfile | undefined>(undefined);
@@ -92,6 +103,16 @@ export const ModelLibrary = ({ onClose }: Props) => {
     await upsertModel(model.providerId, model.id, updatedModel);
   };
 
+  const handleBulkToggleHidden = async (modelIds: string[], isHidden: boolean) => {
+    const modelsToUpdate = models.filter((model) => modelIds.includes(model.id));
+    const modelUpdates = modelsToUpdate.map((model) => ({
+      providerId: model.providerId,
+      modelId: model.id,
+      model: { ...model, isHidden },
+    }));
+    await updateModels(modelUpdates);
+  };
+
   // Show provider selection when adding new provider
   if (showProviderSelection || (!hasProfiles && !configuringProvider)) {
     return (
@@ -149,6 +170,7 @@ export const ModelLibrary = ({ onClose }: Props) => {
           onEditModel={handleEditModel}
           onDeleteModel={handleDeleteModel}
           onToggleHidden={handleToggleHidden}
+          onBulkToggleHidden={handleBulkToggleHidden}
           onRefreshModels={refresh}
           modelsLoading={modelsLoading}
         />

@@ -11,6 +11,7 @@ type ModelProviderContextType = {
   deleteProvider: (profileId: string) => Promise<void>;
   upsertModel: (providerId: string, modelId: string, model: Model) => Promise<void>;
   deleteModel: (providerId: string, modelId: string) => Promise<void>;
+  updateModels: (modelUpdates: Array<{ providerId: string; modelId: string; model: Model }>) => Promise<void>;
   modelsLoading: boolean;
   providersLoading: boolean;
   errors: Record<string, string>;
@@ -146,6 +147,32 @@ export const ModelProviderProvider: React.FC<{ children: ReactNode }> = ({ child
     [api, models, setOptimisticModels],
   );
 
+  const updateModels = useCallback(
+    async (modelUpdates: Array<{ providerId: string; modelId: string; model: Model }>) => {
+      // Create optimistic updates
+      const updated = [...models];
+      for (const { providerId, modelId, model } of modelUpdates) {
+        const existingIndex = updated.findIndex((m) => m.id === modelId && m.providerId === providerId);
+        if (existingIndex >= 0) {
+          updated[existingIndex] = model;
+        } else {
+          updated.push(model);
+        }
+      }
+
+      startTransition(async () => {
+        setOptimisticModels(updated);
+        const { models, errors } = await api.updateModels(modelUpdates);
+        if (models) {
+          setModels(models);
+        } else if (errors) {
+          setErrors(errors);
+        }
+      });
+    },
+    [api, models, setOptimisticModels],
+  );
+
   useEffect(() => {
     void loadModels();
     void loadProviders();
@@ -184,6 +211,7 @@ export const ModelProviderProvider: React.FC<{ children: ReactNode }> = ({ child
         deleteProvider,
         upsertModel,
         deleteModel,
+        updateModels,
       }}
     >
       {children}

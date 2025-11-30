@@ -132,6 +132,7 @@ export interface ApplicationAPI {
   updateProviders: (providers: ProviderProfile[]) => Promise<ProviderProfile[]>;
   upsertModel: (providerId: string, modelId: string, model: Model) => Promise<ProviderModelsData>;
   deleteModel: (providerId: string, modelId: string) => Promise<ProviderModelsData>;
+  updateModels: (modelUpdates: Array<{ providerId: string; modelId: string; model: Model }>) => Promise<ProviderModelsData>;
 
   addSettingsUpdatedListener: (callback: (data: SettingsData) => void) => () => void;
   addResponseChunkListener: (baseDir: string, taskId: string, callback: (data: ResponseChunkData) => void) => () => void;

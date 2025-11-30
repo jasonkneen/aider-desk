@@ -651,6 +651,11 @@ export class EventsHandler {
     await this.modelManager.deleteModel(providerId, modelId);
   }
 
+  async updateModels(modelUpdates: Array<{ providerId: string; modelId: string; model: Model }>): Promise<void> {
+    await this.modelManager.updateModels(modelUpdates);
+    this.projectManager.modelsUpdated();
+  }
+
   async showOpenDialog(options: Electron.OpenDialogSyncOptions): Promise<Electron.OpenDialogReturnValue> {
     if (!this.mainWindow) {
       return {

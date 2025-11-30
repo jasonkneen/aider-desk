@@ -520,6 +520,9 @@ export class BrowserApi implements ApplicationAPI {
   deleteModel(providerId: string, modelId: string): Promise<ProviderModelsData> {
     return this.delete(`/providers/${providerId}/models/${modelId}`);
   }
+  updateModels(modelUpdates: Array<{ providerId: string; modelId: string; model: Model }>): Promise<ProviderModelsData> {
+    return this.put('/models', modelUpdates);
+  }
   queryUsageData(from: string, to: string): Promise<UsageDataRow[]> {
     return this.get('/usage', { from, to });
   }

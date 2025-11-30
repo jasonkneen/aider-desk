@@ -116,6 +116,7 @@ const api: ApplicationAPI = {
   updateProviders: async (providers) => await ipcRenderer.invoke('update-providers', providers),
   upsertModel: (providerId, modelId, model) => ipcRenderer.invoke('upsert-model', providerId, modelId, model),
   deleteModel: (providerId, modelId) => ipcRenderer.invoke('delete-model', providerId, modelId),
+  updateModels: (modelUpdates) => ipcRenderer.invoke('update-models', modelUpdates),
   queryUsageData: (from, to) => ipcRenderer.invoke('query-usage-data', from, to),
   getEffectiveEnvironmentVariable: (key: string, baseDir?: string) => ipcRenderer.invoke('get-effective-environment-variable', key, baseDir),
 

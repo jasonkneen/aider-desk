@@ -373,6 +373,11 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     return await eventsHandler.getProviderModels();
   });
 
+  ipcMain.handle('update-models', async (_, modelUpdates: Array<{ providerId: string; modelId: string; model: Model }>) => {
+    await eventsHandler.updateModels(modelUpdates);
+    return await eventsHandler.getProviderModels();
+  });
+
   ipcMain.handle('delete-model', async (_, providerId: string, modelId: string) => {
     await eventsHandler.deleteModel(providerId, modelId);
     return await eventsHandler.getProviderModels();

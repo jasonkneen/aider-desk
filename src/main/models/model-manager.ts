@@ -481,6 +481,44 @@ export class ModelManager {
     }
   }
 
+  async updateModels(modelUpdates: Array<{ providerId: string; modelId: string; model: Model }>): Promise<void> {
+    await this.initPromise;
+
+    if (!this.modelOverrides) {
+      this.modelOverrides = [];
+    }
+
+    const affectedProviderIds = new Set<string>();
+
+    for (const { providerId, modelId, model } of modelUpdates) {
+      const existingIndex = this.modelOverrides.findIndex((m) => m.id === modelId && m.providerId === providerId);
+
+      const modelOverride: Model = {
+        ...model,
+        id: modelId,
+        providerId,
+      };
+
+      if (existingIndex >= 0) {
+        this.modelOverrides[existingIndex] = modelOverride;
+        logger.info(`Updated model override: ${providerId}/${modelId}`);
+      } else {
+        this.modelOverrides.push(modelOverride);
+        logger.info(`Added model override: ${providerId}/${modelId}`);
+      }
+
+      affectedProviderIds.add(providerId);
+    }
+
+    await this.saveModelOverrides();
+
+    // Reload models for all affected providers at once
+    const affectedProviders = this.store.getProviders().filter((provider) => affectedProviderIds.has(provider.id));
+    await this.loadProviderModels(affectedProviders);
+
+    logger.info(`Bulk updated ${modelUpdates.length} model overrides for ${affectedProviderIds.size} providers`);
+  }
+
   getAiderModelMapping(modelName: string): AiderModelMapping {
     const providers = this.store.getProviders();
     const [providerId, ...modelIdParts] = modelName.split('/');

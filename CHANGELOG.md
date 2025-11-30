@@ -11,6 +11,7 @@
 - fixed issue with caching when using OpenRouter provider and Anthropic models
 - watch files functionality now correctly only triggers once per project
 - updated close button text in Changelog dialog
+- added hide and unhide batch actions for models in Model Library
 
 ## [0.41.0]
 

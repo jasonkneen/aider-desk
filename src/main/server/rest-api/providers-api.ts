@@ -7,6 +7,14 @@ import { EventsHandler } from '@/events-handler';
 
 const LlmProviderProfileSchema = z.any(); // Placeholder - can be refined based on LlmProviderProfile type
 
+const ModelUpdateSchema = z.object({
+  providerId: z.string(),
+  modelId: z.string(),
+  model: z.any(), // Model object - will be validated at runtime
+});
+
+const BulkUpdateSchema = z.array(ModelUpdateSchema);
+
 export class ProvidersApi extends BaseApi {
   constructor(private readonly eventsHandler: EventsHandler) {
     super();
@@ -42,6 +50,21 @@ export class ProvidersApi extends BaseApi {
       this.handleRequest(async (req, res) => {
         const reload = req.query.reload === 'true';
         const models = await this.eventsHandler.getProviderModels(reload);
+        res.status(200).json(models);
+      }),
+    );
+
+    // Bulk update models
+    router.put(
+      '/models',
+      this.handleRequest(async (req, res) => {
+        const parsed = this.validateRequest(BulkUpdateSchema, req.body, res);
+        if (!parsed) {
+          return;
+        }
+
+        await this.eventsHandler.updateModels(parsed);
+        const models = await this.eventsHandler.getProviderModels(false);
         res.status(200).json(models);
       }),
     );
