@@ -90,9 +90,7 @@ export const migrateSettingsV16toV17 = async (settings: SettingsData): Promise<S
     }
   }
 
-  // Remove agentProfiles from settings (they're now file-based)
-  const { agentProfiles: _agentProfiles, ...settingsWithoutAgentProfiles } = settings as any;
-
   logger.info('Agent profiles migration completed');
-  return settingsWithoutAgentProfiles;
+  // keeping the agentProfiles in settings for now, just in case user needs to revert the version
+  return settings;
 };
