@@ -6,7 +6,33 @@ sidebar_label: "Agent Profiles"
 
 Agent Profiles are the core of configuring the agent's behavior. You can create multiple profiles for different workflows (e.g., a "Code Analysis" profile that only reads files, or a "Refactoring" profile with full file write access).
 
-You can manage profiles in **Settings > Agent**.
+## File-Based Storage
+
+Agent profiles are now stored as files, making them easy to share, backup, and version control. There are two levels of profile storage:
+
+### Global Profiles
+Stored in `~/.aider-desk/agents/`, these profiles are available across all projects.
+
+### Project-Level Profiles
+Stored in `$projectDir/.aider-desk/agents/`, these profiles are specific to individual projects and override global profiles when working within that project.
+
+### Profile Directory Structure
+
+Each agent profile is stored as a directory with the following structure:
+
+```
+profile-name/
+├── config.json          # Profile configuration
+└── rules/               # Additional rule files (optional)
+    ├── coding-standards.md
+    ├── architecture.md
+    └── custom-instructions.md
+```
+
+- **config.json**: Contains the profile settings (parameters, tool approvals, etc.)
+- **rules/**: Optional directory containing markdown files with additional rules and instructions for this specific agent
+
+You can manage profiles in **Settings > Agent**, or directly edit the files for advanced customization.
 
 ## Pre-defined Profiles
 
@@ -63,7 +89,20 @@ Each agent profile is fully configurable to your needs. You can customize:
 
 ### Rules & Instructions
 
+Agent profiles can include custom rules and instructions from multiple sources:
+
 - **Custom Instructions**: A free-text area to provide specific, persistent instructions to the agent for this profile.
+- **Agent-Specific Rule Files**: Markdown files placed in the agent's `rules/` directory are automatically included as additional instructions. This allows you to create detailed, structured rules for specific agent behaviors.
+- **Project-Level Rules**: When using project-level profiles, rules from both the project's `.aider-desk/rules/` directory and the agent's own `rules/` directory are included.
+- **Global Rule Inheritance**: Project-level profiles automatically inherit rules from global profiles with the same ID, allowing you to extend base profiles with project-specific customizations.
+
+#### Rule File Best Practices
+
+- Use descriptive filenames (e.g., `coding-standards.md`, `api-patterns.md`)
+- Structure rules with clear headings and bullet points
+- Include both "do's" and "don'ts" for clarity
+- Keep rules focused and specific to the agent's intended purpose
+- Use markdown formatting for better readability
 
 ### MCP Servers
 
@@ -95,6 +134,23 @@ Subagents can be used by any agent profile that has **"Use Subagents"** enabled 
 
 Learn more about creating, configuring, and using subagents in the [Subagents](./subagents.md) documentation.
 
+### File Management
+
+#### Profile Sharing
+Since profiles are stored as files, you can easily:
+- **Share profiles** by copying the profile directory between machines or users
+- **Version control** profiles by committing them to your repository (especially project-level profiles)
+- **Backup profiles** by copying the `~/.aider-desk/agents/` directory
+
+#### Profile Ordering
+Profile order is maintained via `order.json` files in both global and project agent directories. The Settings interface automatically updates these files when you reorder profiles.
+
+#### Real-time Updates
+AiderDesk automatically watches for changes to profile files and reloads them in real-time. You can:
+- Edit `config.json` directly to modify profile settings
+- Add/remove rule files in the `rules/` directory
+- Changes are applied immediately without restarting the application
+
 ### Best Practices
 
 1. **Create specialized profiles** for different types of tasks:
@@ -109,3 +165,13 @@ Learn more about creating, configuring, and using subagents in the [Subagents](.
 4. **Regularly review and update** your profiles as your project needs evolve.
 
 5. **Test new profiles** on non-critical tasks before using them for important work.
+
+6. **Leverage file-based storage** for team collaboration:
+   - Commit project-level profiles to version control
+   - Share global profiles with team members
+   - Create profile templates for common workflows
+
+7. **Organize rule files effectively**:
+   - Use separate markdown files for different aspects (coding standards, architecture, etc.)
+   - Keep rule files focused and maintainable
+   - Use consistent naming conventions across profiles
