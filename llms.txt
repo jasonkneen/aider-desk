@@ -1404,6 +1404,12 @@ File: src/common/locales/en.json
     "voiceControlDescription": "Use speech-to-text to dictate your prompts directly into the chat input.",
     "voiceEnabled": "Voice interaction enabled",
     "title": "Model Library",
+    "selectAll": "Select All",
+    "clearSelection": "Clear Selection",
+    "hideSelected": "Hide Selected",
+    "unhideSelected": "Unhide Selected",
+    "selectedCount": "{{count}} selected",
+    "bulkActions": "Actions",
     "search": "Search Models",
     "providers": "Providers",
     "all": "All",
@@ -2521,6 +2527,12 @@ File: src/common/locales/zh.json
     "voiceControlDescription": "使用语音转文本功能直接将您的提示语音输入到聊天输入框中。",
     "voiceEnabled": "语音交互已启用",
     "title": "模型库",
+    "selectAll": "全选",
+    "clearSelection": "清除选择",
+    "hideSelected": "隐藏选中",
+    "unhideSelected": "显示选中",
+    "selectedCount": "已选择 {{count}} 个",
+    "bulkActions": "操作",
     "search": "搜索模型",
     "providers": "提供商",
     "all": "全部",
@@ -3831,6 +3843,7 @@ export interface ApplicationAPI {
   updateProviders: (providers: ProviderProfile[]) => Promise<ProviderProfile[]>;
   upsertModel: (providerId: string, modelId: string, model: Model) => Promise<ProviderModelsData>;
   deleteModel: (providerId: string, modelId: string) => Promise<ProviderModelsData>;
+  updateModels: (modelUpdates: Array<{ providerId: string; modelId: string; model: Model }>) => Promise<ProviderModelsData>;
 
   addSettingsUpdatedListener: (callback: (data: SettingsData) => void) => () => void;
   addResponseChunkListener: (baseDir: string, taskId: string, callback: (data: ResponseChunkData) => void) => () => void;
@@ -7235,6 +7248,10 @@ async upsertModel(providerId: string, modelId: string, model: Model): Promise<vo
 ⋮----
 async deleteModel(providerId: string, modelId: string): Promise<void>
 ⋮----
+async updateModels(modelUpdates: Array<
+⋮----
+// Reload models for all affected providers at once
+⋮----
 getAiderModelMapping(modelName: string): AiderModelMapping
 ⋮----
 private getProviderAiderMapping(provider: ProviderProfile, modelId: string): AiderModelMapping
@@ -7901,6 +7918,8 @@ import { EventsHandler } from '@/events-handler';
 ⋮----
 const LlmProviderProfileSchema = z.any(); // Placeholder - can be refined based on LlmProviderProfile type
 ⋮----
+model: z.any(), // Model object - will be validated at runtime
+⋮----
 export class ProvidersApi extends BaseApi
 ⋮----
 constructor(private readonly eventsHandler: EventsHandler)
@@ -7912,6 +7931,8 @@ registerRoutes(router: Router): void
 // Update providers
 ⋮----
 // Get provider models
+⋮----
+// Bulk update models
 
 ================
 File: src/main/server/rest-api/settings-api.ts
@@ -8246,7 +8267,7 @@ existingDirNames.add(dirName); // Add to set to avoid collisions in same loop
 ⋮----
 // Create order.json file using profile IDs
 ⋮----
-// Remove agentProfiles from settings (they're now file-based)
+// keeping the agentProfiles in settings for now, just in case user needs to revert the version
 
 ================
 File: src/main/store/migrations/v2-to-v3.ts
@@ -10582,6 +10603,8 @@ async upsertModel(providerId: string, modelId: string, model: Model): Promise<vo
 ⋮----
 async deleteModel(providerId: string, modelId: string): Promise<void>
 ⋮----
+async updateModels(modelUpdates: Array<
+⋮----
 async showOpenDialog(options: Electron.OpenDialogSyncOptions): Promise<Electron.OpenDialogReturnValue>
 ⋮----
 async openLogsDirectory(): Promise<boolean>
@@ -11441,6 +11464,7 @@ getProviders(): Promise<ProviderProfile[]>
 updateProviders(providers: ProviderProfile[]): Promise<ProviderProfile[]>
 upsertModel(providerId: string, modelId: string, model: Model): Promise<ProviderModelsData>
 deleteModel(providerId: string, modelId: string): Promise<ProviderModelsData>
+updateModels(modelUpdates: Array<
 queryUsageData(from: string, to: string): Promise<UsageDataRow[]>
 getEffectiveEnvironmentVariable(key: string, baseDir?: string): Promise<EnvironmentVariable | undefined>
 ⋮----
@@ -14443,6 +14467,8 @@ const handleSaveModel = async (model: Model) =>
 ⋮----
 const handleToggleHidden = async (model: Model) =>
 ⋮----
+const handleBulkToggleHidden = async (modelIds: string[], isHidden: boolean) =>
+⋮----
 // Show provider selection when adding new provider
 ⋮----
 <ModalOverlayLayout title=
@@ -14492,10 +14518,10 @@ const handleResetToDefaults = () =>
 ================
 File: src/renderer/src/components/ModelLibrary/ModelTableSection.tsx
 ================
-import { useState, ReactNode } from 'react';
+import { useState, ReactNode, useRef, useEffect, RefObject } from 'react';
 import { useDebounce } from '@reactuses/core';
 import { useTranslation } from 'react-i18next';
-import { FiEdit2, FiTrash2, FiPlus, FiEye, FiSliders, FiRefreshCw } from 'react-icons/fi';
+import { FiEdit2, FiTrash2, FiPlus, FiEye, FiSliders, FiRefreshCw, FiChevronDown } from 'react-icons/fi';
 import { Model, ProviderProfile } from '@common/types';
 import { MdThermostat } from 'react-icons/md';
 ⋮----
@@ -14506,6 +14532,7 @@ import { Column } from '@/components/common/Table';
 import { VirtualTable } from '@/components/common/VirtualTable';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { type MenuOption } from '@/components/common/VerticalDotsMenu';
 ⋮----
 type Props = {
   models: Model[];
@@ -14515,9 +14542,24 @@ type Props = {
   onEditModel: (model: Model) => void;
   onDeleteModel: (model: Model) => void;
   onToggleHidden: (model: Model) => void;
+  onBulkToggleHidden: (modelIds: string[], isHidden: boolean) => void;
   onRefreshModels: () => void;
   modelsLoading?: boolean;
 };
+⋮----
+const useClickOutside = (refs: React.RefObject<HTMLElement>[], callback: () => void) =>
+⋮----
+const handleClickOutside = (event: MouseEvent) =>
+⋮----
+const handleToggleSelectAll = () =>
+⋮----
+const handleSelectModel = (modelId: string, checked: boolean) =>
+⋮----
+const handleClearSelection = () =>
+⋮----
+const handleBulkHide = () =>
+⋮----
+const handleBulkUnhide = () =>
 ⋮----
 const getRowClassName = (row: Model) =>
 ⋮----
@@ -14526,6 +14568,9 @@ onClick=
 {/* Search and Info Header */}
 ⋮----
 <Checkbox label=
+⋮----
+option.action();
+setIsBulkActionsOpen(false);
 ⋮----
 {/* Table */}
 
@@ -17366,18 +17411,17 @@ type ModelProviderContextType = {
   deleteProvider: (profileId: string) => Promise<void>;
   upsertModel: (providerId: string, modelId: string, model: Model) => Promise<void>;
   deleteModel: (providerId: string, modelId: string) => Promise<void>;
+  updateModels: (modelUpdates: Array<{ providerId: string; modelId: string; model: Model }>) => Promise<void>;
   modelsLoading: boolean;
   providersLoading: boolean;
   errors: Record<string, string>;
 };
 ⋮----
-export const ModelProviderProvider: React.FC<
-⋮----
 // eslint-disable-next-line no-console
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
-export const useModelProviders = (): ModelProviderContextType =>
+// Create optimistic updates
 
 ================
 File: src/renderer/src/contexts/ProjectSettingsContext.tsx
@@ -17628,7 +17672,12 @@ File: src/renderer/src/hooks/useClickOutside.ts
 ================
 import { useEffect, RefObject } from 'react';
 ⋮----
-type RefType = RefObject<HTMLElement | null>;
+type RefType =
+  | RefObject<HTMLElement | null>
+  | RefObject<HTMLDivElement | null>
+  | RefObject<HTMLButtonElement | null>
+  | RefObject<HTMLAnchorElement | null>
+  | RefObject<HTMLInputElement | null>;
 ⋮----
 export const useClickOutside = (refs: RefType | RefType[], handler: (event: MouseEvent) => void) =>
 ⋮----
