@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.42.1]
+
+- fixed issue with Aider not loading on Windows
+
 ## [0.42.0]
 
 - redesign settings interface with sidebar navigation
