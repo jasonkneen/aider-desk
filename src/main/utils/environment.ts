@@ -3,12 +3,12 @@ import path from 'path';
 
 import { parse } from '@dotenvx/dotenvx';
 import YAML from 'yaml';
-import { DEFAULT_PROVIDER_MODEL, LlmProviderName } from '@common/agent';
-import { EnvironmentVariable, Model, ProviderProfile, SettingsData } from '@common/types';
+import { DEFAULT_AGENT_PROFILE, DEFAULT_AIDER_MAIN_MODEL, DEFAULT_PROVIDER_MODELS } from '@common/agent';
+import { EnvironmentVariable, Model, ProjectSettings, ProviderProfile, SettingsData } from '@common/types';
 
 import logger from '@/logger';
-import { DEFAULT_MAIN_MODEL } from '@/models';
 import { getLangfuseEnvironmentVariables } from '@/telemetry';
+import { Store } from '@/store';
 
 const readEnvFile = (filePath: string): Record<string, string> | null => {
   try {
@@ -254,14 +254,14 @@ export const determineMainModel = (settings: SettingsData, providers: ProviderPr
 
   for (const provider of providers) {
     const models = providerModels.filter((model) => model.providerId === provider.id);
-    const defaultModel = DEFAULT_PROVIDER_MODEL[provider.provider.name];
+    const defaultModel = DEFAULT_PROVIDER_MODELS[provider.provider.name];
     if (defaultModel || models.length > 0) {
       return `${provider.id}/${defaultModel || models[0].id}`;
     }
   }
 
   // Default model if no other condition is met
-  return DEFAULT_MAIN_MODEL;
+  return DEFAULT_AIDER_MAIN_MODEL;
 };
 
 export const getEnvironmentVariablesForAider = (settings: SettingsData, baseDir: string): Record<string, unknown> => {
@@ -277,27 +277,26 @@ const getTelemetryEnvironmentVariablesForAider = (settings: SettingsData, baseDi
   };
 };
 
-export const determineProvider = (projectDir?: string, settings?: SettingsData): LlmProviderName => {
-  if (getEffectiveEnvironmentVariable('ANTHROPIC_API_KEY', settings, projectDir)) {
-    return 'anthropic';
+export const getDefaultProjectSettings = (
+  store: Store,
+  providerModels: Model[],
+  baseDir: string,
+  defaultAgentProfileId = DEFAULT_AGENT_PROFILE.id,
+): ProjectSettings => {
+  const openProjects = store.getOpenProjects();
+  const activeProject = openProjects.find((p) => p.active);
+
+  if (activeProject) {
+    return {
+      ...activeProject.settings,
+    };
   }
-  if (getEffectiveEnvironmentVariable('GEMINI_API_KEY', settings, projectDir)) {
-    return 'gemini';
-  }
-  if (getEffectiveEnvironmentVariable('OPENAI_API_KEY', settings, projectDir)) {
-    return 'openai';
-  }
-  if (getEffectiveEnvironmentVariable('DEEPSEEK_API_KEY', settings, projectDir)) {
-    return 'deepseek';
-  }
-  if (getEffectiveEnvironmentVariable('OPENROUTER_API_KEY', settings, projectDir)) {
-    return 'openrouter';
-  }
-  if (getEffectiveEnvironmentVariable('CEREBRAS_API_KEY', settings, projectDir)) {
-    return 'cerebras';
-  }
-  if (getEffectiveEnvironmentVariable('REQUESTY_API_KEY', settings, projectDir)) {
-    return 'requesty';
-  }
-  return 'anthropic';
+
+  return {
+    mainModel: determineMainModel(store.getSettings(), store.getProviders(), providerModels, baseDir),
+    weakModel: determineWeakModel(baseDir),
+    modelEditFormats: {},
+    currentMode: 'code',
+    agentProfileId: defaultAgentProfileId,
+  };
 };

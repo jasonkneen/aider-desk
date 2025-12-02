@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { ProviderProfile, ProjectData, ProjectSettings, SettingsData, ProjectStartMode, SuggestionMode, WindowState, Model } from '@common/types';
+import { ProviderProfile, ProjectData, ProjectSettings, SettingsData, ProjectStartMode, SuggestionMode, WindowState } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
 
 import { migrateSettingsV0toV1 } from './migrations/v0-to-v1';
@@ -16,7 +16,7 @@ import { migrateV10ToV11 } from './migrations/v10-to-v11';
 import { migrateV11ToV12 } from './migrations/v11-to-v12';
 import { migrateV12ToV13 } from './migrations/v12-to-v13';
 
-import { determineMainModel, determineWeakModel } from '@/utils';
+import { getDefaultProjectSettings } from '@/utils';
 import logger from '@/logger';
 import { migrateProvidersV13toV14 } from '@/store/migrations/v13-to-v14';
 import { migrateSettingsV14toV15 } from '@/store/migrations/v14-to-v15';
@@ -65,16 +65,6 @@ export const DEFAULT_SETTINGS: SettingsData = {
       password: '',
     },
   },
-};
-
-export const getDefaultProjectSettings = (store: Store, providerModels: Model[], baseDir: string): ProjectSettings => {
-  return {
-    mainModel: determineMainModel(store.getSettings(), store.getProviders(), providerModels, baseDir),
-    weakModel: determineWeakModel(baseDir),
-    modelEditFormats: {},
-    currentMode: 'code',
-    agentProfileId: 'default',
-  };
 };
 
 const compareBaseDirs = (baseDir1: string, baseDir2: string): boolean => {

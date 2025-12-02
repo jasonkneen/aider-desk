@@ -1,1 +1,1 @@
-export { Store, appStore, getDefaultProjectSettings } from './store';
+export { Store, appStore } from './store';

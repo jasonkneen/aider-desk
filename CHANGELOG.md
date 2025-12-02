@@ -4,6 +4,8 @@
 
 - selected agent profile and models are now remembered per task
 - recent projects are now correctly added when closing a project
+- updated default models for providers
+- using settings from the last active projects when opening a new project
 
 ## [0.42.1]
 

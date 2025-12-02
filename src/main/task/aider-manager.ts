@@ -7,12 +7,13 @@ import path from 'path';
 import { EditFormat, ModelsData, ProjectSettings, TokensInfoData } from '@common/types';
 import { fileExists } from '@common/utils';
 import treeKill from 'tree-kill';
+import { DEFAULT_AIDER_MAIN_MODEL } from '@common/agent';
 
 import { AIDER_DESK_CONNECTOR_DIR, AIDER_DESK_PROJECT_RULES_DIR, AIDER_DESK_TASKS_DIR, PID_FILES_DIR, PYTHON_COMMAND, SERVER_PORT } from '@/constants';
 import { Connector } from '@/connector';
 import logger from '@/logger';
 import { Store } from '@/store';
-import { DEFAULT_MAIN_MODEL, ModelManager } from '@/models';
+import { ModelManager } from '@/models';
 import { EventManager } from '@/events';
 import { getEnvironmentVariablesForAider } from '@/utils';
 import { Task } from '@/task/task';
@@ -58,7 +59,7 @@ export class AiderManager {
 
     const settings = this.store.getSettings();
     const projectSettings = this.store.getProjectSettings(this.task.getProjectDir());
-    const mainModel = projectSettings.mainModel || DEFAULT_MAIN_MODEL;
+    const mainModel = projectSettings.mainModel || DEFAULT_AIDER_MAIN_MODEL;
     const weakModel = projectSettings.weakModel;
     const modelEditFormats = projectSettings.modelEditFormats;
     const reasoningEffort = projectSettings.reasoningEffort;
@@ -360,7 +361,7 @@ export class AiderManager {
     this.store.saveProjectSettings(this.task.getProjectDir(), updatedSettings);
 
     const projectSettings = this.store.getProjectSettings(this.task.getProjectDir());
-    const mainModel = projectSettings.mainModel || DEFAULT_MAIN_MODEL;
+    const mainModel = projectSettings.mainModel || DEFAULT_AIDER_MAIN_MODEL;
     const mainModelParts = mainModel.split('/');
     const weakModelParts = projectSettings.weakModel?.split('/') || modelsData.weakModel?.split('/');
     const architectModelParts = projectSettings.architectModel?.split('/') || modelsData.architectModel?.split('/');

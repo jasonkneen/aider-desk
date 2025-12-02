@@ -4,7 +4,7 @@ import { homedir } from 'os';
 
 import { FSWatcher, watch } from 'chokidar';
 import debounce from 'lodash/debounce';
-import { DEFAULT_AGENT_PROFILES } from '@common/agent';
+import { DEFAULT_AGENT_PROFILE, DEFAULT_AGENT_PROFILES } from '@common/agent';
 import { fileExists } from '@common/utils';
 
 import type { AgentProfile } from '@common/types';
@@ -693,5 +693,15 @@ export class AgentProfileManager {
 
     // Clear profiles
     this.profiles.clear();
+  }
+
+  getDefaultAgentProfileId() {
+    for (const defaultProfile of DEFAULT_AGENT_PROFILES) {
+      if (this.profiles.has(defaultProfile.id)) {
+        return defaultProfile.id;
+      }
+    }
+
+    return this.profiles.values().next().value?.agentProfile.id || DEFAULT_AGENT_PROFILE.id;
   }
 }

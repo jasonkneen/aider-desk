@@ -19,7 +19,6 @@ import {
   TOOL_GROUP_NAME_SEPARATOR,
 } from '@common/tools';
 
-// TODO: move to providers.ts
 export type LlmProviderName =
   | 'anthropic'
   | 'azure'
@@ -221,15 +220,20 @@ export type LlmProvider =
 
 export const DEFAULT_MODEL_TEMPERATURE = 0.0;
 
-export const DEFAULT_PROVIDER_MODEL: Partial<Record<LlmProviderName, string>> = {
-  anthropic: 'claude-sonnet-4-20250514',
-  cerebras: 'llama3.1-8b',
+export const DEFAULT_PROVIDER_MODELS: Partial<Record<LlmProviderName, string>> = {
+  anthropic: 'claude-sonnet-4-5-20250929',
+  cerebras: 'qwen-3-235b-a22b-instruct-2507',
   deepseek: 'deepseek-chat',
-  gemini: 'gemini-2.5-pro',
-  openai: 'gpt-5',
-  openrouter: 'anthropic/claude-sonnet-4',
-  requesty: 'anthropic/claude-sonnet-4-20250514',
+  gemini: 'gemini-3-pro',
+  groq: 'moonshotai/kimi-k2-instruct-0905',
+  openai: 'gpt-5.1-codex',
+  openrouter: 'anthropic/claude-sonnet-4.5',
+  requesty: 'anthropic/claude-sonnet-4-5',
+  'zai-plan': 'glm-4.6',
+  minimax: 'MiniMax-M2',
 };
+
+export const DEFAULT_AIDER_MAIN_MODEL = `anthropic/${DEFAULT_PROVIDER_MODELS.anthropic}`;
 
 const DEFAULT_AGENT_PROFILE_ID = 'default';
 
@@ -237,7 +241,7 @@ export const DEFAULT_AGENT_PROFILE: AgentProfile = {
   id: DEFAULT_AGENT_PROFILE_ID,
   name: 'Default Agent',
   provider: 'anthropic',
-  model: DEFAULT_PROVIDER_MODEL.anthropic!,
+  model: DEFAULT_PROVIDER_MODELS.anthropic!,
   maxIterations: 100,
   minTimeBetweenToolCalls: 0,
   toolApprovals: {

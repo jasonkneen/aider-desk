@@ -502,6 +502,13 @@ export class Agent {
     const contextMessages = initialContextMessages ?? task.getContextMessages();
     const contextFiles = initialContextFiles ?? (await task.getContextFiles());
 
+    const userRequestMessage: ContextUserMessage = {
+      id: promptContext?.id || uuidv4(),
+      role: 'user',
+      content: prompt,
+      promptContext,
+    };
+
     const settings = this.store.getSettings();
     const projectProfiles = this.agentProfileManager.getProjectProfiles(task.getProjectDir());
 
@@ -509,8 +516,8 @@ export class Agent {
     const provider = providers.find((p) => p.id === profile.provider);
     if (!provider) {
       logger.error(`Provider ${profile.provider} not found`);
-      task.addLogMessage('error', 'Selected model is not configured. Select another model and try again.', false, promptContext);
-      return [];
+      task.addLogMessage('error', 'Selected model is not configured. Select another model and try again.', true, promptContext);
+      return [userRequestMessage];
     }
 
     this.telemetryManager.captureAgentRun(profile, task.task);
@@ -544,12 +551,6 @@ export class Agent {
     const providerOptions = this.modelManager.getProviderOptions(provider, profile.model);
     const providerParameters = this.modelManager.getProviderParameters(provider, profile.model);
 
-    const userRequestMessage: ContextUserMessage = {
-      id: promptContext?.id || uuidv4(),
-      role: 'user',
-      content: prompt,
-      promptContext,
-    };
     const messages = await this.prepareMessages(task, profile, contextMessages, contextFiles);
     const resultMessages: ContextMessage[] = [userRequestMessage];
     const initialUserRequestMessageIndex = messages.length - contextMessages.length;

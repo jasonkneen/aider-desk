@@ -11,9 +11,10 @@ import { AIDER_DESK_DATA_DIR, HEADLESS_MODE } from '@/constants';
 import { ProgressWindow } from '@/progress-window';
 import { setupIpcHandlers } from '@/ipc-handlers';
 import { performStartUp, UpdateProgressData } from '@/start-up';
-import { getDefaultProjectSettings, Store } from '@/store';
+import { Store } from '@/store';
 import logger from '@/logger';
 import { initManagers } from '@/managers';
+import { getDefaultProjectSettings } from '@/utils';
 
 const setupCustomMenu = (): void => {
   const menuTemplate: Electron.MenuItemConstructorOptions[] = [

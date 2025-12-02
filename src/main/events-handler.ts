@@ -34,13 +34,13 @@ import { McpManager, AgentProfileManager } from '@/agent';
 import { ModelManager } from '@/models';
 import { ProjectManager } from '@/project';
 import { CloudflareTunnelManager } from '@/server';
-import { getDefaultProjectSettings, Store } from '@/store';
+import { Store } from '@/store';
 import { TelemetryManager } from '@/telemetry';
 import { VersionsManager } from '@/versions';
 import { DataManager } from '@/data-manager';
 import { TerminalManager } from '@/terminal/terminal-manager';
 import logger from '@/logger';
-import { getEffectiveEnvironmentVariable, getFilePathSuggestions, isProjectPath, isValidPath, scrapeWeb } from '@/utils';
+import { getDefaultProjectSettings, getEffectiveEnvironmentVariable, getFilePathSuggestions, isProjectPath, isValidPath, scrapeWeb } from '@/utils';
 import { AIDER_DESK_TMP_DIR, LOGS_DIR } from '@/constants';
 import { EventManager } from '@/events';
 
@@ -129,7 +129,7 @@ export class EventsHandler {
       const providerModels = await this.modelManager.getProviderModels();
       const newProject: ProjectData = {
         baseDir: baseDir.endsWith('/') ? baseDir.slice(0, -1) : baseDir,
-        settings: getDefaultProjectSettings(this.store, providerModels.models || [], baseDir),
+        settings: getDefaultProjectSettings(this.store, providerModels.models || [], baseDir, this.agentProfileManager.getDefaultAgentProfileId()),
         active: true,
       };
       const updatedProjects = [...projects.map((p) => ({ ...p, active: false })), newProject];
