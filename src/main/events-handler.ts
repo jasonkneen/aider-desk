@@ -151,6 +151,7 @@ export class EventsHandler {
       }
     }
 
+    this.addRecentProject(baseDir);
     this.store.setOpenProjects(updatedProjects);
 
     this.telemetryManager.captureProjectClosed(this.store.getOpenProjects().length);

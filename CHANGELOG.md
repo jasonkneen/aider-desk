@@ -3,6 +3,7 @@
 ## [UNRELEASED]
 
 - selected agent profile and models are now remembered per task
+- recent projects are now correctly added when closing a project
 
 ## [0.42.1]
 
