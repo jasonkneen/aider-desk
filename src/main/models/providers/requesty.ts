@@ -192,7 +192,7 @@ export const getRequestyUsageReport = (
   const receivedTokens = usage.outputTokens || 0;
 
   // Extract cache tokens from provider metadata
-  const { requesty } = providerMetadata as RequestyProviderMetadata;
+  const { requesty } = providerMetadata ? (providerMetadata as RequestyProviderMetadata) : {};
   logger.info('Requesty usage report', {
     requesty,
     usage,
