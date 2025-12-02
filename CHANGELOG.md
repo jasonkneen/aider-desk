@@ -1,5 +1,9 @@
 # Changelog
 
+## [UNRELEASED]
+
+- selected agent profile and models are now remembered per task
+
 ## [0.42.1]
 
 - fixed issue with Aider not loading on Windows

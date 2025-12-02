@@ -649,7 +649,8 @@
     "removePreferred": "从首选模型中移除",
     "selectModel": "选择模型...",
     "weakModelLock": "锁定弱模型",
-    "weakModelUnlock": "解锁弱模型"
+    "weakModelUnlock": "解锁弱模型",
+    "noModelSelected": "未选择模型"
   },
   "modelInfo": {
     "noInfo": "无模型信息可用。",
@@ -885,7 +886,8 @@
     "profileDescription": "描述",
     "profileDescriptionPlaceholder": "描述此代理配置（用途、工具等）",
     "tools": "工具",
-    "model": "模型"
+    "model": "模型",
+    "saveAsProjectDefault": "保存为项目默认"
   },
   "projectBar": {
     "editFormatTooltip": "这是用于编辑代码的格式。更改它可能会导致模型表现不如预期。",

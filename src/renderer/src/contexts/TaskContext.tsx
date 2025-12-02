@@ -77,6 +77,7 @@ interface TaskContextType {
   setAiderModelsData: (taskId: string, modelsData: ModelsData | null) => void;
   answerQuestion: (taskId: string, answer: string) => void;
   interruptResponse: (taskId: string) => void;
+  updateTaskAgentProfile: (taskId: string, agentProfileId: string, provider: string, model: string) => void;
 }
 
 const TaskContext = createContext<TaskContextType | null>(null);
@@ -288,6 +289,17 @@ export const TaskProvider: React.FC<{
       });
     },
     [api, baseDir, updateTaskState],
+  );
+
+  const updateTaskAgentProfile = useCallback(
+    (taskId: string, agentProfileId: string, provider: string, model: string) => {
+      void api.updateTask(baseDir, taskId, {
+        agentProfileId,
+        provider,
+        model,
+      });
+    },
+    [api, baseDir],
   );
 
   useEffect(() => {
@@ -745,6 +757,7 @@ export const TaskProvider: React.FC<{
         setAiderModelsData,
         answerQuestion,
         interruptResponse,
+        updateTaskAgentProfile,
       }}
     >
       {children}

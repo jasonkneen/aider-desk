@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap } from 'react-icons/md';
+import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdSave } from 'react-icons/md';
 import { RiToolsFill } from 'react-icons/ri';
 import { clsx } from 'clsx';
-import { AgentProfile, ToolApprovalState } from '@common/types';
+import { AgentProfile, TaskData, ToolApprovalState } from '@common/types';
 import { BiCog } from 'react-icons/bi';
 import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -18,14 +18,17 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
 import { useApi } from '@/contexts/ApiContext';
 import { useAgents } from '@/contexts/AgentsContext';
+import { useTask } from '@/contexts/TaskContext';
+import { resolveAgentProfile } from '@/utils/agents';
 
 type Props = {
   projectDir: string;
+  task: TaskData;
   isActive: boolean;
   showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
 };
 
-export const AgentSelector = ({ projectDir, isActive, showSettingsPage }: Props) => {
+export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: Props) => {
   const { t } = useTranslation();
   const { settings } = useSettings();
   const { projectSettings, saveProjectSettings } = useProjectSettings();
@@ -34,11 +37,12 @@ export const AgentSelector = ({ projectDir, isActive, showSettingsPage }: Props)
   const [enabledToolsCount, setEnabledToolsCount] = useState<number | null>(null);
   const selectorRef = useRef<HTMLDivElement>(null);
   const api = useApi();
+  const { updateTaskAgentProfile } = useTask();
 
   const profiles = useMemo(() => getProfiles(projectDir), [getProfiles, projectDir]);
   const activeProfile = useMemo(() => {
-    return profiles.find((profile) => profile.id === projectSettings?.agentProfileId);
-  }, [projectSettings?.agentProfileId, profiles]);
+    return resolveAgentProfile(task, projectSettings?.agentProfileId, profiles);
+  }, [task, projectSettings?.agentProfileId, profiles]);
   const { mcpServers = {} } = settings || {};
   const { enabledServers = [], toolApprovals = {} } = activeProfile || {};
 
@@ -135,11 +139,18 @@ export const AgentSelector = ({ projectDir, isActive, showSettingsPage }: Props)
 
   const handleSwitchProfile = (profileId: string) => {
     const newActiveProfile = profiles.find((p) => p.id === profileId);
-    if (newActiveProfile && projectSettings) {
-      void saveProjectSettings({
-        agentProfileId: newActiveProfile.id,
-      });
+    if (newActiveProfile) {
+      updateTaskAgentProfile(task.id, newActiveProfile.id, newActiveProfile.provider, newActiveProfile.model);
       setSelectorVisible(false);
+    }
+  };
+
+  const handleSaveAsProjectDefault = async () => {
+    if (activeProfile) {
+      setSelectorVisible(false);
+      await saveProjectSettings({
+        agentProfileId: activeProfile.id,
+      });
     }
   };
 
@@ -206,13 +217,22 @@ export const AgentSelector = ({ projectDir, isActive, showSettingsPage }: Props)
           <div className="py-2 border-b border-border-default-dark">
             <div className="flex items-center justify-between mb-2 pl-3 pr-2">
               <span className="text-xs font-medium text-text-secondary uppercase">{t('agentProfiles.profiles')}</span>
-              <IconButton
-                icon={<BiCog className="w-4 h-4" />}
-                onClick={handleOpenAgentProfiles}
-                className="opacity-60 hover:opacity-100 p-1 hover:bg-bg-secondary  rounded-md"
-                tooltip={t('agentProfiles.manageProfiles')}
-                tooltipId="agent-selector-tooltip"
-              />
+              <div className="flex items-center gap-1">
+                <IconButton
+                  icon={<MdSave className="w-4 h-4" />}
+                  onClick={handleSaveAsProjectDefault}
+                  className="opacity-60 hover:opacity-100 p-1 hover:bg-bg-secondary rounded-md"
+                  tooltip={t('agentProfiles.saveAsProjectDefault')}
+                  tooltipId="agent-selector-tooltip"
+                />
+                <IconButton
+                  icon={<BiCog className="w-4 h-4" />}
+                  onClick={handleOpenAgentProfiles}
+                  className="opacity-60 hover:opacity-100 p-1 hover:bg-bg-secondary  rounded-md"
+                  tooltip={t('agentProfiles.manageProfiles')}
+                  tooltipId="agent-selector-tooltip"
+                />
+              </div>
             </div>
             <div className="max-h-[250px] overflow-y-auto scrollbar-thin scrollbar-thumb-bg-secondary-light scrollbar-track-bg-primary-light">
               {profiles.map((profile) => (

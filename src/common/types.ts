@@ -634,6 +634,9 @@ export const TaskDataSchema = z.object({
   aiderTotalCost: z.number(),
   agentTotalCost: z.number(),
   autoApprove: z.boolean().optional(),
+  agentProfileId: z.string().optional(),
+  provider: z.string().optional(),
+  model: z.string().optional(),
 });
 
 export type TaskData = z.infer<typeof TaskDataSchema>;

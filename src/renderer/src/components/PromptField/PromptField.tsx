@@ -1020,7 +1020,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
             <ModeSelector mode={mode} onModeChange={onModeChanged} />
             {mode === 'agent' && (
               <>
-                <AgentSelector projectDir={baseDir} isActive={isActive} showSettingsPage={showSettingsPage} />
+                <AgentSelector projectDir={baseDir} task={task} isActive={isActive} showSettingsPage={showSettingsPage} />
                 <div
                   className="flex items-center ml-1 group"
                   data-tooltip-id="prompt-field-tooltip"

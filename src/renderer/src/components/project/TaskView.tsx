@@ -23,6 +23,7 @@ import { WelcomeMessage } from '@/components/project/WelcomeMessage';
 import 'react-resizable/css/styles.css';
 import { useSearchText } from '@/hooks/useSearchText';
 import { useApi } from '@/contexts/ApiContext';
+import { resolveAgentProfile } from '@/utils/agents';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useModelProviders } from '@/contexts/ModelProviderContext';
 import { useTask } from '@/contexts/TaskContext';
@@ -70,7 +71,9 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
   const [messagesPending, startMessagesTransition] = useTransition();
   const [transitionMessages, setTransitionMessages] = useState<Message[]>([]);
   const [searchContainer, setSearchContainer] = useState<HTMLElement | null>(null);
-  const activeAgentProfile = getProfiles(project.baseDir).find((p) => p.id === projectSettings?.agentProfileId);
+  const activeAgentProfile = useMemo(() => {
+    return resolveAgentProfile(task, projectSettings?.agentProfileId, getProfiles(project.baseDir));
+  }, [task, projectSettings?.agentProfileId, getProfiles, project.baseDir]);
 
   const { renderSearchInput } = useSearchText(searchContainer, 'absolute top-1 left-1');
 
@@ -344,6 +347,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
           onModelsChange={handleModelChange}
           runCommand={runCommand}
           onToggleSidebar={() => setShowSidebar(!showSidebar)}
+          updateTask={updateTask}
         />
         <div className="flex-grow overflow-y-hidden relative flex flex-col">
           {renderSearchInput()}

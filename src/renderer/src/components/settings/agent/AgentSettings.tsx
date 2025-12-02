@@ -1,9 +1,19 @@
-import { AgentProfile, ContextMemoryMode, GenericTool, InvocationMode, McpServerConfig, ProjectData, SettingsData, ToolApprovalState } from '@common/types';
+import {
+  AgentProfile,
+  ContextMemoryMode,
+  GenericTool,
+  InvocationMode,
+  McpServerConfig,
+  Model,
+  ProjectData,
+  SettingsData,
+  ToolApprovalState,
+} from '@common/types';
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { FaChevronLeft, FaChevronRight, FaPaste, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
 import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat } from 'react-icons/md';
-import { DEFAULT_AGENT_PROFILE, DEFAULT_MODEL_TEMPERATURE } from '@common/agent';
+import { DEFAULT_AGENT_PROFILE, DEFAULT_MODEL_TEMPERATURE, AVAILABLE_PROVIDERS, getProviderModelId } from '@common/agent';
 import { BiTrash } from 'react-icons/bi';
 import { clsx } from 'clsx';
 import Sketch from '@uiw/react-color-sketch';
@@ -44,7 +54,7 @@ import { SortableAgentProfileItem } from './SortableAgentProfileItem';
 
 import { IconButton } from '@/components/common/IconButton';
 import { Button } from '@/components/common/Button';
-import { AgentModelSelector } from '@/components/AgentModelSelector';
+import { ModelSelector } from '@/components/ModelSelector';
 import { Slider } from '@/components/common/Slider';
 import { InfoIcon } from '@/components/common/InfoIcon';
 import { Accordion } from '@/components/common/Accordion';
@@ -53,6 +63,8 @@ import { Checkbox } from '@/components/common/Checkbox';
 import { Select } from '@/components/common/Select';
 import { TextArea } from '@/components/common/TextArea';
 import { useApi } from '@/contexts/ApiContext';
+import { useModelProviders } from '@/contexts/ModelProviderContext';
+import { showErrorNotification } from '@/utils/notifications';
 
 const tools: Record<string, GenericTool[]> = {
   [AIDER_TOOL_GROUP_NAME]: [
@@ -266,6 +278,7 @@ export const AgentSettings = ({
   const [profileContext, setProfileContext] = useState<'global' | string>(selectedProfileContext || 'global');
 
   const api = useApi();
+  const { models, providers } = useModelProviders();
 
   // Sync internal profileContext with selectedProfileContext prop
   useEffect(() => {
@@ -486,6 +499,70 @@ export const AgentSettings = ({
     setSettings(updatedSettings);
   };
 
+  const handleAddPreferredModel = (modelId: string) => {
+    const updatedSettings = {
+      ...settings,
+      preferredModels: [...new Set([modelId, ...settings.preferredModels])],
+    };
+    setSettings(updatedSettings);
+  };
+
+  const handleModelChange = (model: Model) => {
+    if (!selectedProfile) {
+      return;
+    }
+
+    const selectedModelId = getProviderModelId(model);
+    const providerId = model.providerId;
+    const modelId = model.id;
+
+    // Validate provider
+    const provider = providers.find((p) => p.id === providerId);
+    if (!provider) {
+      showErrorNotification(
+        t('modelSelector.providerNotSupported', {
+          provider: providerId,
+          providers: AVAILABLE_PROVIDERS.join(', '),
+        }),
+      );
+      return;
+    }
+
+    // Update profile
+    const updatedProfile = {
+      ...selectedProfile,
+      provider: providerId,
+      model: modelId,
+    };
+    handleProfileChange(updatedProfile);
+
+    // Add to preferred models
+    handleAddPreferredModel(selectedModelId);
+  };
+
+  const currentModelId = selectedProfile ? `${selectedProfile.provider}/${selectedProfile.model}` : undefined;
+
+  const agentModels = useMemo(() => {
+    const agentModelsList = [...models];
+
+    // Add custom model if not in list
+    if (currentModelId) {
+      const existingModel = agentModelsList.find((model) => getProviderModelId(model) === currentModelId);
+      if (!existingModel) {
+        const [providerId, ...modelNameParts] = currentModelId.split('/');
+        const modelId = modelNameParts.join('/');
+        if (providerId && modelId) {
+          const customModel: Model = {
+            id: modelId,
+            providerId: providerId,
+          };
+          agentModelsList.unshift(customModel);
+        }
+      }
+    }
+    return agentModelsList;
+  }, [currentModelId, models]);
+
   const handleToggleServerEnabled = (serverKey: string, checked: boolean) => {
     if (selectedProfile) {
       const currentEnabledServers = selectedProfile.enabledServers || [];
@@ -701,12 +778,14 @@ export const AgentSettings = ({
                   <div className="!mb-4">
                     <label className="block text-sm font-medium text-text-primary mb-1">{t('agentProfiles.model')}</label>
                     <div className="w-full p-2 bg-bg-secondary-light border-2 border-border-default rounded focus-within:outline-none focus-within:border-border-light">
-                      <AgentModelSelector
+                      <ModelSelector
                         className="w-full justify-between"
-                        agentProfile={selectedProfile}
-                        onProfileChange={handleProfileChange}
+                        models={agentModels}
+                        selectedModelId={currentModelId}
+                        onChange={handleModelChange}
                         preferredModelIds={settings.preferredModels || []}
                         removePreferredModel={handleRemovePreferredModel}
+                        providers={providers}
                       />
                     </div>
                   </div>

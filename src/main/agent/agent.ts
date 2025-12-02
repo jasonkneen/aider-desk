@@ -587,7 +587,9 @@ export class Agent {
       });
 
       const model = this.modelManager.createLlm(provider, profile.model, settings, task.getProjectDir());
-      logger.debug('LLM model created successfully');
+      logger.debug('LLM model created successfully', {
+        model: model.modelId,
+      });
 
       if (!systemPrompt) {
         systemPrompt = await getSystemPrompt(task, profile);

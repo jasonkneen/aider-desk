@@ -113,17 +113,34 @@ export class Task {
     void this.loadTaskData();
   }
 
-  private async getActiveAgentProfile(): Promise<AgentProfile | null> {
-    const projectSettings = this.project.getProjectSettings();
-    if (!projectSettings.agentProfileId) {
+  private async getTaskAgentProfile(): Promise<AgentProfile | null> {
+    // Check task-level agent profile first
+    let agentProfileId = this.task.agentProfileId;
+
+    // If no task-level profile, fall back to project-level
+    if (!agentProfileId) {
+      const projectSettings = this.project.getProjectSettings();
+      agentProfileId = projectSettings.agentProfileId;
+    }
+
+    if (!agentProfileId) {
       return null;
     }
 
-    const profile = this.agentProfileManager.getProfile(projectSettings.agentProfileId);
-
+    let profile = this.agentProfileManager.getProfile(agentProfileId);
     if (!profile) {
-      logger.warn(`Agent profile with id ${projectSettings.agentProfileId} not found`);
+      logger.warn(`Agent profile with id ${agentProfileId} not found`);
       return null;
+    }
+
+    // If profile not found, try to create a temporary one from task-level provider/model
+    if (this.task.provider && this.task.model) {
+      // Create a temporary profile with task-level overrides
+      profile = {
+        ...profile,
+        provider: this.task.provider,
+        model: this.task.model,
+      };
     }
 
     return profile;
@@ -462,7 +479,7 @@ export class Task {
     // Generate promptContext for this run
 
     if (mode === 'agent') {
-      const profile = await this.getActiveAgentProfile();
+      const profile = await this.getTaskAgentProfile();
       logger.debug('AgentProfile:', profile);
 
       if (!profile) {
@@ -1123,7 +1140,7 @@ export class Task {
       return contextFiles;
     }
 
-    const profile = await this.getActiveAgentProfile();
+    const profile = await this.getTaskAgentProfile();
     const ruleFiles = await this.getRuleFilesAsContextFiles(profile || undefined);
     return [...contextFiles, ...ruleFiles];
   }
@@ -1466,7 +1483,7 @@ export class Task {
   ) {
     // Get profile if not provided
     if (!profile) {
-      profile = await this.getActiveAgentProfile();
+      profile = await this.getTaskAgentProfile();
     }
 
     const userMessage = contextMessages[0];
@@ -1589,7 +1606,7 @@ export class Task {
       checkContextFilesIncluded,
       checkRepoMapIncluded,
     });
-    const agentProfile = await this.getActiveAgentProfile();
+    const agentProfile = await this.getTaskAgentProfile();
     if (!agentProfile || (checkContextFilesIncluded && !agentProfile.includeContextFiles && checkRepoMapIncluded && !agentProfile.includeRepoMap)) {
       return;
     }
@@ -1783,7 +1800,7 @@ export class Task {
 
     try {
       // Get the active agent profile
-      const activeProfile = await this.getActiveAgentProfile();
+      const activeProfile = await this.getTaskAgentProfile();
       if (!activeProfile) {
         throw new Error('No active agent profile found');
       }
@@ -1929,7 +1946,7 @@ ${error.stderr}`,
     try {
       if (mode === 'agent') {
         // Agent mode logic
-        const profile = await this.getActiveAgentProfile();
+        const profile = await this.getTaskAgentProfile();
         if (!profile) {
           this.addLogMessage('error', 'No active Agent profile found');
           return;
@@ -2082,7 +2099,7 @@ ${error.stderr}`,
 
         if (changesDiff) {
           // Try to generate commit message using AI
-          const agentProfile = await this.getActiveAgentProfile();
+          const agentProfile = await this.getTaskAgentProfile();
           if (agentProfile) {
             try {
               commitMessage = await this.agent.generateText(
