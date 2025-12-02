@@ -10,10 +10,12 @@ type SortableAgentProfileItemProps = {
   onClick: (id: string) => void;
   onCopy?: (profile: AgentProfile) => void;
   onCut?: (profile: AgentProfile) => void;
+  onDelete?: (profile: AgentProfile) => void;
   isCut?: boolean;
+  isDefaultProfile?: boolean;
 };
 
-export const SortableAgentProfileItem = ({ profile, isSelected, onClick, onCopy, onCut, isCut }: SortableAgentProfileItemProps) => {
+export const SortableAgentProfileItem = ({ profile, isSelected, onClick, onCopy, onCut, onDelete, isCut, isDefaultProfile }: SortableAgentProfileItemProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: profile.id,
   });
@@ -27,7 +29,16 @@ export const SortableAgentProfileItem = ({ profile, isSelected, onClick, onCopy,
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <AgentProfileItem profile={profile} isSelected={isSelected} onClick={onClick} onCopy={onCopy} onCut={onCut} isCut={isCut} />
+      <AgentProfileItem
+        profile={profile}
+        isSelected={isSelected}
+        onClick={onClick}
+        onCopy={onCopy}
+        onCut={onCut}
+        onDelete={onDelete}
+        isCut={isCut}
+        isDefaultProfile={isDefaultProfile}
+      />
     </div>
   );
 };

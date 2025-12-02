@@ -348,8 +348,8 @@ export const AgentSettings = ({
   };
 
   // Update filtered profiles when context changes
-  useMemo(() => {
-    if (filteredProfiles.length > 0 && !selectedProfileId) {
+  useEffect(() => {
+    if (filteredProfiles.length > 0 && !filteredProfiles.some((p) => p.id === selectedProfileId)) {
       setSelectedProfileId(filteredProfiles[0].id);
     } else if (filteredProfiles.length === 0) {
       setSelectedProfileId(null);
@@ -432,10 +432,9 @@ export const AgentSettings = ({
     }, 0); // Focus the input after the state update
   };
 
-  const handleDeleteProfile = () => {
-    if (selectedProfileId && selectedProfileId !== DEFAULT_AGENT_PROFILE.id) {
-      setAgentProfiles(agentProfiles.filter((p) => p.id !== selectedProfileId));
-      setSelectedProfileId(DEFAULT_AGENT_PROFILE.id);
+  const handleDeleteProfile = (agentProfileId: string | null) => {
+    if (agentProfileId && agentProfileId !== DEFAULT_AGENT_PROFILE.id) {
+      setAgentProfiles(agentProfiles.filter((p) => p.id !== agentProfileId));
     }
   };
 
@@ -740,6 +739,8 @@ export const AgentSettings = ({
                     onCopy={handleCopyProfile}
                     onCut={handleCutProfile}
                     isCut={clipboardProfile?.action === 'cut' && clipboardProfile.profile.id === profile.id}
+                    onDelete={(profile) => handleDeleteProfile(profile.id)}
+                    isDefaultProfile={profile.id === DEFAULT_AGENT_PROFILE.id}
                   />
                 ))}
               </SortableContext>
@@ -1159,7 +1160,7 @@ export const AgentSettings = ({
 
                 <div className="mt-4 pt-2 flex justify-end items-center">
                   <Button
-                    onClick={handleDeleteProfile}
+                    onClick={() => handleDeleteProfile(selectedProfileId)}
                     variant="text"
                     size="sm"
                     color="danger"

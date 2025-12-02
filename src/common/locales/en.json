@@ -452,9 +452,10 @@
       "nextContext": "Next project",
       "noProfilesInContext": "No profiles found in this context",
       "createNewProfileInContext": "Create New Profile",
-      "copyProfile": "Copy Profile",
-      "cutProfile": "Cut Profile",
-      "pasteProfile": "Paste Profile"
+      "copyProfile": "Copy",
+      "cutProfile": "Cut",
+      "deleteProfile": "Delete",
+      "pasteProfile": "Paste Agent"
     },
     "aider": {
       "options": "Options",
@@ -907,17 +908,17 @@
     "agentModeOnly": "Available in Agent mode only"
   },
   "agentProfiles": {
-    "title": "Agent Profiles",
+    "title": "Agents",
     "profileSettings": "Agent Profile: {{profileName}}",
     "newProfileName": "New Profile",
     "manageProfiles": "Manage Profiles",
-    "profiles": "Profiles",
     "createNew": "New Profile",
     "profileName": "Name",
     "profileDescription": "Description",
     "profileDescriptionPlaceholder": "Describe this agent profile (purpose, tools, etc.)",
     "tools": "Tools",
     "model": "Model",
+    "selectProfile": "Select...",
     "saveAsProjectDefault": "Save as project default"
   },
   "projectBar": {

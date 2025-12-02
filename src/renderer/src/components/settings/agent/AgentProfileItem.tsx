@@ -1,5 +1,5 @@
 import { AgentProfile } from '@common/types';
-import { BiCopy, BiCut } from 'react-icons/bi';
+import { BiCopy, BiCut, BiTrash } from 'react-icons/bi';
 import { clsx } from 'clsx';
 import { useTranslation } from 'react-i18next';
 
@@ -11,10 +11,12 @@ type Props = {
   onClick: (id: string) => void;
   onCopy?: (profile: AgentProfile) => void;
   onCut?: (profile: AgentProfile) => void;
+  onDelete?: (profile: AgentProfile) => void;
   isCut?: boolean;
+  isDefaultProfile?: boolean;
 };
 
-export const AgentProfileItem = ({ profile, isSelected, onClick, onCopy, onCut, isCut }: Props) => {
+export const AgentProfileItem = ({ profile, isSelected, onClick, onCopy, onCut, onDelete, isCut, isDefaultProfile }: Props) => {
   const { t } = useTranslation();
 
   const menuOptions: MenuOption[] = [
@@ -23,11 +25,20 @@ export const AgentProfileItem = ({ profile, isSelected, onClick, onCopy, onCut, 
       action: () => onCopy?.(profile),
       icon: <BiCopy className="w-4 h-4" />,
     },
-    {
-      label: t('settings.agent.cutProfile'),
-      action: () => onCut?.(profile),
-      icon: <BiCut className="w-4 h-4" />,
-    },
+    ...(isDefaultProfile
+      ? []
+      : [
+          {
+            label: t('settings.agent.cutProfile'),
+            action: () => onCut?.(profile),
+            icon: <BiCut className="w-4 h-4" />,
+          },
+          {
+            label: t('settings.agent.deleteProfile'),
+            action: () => onDelete?.(profile),
+            icon: <BiTrash className="w-4 h-4" />,
+          },
+        ]),
   ];
 
   return (

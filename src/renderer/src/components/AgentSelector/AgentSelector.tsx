@@ -40,12 +40,12 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
   const { updateTaskAgentProfile } = useTask();
 
   const profiles = useMemo(() => getProfiles(projectDir), [getProfiles, projectDir]);
+
   const activeProfile = useMemo(() => {
     return resolveAgentProfile(task, projectSettings?.agentProfileId, profiles);
   }, [task, projectSettings?.agentProfileId, profiles]);
   const { mcpServers = {} } = settings || {};
   const { enabledServers = [], toolApprovals = {} } = activeProfile || {};
-
   const handleToggleProfileSetting = useCallback(
     (setting: keyof AgentProfile, value: boolean) => {
       if (activeProfile) {
@@ -129,13 +129,9 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
     void calculateEnabledTools();
   }, [enabledServers, mcpServers, toolApprovals, api]);
 
-  if (!activeProfile) {
+  if (!activeProfile && profiles.length === 0) {
     return <div className="text-xs text-text-muted-light">{t('common.loading')}</div>;
   }
-
-  const toggleSelectorVisible = () => {
-    setSelectorVisible((prev) => !prev);
-  };
 
   const handleSwitchProfile = (profileId: string) => {
     const newActiveProfile = profiles.find((p) => p.id === profileId);
@@ -183,8 +179,12 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
     }
   };
 
+  const toggleSelectorVisible = () => {
+    setSelectorVisible((prev) => !prev);
+  };
+
   const handleOpenAgentProfiles = () => {
-    showSettingsPage?.('agents', { agentProfileId: activeProfile.id });
+    showSettingsPage?.('agents', activeProfile ? { agentProfileId: activeProfile.id } : undefined);
     setSelectorVisible(false);
   };
 
@@ -201,14 +201,20 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
         )}
       >
         <RiToolsFill className="w-3.5 h-3.5" />
-        <span className="text-2xs truncate max-w-[250px] -mb-0.5">{activeProfile.name}</span>
-        <span className="text-2xs font-mono text-text-muted">({enabledToolsCount ?? '...'})</span>
+        {activeProfile ? (
+          <>
+            <span className="text-2xs truncate max-w-[250px] -mb-0.5">{activeProfile.name}</span>
+            <span className="text-2xs font-mono text-text-muted">({enabledToolsCount ?? '...'})</span>
 
-        {activeProfile.useAiderTools && <MdOutlineHdrAuto className="w-3.5 h-3.5 text-agent-aider-tools opacity-90" />}
-        {activeProfile.usePowerTools && <MdFlashOn className="w-3.5 h-3.5 text-agent-power-tools opacity-70" />}
-        {activeProfile.useTodoTools && <MdOutlineChecklist className="w-3.5 h-3.5 text-agent-todo-tools opacity-70" />}
-        {activeProfile.includeContextFiles && <MdOutlineFileCopy className="w-3 h-3 text-agent-context-files opacity-70" />}
-        {activeProfile.includeRepoMap && <MdOutlineMap className="w-3 h-3 text-agent-repo-map opacity-70" />}
+            {activeProfile.useAiderTools && <MdOutlineHdrAuto className="w-3.5 h-3.5 text-agent-aider-tools opacity-90" />}
+            {activeProfile.usePowerTools && <MdFlashOn className="w-3.5 h-3.5 text-agent-power-tools opacity-70" />}
+            {activeProfile.useTodoTools && <MdOutlineChecklist className="w-3.5 h-3.5 text-agent-todo-tools opacity-70" />}
+            {activeProfile.includeContextFiles && <MdOutlineFileCopy className="w-3 h-3 text-agent-context-files opacity-70" />}
+            {activeProfile.includeRepoMap && <MdOutlineMap className="w-3 h-3 text-agent-repo-map opacity-70" />}
+          </>
+        ) : (
+          <span className="text-2xs truncate max-w-[250px] -mb-0.5">{t('agentProfiles.selectProfile')}</span>
+        )}
       </button>
 
       {selectorVisible && (
@@ -216,15 +222,17 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
           {/* Profiles List */}
           <div className="py-2 border-b border-border-default-dark">
             <div className="flex items-center justify-between mb-2 pl-3 pr-2">
-              <span className="text-xs font-medium text-text-secondary uppercase">{t('agentProfiles.profiles')}</span>
+              <span className="text-xs font-medium text-text-secondary uppercase">{t('agentProfiles.title')}</span>
               <div className="flex items-center gap-1">
-                <IconButton
-                  icon={<MdSave className="w-4 h-4" />}
-                  onClick={handleSaveAsProjectDefault}
-                  className="opacity-60 hover:opacity-100 p-1 hover:bg-bg-secondary rounded-md"
-                  tooltip={t('agentProfiles.saveAsProjectDefault')}
-                  tooltipId="agent-selector-tooltip"
-                />
+                {activeProfile && (
+                  <IconButton
+                    icon={<MdSave className="w-4 h-4" />}
+                    onClick={handleSaveAsProjectDefault}
+                    className="opacity-60 hover:opacity-100 p-1 hover:bg-bg-secondary rounded-md"
+                    tooltip={t('agentProfiles.saveAsProjectDefault')}
+                    tooltipId="agent-selector-tooltip"
+                  />
+                )}
                 <IconButton
                   icon={<BiCog className="w-4 h-4" />}
                   onClick={handleOpenAgentProfiles}
@@ -240,11 +248,11 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
                   key={profile.id}
                   className={clsx(
                     'pl-6 pr-2 py-1 cursor-pointer transition-colors text-2xs relative',
-                    profile.id === activeProfile.id ? 'bg-bg-secondary-light text-text-primary' : 'hover:bg-bg-secondary-light text-text-tertiary ',
+                    profile.id === activeProfile?.id ? 'bg-bg-secondary-light text-text-primary' : 'hover:bg-bg-secondary-light text-text-tertiary ',
                   )}
                   onClick={() => handleSwitchProfile(profile.id)}
                 >
-                  {profile.id === activeProfile.id && (
+                  {profile.id === activeProfile?.id && (
                     <MdCheck className="w-3 h-3 absolute left-1.5 top-1/2 transform -translate-y-1/2 text-agent-auto-approve" />
                   )}
                   <span className="truncate block">{profile.name}&nbsp;</span>
@@ -254,84 +262,88 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
           </div>
 
           {/* MCP Servers */}
-          <div className="border-b border-border-default-dark">
-            <Accordion
-              title={
-                <div className="flex items-center w-full">
-                  <span className="text-xs flex-1 font-medium text-text-secondary text-left px-1 uppercase">{t('mcp.servers')}</span>
-                  <span className="text-2xs text-text-tertiary bg-secondary-light px-1.5 py-0.5 rounded">
-                    {enabledServers.filter((serverName) => mcpServers[serverName]).length}/{Object.keys(mcpServers).length}
-                  </span>
+          {activeProfile && (
+            <div className="border-b border-border-default-dark">
+              <Accordion
+                title={
+                  <div className="flex items-center w-full">
+                    <span className="text-xs flex-1 font-medium text-text-secondary text-left px-1 uppercase">{t('mcp.servers')}</span>
+                    <span className="text-2xs text-text-tertiary bg-secondary-light px-1.5 py-0.5 rounded">
+                      {enabledServers.filter((serverName) => mcpServers[serverName]).length}/{Object.keys(mcpServers).length}
+                    </span>
+                  </div>
+                }
+                chevronPosition="right"
+              >
+                <div className="max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-bg-secondary-light scrollbar-track-bg-primary-light pb-2">
+                  {Object.keys(mcpServers).length === 0 ? (
+                    <div className="py-2 text-xs text-text-muted italic">{t('settings.agent.noServersConfiguredGlobal')}</div>
+                  ) : (
+                    Object.keys(mcpServers).map((serverName) => (
+                      <McpServerSelectorItem
+                        key={serverName}
+                        serverName={serverName}
+                        disabled={!enabledServers.includes(serverName)}
+                        toolApprovals={activeProfile?.toolApprovals || {}}
+                        onToggle={handleToggleServer}
+                      />
+                    ))
+                  )}
                 </div>
-              }
-              chevronPosition="right"
-            >
-              <div className="max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-bg-secondary-light scrollbar-track-bg-primary-light pb-2">
-                {Object.keys(mcpServers).length === 0 ? (
-                  <div className="py-2 text-xs text-text-muted italic">{t('settings.agent.noServersConfiguredGlobal')}</div>
-                ) : (
-                  Object.keys(mcpServers).map((serverName) => (
-                    <McpServerSelectorItem
-                      key={serverName}
-                      serverName={serverName}
-                      disabled={!enabledServers.includes(serverName)}
-                      toolApprovals={activeProfile.toolApprovals || {}}
-                      onToggle={handleToggleServer}
-                    />
-                  ))
-                )}
-              </div>
-            </Accordion>
-          </div>
+              </Accordion>
+            </div>
+          )}
 
           {/* Quick Settings */}
-          <div className="px-3 py-2">
-            <div className="flex items-center justify-end gap-1">
-              <IconButton
-                icon={
-                  <MdOutlineHdrAuto className={clsx('w-3.5 h-3.5', activeProfile.useAiderTools ? 'text-agent-aider-tools' : 'text-text-muted opacity-50')} />
-                }
-                onClick={() => handleToggleProfileSetting('useAiderTools', !activeProfile.useAiderTools)}
-                className="p-1.5 hover:bg-bg-secondary rounded-md"
-                tooltip={t('settings.agent.useAiderTools')}
-                tooltipId="agent-selector-tooltip"
-              />
-              <IconButton
-                icon={<MdFlashOn className={clsx('w-3.5 h-3.5', activeProfile.usePowerTools ? 'text-agent-power-tools' : 'text-text-muted opacity-50')} />}
-                onClick={() => handleToggleProfileSetting('usePowerTools', !activeProfile.usePowerTools)}
-                className="p-1.5 hover:bg-bg-secondary rounded-md"
-                tooltip={t('settings.agent.usePowerTools')}
-                tooltipId="agent-selector-tooltip"
-              />
-              <IconButton
-                icon={
-                  <MdOutlineChecklist className={clsx('w-3.5 h-3.5', activeProfile.useTodoTools ? 'text-agent-todo-tools' : 'text-text-muted opacity-50')} />
-                }
-                onClick={() => handleToggleProfileSetting('useTodoTools', !activeProfile.useTodoTools)}
-                className="p-1.5 hover:bg-bg-secondary rounded-md"
-                tooltip={`${t('settings.agent.useTodoTools')} (Alt + T)`}
-                tooltipId="agent-selector-tooltip"
-              />
-              <IconButton
-                icon={
-                  <MdOutlineFileCopy
-                    className={clsx('w-3.5 h-3.5', activeProfile.includeContextFiles ? 'text-agent-context-files' : 'text-text-muted opacity-50')}
-                  />
-                }
-                onClick={() => handleToggleProfileSetting('includeContextFiles', !activeProfile.includeContextFiles)}
-                className="p-1.5 hover:bg-bg-secondary rounded-md"
-                tooltip={`${t('settings.agent.includeContextFiles')} (Alt + F)`}
-                tooltipId="agent-selector-tooltip"
-              />
-              <IconButton
-                icon={<MdOutlineMap className={clsx('w-3.5 h-3.5', activeProfile.includeRepoMap ? 'text-agent-repo-map' : 'text-text-muted opacity-50')} />}
-                onClick={() => handleToggleProfileSetting('includeRepoMap', !activeProfile.includeRepoMap)}
-                className="p-1.5 hover:bg-bg-secondary rounded-md"
-                tooltip={`${t('settings.agent.includeRepoMap')} (Alt + R)`}
-                tooltipId="agent-selector-tooltip"
-              />
+          {activeProfile && (
+            <div className="px-3 py-2">
+              <div className="flex items-center justify-end gap-1">
+                <IconButton
+                  icon={
+                    <MdOutlineHdrAuto className={clsx('w-3.5 h-3.5', activeProfile.useAiderTools ? 'text-agent-aider-tools' : 'text-text-muted opacity-50')} />
+                  }
+                  onClick={() => handleToggleProfileSetting('useAiderTools', !activeProfile.useAiderTools)}
+                  className="p-1.5 hover:bg-bg-secondary rounded-md"
+                  tooltip={t('settings.agent.useAiderTools')}
+                  tooltipId="agent-selector-tooltip"
+                />
+                <IconButton
+                  icon={<MdFlashOn className={clsx('w-3.5 h-3.5', activeProfile.usePowerTools ? 'text-agent-power-tools' : 'text-text-muted opacity-50')} />}
+                  onClick={() => handleToggleProfileSetting('usePowerTools', !activeProfile.usePowerTools)}
+                  className="p-1.5 hover:bg-bg-secondary rounded-md"
+                  tooltip={t('settings.agent.usePowerTools')}
+                  tooltipId="agent-selector-tooltip"
+                />
+                <IconButton
+                  icon={
+                    <MdOutlineChecklist className={clsx('w-3.5 h-3.5', activeProfile.useTodoTools ? 'text-agent-todo-tools' : 'text-text-muted opacity-50')} />
+                  }
+                  onClick={() => handleToggleProfileSetting('useTodoTools', !activeProfile.useTodoTools)}
+                  className="p-1.5 hover:bg-bg-secondary rounded-md"
+                  tooltip={`${t('settings.agent.useTodoTools')} (Alt + T)`}
+                  tooltipId="agent-selector-tooltip"
+                />
+                <IconButton
+                  icon={
+                    <MdOutlineFileCopy
+                      className={clsx('w-3.5 h-3.5', activeProfile.includeContextFiles ? 'text-agent-context-files' : 'text-text-muted opacity-50')}
+                    />
+                  }
+                  onClick={() => handleToggleProfileSetting('includeContextFiles', !activeProfile.includeContextFiles)}
+                  className="p-1.5 hover:bg-bg-secondary rounded-md"
+                  tooltip={`${t('settings.agent.includeContextFiles')} (Alt + F)`}
+                  tooltipId="agent-selector-tooltip"
+                />
+                <IconButton
+                  icon={<MdOutlineMap className={clsx('w-3.5 h-3.5', activeProfile.includeRepoMap ? 'text-agent-repo-map' : 'text-text-muted opacity-50')} />}
+                  onClick={() => handleToggleProfileSetting('includeRepoMap', !activeProfile.includeRepoMap)}
+                  className="p-1.5 hover:bg-bg-secondary rounded-md"
+                  tooltip={`${t('settings.agent.includeRepoMap')} (Alt + R)`}
+                  tooltipId="agent-selector-tooltip"
+                />
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 

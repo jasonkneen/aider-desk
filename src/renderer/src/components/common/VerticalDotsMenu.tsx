@@ -53,7 +53,7 @@ export const VerticalDotsMenu = ({ options, className }: Props) => {
         </button>
       </div>
       {isMenuOpen && (
-        <div ref={menuRef} className="absolute right-0 top-full mt-1 w-[170px] bg-bg-secondary-light border border-border-default-dark rounded shadow-lg z-10">
+        <div ref={menuRef} className="absolute right-0 top-full mt-1 w-[100px] bg-bg-secondary border border-border-default-dark rounded shadow-lg z-10">
           <ul>
             {options.map((option, index) => (
               <li

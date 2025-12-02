@@ -449,9 +449,10 @@
       "nextContext": "下一个项目",
       "noProfilesInContext": "此上下文中没有配置",
       "createNewProfileInContext": "创建新配置",
-      "copyProfile": "复制配置",
-      "cutProfile": "剪切配置",
-      "pasteProfile": "粘贴配置"
+      "copyProfile": "复制",
+      "cutProfile": "剪切",
+      "deleteProfile": "删除",
+      "pasteProfile": "粘贴代理"
     },
     "aider": {
       "options": "选项",
@@ -880,13 +881,13 @@
     "profileSettings": "代理配置: {{profileName}}",
     "newProfileName": "新配置",
     "manageProfiles": "管理配置",
-    "profiles": "配置列表",
     "createNew": "创建新配置",
     "profileName": "名称",
     "profileDescription": "描述",
     "profileDescriptionPlaceholder": "描述此代理配置（用途、工具等）",
     "tools": "工具",
     "model": "模型",
+    "selectProfile": "选择...",
     "saveAsProjectDefault": "保存为项目默认"
   },
   "projectBar": {

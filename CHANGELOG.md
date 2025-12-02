@@ -6,6 +6,7 @@
 - recent projects are now correctly added when closing a project
 - updated default models for providers
 - using settings from the last active projects when opening a new project
+- improved agent profile management and UI selection handling
 
 ## [0.42.1]
 
