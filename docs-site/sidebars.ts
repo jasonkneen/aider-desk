@@ -36,6 +36,7 @@ const sidebars: SidebarsConfig = {
         'features/git-worktrees',
         'features/custom-commands',
         'features/web-scraping',
+        'features/voice-control',
         'features/compact',
         'features/usage-dashboard',
         'features/aider-mcp-server',
