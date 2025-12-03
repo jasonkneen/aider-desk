@@ -4,7 +4,7 @@ import { clsx } from 'clsx';
 import { Mode, TokensInfoData, ProjectSettings, ContextFile } from '@common/types';
 import { FiChevronDown } from 'react-icons/fi';
 
-import { SidebarContent } from '@/components/project/SidebarContent';
+import { FilesContextInfoContent } from '@/components/project/FilesContextInfoContent';
 
 type AddFileDialogOptions = {
   readOnly: boolean;
@@ -57,7 +57,7 @@ export const MobileSidebar = ({
         <div onClick={() => setShowSidebar(false)} className="w-full flex justify-center items-center p-1 cursor-pointer">
           <FiChevronDown size={24} />
         </div>
-        <SidebarContent
+        <FilesContextInfoContent
           baseDir={baseDir}
           taskId={taskId}
           allFiles={allFiles}

@@ -13,13 +13,15 @@ import { Mode, PromptBehavior, QuestionData, SuggestionMode, TaskData } from '@c
 import { githubDarkInit } from '@uiw/codemirror-theme-github';
 import CodeMirror, { Annotation, Prec, type ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { useDebounce, useLocalStorage } from '@reactuses/core';
+import { useDebounce } from '@reactuses/core';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useTranslation } from 'react-i18next';
 import { BiSend } from 'react-icons/bi';
 import { MdDoneAll, MdPlaylistRemove, MdSave, MdStop, MdMic, MdMicOff } from 'react-icons/md';
 import { VscTerminal } from 'react-icons/vsc';
 import { clsx } from 'clsx';
+
+import { usePromptFieldText } from './usePromptFieldText';
 
 import { AgentSelector } from '@/components/AgentSelector';
 import { InputHistoryMenu } from '@/components/PromptField/InputHistoryMenu';
@@ -168,8 +170,14 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
     const { t } = useTranslation();
     const [text, setText] = useState('');
     const debouncedText = useDebounce(text, 100);
-    const [savedText, setSavedText] = useLocalStorage(`prompt-field-text-${baseDir}-${taskId}`, '');
-    const initialTextRefSet = useRef(false);
+    const { setText: setSavedText } = usePromptFieldText(baseDir, taskId, (text) => {
+      const view = editorRef.current?.view;
+      view?.dispatch({
+        changes: { from: 0, to: view.state.doc.toString().length, insert: text },
+        annotations: [External.of(true)],
+      });
+      setText(text);
+    });
     const [placeholderIndex, setPlaceholderIndex] = useState(() => Math.floor(Math.random() * PLACEHOLDER_COUNT));
     const [historyMenuVisible, setHistoryMenuVisible] = useState(false);
     const [highlightedHistoryItemIndex, setHighlightedHistoryItemIndex] = useState(0);
@@ -223,6 +231,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
         resetTranscription();
         setTextBeforeRecording('');
       }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isRecording]);
 
     useEffect(() => {
@@ -230,6 +239,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
         const separator = textBeforeRecording && !textBeforeRecording.endsWith(' ') ? ' ' : '';
         setTextWithDispatch(textBeforeRecording + separator + transcription);
       }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [transcription, isRecording, isProcessing, textBeforeRecording]);
 
     const completionSource = async (context: CompletionContext): Promise<CompletionResult | null> => {
@@ -879,12 +889,12 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
             <CodeMirror
               ref={(instance) => {
                 editorRef.current = instance;
-                if (instance?.view && !initialTextRefSet.current && savedText) {
-                  setTimeout(() => {
-                    setTextWithDispatch(savedText);
-                  }, 0);
-                  initialTextRefSet.current = true;
-                }
+                // if (instance?.view && !initialTextRefSet.current && savedText) {
+                //   setTimeout(() => {
+                //     setTextWithDispatch(savedText);
+                //   }, 0);
+                //   initialTextRefSet.current = true;
+                // }
               }}
               onChange={onChange}
               placeholder={question ? t('promptField.questionPlaceholder') : t(`promptField.placeholders.${placeholderIndex}`)}

@@ -2,10 +2,15 @@ import { Mode, Model, ModelsData, ProjectData, TaskData, TodoItem } from '@commo
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CgSpinner } from 'react-icons/cg';
-import { ResizableBox } from 'react-resizable';
+import { ResizableBox, ResizeCallbackData } from 'react-resizable';
 import { clsx } from 'clsx';
 import { getProviderModelId } from '@common/agent';
+import { RiMenuUnfold4Line } from 'react-icons/ri';
+import { useLocalStorage } from '@reactuses/core';
 
+import { useSidebarWidth } from './useSidebarWidth';
+
+import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { isLogMessage, isResponseMessage, isToolMessage, isUserMessage, Message } from '@/types/message';
 import { Messages, MessagesRef } from '@/components/message/Messages';
 import { VirtualizedMessages, VirtualizedMessagesRef } from '@/components/message/VirtualizedMessages';
@@ -18,7 +23,7 @@ import { Button } from '@/components/common/Button';
 import { TodoWindow } from '@/components/project/TodoWindow';
 import { TerminalView, TerminalViewRef } from '@/components/terminal/TerminalView';
 import { MobileSidebar } from '@/components/project/MobileSidebar';
-import { SidebarContent } from '@/components/project/SidebarContent';
+import { FilesContextInfoContent } from '@/components/project/FilesContextInfoContent';
 import { WelcomeMessage } from '@/components/project/WelcomeMessage';
 import 'react-resizable/css/styles.css';
 import { useSearchText } from '@/hooks/useSearchText';
@@ -36,6 +41,8 @@ type AddFileDialogOptions = {
 export type TaskViewRef = {
   exportMessagesToImage: () => void;
 };
+
+const FILES_COLLAPSED_WIDTH = 36;
 
 type Props = {
   project: ProjectData;
@@ -63,6 +70,8 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
   const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
   const [terminalVisible, setTerminalVisible] = useState(false);
   const [showSidebar, setShowSidebar] = useState(isMobile);
+  const { width: sidebarWidth, setWidth: setSidebarWidth } = useSidebarWidth(project.baseDir, task.id);
+  const [isFilesSidebarCollapsed, setIsFilesSidebarCollapsed] = useLocalStorage(`files-sidebar-collapsed-${project.baseDir}-${task.id}`, false);
 
   const promptFieldRef = useRef<PromptFieldRef>(null);
   const projectTopBarRef = useRef<TaskBarRef>(null);
@@ -320,6 +329,14 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
     terminalViewRef.current?.resize();
   };
 
+  const handleSidebarResize = async (_, data: ResizeCallbackData) => {
+    setSidebarWidth(data.size.width);
+  };
+
+  const handleToggleFilesSidebarCollapse = () => {
+    setIsFilesSidebarCollapsed(!isFilesSidebarCollapsed);
+  };
+
   const handleCopyTerminalOutput = (output: string) => {
     promptFieldRef.current?.appendText(output);
   };
@@ -482,38 +499,62 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
         </div>
       </div>
       {!isMobile && (
-        <ResizableBox
-          width={300}
-          height={Infinity}
-          minConstraints={[100, Infinity]}
-          maxConstraints={[window.innerWidth - 300, Infinity]}
-          axis="x"
-          resizeHandles={['w']}
-          className="border-l border-border-dark-light flex flex-col flex-shrink-0"
+        <div
+          className="border-l border-border-dark-light flex flex-col flex-shrink-0 select-none relative group"
+          style={{ width: isFilesSidebarCollapsed ? FILES_COLLAPSED_WIDTH : sidebarWidth }}
         >
-          <div className="flex flex-col h-full">
-            <SidebarContent
-              baseDir={project.baseDir}
-              taskId={task.id}
-              allFiles={allFiles}
-              contextFiles={contextFiles}
-              tokensInfo={tokensInfo}
-              aiderTotalCost={aiderTotalCost}
-              maxInputTokens={currentModel?.maxInputTokens || 0}
-              clearMessages={clearMessages}
-              runCommand={runCommand}
-              restartTask={handleRestartTask}
-              mode={projectSettings.currentMode}
-              showFileDialog={() =>
-                setAddFileDialogOptions({
-                  readOnly: false,
-                })
-              }
-              projectSettings={projectSettings}
-              saveProjectSettings={saveProjectSettings}
-            />
-          </div>
-        </ResizableBox>
+          <StyledTooltip id="files-sidebar-tooltip" />
+
+          {/* Expand/Collapse Button */}
+          <button
+            data-tooltip-id="files-sidebar-tooltip"
+            data-tooltip-content={isFilesSidebarCollapsed ? t('common.expand') : t('common.collapse')}
+            className={clsx(
+              'absolute top-[50%] translate-y-[-50%] z-10 p-1.5 rounded-md hover:bg-bg-tertiary -mt-0.5',
+              isFilesSidebarCollapsed ? 'left-1' : 'transition-opacity opacity-0 group-hover:opacity-100 left-3',
+            )}
+            onClick={handleToggleFilesSidebarCollapse}
+          >
+            <RiMenuUnfold4Line className={clsx('w-4 h-4 text-text-primary transition-transform duration-300', !isFilesSidebarCollapsed && 'rotate-180')} />
+          </button>
+
+          {/* Resizable wrapper for expanded state */}
+          {!isFilesSidebarCollapsed && (
+            <ResizableBox
+              width={sidebarWidth}
+              height={Infinity}
+              minConstraints={[200, Infinity]}
+              maxConstraints={[window.innerWidth - 100, Infinity]}
+              axis="x"
+              resizeHandles={['w']}
+              className="flex flex-col h-full"
+              onResize={handleSidebarResize}
+            >
+              <div className="flex flex-col h-full">
+                <FilesContextInfoContent
+                  baseDir={project.baseDir}
+                  taskId={task.id}
+                  allFiles={allFiles}
+                  contextFiles={contextFiles}
+                  tokensInfo={tokensInfo}
+                  aiderTotalCost={aiderTotalCost}
+                  maxInputTokens={currentModel?.maxInputTokens || 0}
+                  clearMessages={clearMessages}
+                  runCommand={runCommand}
+                  restartTask={handleRestartTask}
+                  mode={projectSettings.currentMode}
+                  showFileDialog={() =>
+                    setAddFileDialogOptions({
+                      readOnly: false,
+                    })
+                  }
+                  projectSettings={projectSettings}
+                  saveProjectSettings={saveProjectSettings}
+                />
+              </div>
+            </ResizableBox>
+          )}
+        </div>
       )}
 
       {addFileDialogOptions && (

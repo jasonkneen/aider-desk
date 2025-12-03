@@ -20,7 +20,7 @@ type Props = {
   saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
 };
 
-export const SidebarContent = ({
+export const FilesContextInfoContent = ({
   baseDir,
   taskId,
   allFiles,
