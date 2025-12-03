@@ -118,7 +118,6 @@ src/
         zai-plan.ts
       index.ts
       model-manager.ts
-      models.ts
       types.ts
     project/
       index.ts
@@ -400,7 +399,6 @@ src/
           UsageDashboard.tsx
           UsageTable.tsx
           utils.ts
-        AgentModelSelector.tsx
         AutocompletionInput.tsx
         CostInfo.tsx
         ModelSelector.tsx
@@ -496,6 +494,7 @@ src/
       types/
         message.ts
       utils/
+        agents.ts
         notifications.ts
         routes.ts
         string-utils.ts
@@ -1679,9 +1678,10 @@ File: src/common/locales/en.json
       "nextContext": "Next project",
       "noProfilesInContext": "No profiles found in this context",
       "createNewProfileInContext": "Create New Profile",
-      "copyProfile": "Copy Profile",
-      "cutProfile": "Cut Profile",
-      "pasteProfile": "Paste Profile"
+      "copyProfile": "Copy",
+      "cutProfile": "Cut",
+      "deleteProfile": "Delete",
+      "pasteProfile": "Paste Agent"
     },
     "aider": {
       "options": "Options",
@@ -1922,7 +1922,8 @@ File: src/common/locales/en.json
     "providerNotSupported": "Provider '{{provider}}' is not supported. Supported providers are: {{providers}}.",
     "selectModel": "Select model...",
     "weakModelLock": "Lock weak model",
-    "weakModelUnlock": "Unlock weak model"
+    "weakModelUnlock": "Unlock weak model",
+    "noModelSelected": "No model selected"
   },
   "modelInfo": {
     "noInfo": "No model information available.",
@@ -2133,17 +2134,18 @@ File: src/common/locales/en.json
     "agentModeOnly": "Available in Agent mode only"
   },
   "agentProfiles": {
-    "title": "Agent Profiles",
+    "title": "Agents",
     "profileSettings": "Agent Profile: {{profileName}}",
     "newProfileName": "New Profile",
     "manageProfiles": "Manage Profiles",
-    "profiles": "Profiles",
     "createNew": "New Profile",
     "profileName": "Name",
     "profileDescription": "Description",
     "profileDescriptionPlaceholder": "Describe this agent profile (purpose, tools, etc.)",
     "tools": "Tools",
-    "model": "Model"
+    "model": "Model",
+    "selectProfile": "Select...",
+    "saveAsProjectDefault": "Save as project default"
   },
   "projectBar": {
     "editFormatTooltip": "This is the format used for editing code. Changing it might cause the model to not perform as expected.",
@@ -2800,9 +2802,10 @@ File: src/common/locales/zh.json
       "nextContext": "下一个项目",
       "noProfilesInContext": "此上下文中没有配置",
       "createNewProfileInContext": "创建新配置",
-      "copyProfile": "复制配置",
-      "cutProfile": "剪切配置",
-      "pasteProfile": "粘贴配置"
+      "copyProfile": "复制",
+      "cutProfile": "剪切",
+      "deleteProfile": "删除",
+      "pasteProfile": "粘贴代理"
     },
     "aider": {
       "options": "选项",
@@ -3000,7 +3003,8 @@ File: src/common/locales/zh.json
     "removePreferred": "从首选模型中移除",
     "selectModel": "选择模型...",
     "weakModelLock": "锁定弱模型",
-    "weakModelUnlock": "解锁弱模型"
+    "weakModelUnlock": "解锁弱模型",
+    "noModelSelected": "未选择模型"
   },
   "modelInfo": {
     "noInfo": "无模型信息可用。",
@@ -3230,13 +3234,14 @@ File: src/common/locales/zh.json
     "profileSettings": "代理配置: {{profileName}}",
     "newProfileName": "新配置",
     "manageProfiles": "管理配置",
-    "profiles": "配置列表",
     "createNew": "创建新配置",
     "profileName": "名称",
     "profileDescription": "描述",
     "profileDescriptionPlaceholder": "描述此代理配置（用途、工具等）",
     "tools": "工具",
-    "model": "模型"
+    "model": "模型",
+    "selectProfile": "选择...",
+    "saveAsProjectDefault": "保存为项目默认"
   },
   "projectBar": {
     "editFormatTooltip": "这是用于编辑代码的格式。更改它可能会导致模型表现不如预期。",
@@ -3500,7 +3505,6 @@ import {
   TOOL_GROUP_NAME_SEPARATOR,
 } from '@common/tools';
 ⋮----
-// TODO: move to providers.ts
 export type LlmProviderName =
   | 'anthropic'
   | 'azure'
@@ -4917,7 +4921,7 @@ import { homedir } from 'os';
 ⋮----
 import { FSWatcher, watch } from 'chokidar';
 import debounce from 'lodash/debounce';
-import { DEFAULT_AGENT_PROFILES } from '@common/agent';
+import { DEFAULT_AGENT_PROFILE, DEFAULT_AGENT_PROFILES } from '@common/agent';
 import { fileExists } from '@common/utils';
 ⋮----
 import type { AgentProfile } from '@common/types';
@@ -5132,6 +5136,8 @@ async dispose(): Promise<void>
 // Clean up all directory watchers
 ⋮----
 // Clear profiles
+⋮----
+getDefaultAgentProfileId()
 
 ================
 File: src/main/agent/agent.ts
@@ -7293,20 +7299,34 @@ async getProviderTools(provider: ProviderProfile, modelId: string): Promise<Tool
 async createVoiceSession(provider: ProviderProfile): Promise<VoiceSession>
 
 ================
-File: src/main/models/models.ts
-================
-
-
-================
 File: src/main/models/types.ts
 ================
 import { AgentProfile, Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, VoiceSession } from '@common/types';
-import { LlmProvider, LlmProviderName } from '@common/agent';
+import { LlmProvider } from '@common/agent';
 ⋮----
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 import type { LanguageModelUsage, ToolSet } from 'ai';
 ⋮----
 import { Task } from '@/task';
+⋮----
+export type LlmProviderName =
+  | 'anthropic'
+  | 'azure'
+  | 'bedrock'
+  | 'cerebras'
+  | 'deepseek'
+  | 'gemini'
+  | 'gpustack'
+  | 'groq'
+  | 'lmstudio'
+  | 'minimax'
+  | 'ollama'
+  | 'openai'
+  | 'openai-compatible'
+  | 'openrouter'
+  | 'requesty'
+  | 'vertex-ai'
+  | 'zai-plan';
 ⋮----
 export interface CacheControl {
   providerOptions: SharedV2ProviderOptions;
@@ -8357,7 +8377,7 @@ File: src/main/store/index.ts
 File: src/main/store/store.ts
 ================
 import { v4 as uuidv4 } from 'uuid';
-import { ProviderProfile, ProjectData, ProjectSettings, SettingsData, ProjectStartMode, SuggestionMode, WindowState, Model } from '@common/types';
+import { ProviderProfile, ProjectData, ProjectSettings, SettingsData, ProjectStartMode, SuggestionMode, WindowState } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
 ⋮----
 import { migrateSettingsV0toV1 } from './migrations/v0-to-v1';
@@ -8374,14 +8394,12 @@ import { migrateV10ToV11 } from './migrations/v10-to-v11';
 import { migrateV11ToV12 } from './migrations/v11-to-v12';
 import { migrateV12ToV13 } from './migrations/v12-to-v13';
 ⋮----
-import { determineMainModel, determineWeakModel } from '@/utils';
+import { getDefaultProjectSettings } from '@/utils';
 import logger from '@/logger';
 import { migrateProvidersV13toV14 } from '@/store/migrations/v13-to-v14';
 import { migrateSettingsV14toV15 } from '@/store/migrations/v14-to-v15';
 import { migrateSettingsV15toV16 } from '@/store/migrations/v15-to-v16';
 import { migrateSettingsV16toV17 } from '@/store/migrations/v16-to-v17';
-⋮----
-export const getDefaultProjectSettings = (store: Store, providerModels: Model[], baseDir: string): ProjectSettings =>
 ⋮----
 const compareBaseDirs = (baseDir1: string, baseDir2: string): boolean =>
 ⋮----
@@ -8515,12 +8533,13 @@ import path from 'path';
 import { EditFormat, ModelsData, ProjectSettings, TokensInfoData } from '@common/types';
 import { fileExists } from '@common/utils';
 import treeKill from 'tree-kill';
+import { DEFAULT_AIDER_MAIN_MODEL } from '@common/agent';
 ⋮----
 import { AIDER_DESK_CONNECTOR_DIR, AIDER_DESK_PROJECT_RULES_DIR, AIDER_DESK_TASKS_DIR, PID_FILES_DIR, PYTHON_COMMAND, SERVER_PORT } from '@/constants';
 import { Connector } from '@/connector';
 import logger from '@/logger';
 import { Store } from '@/store';
-import { DEFAULT_MAIN_MODEL, ModelManager } from '@/models';
+import { ModelManager } from '@/models';
 import { EventManager } from '@/events';
 import { getEnvironmentVariablesForAider } from '@/utils';
 import { Task } from '@/task/task';
@@ -8818,7 +8837,15 @@ constructor(
     private readonly worktreeManager: WorktreeManager,
 )
 ⋮----
-private async getActiveAgentProfile(): Promise<AgentProfile | null>
+private async getTaskAgentProfile(): Promise<AgentProfile | null>
+⋮----
+// Check task-level agent profile first
+⋮----
+// If no task-level profile, fall back to project-level
+⋮----
+// If profile not found, try to create a temporary one from task-level provider/model
+⋮----
+// Create a temporary profile with task-level overrides
 ⋮----
 private async loadTaskData()
 ⋮----
@@ -9391,12 +9418,12 @@ import path from 'path';
 ⋮----
 import { parse } from '@dotenvx/dotenvx';
 import YAML from 'yaml';
-import { DEFAULT_PROVIDER_MODEL, LlmProviderName } from '@common/agent';
-import { EnvironmentVariable, Model, ProviderProfile, SettingsData } from '@common/types';
+import { DEFAULT_AGENT_PROFILE, DEFAULT_AIDER_MAIN_MODEL, DEFAULT_PROVIDER_MODELS } from '@common/agent';
+import { EnvironmentVariable, Model, ProjectSettings, ProviderProfile, SettingsData } from '@common/types';
 ⋮----
 import logger from '@/logger';
-import { DEFAULT_MAIN_MODEL } from '@/models';
 import { getLangfuseEnvironmentVariables } from '@/telemetry';
+import { Store } from '@/store';
 ⋮----
 const readEnvFile = (filePath: string): Record<string, string> | null =>
 ⋮----
@@ -9460,7 +9487,12 @@ export const getEnvironmentVariablesForAider = (settings: SettingsData, baseDir:
 ⋮----
 const getTelemetryEnvironmentVariablesForAider = (settings: SettingsData, baseDir: string): Record<string, unknown> =>
 ⋮----
-export const determineProvider = (projectDir?: string, settings?: SettingsData): LlmProviderName =>
+export const getDefaultProjectSettings = (
+  store: Store,
+  providerModels: Model[],
+  baseDir: string,
+  defaultAgentProfileId = DEFAULT_AGENT_PROFILE.id,
+): ProjectSettings =>
 
 ================
 File: src/main/utils/errors.ts
@@ -10433,13 +10465,13 @@ import { McpManager, AgentProfileManager } from '@/agent';
 import { ModelManager } from '@/models';
 import { ProjectManager } from '@/project';
 import { CloudflareTunnelManager } from '@/server';
-import { getDefaultProjectSettings, Store } from '@/store';
+import { Store } from '@/store';
 import { TelemetryManager } from '@/telemetry';
 import { VersionsManager } from '@/versions';
 import { DataManager } from '@/data-manager';
 import { TerminalManager } from '@/terminal/terminal-manager';
 import logger from '@/logger';
-import { getEffectiveEnvironmentVariable, getFilePathSuggestions, isProjectPath, isValidPath, scrapeWeb } from '@/utils';
+import { getDefaultProjectSettings, getEffectiveEnvironmentVariable, getFilePathSuggestions, isProjectPath, isValidPath, scrapeWeb } from '@/utils';
 import { AIDER_DESK_TMP_DIR, LOGS_DIR } from '@/constants';
 import { EventManager } from '@/events';
 ⋮----
@@ -10663,9 +10695,10 @@ import { AIDER_DESK_DATA_DIR, HEADLESS_MODE } from '@/constants';
 import { ProgressWindow } from '@/progress-window';
 import { setupIpcHandlers } from '@/ipc-handlers';
 import { performStartUp, UpdateProgressData } from '@/start-up';
-import { getDefaultProjectSettings, Store } from '@/store';
+import { Store } from '@/store';
 import logger from '@/logger';
 import { initManagers } from '@/managers';
+import { getDefaultProjectSettings } from '@/utils';
 ⋮----
 const setupCustomMenu = (): void =>
 ⋮----
@@ -11565,10 +11598,10 @@ File: src/renderer/src/components/AgentSelector/AgentSelector.tsx
 ================
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap } from 'react-icons/md';
+import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdSave } from 'react-icons/md';
 import { RiToolsFill } from 'react-icons/ri';
 import { clsx } from 'clsx';
-import { AgentProfile, ToolApprovalState } from '@common/types';
+import { AgentProfile, TaskData, ToolApprovalState } from '@common/types';
 import { BiCog } from 'react-icons/bi';
 import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 import { useHotkeys } from 'react-hotkeys-hook';
@@ -11583,9 +11616,12 @@ import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
 import { useApi } from '@/contexts/ApiContext';
 import { useAgents } from '@/contexts/AgentsContext';
+import { useTask } from '@/contexts/TaskContext';
+import { resolveAgentProfile } from '@/utils/agents';
 ⋮----
 type Props = {
   projectDir: string;
+  task: TaskData;
   isActive: boolean;
   showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
 };
@@ -11595,8 +11631,6 @@ const calculateEnabledTools = async () =>
 // eslint-disable-next-line no-console
 ⋮----
 // eslint-disable-next-line no-console
-⋮----
-const toggleSelectorVisible = () =>
 ⋮----
 if (activeProfile)
 ⋮----
@@ -15272,11 +15306,11 @@ import { IoMdClose } from 'react-icons/io';
 import { VscLock, VscUnlock } from 'react-icons/vsc';
 import { RiRobot2Line } from 'react-icons/ri';
 import { useTranslation } from 'react-i18next';
-import { getProviderModelId } from '@common/agent';
+import { getProviderModelId, AVAILABLE_PROVIDERS } from '@common/agent';
 ⋮----
 import { IconButton } from '@/components/common/IconButton';
-import { AgentModelSelector } from '@/components/AgentModelSelector';
 import { ModelSelector, ModelSelectorRef } from '@/components/ModelSelector';
+import { showErrorNotification } from '@/utils/notifications';
 import { EditFormatSelector } from '@/components/PromptField/EditFormatSelector';
 import { TaskWorkingMode } from '@/components/PromptField/TaskWorkingMode';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
@@ -15300,7 +15334,18 @@ type Props = {
   onModelsChange?: (modelsData: ModelsData | null) => void;
   runCommand: (command: string) => void;
   onToggleSidebar: () => void;
+  updateTask: (updates: Partial<TaskData>, useOptimistic?: boolean) => void;
 };
+⋮----
+// Use task provider/model first, fallback to active agent profile
+⋮----
+// Add the currently selected model if it's not in the known list (custom model)
+⋮----
+// Create a custom model object for the current model
+⋮----
+taskModels.unshift(customModel); // Add to the beginning for visibility
+⋮----
+// Update task directly instead of agent profile
 ⋮----
 // optimistic update
 ⋮----
@@ -15507,6 +15552,7 @@ import { WelcomeMessage } from '@/components/project/WelcomeMessage';
 ⋮----
 import { useSearchText } from '@/hooks/useSearchText';
 import { useApi } from '@/contexts/ApiContext';
+import { resolveAgentProfile } from '@/utils/agents';
 import { useResponsive } from '@/hooks/useResponsive';
 import { useModelProviders } from '@/contexts/ModelProviderContext';
 import { useTask } from '@/contexts/TaskContext';
@@ -16070,7 +16116,7 @@ const handleWorkingModeChanged = async (mode: WorkingMode) =>
 File: src/renderer/src/components/settings/agent/AgentProfileItem.tsx
 ================
 import { AgentProfile } from '@common/types';
-import { BiCopy, BiCut } from 'react-icons/bi';
+import { BiCopy, BiCut, BiTrash } from 'react-icons/bi';
 import { clsx } from 'clsx';
 import { useTranslation } from 'react-i18next';
 ⋮----
@@ -16082,7 +16128,9 @@ type Props = {
   onClick: (id: string) => void;
   onCopy?: (profile: AgentProfile) => void;
   onCut?: (profile: AgentProfile) => void;
+  onDelete?: (profile: AgentProfile) => void;
   isCut?: boolean;
+  isDefaultProfile?: boolean;
 };
 ⋮----
 export const AgentProfileItem = (
@@ -16106,12 +16154,22 @@ type AgentRulesProps = {
 ================
 File: src/renderer/src/components/settings/agent/AgentSettings.tsx
 ================
-import { AgentProfile, ContextMemoryMode, GenericTool, InvocationMode, McpServerConfig, ProjectData, SettingsData, ToolApprovalState } from '@common/types';
+import {
+  AgentProfile,
+  ContextMemoryMode,
+  GenericTool,
+  InvocationMode,
+  McpServerConfig,
+  Model,
+  ProjectData,
+  SettingsData,
+  ToolApprovalState,
+} from '@common/types';
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { FaChevronLeft, FaChevronRight, FaPaste, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
 import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat } from 'react-icons/md';
-import { DEFAULT_AGENT_PROFILE, DEFAULT_MODEL_TEMPERATURE } from '@common/agent';
+import { DEFAULT_AGENT_PROFILE, DEFAULT_MODEL_TEMPERATURE, AVAILABLE_PROVIDERS, getProviderModelId } from '@common/agent';
 import { BiTrash } from 'react-icons/bi';
 import { clsx } from 'clsx';
 import Sketch from '@uiw/react-color-sketch';
@@ -16152,7 +16210,7 @@ import { SortableAgentProfileItem } from './SortableAgentProfileItem';
 ⋮----
 import { IconButton } from '@/components/common/IconButton';
 import { Button } from '@/components/common/Button';
-import { AgentModelSelector } from '@/components/AgentModelSelector';
+import { ModelSelector } from '@/components/ModelSelector';
 import { Slider } from '@/components/common/Slider';
 import { InfoIcon } from '@/components/common/InfoIcon';
 import { Accordion } from '@/components/common/Accordion';
@@ -16161,6 +16219,8 @@ import { Checkbox } from '@/components/common/Checkbox';
 import { Select } from '@/components/common/Select';
 import { TextArea } from '@/components/common/TextArea';
 import { useApi } from '@/contexts/ApiContext';
+import { useModelProviders } from '@/contexts/ModelProviderContext';
+import { showErrorNotification } from '@/utils/notifications';
 ⋮----
 // Helper functions for accordion summaries
 const getRunSettingsSummary = (profile: AgentProfile) =>
@@ -16225,7 +16285,7 @@ const handleCreateNewProfile = () =>
 ⋮----
 }, 0); // Focus the input after the state update
 ⋮----
-const handleDeleteProfile = () =>
+const handleDeleteProfile = (agentProfileId: string | null) =>
 ⋮----
 const handleCopyProfile = (profile: AgentProfile) =>
 ⋮----
@@ -16242,6 +16302,18 @@ const handleProfileSettingChange = <K extends keyof AgentProfile>(field: K, valu
 const handleProfileChange = (profile: AgentProfile) =>
 ⋮----
 const handleRemovePreferredModel = (modelId: string) =>
+⋮----
+const handleAddPreferredModel = (modelId: string) =>
+⋮----
+const handleModelChange = (model: Model) =>
+⋮----
+// Validate provider
+⋮----
+// Update profile
+⋮----
+// Add to preferred models
+⋮----
+// Add custom model if not in list
 ⋮----
 const handleToggleServerEnabled = (serverKey: string, checked: boolean) =>
 ⋮----
@@ -16274,6 +16346,8 @@ const handleToolApprovalChange = (toolId: string, approval: ToolApprovalState) =
 {/* Profile Context Header */}
 ⋮----
 onClick=
+⋮----
+onDelete=
 ⋮----
 {/* Right Details Pane */}
 ⋮----
@@ -16475,7 +16549,9 @@ type SortableAgentProfileItemProps = {
   onClick: (id: string) => void;
   onCopy?: (profile: AgentProfile) => void;
   onCut?: (profile: AgentProfile) => void;
+  onDelete?: (profile: AgentProfile) => void;
   isCut?: boolean;
+  isDefaultProfile?: boolean;
 };
 ⋮----
 export const SortableAgentProfileItem = (
@@ -17123,34 +17199,6 @@ export enum GroupBy {
 export const formatDateByGroup = (timestamp: string, groupBy: GroupBy): string =>
 
 ================
-File: src/renderer/src/components/AgentModelSelector.tsx
-================
-import { forwardRef, useCallback, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
-import { AVAILABLE_PROVIDERS, getProviderModelId } from '@common/agent';
-import { AgentProfile, Model } from '@common/types';
-⋮----
-import { ModelSelector, ModelSelectorRef } from './ModelSelector';
-⋮----
-import { useModelProviders } from '@/contexts/ModelProviderContext';
-import { showErrorNotification } from '@/utils/notifications';
-⋮----
-type Props = {
-  className?: string;
-  agentProfile: AgentProfile | undefined;
-  onProfileChange?: (profile: AgentProfile) => void;
-  preferredModelIds?: string[];
-  removePreferredModel?: (modelId: string) => void;
-  addPreferredModel?: (modelId: string) => void;
-};
-⋮----
-// Add the currently selected model if it's not in the known list (custom model)
-⋮----
-// Create a custom model object for the current model
-⋮----
-agentModels.unshift(customModel); // Add to the beginning for visibility
-
-================
 File: src/renderer/src/components/AutocompletionInput.tsx
 ================
 import { useState, useRef, useEffect, ReactNode } from 'react';
@@ -17550,6 +17598,7 @@ interface TaskContextType {
   setAiderModelsData: (taskId: string, modelsData: ModelsData | null) => void;
   answerQuestion: (taskId: string, answer: string) => void;
   interruptResponse: (taskId: string) => void;
+  updateTaskAgentProfile: (taskId: string, agentProfileId: string, provider: string, model: string) => void;
 }
 ⋮----
 export const TaskProvider: React.FC<{
@@ -20188,6 +20237,25 @@ export interface GroupMessage extends Message {
 }
 ⋮----
 export const isGroupMessage = (message: Message): message is GroupMessage =>
+
+================
+File: src/renderer/src/utils/agents.ts
+================
+import { AgentProfile, TaskData } from '@common/types';
+⋮----
+/**
+ * Resolves the active agent profile for a task following the correct hierarchy:
+ * 1. Task-level agent profile ID
+ * 2. Project-level agent profile ID (fallback)
+ * 3. Creates temporary profile if task has provider/model
+ */
+export const resolveAgentProfile = (task: TaskData | undefined, projectAgentProfileId: string | undefined, profiles: AgentProfile[]): AgentProfile | null =>
+⋮----
+// Check task-level agent profile first
+⋮----
+// If no task-level profile, fall back to project-level
+⋮----
+// Create a profile with task-level overrides
 
 ================
 File: src/renderer/src/utils/notifications.ts
