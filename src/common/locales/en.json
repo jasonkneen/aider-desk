@@ -674,9 +674,9 @@
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "dropAll": "Drop all context files",
-    "globalRule": "Global rule file included automatically",
-    "projectRule": "Project rule file included automatically",
-    "agentRule": "Agent profile rule file included automatically",
+    "globalRule": "Global rule file",
+    "projectRule": "Project rule file",
+    "agentRule": "Agent rule file",
     "projectFiles": "Project Files",
     "rules": "Rule Files"
   },

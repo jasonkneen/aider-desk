@@ -7,27 +7,7 @@
   margin-left: -6px;
 }
 
-@keyframes flash {
-  0% {
-    opacity: 1;
-  }
-  25% {
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 1;
-  }
-  75% {
-    opacity: 0.3;
-  }
-  100% {
-    opacity: 1;
-  }
-}
 
-.flash-highlight {
-  animation: flash 1s ease-in-out;
-}
 
 .context-dimmed {
   @apply text-text-muted;

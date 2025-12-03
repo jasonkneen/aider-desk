@@ -8,6 +8,7 @@
 - using settings from the last active projects when opening a new project
 - improved agent profile management and UI selection handling
 - including AGENTS.md in the Rule files as those are automatically added to the context
+- added missing icon buttons and tooltips for items in the fies tree
 
 ## [0.42.1]
 

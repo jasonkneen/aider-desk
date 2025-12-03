@@ -630,9 +630,9 @@
     "expandAll": "全部展开",
     "collapseAll": "全部折叠",
     "dropAll": "删除所有上下文文件",
-    "globalRule": "全局规则文件自动包含",
-    "projectRule": "项目规则文件自动包含",
-    "agentRule": "代理配置规则文件自动包含",
+    "globalRule": "全局规则文件",
+    "projectRule": "项目规则文件",
+    "agentRule": "代理规则文件",
     "projectFiles": "项目文件",
     "rules": "规则文件"
   },

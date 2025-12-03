@@ -9,7 +9,7 @@ import { MdOutlinePublic } from 'react-icons/md';
 import { RiRobot2Line } from 'react-icons/ri';
 import { VscFileCode } from 'react-icons/vsc';
 import { useTranslation } from 'react-i18next';
-import { useLocalStorage, usePrevious } from '@reactuses/core';
+import { useLocalStorage } from '@reactuses/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 
@@ -105,10 +105,8 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
   const { t } = useTranslation();
   const os = useOS();
   const api = useApi();
-  const prevContextFiles = usePrevious(contextFiles);
 
   const [activeSection, setActiveSection] = useLocalStorage<SectionType>(`context-files-active-section-${baseDir}`, 'context');
-  const [newlyAddedFiles, setNewlyAddedFiles] = useState<string[]>([]);
 
   // Separate expanded items for each tree
   const [projectExpandedItems, setProjectExpandedItems] = useState<string[]>([]);
@@ -167,26 +165,13 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
     return [...allFiles].sort((a, b) => a.localeCompare(b));
   }, [allFiles]);
 
-  useEffect(() => {
-    const newFiles = contextFiles.filter((file) => !prevContextFiles?.some((prevFile) => normalizePath(prevFile.path) === normalizePath(file.path)));
-    if (newFiles.length > 0) {
-      setNewlyAddedFiles((prev) => [...prev, ...newFiles.map((f) => f.path)]);
-      setTimeout(() => {
-        setNewlyAddedFiles((prev) => prev.filter((path) => !newFiles.some((f) => normalizePath(f.path) === normalizePath(path))));
-      }, 2000);
-
-      // Auto-switch to context view if new files added (optional, maybe distracting)
-      // setActiveSection('context');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contextFiles, taskId]);
-
   // Tree Data Generators
   const projectTreeData = useMemo(() => {
     const allFileObjects: ContextFile[] = sortedAllFiles.map((path) => ({
       path,
       // Check if readOnly in context files
       readOnly: contextFiles.find((file) => normalizePath(file.path) === normalizePath(path))?.readOnly,
+      source: contextFiles.find((file) => normalizePath(file.path) === normalizePath(path))?.source,
     }));
     return createFileTree(allFileObjects, 'root');
   }, [sortedAllFiles, contextFiles]);
@@ -300,7 +285,6 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
     // Actions logic
     const showAdd = type === 'project' && !isContextFile && !isRuleFile;
     const showRemove = (type === 'context' || (type === 'project' && isContextFile)) && !isRuleFile;
-    const showRuleIcon = isRuleFile;
 
     return (
       <>
@@ -353,16 +337,40 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
             </span>
           </div>
 
-          <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
-            {showRuleIcon && (
+          <div className="flex items-center gap-1 flex-shrink-0 group">
+            {isRuleFile && (
               <>
-                {source === 'global-rule' && <MdOutlinePublic className="w-4 h-4 text-text-muted-light" />}
-                {source === 'project-rule' && <VscFileCode className="w-4 h-4 text-text-muted-light" />}
-                {source === 'agent-rule' && <RiRobot2Line className="w-4 h-4 text-text-muted-light" />}
+                {source === 'global-rule' && (
+                  <MdOutlinePublic
+                    className="w-4 h-4 text-text-muted-light mr-1"
+                    data-tooltip-id="context-files-tooltip"
+                    data-tooltip-content={t('contextFiles.globalRule')}
+                  />
+                )}
+                {source === 'project-rule' && (
+                  <VscFileCode
+                    className="w-4 h-4 text-text-muted-light mr-1"
+                    data-tooltip-id="context-files-tooltip"
+                    data-tooltip-content={t('contextFiles.projectRule')}
+                  />
+                )}
+                {source === 'agent-rule' && (
+                  <RiRobot2Line
+                    className="w-4 h-4 text-text-muted-light mr-1"
+                    data-tooltip-id="context-files-tooltip"
+                    data-tooltip-content={t('contextFiles.agentRule')}
+                  />
+                )}
               </>
             )}
 
-            {treeItem.file?.readOnly && !isRuleFile && <TbPencilOff className="w-4 h-4 text-text-muted-light" />}
+            {treeItem.file?.readOnly && !isRuleFile && (
+              <TbPencilOff
+                className="w-4 h-4 text-text-muted-light"
+                data-tooltip-id="context-files-tooltip"
+                data-tooltip-content={t('contextFiles.readOnly')}
+              />
+            )}
 
             {showRemove && (
               <button onClick={dropFile(treeItem)} className="px-1 py-1 rounded hover:bg-bg-primary-light text-text-muted hover:text-error-dark">
@@ -454,12 +462,11 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
                   renderItemTitle={({ title, item }) => {
                     const treeItem = item as TreeItem;
                     const filePath = treeItem.file?.path;
-                    const isNewlyAdded = filePath && newlyAddedFiles.includes(filePath);
                     const isContextFile = filePath ? contextFiles.some((f) => normalizePath(f.path) === normalizePath(filePath)) : false;
                     const dimmed = section === 'project' && !isContextFile;
 
                     return (
-                      <div className={`px-1 ${isNewlyAdded ? 'flash-highlight' : ''} flex items-center gap-1 h-6 whitespace-nowrap`}>
+                      <div className="px-1 flex items-center gap-1 h-6 whitespace-nowrap">
                         <span className={dimmed ? 'context-dimmed' : undefined}>{title}</span>
                       </div>
                     );
