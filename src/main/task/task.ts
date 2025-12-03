@@ -1215,6 +1215,20 @@ export class Task {
       }
     }
 
+    // Include AGENTS.md from project root if it exists
+    const agentsFilePath = path.join(this.project.baseDir, 'AGENTS.md');
+    try {
+      await fs.access(agentsFilePath);
+      ruleFiles.push({
+        path: 'AGENTS.md',
+        readOnly: true,
+        source: 'project-rule',
+      });
+    } catch (error) {
+      // AGENTS.md doesn't exist, which is fine
+      logger.debug('AGENTS.md not found in project root', { error });
+    }
+
     return ruleFiles;
   }
 
