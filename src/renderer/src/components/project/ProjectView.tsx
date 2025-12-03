@@ -198,17 +198,19 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
 
   const handleDeleteTask = useCallback(
     async (taskId: string) => {
-      try {
-        setOptimisticTasks((prev) => prev.filter((task) => task.id !== taskId));
-        await api.deleteTask(project.baseDir, taskId);
-        if (activeTaskId === taskId) {
-          await createNewTask();
+      startTransition(async () => {
+        try {
+          setOptimisticTasks((prev) => prev.filter((task) => task.id !== taskId));
+          await api.deleteTask(project.baseDir, taskId);
+          if (activeTaskId === taskId) {
+            await createNewTask();
+          }
+          // Task will be automatically removed via the existing handleTaskDeleted listener
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error('Failed to delete task:', error);
         }
-        // Task will be automatically removed via the existing handleTaskDeleted listener
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to delete task:', error);
-      }
+      });
     },
     [activeTaskId, api, createNewTask, project.baseDir, setOptimisticTasks],
   );
