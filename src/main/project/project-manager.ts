@@ -1,5 +1,5 @@
 import { normalizeBaseDir } from '@common/utils';
-import { ProjectSettings, SettingsData } from '@common/types';
+import { AgentProfile, ProjectSettings, SettingsData } from '@common/types';
 
 import { TelemetryManager } from '@/telemetry';
 import { AgentProfileManager, McpManager } from '@/agent';
@@ -111,5 +111,11 @@ export class ProjectManager {
 
   public getCustomCommands(baseDir: string) {
     return this.getProject(baseDir).getCustomCommands();
+  }
+
+  agentProfileUpdated(oldProfile: AgentProfile, profile: AgentProfile) {
+    this.projects.forEach((project) => {
+      project.forEachTask((task) => task.agentProfileUpdated(oldProfile, profile));
+    });
   }
 }

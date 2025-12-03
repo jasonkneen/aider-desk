@@ -2252,4 +2252,14 @@ ${error.stderr}`,
       });
     }
   }
+
+  async agentProfileUpdated(oldProfile: AgentProfile, newProfile: AgentProfile) {
+    const taskAgentProfile = await this.getTaskAgentProfile();
+
+    if (taskAgentProfile?.id === newProfile.id) {
+      if (oldProfile.includeContextFiles !== newProfile.includeContextFiles || oldProfile.includeRepoMap !== newProfile.includeRepoMap) {
+        void this.updateContextInfo();
+      }
+    }
+  }
 }

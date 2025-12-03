@@ -782,7 +782,13 @@ export class EventsHandler {
   }
 
   async updateAgentProfile(profile: AgentProfile) {
+    const oldProfile = this.agentProfileManager.getProfile(profile.id);
     await this.agentProfileManager.updateProfile(profile);
+
+    if (oldProfile) {
+      this.projectManager.agentProfileUpdated(oldProfile, profile);
+    }
+
     return this.agentProfileManager.getAllProfiles();
   }
 

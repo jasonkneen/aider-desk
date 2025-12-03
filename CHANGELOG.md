@@ -9,6 +9,7 @@
 - improved agent profile management and UI selection handling
 - including AGENTS.md in the Rule files as those are automatically added to the context
 - added missing icon buttons and tooltips for items in the fies tree
+- estimated tokens now correctly recalculate when switching the Include files and Include repo map settings
 
 ## [0.42.1]
 
