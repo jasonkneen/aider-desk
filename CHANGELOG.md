@@ -2,7 +2,7 @@
 
 ## [UNRELEASED]
 
-- selected agent profile and models are now remembered per task
+- selected agent profile and models are now stored per task
 - recent projects are now correctly added when closing a project
 - updated default models for providers
 - using settings from the last active projects when opening a new project
@@ -10,6 +10,8 @@
 - including AGENTS.md in the Rule files as those are automatically added to the context
 - added missing icon buttons and tooltips for items in the fies tree
 - estimated tokens now correctly recalculate when switching the Include files and Include repo map settings
+- storing files sidebar width and added collapse/expand functionality
+- task-level selected mode and models
 
 ## [0.42.1]
 

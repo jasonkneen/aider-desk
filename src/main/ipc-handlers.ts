@@ -131,16 +131,16 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     return await eventsHandler.getFilePathSuggestions(currentPath, directoriesOnly);
   });
 
-  ipcMain.on('update-main-model', (_, baseDir: string, mainModel: string) => {
-    eventsHandler.updateMainModel(baseDir, mainModel);
+  ipcMain.on('update-main-model', (_, baseDir: string, taskId: string, mainModel: string) => {
+    eventsHandler.updateMainModel(baseDir, taskId, mainModel);
   });
 
-  ipcMain.on('update-weak-model', (_, baseDir: string, weakModel: string) => {
-    eventsHandler.updateWeakModel(baseDir, weakModel);
+  ipcMain.on('update-weak-model', (_, baseDir: string, taskId: string, weakModel: string) => {
+    eventsHandler.updateWeakModel(baseDir, taskId, weakModel);
   });
 
-  ipcMain.on('update-architect-model', (_, baseDir: string, architectModel: string) => {
-    eventsHandler.updateArchitectModel(baseDir, architectModel);
+  ipcMain.on('update-architect-model', (_, baseDir: string, taskId: string, architectModel: string) => {
+    eventsHandler.updateArchitectModel(baseDir, taskId, architectModel);
   });
 
   ipcMain.on('update-edit-formats', (_, baseDir: string, updatedFormats: Record<string, EditFormat>) => {

@@ -93,6 +93,12 @@ export const DiffViewer = ({ oldValue, newValue, language, isComplete = false }:
       className="diff-viewer"
       optimizeSelection={true}
       tokens={tokens}
+      gutterEvents={{
+        onClick: () => {
+          // eslint-disable-next-line no-console
+          console.log('Gutter clicked');
+        },
+      }}
     >
       {(hunks) => hunks.map((hunk) => <Hunk key={hunk.content} hunk={hunk} />)}
     </Diff>

@@ -4,6 +4,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { ContextFile, ContextMessage, TaskContext, TaskData } from '@common/types';
 import { fileExists } from '@common/utils';
+import { DEFAULT_AIDER_MAIN_MODEL } from '@common/agent';
 
 import { AIDER_DESK_DIR, AIDER_DESK_TASKS_DIR } from '@/constants';
 import logger from '@/logger';
@@ -130,6 +131,9 @@ const migrateSessionFile = async (project: Project, sessionsDirPath: string, tas
       updatedAt: (await fs.stat(sessionFilePath)).mtime.toISOString(),
       agentTotalCost: 0,
       aiderTotalCost: 0,
+      mainModel: DEFAULT_AIDER_MAIN_MODEL,
+      currentMode: 'code',
+      weakModelLocked: false,
     };
 
     // Write settings.json file

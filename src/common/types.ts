@@ -240,6 +240,8 @@ export interface WindowState {
 }
 
 export const ProjectSettingsSchema = z.object({
+  // @deprecated: These properties are deprecated in favor of task-level settings
+  // They are kept for backward compatibility and as defaults for new tasks
   mainModel: z.string(),
   weakModel: z.string().nullable().optional(),
   architectModel: z.string().nullable().optional(),
@@ -637,6 +639,14 @@ export const TaskDataSchema = z.object({
   agentProfileId: z.string().optional(),
   provider: z.string().optional(),
   model: z.string().optional(),
+  mainModel: z.string(),
+  weakModel: z.string().nullable().optional(),
+  architectModel: z.string().nullable().optional(),
+  reasoningEffort: z.string().optional(),
+  thinkingTokens: z.string().optional(),
+  currentMode: z.enum(['code', 'ask', 'architect', 'context', 'agent']).default('code'),
+  contextCompactingThreshold: z.number().optional(),
+  weakModelLocked: z.boolean().default(false),
 });
 
 export type TaskData = z.infer<typeof TaskDataSchema>;

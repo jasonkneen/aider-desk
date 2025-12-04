@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
-import { Mode, TokensInfoData, ProjectSettings, ContextFile } from '@common/types';
+import { ContextFile, Mode, TaskData, TokensInfoData } from '@common/types';
 import { FiChevronDown } from 'react-icons/fi';
 
 import { FilesContextInfoContent } from '@/components/project/FilesContextInfoContent';
@@ -25,8 +25,8 @@ type Props = {
   restartTask: () => void;
   mode: Mode;
   setAddFileDialogOptions: React.Dispatch<React.SetStateAction<AddFileDialogOptions | null>>;
-  projectSettings: ProjectSettings;
-  saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
+  task: TaskData;
+  updateTask: (updates: Partial<TaskData>) => void;
 };
 
 export const MobileSidebar = ({
@@ -44,8 +44,8 @@ export const MobileSidebar = ({
   restartTask,
   mode,
   setAddFileDialogOptions,
-  projectSettings,
-  saveProjectSettings,
+  task,
+  updateTask,
 }: Props) => {
   return (
     <motion.div
@@ -74,8 +74,8 @@ export const MobileSidebar = ({
               readOnly: false,
             })
           }
-          projectSettings={projectSettings}
-          saveProjectSettings={saveProjectSettings}
+          task={task}
+          updateTask={updateTask}
         />
       </div>
     </motion.div>

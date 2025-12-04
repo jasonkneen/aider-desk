@@ -4,7 +4,7 @@ import { unlinkSync } from 'fs';
 import fs from 'fs/promises';
 import path from 'path';
 
-import { EditFormat, ModelsData, ProjectSettings, TokensInfoData } from '@common/types';
+import { EditFormat, ModelsData, TokensInfoData } from '@common/types';
 import { fileExists } from '@common/utils';
 import treeKill from 'tree-kill';
 import { DEFAULT_AIDER_MAIN_MODEL } from '@common/agent';
@@ -59,12 +59,12 @@ export class AiderManager {
 
     const settings = this.store.getSettings();
     const projectSettings = this.store.getProjectSettings(this.task.getProjectDir());
-    const mainModel = projectSettings.mainModel || DEFAULT_AIDER_MAIN_MODEL;
-    const weakModel = projectSettings.weakModel;
+    const mainModel = this.task.task.mainModel || DEFAULT_AIDER_MAIN_MODEL;
+    const weakModel = this.task.task.weakModel;
     const modelEditFormats = projectSettings.modelEditFormats;
-    const reasoningEffort = projectSettings.reasoningEffort;
+    const reasoningEffort = this.task.task.reasoningEffort;
+    const thinkingTokens = this.task.task.thinkingTokens;
     const environmentVariables = getEnvironmentVariablesForAider(settings, this.task.getProjectDir());
-    const thinkingTokens = projectSettings.thinkingTokens;
 
     const mainModelMapping = this.modelManager.getAiderModelMapping(mainModel);
     const mainModelName = mainModelMapping.modelName;
@@ -114,11 +114,11 @@ export class AiderManager {
 
     args.push('--edit-format', modelEditFormats[mainModel] || 'diff');
 
-    if (reasoningEffort !== undefined && !optionsArgsSet.has('--reasoning-effort')) {
+    if (reasoningEffort != null && !optionsArgsSet.has('--reasoning-effort')) {
       args.push('--reasoning-effort', reasoningEffort);
     }
 
-    if (thinkingTokens !== undefined && !optionsArgsSet.has('--thinking-tokens')) {
+    if (thinkingTokens != null && !optionsArgsSet.has('--thinking-tokens')) {
       args.push('--thinking-tokens', thinkingTokens);
     }
 
@@ -352,22 +352,13 @@ export class AiderManager {
   }
 
   public updateAiderModels(modelsData: ModelsData): void {
-    const currentSettings = this.store.getProjectSettings(this.task.getProjectDir());
-    const updatedSettings: ProjectSettings = {
-      ...currentSettings,
-      reasoningEffort: modelsData.reasoningEffort ? modelsData.reasoningEffort : undefined,
-      thinkingTokens: modelsData.thinkingTokens ? modelsData.thinkingTokens : undefined,
-    };
-    this.store.saveProjectSettings(this.task.getProjectDir(), updatedSettings);
-
-    const projectSettings = this.store.getProjectSettings(this.task.getProjectDir());
-    const mainModel = projectSettings.mainModel || DEFAULT_AIDER_MAIN_MODEL;
+    const mainModel = this.task.task.mainModel || DEFAULT_AIDER_MAIN_MODEL;
     const mainModelParts = mainModel.split('/');
-    const weakModelParts = projectSettings.weakModel?.split('/') || modelsData.weakModel?.split('/');
-    const architectModelParts = projectSettings.architectModel?.split('/') || modelsData.architectModel?.split('/');
+    const weakModelParts = this.task.task.weakModel?.split('/') || modelsData.weakModel?.split('/');
+    const architectModelParts = this.task.task.architectModel?.split('/') || modelsData.architectModel?.split('/');
 
     const getWeakModelProvider = () => {
-      if (modelsData.mainModel !== projectSettings.mainModel && weakModelParts?.[0] === modelsData.mainModel.split('/')[0]) {
+      if (modelsData.mainModel !== this.task.task.mainModel && weakModelParts?.[0] === modelsData.mainModel.split('/')[0]) {
         // use the provider prefix from the main model when Aider's provider prefix is different
         return mainModelParts[0];
       }

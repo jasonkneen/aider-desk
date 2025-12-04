@@ -95,14 +95,20 @@ export class Task {
     private readonly eventManager: EventManager,
     private readonly modelManager: ModelManager,
     private readonly worktreeManager: WorktreeManager,
+    initialTaskData?: Partial<TaskData>,
   ) {
     this.task = {
-      id: taskId,
-      baseDir: project.baseDir,
       name: '',
       archived: false,
       aiderTotalCost: 0,
       agentTotalCost: 0,
+      mainModel: '',
+      currentMode: 'code',
+      contextCompactingThreshold: 0,
+      weakModelLocked: false,
+      ...initialTaskData,
+      id: taskId,
+      baseDir: project.baseDir,
     };
     this.taskDataPath = path.join(this.project.baseDir, AIDER_DESK_TASKS_DIR, this.taskId, 'settings.json');
     this.contextManager = new ContextManager(this, this.taskId);
@@ -166,7 +172,30 @@ export class Task {
       }
     }
 
+    // Migrate missing task-level settings from project settings
+    await this.migrateFromProjectSettings();
+
     this.git = simpleGit(this.getTaskDir());
+  }
+
+  /**
+   * @deprecated Migrate missing task-level settings from project settings
+   */
+  private async migrateFromProjectSettings() {
+    const projectSettings = this.project.getProjectSettings();
+
+    if (!this.task.mainModel || !this.task.currentMode) {
+      this.task.currentMode = projectSettings.currentMode;
+      this.task.mainModel = projectSettings.mainModel;
+      this.task.weakModel = projectSettings.weakModel;
+      this.task.architectModel = projectSettings.architectModel;
+      this.task.reasoningEffort = projectSettings.reasoningEffort;
+      this.task.thinkingTokens = projectSettings.thinkingTokens;
+      this.task.contextCompactingThreshold = projectSettings.contextCompactingThreshold;
+      this.task.weakModelLocked = projectSettings.weakModelLocked ?? false;
+
+      await this.saveTask(undefined, false);
+    }
   }
 
   /**
@@ -194,7 +223,7 @@ export class Task {
     return `${WORKTREE_BRANCH_PREFIX}${cleanBranchName || this.taskId}`;
   }
 
-  public async saveTask(updates?: Partial<TaskData>) {
+  public async saveTask(updates?: Partial<TaskData>, updateTimestamps = true): Promise<TaskData> {
     logger.debug('Saving task data', {
       baseDir: this.project.baseDir,
       taskId: this.taskId,
@@ -210,10 +239,13 @@ export class Task {
         this.task[key] = updates[key];
       }
     }
-    if (!this.task.createdAt) {
-      this.task.createdAt = new Date().toISOString();
+
+    if (updateTimestamps) {
+      if (!this.task.createdAt) {
+        this.task.createdAt = new Date().toISOString();
+      }
+      this.task.updatedAt = new Date().toISOString();
     }
-    this.task.updatedAt = new Date().toISOString();
 
     await fs.mkdir(path.dirname(this.taskDataPath), { recursive: true });
     await fs.writeFile(this.taskDataPath, JSON.stringify(this.task, null, 2), 'utf8');
@@ -1019,6 +1051,9 @@ export class Task {
     if (!this.initialized) {
       return;
     }
+
+    this.task.reasoningEffort = modelsData.reasoningEffort;
+    this.task.thinkingTokens = modelsData.thinkingTokens;
     this.aiderManager.updateAiderModels(modelsData);
     void this.sendUpdateModelsInfo();
   }

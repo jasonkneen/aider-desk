@@ -1,4 +1,4 @@
-import { TokensInfoData, Mode, ProjectSettings, ContextFile } from '@common/types';
+import { ContextFile, Mode, TaskData, TokensInfoData } from '@common/types';
 
 import { ContextFiles } from '@/components/ContextFiles';
 import { CostInfo } from '@/components/CostInfo';
@@ -16,8 +16,8 @@ type Props = {
   restartTask: () => void;
   mode: Mode;
   showFileDialog: () => void;
-  projectSettings: ProjectSettings;
-  saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
+  task: TaskData;
+  updateTask: (updates: Partial<TaskData>) => void;
 };
 
 export const FilesContextInfoContent = ({
@@ -33,8 +33,8 @@ export const FilesContextInfoContent = ({
   restartTask,
   mode,
   showFileDialog,
-  projectSettings,
-  saveProjectSettings,
+  task,
+  updateTask,
 }: Props) => {
   return (
     <>
@@ -56,8 +56,8 @@ export const FilesContextInfoContent = ({
         refreshRepoMap={() => runCommand('map-refresh')}
         restartTask={restartTask}
         mode={mode}
-        projectSettings={projectSettings}
-        saveProjectSettings={saveProjectSettings}
+        task={task}
+        updateTask={updateTask}
       />
     </>
   );

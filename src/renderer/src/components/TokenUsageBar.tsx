@@ -1,5 +1,5 @@
-import { Mode, ProjectSettings, TokensInfoData } from '@common/types';
-import { useCallback, useEffect, useRef, useState, MouseEvent } from 'react';
+import { Mode, TaskData, TokensInfoData } from '@common/types';
+import { MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import debounce from 'lodash/debounce';
 import { clsx } from 'clsx';
@@ -10,13 +10,13 @@ type Props = {
   tokensInfo?: TokensInfoData | null;
   maxInputTokens?: number;
   mode: Mode;
-  projectSettings: ProjectSettings;
-  saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
+  task: TaskData;
+  updateTask: (updates: Partial<TaskData>) => void;
 };
 
-export const TokenUsageBar = ({ tokensInfo, maxInputTokens = 0, mode, projectSettings, saveProjectSettings }: Props) => {
+export const TokenUsageBar = ({ tokensInfo, maxInputTokens = 0, mode, task, updateTask }: Props) => {
   const { t } = useTranslation();
-  const [localThreshold, setLocalThreshold] = useState(projectSettings.contextCompactingThreshold || 0);
+  const [localThreshold, setLocalThreshold] = useState(task.contextCompactingThreshold || 0);
   const [isDragging, setIsDragging] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
   const [isHoveringThreshold, setIsHoveringThreshold] = useState(false);
@@ -25,18 +25,17 @@ export const TokenUsageBar = ({ tokensInfo, maxInputTokens = 0, mode, projectSet
 
   const onContextCompactingThreshold = useCallback(
     (value: number) => {
-      saveProjectSettings({
-        contextCompactingThreshold: value,
-      });
+      updateTask({ contextCompactingThreshold: value });
     },
-    [saveProjectSettings],
+    [updateTask],
   );
 
   const debouncedOnContextCompactingThreshold = debounce(onContextCompactingThreshold, 1000);
 
   useEffect(() => {
-    setLocalThreshold(projectSettings.contextCompactingThreshold || 0);
-  }, [projectSettings.contextCompactingThreshold]);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setLocalThreshold(task.contextCompactingThreshold || 0);
+  }, [task.contextCompactingThreshold]);
 
   const handleTokenBarClick = useCallback(
     (e: MouseEvent<HTMLDivElement>) => {

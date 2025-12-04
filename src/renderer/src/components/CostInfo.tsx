@@ -1,4 +1,4 @@
-import { Mode, ProjectSettings, TokensInfoData } from '@common/types';
+import { Mode, TokensInfoData, TaskData } from '@common/types';
 import { ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IoChevronDown, IoChevronUp, IoClose } from 'react-icons/io5';
@@ -15,21 +15,11 @@ type Props = {
   restartTask?: () => void;
   maxInputTokens?: number;
   mode: Mode;
-  projectSettings: ProjectSettings;
-  saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
+  task: TaskData;
+  updateTask: (updates: Partial<TaskData>) => void;
 };
 
-export const CostInfo = ({
-  tokensInfo,
-  aiderTotalCost,
-  clearMessages,
-  refreshRepoMap,
-  restartTask,
-  maxInputTokens = 0,
-  mode,
-  projectSettings,
-  saveProjectSettings,
-}: Props) => {
+export const CostInfo = ({ tokensInfo, aiderTotalCost, clearMessages, refreshRepoMap, restartTask, maxInputTokens = 0, mode, task, updateTask }: Props) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [refreshingAnimation, setRefreshingAnimation] = useState(false);
@@ -120,13 +110,7 @@ export const CostInfo = ({
           </div>
         </div>
 
-        <TokenUsageBar
-          tokensInfo={tokensInfo}
-          maxInputTokens={maxInputTokens}
-          mode={mode}
-          projectSettings={projectSettings}
-          saveProjectSettings={saveProjectSettings}
-        />
+        <TokenUsageBar tokensInfo={tokensInfo} maxInputTokens={maxInputTokens} mode={mode} task={task} updateTask={updateTask} />
       </div>
     </div>
   );

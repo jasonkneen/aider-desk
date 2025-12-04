@@ -42,7 +42,7 @@ export const TaskBar = React.forwardRef<TaskBarRef, Props>(
   ({ baseDir, task, modelsData, mode, onModelsChange, runCommand, onToggleSidebar, updateTask }, ref) => {
     const { t } = useTranslation();
     const { settings, saveSettings } = useSettings();
-    const { projectSettings, saveProjectSettings } = useProjectSettings();
+    const { projectSettings } = useProjectSettings();
     const { models, providers } = useModelProviders();
     const api = useApi();
     const { isMobile } = useResponsive();
@@ -136,7 +136,6 @@ export const TaskBar = React.forwardRef<TaskBarRef, Props>(
           return;
         }
 
-        // Update task directly instead of agent profile
         updateTask({
           provider: provider.id,
           model: modelId,
@@ -210,20 +209,20 @@ export const TaskBar = React.forwardRef<TaskBarRef, Props>(
     const updateMainModel = useCallback(
       (mainModel: Model) => {
         const modelId = getProviderModelId(mainModel);
-        api.updateMainModel(baseDir, modelId);
+        api.updateMainModel(baseDir, task.id, modelId);
         updatePreferredModels(modelId);
 
         if (modelsData && onModelsChange) {
           onModelsChange(null);
         }
       },
-      [api, baseDir, modelsData, onModelsChange, updatePreferredModels],
+      [api, baseDir, task.id, modelsData, onModelsChange, updatePreferredModels],
     );
 
     const updateWeakModel = useCallback(
       (weakModel: Model) => {
         const modelId = getProviderModelId(weakModel);
-        api.updateWeakModel(baseDir, modelId);
+        api.updateWeakModel(baseDir, task.id, modelId);
         updatePreferredModels(modelId);
         if (modelsData && onModelsChange) {
           onModelsChange({
@@ -232,26 +231,19 @@ export const TaskBar = React.forwardRef<TaskBarRef, Props>(
           });
         }
       },
-      [api, baseDir, updatePreferredModels, modelsData, onModelsChange],
+      [api, baseDir, task.id, updatePreferredModels, modelsData, onModelsChange],
     );
 
     const toggleWeakModelLock = useCallback(() => {
-      if (!projectSettings) {
-        return;
-      }
-
-      const updatedSettings = {
-        ...projectSettings,
-        weakModelLocked: !projectSettings.weakModelLocked,
-      };
-
-      void saveProjectSettings(updatedSettings);
-    }, [projectSettings, saveProjectSettings]);
+      updateTask({
+        weakModelLocked: !task.weakModelLocked,
+      });
+    }, [task.weakModelLocked, updateTask]);
 
     const updateArchitectModel = useCallback(
       (architectModel: Model) => {
         const modelId = getProviderModelId(architectModel);
-        api.updateArchitectModel(baseDir, modelId);
+        api.updateArchitectModel(baseDir, task.id, modelId);
         updatePreferredModels(modelId);
         if (modelsData && onModelsChange) {
           onModelsChange({
@@ -260,7 +252,7 @@ export const TaskBar = React.forwardRef<TaskBarRef, Props>(
           });
         }
       },
-      [api, baseDir, modelsData, onModelsChange, updatePreferredModels],
+      [api, baseDir, task.id, modelsData, onModelsChange, updatePreferredModels],
     );
 
     const handleRemovePreferredModel = (model: string) => {
@@ -351,11 +343,11 @@ export const TaskBar = React.forwardRef<TaskBarRef, Props>(
               removePreferredModel={handleRemovePreferredModel}
               providers={providers}
             />
-            {projectSettings?.weakModel && (
+            {task.weakModel && (
               <IconButton
-                icon={projectSettings?.weakModelLocked ? <VscLock className="w-4 h-4" /> : <VscUnlock className="w-4 h-4" />}
+                icon={task.weakModelLocked ? <VscLock className="w-4 h-4" /> : <VscUnlock className="w-4 h-4" />}
                 onClick={toggleWeakModelLock}
-                tooltip={projectSettings?.weakModelLocked ? t('modelSelector.weakModelUnlock') : t('modelSelector.weakModelLock')}
+                tooltip={task.weakModelLocked ? t('modelSelector.weakModelUnlock') : t('modelSelector.weakModelLock')}
               />
             )}
           </div>

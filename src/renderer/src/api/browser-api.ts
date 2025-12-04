@@ -315,21 +315,24 @@ export class BrowserApi implements ApplicationAPI {
   updateOpenProjectsOrder(baseDirs: string[]): Promise<ProjectData[]> {
     return this.post('/project/update-order', { projectDirs: baseDirs });
   }
-  updateMainModel(baseDir: string, model: string): void {
+  updateMainModel(baseDir: string, taskId: string, model: string): void {
     this.post('/project/settings/main-model', {
       projectDir: baseDir,
+      taskId: taskId,
       mainModel: model,
     });
   }
-  updateWeakModel(baseDir: string, model: string): void {
+  updateWeakModel(baseDir: string, taskId: string, model: string): void {
     this.post('/project/settings/weak-model', {
       projectDir: baseDir,
+      taskId: taskId,
       weakModel: model,
     });
   }
-  updateArchitectModel(baseDir: string, model: string): void {
+  updateArchitectModel(baseDir: string, taskId: string, model: string): void {
     this.post('/project/settings/architect-model', {
       projectDir: baseDir,
+      taskId: taskId,
       architectModel: model,
     });
   }

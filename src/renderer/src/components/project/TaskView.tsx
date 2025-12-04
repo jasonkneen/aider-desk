@@ -56,7 +56,7 @@ type Props = {
 export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateTask, inputHistory, isActive = false, showSettingsPage }, ref) => {
   const { t } = useTranslation();
   const { settings } = useSettings();
-  const { projectSettings, saveProjectSettings } = useProjectSettings();
+  const { projectSettings } = useProjectSettings();
   const { isMobile } = useResponsive();
   const api = useApi();
   const { models } = useModelProviders();
@@ -65,6 +65,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
 
   const taskState = getTaskState(task.id);
   const aiderModelsData = taskState?.aiderModelsData || null;
+  const currentMode = task.currentMode || 'code';
 
   const [addFileDialogOptions, setAddFileDialogOptions] = useState<AddFileDialogOptions | null>(null);
   const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
@@ -94,7 +95,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
 
   const currentModel = useMemo(() => {
     let model: Model | undefined;
-    if (projectSettings?.currentMode === 'agent') {
+    if (currentMode === 'agent') {
       if (activeAgentProfile) {
         model = models.find((m) => m.id === activeAgentProfile.model && m.providerId === activeAgentProfile.provider);
       }
@@ -103,7 +104,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
     }
 
     return model;
-  }, [projectSettings?.currentMode, activeAgentProfile, models, aiderModelsData?.mainModel]);
+  }, [currentMode, activeAgentProfile, models, aiderModelsData?.mainModel]);
   const maxInputTokens = currentModel?.maxInputTokens || 0;
 
   useEffect(() => {
@@ -113,8 +114,8 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
   }, [taskState?.messages]);
 
   const todoListVisible = useMemo(() => {
-    return projectSettings?.currentMode === 'agent' && activeAgentProfile?.useTodoTools;
-  }, [activeAgentProfile?.useTodoTools, projectSettings?.currentMode]);
+    return currentMode === 'agent' && activeAgentProfile?.useTodoTools;
+  }, [currentMode, activeAgentProfile?.useTodoTools]);
 
   const renderLoading = (message: string) => (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-bg-primary to-bg-primary-light z-10">
@@ -191,23 +192,19 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
   };
 
   const handleModeChange = (mode: Mode) => {
-    void saveProjectSettings({ currentMode: mode });
+    updateTask({ currentMode: mode });
   };
 
   const runPrompt = (prompt: string) => {
-    if (!projectSettings) {
-      return;
-    } // Should not happen if component is rendered
-
     if (editingMessageIndex !== null) {
       // This submission is an edit of a previous message
       setEditingMessageIndex(null); // Clear editing state
       setMessages(task.id, (prevMessages) => {
         return prevMessages.slice(0, editingMessageIndex);
       });
-      api.redoLastUserPrompt(project.baseDir, task.id, projectSettings.currentMode, prompt);
+      api.redoLastUserPrompt(project.baseDir, task.id, currentMode, prompt);
     } else {
-      api.runPrompt(project.baseDir, task.id, prompt, projectSettings.currentMode);
+      api.runPrompt(project.baseDir, task.id, prompt, currentMode);
     }
   };
 
@@ -257,10 +254,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
       // Keep messages up to and excluding the one being redone
       return prevMessages.slice(0, lastUserMessageIndex);
     });
-    if (projectSettings) {
-      // Ensure projectSettings is available
-      api.redoLastUserPrompt(project.baseDir, task.id, projectSettings.currentMode);
-    }
+    api.redoLastUserPrompt(project.baseDir, task.id, currentMode);
   };
 
   const handleRemoveMessage = (messageToRemove: Message) => {
@@ -360,7 +354,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
           baseDir={project.baseDir}
           task={task}
           modelsData={aiderModelsData}
-          mode={projectSettings.currentMode}
+          mode={currentMode}
           onModelsChange={handleModelChange}
           runCommand={runCommand}
           onToggleSidebar={() => setShowSidebar(!showSidebar)}
@@ -467,7 +461,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
               task={task}
               inputHistory={inputHistory}
               processing={processing}
-              mode={projectSettings.currentMode}
+              mode={currentMode}
               onModeChanged={handleModeChange}
               runPrompt={runPrompt}
               savePrompt={handleSavePrompt}
@@ -542,14 +536,14 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
                   clearMessages={clearMessages}
                   runCommand={runCommand}
                   restartTask={handleRestartTask}
-                  mode={projectSettings.currentMode}
+                  mode={currentMode}
                   showFileDialog={() =>
                     setAddFileDialogOptions({
                       readOnly: false,
                     })
                   }
-                  projectSettings={projectSettings}
-                  saveProjectSettings={saveProjectSettings}
+                  task={task}
+                  updateTask={updateTask}
                 />
               </div>
             </ResizableBox>
@@ -583,10 +577,10 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
           clearMessages={clearMessages}
           runCommand={runCommand}
           restartTask={handleRestartTask}
-          mode={projectSettings.currentMode}
+          mode={currentMode}
           setAddFileDialogOptions={setAddFileDialogOptions}
-          projectSettings={projectSettings}
-          saveProjectSettings={saveProjectSettings}
+          task={task}
+          updateTask={updateTask}
         />
       )}
     </div>

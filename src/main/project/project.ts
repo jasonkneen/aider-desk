@@ -18,6 +18,7 @@ import { Task } from '@/task';
 import { migrateSessionsToTasks } from '@/project/migrations';
 import { WorktreeManager } from '@/worktrees';
 import { AIDER_DESK_WATCH_FILES_LOCK } from '@/constants';
+import { determineMainModel, determineWeakModel } from '@/utils';
 
 const INTERNAL_TASK_ID = 'internal';
 
@@ -55,7 +56,30 @@ export class Project {
   }
 
   public async createNewTask() {
-    const task = this.prepareTask();
+    const mostRecentTask = this.getMostRecentTask();
+    let initialTaskData: Partial<TaskData>;
+
+    if (mostRecentTask) {
+      initialTaskData = {
+        mainModel: mostRecentTask.task.mainModel,
+        weakModel: mostRecentTask.task.weakModel,
+        architectModel: mostRecentTask.task.architectModel,
+        reasoningEffort: mostRecentTask.task.reasoningEffort,
+        thinkingTokens: mostRecentTask.task.thinkingTokens,
+        currentMode: mostRecentTask.task.currentMode,
+        contextCompactingThreshold: mostRecentTask.task.contextCompactingThreshold,
+        weakModelLocked: mostRecentTask.task.weakModelLocked,
+      };
+    } else {
+      const providerModels = await this.modelManager.getProviderModels();
+      initialTaskData = {
+        mainModel: determineMainModel(this.store.getSettings(), this.store.getProviders(), providerModels.models || [], this.baseDir),
+        weakModel: determineWeakModel(this.baseDir),
+        currentMode: 'code',
+      };
+    }
+
+    const task = this.prepareTask(undefined, initialTaskData);
     this.eventManager.sendTaskCreated(task.task);
     await task.init();
 
@@ -70,7 +94,7 @@ export class Project {
     return task.task;
   }
 
-  private prepareTask(taskId: string = uuidv4()) {
+  private prepareTask(taskId: string = uuidv4(), initialTaskData?: Partial<TaskData>) {
     const task = new Task(
       this,
       taskId,
@@ -83,6 +107,7 @@ export class Project {
       this.eventManager,
       this.modelManager,
       this.worktreeManager,
+      initialTaskData,
     );
     this.tasks.set(taskId, task);
 
@@ -131,6 +156,18 @@ export class Project {
         error: error instanceof Error ? error.message : String(error),
       });
     }
+  }
+
+  public getMostRecentTask() {
+    return Array.from(this.tasks.values()).sort((a, b) => {
+      if (!a.task.updatedAt) {
+        return 1;
+      }
+      if (!b.task.updatedAt) {
+        return -1;
+      }
+      return b.task.updatedAt.localeCompare(a.task.updatedAt);
+    })[0];
   }
 
   public getTask(taskId: string = INTERNAL_TASK_ID) {
@@ -283,7 +320,7 @@ export class Project {
       throw new Error(`Task with id ${taskId} not found`);
     }
 
-    const newTask = this.prepareTask();
+    const newTask = this.prepareTask(undefined, sourceTask.task);
     await newTask.duplicateFrom(sourceTask);
     this.eventManager.sendTaskCreated(newTask.task);
     await newTask.init();

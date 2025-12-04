@@ -304,41 +304,46 @@ export class EventsHandler {
     await task?.runCustomCommand(commandName, args, mode);
   }
 
-  updateMainModel(baseDir: string, mainModel: string): void {
-    const projectSettings = this.store.getProjectSettings(baseDir);
-
-    projectSettings.mainModel = mainModel;
-
-    // Only clear weak model if not locked
-    if (!projectSettings.weakModelLocked) {
-      projectSettings.weakModel = null;
+  async updateMainModel(baseDir: string, taskId: string, mainModel: string): Promise<void> {
+    const task = this.projectManager.getProject(baseDir).getTask(taskId);
+    if (!task) {
+      return;
     }
 
-    const updatedSettings = this.store.saveProjectSettings(baseDir, projectSettings);
-    this.eventManager.sendProjectSettingsUpdated(baseDir, updatedSettings);
-    this.projectManager
-      .getProject(baseDir)
-      .forEachTask((task) => task.updateModels(mainModel, projectSettings.weakModel || null, projectSettings.modelEditFormats[mainModel]));
+    const weakModel = task.task.weakModelLocked ? task.task.weakModel : null;
+    await task.updateTask({
+      mainModel,
+      weakModel,
+    });
+
+    const projectSettings = this.store.getProjectSettings(baseDir);
+    const editFormat = projectSettings.modelEditFormats[mainModel];
+    task.updateModels(mainModel, weakModel || null, editFormat);
   }
 
-  updateWeakModel(baseDir: string, weakModel: string): void {
-    const projectSettings = this.store.getProjectSettings(baseDir);
-    projectSettings.weakModel = weakModel;
-    const updatedSettings = this.store.saveProjectSettings(baseDir, projectSettings);
-    this.eventManager.sendProjectSettingsUpdated(baseDir, updatedSettings);
+  async updateWeakModel(baseDir: string, taskId: string, weakModel: string): Promise<void> {
+    const task = this.projectManager.getProject(baseDir).getTask(taskId);
+    if (!task) {
+      return;
+    }
 
-    this.projectManager
-      .getProject(baseDir)
-      .forEachTask((task) => task.updateModels(projectSettings.mainModel, weakModel, projectSettings.modelEditFormats[projectSettings.mainModel]));
+    await task.updateTask({ weakModel });
+
+    const projectSettings = this.store.getProjectSettings(baseDir);
+    const mainModel = task.task.mainModel;
+    const editFormat = projectSettings.modelEditFormats[mainModel];
+    task.updateModels(mainModel, weakModel, editFormat);
   }
 
-  updateArchitectModel(baseDir: string, architectModel: string): void {
-    const projectSettings = this.store.getProjectSettings(baseDir);
-    projectSettings.architectModel = architectModel;
-    const updatedSettings = this.store.saveProjectSettings(baseDir, projectSettings);
-    this.eventManager.sendProjectSettingsUpdated(baseDir, updatedSettings);
+  async updateArchitectModel(baseDir: string, taskId: string, architectModel: string): Promise<void> {
+    const task = this.projectManager.getProject(baseDir).getTask(taskId);
+    if (!task) {
+      return;
+    }
 
-    this.projectManager.getProject(baseDir).forEachTask((task) => task.setArchitectModel(architectModel));
+    await task.updateTask({ architectModel });
+
+    task.setArchitectModel(architectModel);
   }
 
   updateEditFormats(baseDir: string, updatedFormats: Record<string, EditFormat>): void {
@@ -352,9 +357,7 @@ export class EventsHandler {
     this.eventManager.sendProjectSettingsUpdated(baseDir, updatedSettings);
     this.projectManager
       .getProject(baseDir)
-      .forEachTask((task) =>
-        task.updateModels(projectSettings.mainModel, projectSettings?.weakModel || null, projectSettings.modelEditFormats[projectSettings.mainModel]),
-      );
+      .forEachTask((task) => task.updateModels(task.task.mainModel, task.task.weakModel || null, projectSettings.modelEditFormats[task.task.mainModel]));
   }
 
   async loadMcpServerTools(serverName: string, config?: McpServerConfig): Promise<McpTool[] | null> {

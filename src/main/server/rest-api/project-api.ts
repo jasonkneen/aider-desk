@@ -43,16 +43,19 @@ const AnswerQuestionSchema = z.object({
 
 const UpdateMainModelSchema = z.object({
   projectDir: z.string().min(1, 'Project directory is required'),
+  taskId: z.string().min(1, 'Task ID is required'),
   mainModel: z.string().min(1, 'Main model is required'),
 });
 
 const UpdateWeakModelSchema = z.object({
   projectDir: z.string().min(1, 'Project directory is required'),
+  taskId: z.string().min(1, 'Task ID is required'),
   weakModel: z.string().min(1, 'Weak model is required'),
 });
 
 const UpdateArchitectModelSchema = z.object({
   projectDir: z.string().min(1, 'Project directory is required'),
+  taskId: z.string().min(1, 'Task ID is required'),
   architectModel: z.string().min(1, 'Architect model is required'),
 });
 
@@ -731,8 +734,8 @@ export class ProjectApi extends BaseApi {
           return;
         }
 
-        const { projectDir, mainModel } = parsed;
-        this.eventsHandler.updateMainModel(projectDir, mainModel);
+        const { projectDir, taskId, mainModel } = parsed;
+        this.eventsHandler.updateMainModel(projectDir, taskId, mainModel);
         res.status(200).json({ message: 'Main model updated' });
       }),
     );
@@ -746,8 +749,8 @@ export class ProjectApi extends BaseApi {
           return;
         }
 
-        const { projectDir, weakModel } = parsed;
-        this.eventsHandler.updateWeakModel(projectDir, weakModel);
+        const { projectDir, taskId, weakModel } = parsed;
+        this.eventsHandler.updateWeakModel(projectDir, taskId, weakModel);
         res.status(200).json({ message: 'Weak model updated' });
       }),
     );
@@ -761,8 +764,8 @@ export class ProjectApi extends BaseApi {
           return;
         }
 
-        const { projectDir, architectModel } = parsed;
-        this.eventsHandler.updateArchitectModel(projectDir, architectModel);
+        const { projectDir, taskId, architectModel } = parsed;
+        this.eventsHandler.updateArchitectModel(projectDir, taskId, architectModel);
         res.status(200).json({ message: 'Architect model updated' });
       }),
     );
