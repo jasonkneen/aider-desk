@@ -635,7 +635,9 @@
     "projectRule": "项目规则文件",
     "agentRule": "代理规则文件",
     "projectFiles": "项目文件",
-    "rules": "规则文件"
+    "rules": "规则文件",
+    "search": "搜索文件",
+    "searchPlaceholder": "搜索文件..."
   },
   "modelSelector": {
     "mainModel": "主模型",

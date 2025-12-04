@@ -3,18 +3,19 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import objectHash from 'object-hash';
 import { ControlledTreeEnvironment, Tree } from 'react-complex-tree';
 import { HiChevronDown, HiChevronRight, HiOutlineTrash, HiPlus, HiX } from 'react-icons/hi';
+import { MdOutlineSearch, MdOutlinePublic } from 'react-icons/md';
 import { BiCollapseVertical, BiExpandVertical } from 'react-icons/bi';
 import { TbPencilOff } from 'react-icons/tb';
-import { MdOutlinePublic } from 'react-icons/md';
 import { RiRobot2Line } from 'react-icons/ri';
 import { VscFileCode } from 'react-icons/vsc';
 import { useTranslation } from 'react-i18next';
-import { useLocalStorage } from '@reactuses/core';
+import { useLocalStorage, useDebounce } from '@reactuses/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 
 import { StyledTooltip } from '../common/StyledTooltip';
 
+import { Input } from '@/components/common/Input';
 import { useOS } from '@/hooks/useOS';
 import { useApi } from '@/contexts/ApiContext';
 
@@ -114,6 +115,9 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
   const [rulesExpandedItems, setRulesExpandedItems] = useState<string[]>([]);
 
   const [isDragging, setIsDragging] = useState(false);
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearchQuery = useDebounce(searchQuery, 50);
 
   const handleFileDrop = useCallback(
     async (event: React.DragEvent<HTMLDivElement>) => {
@@ -162,8 +166,16 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
   }, [rulesFiles]);
 
   const sortedAllFiles = useMemo(() => {
-    return [...allFiles].sort((a, b) => a.localeCompare(b));
-  }, [allFiles]);
+    return [...allFiles]
+      .filter((file) => {
+        if (!debouncedSearchQuery.trim()) {
+          return true;
+        }
+        const searchText = debouncedSearchQuery.toLowerCase();
+        return file.toLowerCase().includes(searchText);
+      })
+      .sort((a, b) => a.localeCompare(b));
+  }, [allFiles, debouncedSearchQuery]);
 
   // Tree Data Generators
   const projectTreeData = useMemo(() => {
@@ -227,6 +239,18 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
   const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     setIsDragging(false);
+  };
+
+  const handleSearchToggle = () => {
+    setIsSearchVisible(!isSearchVisible);
+    if (isSearchVisible) {
+      setSearchQuery('');
+    }
+  };
+
+  const handleSearchClose = () => {
+    setIsSearchVisible(false);
+    setSearchQuery('');
   };
 
   const dropFile = (item: TreeItem) => (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -405,6 +429,7 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
     actions?: React.ReactNode,
     isFirst?: boolean,
     _isLast?: boolean,
+    searchField?: React.ReactNode,
   ) => {
     const isOpen = activeSection === section;
     const treeId = `tree-${section}`;
@@ -426,7 +451,7 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
         <div
           className={clsx(
             'flex items-center px-2 cursor-pointer select-none h-[40px] shrink-0 bg-bg-primary-light',
-            isOpen && 'border-b border-border-dark-light',
+            isOpen && !searchField && 'border-b border-border-dark-light',
           )}
           onClick={() => setActiveSection(section)}
         >
@@ -444,6 +469,13 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
             </div>
           )}
         </div>
+
+        {/* Search Field */}
+        {isOpen && searchField && (
+          <div className="px-2 py-2 border-b border-border-dark-light bg-bg-primary-light" onClick={(e) => e.stopPropagation()}>
+            {searchField}
+          </div>
+        )}
 
         <AnimatePresence initial={false}>
           {isOpen && (
@@ -561,9 +593,43 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
           >
             <BiCollapseVertical className="w-4 h-4" />
           </button>
+          <button
+            data-tooltip-id="context-files-tooltip"
+            data-tooltip-content={t('contextFiles.search')}
+            className="p-1 rounded-md hover:bg-bg-tertiary transition-colors"
+            onClick={handleSearchToggle}
+          >
+            <MdOutlineSearch className="w-5 h-5 text-text-primary" />
+          </button>
         </>,
         false,
         false,
+        isSearchVisible ? (
+          <AnimatePresence>
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.05 }}
+              className="relative"
+            >
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('contextFiles.searchPlaceholder')}
+                size="sm"
+                className="pr-8"
+                autoFocus={true}
+              />
+              <button
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-md hover:bg-bg-tertiary transition-colors"
+                onClick={handleSearchClose}
+              >
+                <HiX className="w-4 h-4 text-text-muted hover:text-text-primary" />
+              </button>
+            </motion.div>
+          </AnimatePresence>
+        ) : null,
       )}
 
       {/* Rules Section */}

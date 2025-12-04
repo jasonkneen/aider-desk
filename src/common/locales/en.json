@@ -679,7 +679,9 @@
     "projectRule": "Project rule file",
     "agentRule": "Agent rule file",
     "projectFiles": "Project Files",
-    "rules": "Rule Files"
+    "rules": "Rule Files",
+    "search": "Search files",
+    "searchPlaceholder": "Search files..."
   },
   "modelSelector": {
     "mainModel": "Main model",

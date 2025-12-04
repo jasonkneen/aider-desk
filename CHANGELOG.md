@@ -12,6 +12,8 @@
 - estimated tokens now correctly recalculate when switching the Include files and Include repo map settings
 - storing files sidebar width and added collapse/expand functionality
 - task-level selected mode and models
+- terminal view now correctly uses task directory in case of worktree mode
+- added search functionality to Project Files
 
 ## [0.42.1]
 
