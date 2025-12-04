@@ -346,17 +346,18 @@ src/
         project/
           AddFileDialog.tsx
           FileFinder.tsx
+          FilesContextInfoContent.tsx
           MobileSidebar.tsx
           NoProjectsOpen.tsx
           OpenProjectDialog.tsx
           ProjectTabs.tsx
           ProjectView.tsx
-          SidebarContent.tsx
           TaskBar.tsx
           TaskSidebar.tsx
           TaskView.tsx
           TodoListItem.tsx
           TodoWindow.tsx
+          useSidebarWidth.ts
           WelcomeMessage.tsx
           WorktreeMergeButton.tsx
           WorktreeRevertButton.tsx
@@ -369,6 +370,7 @@ src/
           ModeSelector.tsx
           PromptField.tsx
           TaskWorkingMode.tsx
+          usePromptFieldText.ts
         settings/
           agent/
             AgentProfileItem.tsx
@@ -438,6 +440,7 @@ src/
         useClickOutside.ts
         useCustomCommands.ts
         useEffectiveEnvironmentVariable.ts
+        useIndexedDB.ts
         useLmStudioModels.ts
         useOllamaModels.ts
         useOpenRouterModels.ts
@@ -495,6 +498,7 @@ src/
         message.ts
       utils/
         agents.ts
+        indexedDB.ts
         notifications.ts
         routes.ts
         string-utils.ts
@@ -1262,6 +1266,7 @@ File: src/common/locales/en.json
     "suffix.thousand": "K",
     "ok": "OK",
     "collapse": "Collapse",
+    "expand": "Expand",
     "enabled": "Enabled",
     "noFiles": "No files"
   },
@@ -1900,9 +1905,9 @@ File: src/common/locales/en.json
     "expandAll": "Expand all",
     "collapseAll": "Collapse all",
     "dropAll": "Drop all context files",
-    "globalRule": "Global rule file included automatically",
-    "projectRule": "Project rule file included automatically",
-    "agentRule": "Agent profile rule file included automatically",
+    "globalRule": "Global rule file",
+    "projectRule": "Project rule file",
+    "agentRule": "Agent rule file",
     "projectFiles": "Project Files",
     "rules": "Rule Files"
   },
@@ -2389,6 +2394,7 @@ File: src/common/locales/zh.json
     "suffix.thousand": "千",
     "ok": "确定",
     "collapse": "收起",
+    "expand": "展开",
     "enabled": "已启用",
     "noFiles": "没有找到文件"
   },
@@ -2983,9 +2989,9 @@ File: src/common/locales/zh.json
     "expandAll": "全部展开",
     "collapseAll": "全部折叠",
     "dropAll": "删除所有上下文文件",
-    "globalRule": "全局规则文件自动包含",
-    "projectRule": "项目规则文件自动包含",
-    "agentRule": "代理配置规则文件自动包含",
+    "globalRule": "全局规则文件",
+    "projectRule": "项目规则文件",
+    "agentRule": "代理规则文件",
     "projectFiles": "项目文件",
     "rules": "规则文件"
   },
@@ -7537,7 +7543,7 @@ const migrateSessionFile = async (project: Project, sessionsDirPath: string, tas
 File: src/main/project/project-manager.ts
 ================
 import { normalizeBaseDir } from '@common/utils';
-import { ProjectSettings, SettingsData } from '@common/types';
+import { AgentProfile, ProjectSettings, SettingsData } from '@common/types';
 ⋮----
 import { TelemetryManager } from '@/telemetry';
 import { AgentProfileManager, McpManager } from '@/agent';
@@ -7574,6 +7580,8 @@ modelsUpdated()
 projectSettingsChanged(baseDir: string, oldSettings: ProjectSettings, newSettings: ProjectSettings)
 ⋮----
 public getCustomCommands(baseDir: string)
+⋮----
+agentProfileUpdated(oldProfile: AgentProfile, profile: AgentProfile)
 
 ================
 File: src/main/project/project.ts
@@ -9068,6 +9076,10 @@ public async getRuleFilesAsContextFiles(profile?: AgentProfile): Promise<Context
 ⋮----
 // Rule file doesn't exist or can't be accessed
 ⋮----
+// Include AGENTS.md from project root if it exists
+⋮----
+// AGENTS.md doesn't exist, which is fine
+⋮----
 public getRepoMap(): string
 ⋮----
 public setRepoMap(repoMap: string): void
@@ -9285,6 +9297,8 @@ public async duplicateFrom(sourceTask: Task): Promise<void>
 // Copy todos
 ⋮----
 // Copy worktree if exists
+⋮----
+async agentProfileUpdated(oldProfile: AgentProfile, newProfile: AgentProfile)
 
 ================
 File: src/main/telemetry/index.ts
@@ -12519,8 +12533,6 @@ File: src/renderer/src/components/ContextFiles/ContextFiles.css
 ⋮----
 @apply p-0;
 ⋮----
-.flash-highlight {
-⋮----
 .context-dimmed {
 ⋮----
 @apply text-text-muted;
@@ -12547,7 +12559,7 @@ import { MdOutlinePublic } from 'react-icons/md';
 import { RiRobot2Line } from 'react-icons/ri';
 import { VscFileCode } from 'react-icons/vsc';
 import { useTranslation } from 'react-i18next';
-import { useLocalStorage, usePrevious } from '@reactuses/core';
+import { useLocalStorage } from '@reactuses/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 ⋮----
@@ -12584,11 +12596,6 @@ type Props = {
 type SectionType = 'project' | 'context' | 'rules';
 ⋮----
 // Separate expanded items for each tree
-⋮----
-// Auto-switch to context view if new files added (optional, maybe distracting)
-// setActiveSection('context');
-⋮----
-// eslint-disable-next-line react-hooks/exhaustive-deps
 ⋮----
 // Tree Data Generators
 ⋮----
@@ -15015,6 +15022,48 @@ const handleBrowse = async (browseType: 'file' | 'directory') =>
 onClick=
 
 ================
+File: src/renderer/src/components/project/FilesContextInfoContent.tsx
+================
+import { TokensInfoData, Mode, ProjectSettings, ContextFile } from '@common/types';
+⋮----
+import { ContextFiles } from '@/components/ContextFiles';
+import { CostInfo } from '@/components/CostInfo';
+⋮----
+type Props = {
+  baseDir: string;
+  taskId: string;
+  allFiles: string[];
+  contextFiles: ContextFile[];
+  tokensInfo: TokensInfoData | null;
+  aiderTotalCost: number;
+  maxInputTokens: number;
+  clearMessages: (clearContext?: boolean) => void;
+  runCommand: (command: string) => void;
+  restartTask: () => void;
+  mode: Mode;
+  showFileDialog: () => void;
+  projectSettings: ProjectSettings;
+  saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
+};
+⋮----
+export const FilesContextInfoContent = ({
+  baseDir,
+  taskId,
+  allFiles,
+  contextFiles,
+  tokensInfo,
+  aiderTotalCost,
+  maxInputTokens,
+  clearMessages,
+  runCommand,
+  restartTask,
+  mode,
+  showFileDialog,
+  projectSettings,
+  saveProjectSettings,
+}: Props) =>
+
+================
 File: src/renderer/src/components/project/MobileSidebar.tsx
 ================
 import React from 'react';
@@ -15023,7 +15072,7 @@ import { clsx } from 'clsx';
 import { Mode, TokensInfoData, ProjectSettings, ContextFile } from '@common/types';
 import { FiChevronDown } from 'react-icons/fi';
 ⋮----
-import { SidebarContent } from '@/components/project/SidebarContent';
+import { FilesContextInfoContent } from '@/components/project/FilesContextInfoContent';
 ⋮----
 type AddFileDialogOptions = {
   readOnly: boolean;
@@ -15251,48 +15300,6 @@ const handleToggleCollapse = () =>
 // Optionally switch to the new task
 ⋮----
 // eslint-disable-next-line no-console
-
-================
-File: src/renderer/src/components/project/SidebarContent.tsx
-================
-import { TokensInfoData, Mode, ProjectSettings, ContextFile } from '@common/types';
-⋮----
-import { ContextFiles } from '@/components/ContextFiles';
-import { CostInfo } from '@/components/CostInfo';
-⋮----
-type Props = {
-  baseDir: string;
-  taskId: string;
-  allFiles: string[];
-  contextFiles: ContextFile[];
-  tokensInfo: TokensInfoData | null;
-  aiderTotalCost: number;
-  maxInputTokens: number;
-  clearMessages: (clearContext?: boolean) => void;
-  runCommand: (command: string) => void;
-  restartTask: () => void;
-  mode: Mode;
-  showFileDialog: () => void;
-  projectSettings: ProjectSettings;
-  saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
-};
-⋮----
-export const SidebarContent = ({
-  baseDir,
-  taskId,
-  allFiles,
-  contextFiles,
-  tokensInfo,
-  aiderTotalCost,
-  maxInputTokens,
-  clearMessages,
-  runCommand,
-  restartTask,
-  mode,
-  showFileDialog,
-  projectSettings,
-  saveProjectSettings,
-}: Props) =>
 
 ================
 File: src/renderer/src/components/project/TaskBar.tsx
@@ -15531,10 +15538,15 @@ import { Mode, Model, ModelsData, ProjectData, TaskData, TodoItem } from '@commo
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CgSpinner } from 'react-icons/cg';
-import { ResizableBox } from 'react-resizable';
+import { ResizableBox, ResizeCallbackData } from 'react-resizable';
 import { clsx } from 'clsx';
 import { getProviderModelId } from '@common/agent';
+import { RiMenuUnfold4Line } from 'react-icons/ri';
+import { useLocalStorage } from '@reactuses/core';
 ⋮----
+import { useSidebarWidth } from './useSidebarWidth';
+⋮----
+import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { isLogMessage, isResponseMessage, isToolMessage, isUserMessage, Message } from '@/types/message';
 import { Messages, MessagesRef } from '@/components/message/Messages';
 import { VirtualizedMessages, VirtualizedMessagesRef } from '@/components/message/VirtualizedMessages';
@@ -15547,7 +15559,7 @@ import { Button } from '@/components/common/Button';
 import { TodoWindow } from '@/components/project/TodoWindow';
 import { TerminalView, TerminalViewRef } from '@/components/terminal/TerminalView';
 import { MobileSidebar } from '@/components/project/MobileSidebar';
-import { SidebarContent } from '@/components/project/SidebarContent';
+import { FilesContextInfoContent } from '@/components/project/FilesContextInfoContent';
 import { WelcomeMessage } from '@/components/project/WelcomeMessage';
 ⋮----
 import { useSearchText } from '@/hooks/useSearchText';
@@ -15649,6 +15661,10 @@ const handleClearAllTodos = async () =>
 ⋮----
 const handleTerminalViewResize = () =>
 ⋮----
+const handleSidebarResize = async (_, data: ResizeCallbackData) =>
+⋮----
+const handleToggleFilesSidebarCollapse = () =>
+⋮----
 const handleCopyTerminalOutput = (output: string) =>
 ⋮----
 const handleAutoApproveChanged = (autoApprove: boolean) =>
@@ -15665,6 +15681,12 @@ setSearchContainer(node.container);
 height=
 ⋮----
 answerQuestion=
+⋮----
+{/* Expand/Collapse Button */}
+⋮----
+data-tooltip-content=
+⋮----
+{/* Resizable wrapper for expanded state */}
 
 ================
 File: src/renderer/src/components/project/TodoListItem.tsx
@@ -15753,6 +15775,20 @@ placeholder=
 {/* Todo List */}
 ⋮----
 /* Collapsed state */
+
+================
+File: src/renderer/src/components/project/useSidebarWidth.ts
+================
+import { useEffect, useState } from 'react';
+import { useDebounceFn } from '@reactuses/core';
+⋮----
+import { useIndexedDB } from '@/hooks/useIndexedDB';
+⋮----
+export const useSidebarWidth = (projectBaseDir: string, taskId: string) =>
+⋮----
+// Sync immediate width with persisted width when it loads
+⋮----
+const setWidth = (newWidth: number) =>
 
 ================
 File: src/renderer/src/components/project/WelcomeMessage.tsx
@@ -15968,13 +16004,15 @@ import { Mode, PromptBehavior, QuestionData, SuggestionMode, TaskData } from '@c
 import { githubDarkInit } from '@uiw/codemirror-theme-github';
 import CodeMirror, { Annotation, Prec, type ReactCodeMirrorRef } from '@uiw/react-codemirror';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { useDebounce, useLocalStorage } from '@reactuses/core';
+import { useDebounce } from '@reactuses/core';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useTranslation } from 'react-i18next';
 import { BiSend } from 'react-icons/bi';
 import { MdDoneAll, MdPlaylistRemove, MdSave, MdStop, MdMic, MdMicOff } from 'react-icons/md';
 import { VscTerminal } from 'react-icons/vsc';
 import { clsx } from 'clsx';
+⋮----
+import { usePromptFieldText } from './usePromptFieldText';
 ⋮----
 import { AgentSelector } from '@/components/AgentSelector';
 import { InputHistoryMenu } from '@/components/PromptField/InputHistoryMenu';
@@ -16038,6 +16076,10 @@ const setTextWithDispatch = (newText: string) =>
 // We want to keep the text.
 // We just need to reset the recorder state for next time.
 ⋮----
+// eslint-disable-next-line react-hooks/exhaustive-deps
+⋮----
+// eslint-disable-next-line react-hooks/exhaustive-deps
+⋮----
 const completionSource = async (context: CompletionContext): Promise<CompletionResult | null> =>
 ⋮----
 // Handle @-based file suggestions (exclusive)
@@ -16074,7 +16116,12 @@ const toggleVoice = () =>
 ⋮----
 onClick=
 ⋮----
-placeholder=
+// if (instance?.view && !initialTextRefSet.current && savedText) {
+//   setTimeout(() => {
+//     setTextWithDispatch(savedText);
+//   }, 0);
+//   initialTextRefSet.current = true;
+// }
 ⋮----
 className=
 ⋮----
@@ -16111,6 +16158,20 @@ type Props = {
 const handleWorkingModeChanged = async (mode: WorkingMode) =>
 ⋮----
 // eslint-disable-next-line no-console
+
+================
+File: src/renderer/src/components/PromptField/usePromptFieldText.ts
+================
+import { useEffect, useState } from 'react';
+import { useDebounceFn } from '@reactuses/core';
+⋮----
+import { useIndexedDB } from '@/hooks/useIndexedDB';
+⋮----
+export const usePromptFieldText = (baseDir: string, taskId: string, onLoad?: (value: string) => void) =>
+⋮----
+// Sync immediate text with persisted text when it loads
+⋮----
+const setText = (newText: string) =>
 
 ================
 File: src/renderer/src/components/settings/agent/AgentProfileItem.tsx
@@ -17767,6 +17828,37 @@ type UseEffectiveEnvironmentVariableResult = {
 export const useEffectiveEnvironmentVariable = (key: string, baseDir?: string): UseEffectiveEnvironmentVariableResult =>
 ⋮----
 const fetchEnvironmentVariable = async () =>
+
+================
+File: src/renderer/src/hooks/useIndexedDB.ts
+================
+import { useState, useEffect, useCallback, useRef } from 'react';
+⋮----
+import { uiPreferencesDB } from '@/utils/indexedDB';
+⋮----
+interface UseIndexedDBOptions<T> {
+  ttlDays?: number;
+  onLoad?: (value: T) => void;
+  onExpired?: () => void;
+  onError?: (error: Error) => void;
+}
+⋮----
+export const useIndexedDB = <T>(
+  storeName: string,
+  key: string,
+  defaultValue: T,
+  options: UseIndexedDBOptions<T> = {},
+): [T, (value: T) => Promise<void>, boolean] =>
+⋮----
+// Clear expired entries first
+⋮----
+// Load the specific value
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// Initialize on mount
 
 ================
 File: src/renderer/src/hooks/useLmStudioModels.ts
@@ -20256,6 +20348,56 @@ export const resolveAgentProfile = (task: TaskData | undefined, projectAgentProf
 // If no task-level profile, fall back to project-level
 ⋮----
 // Create a profile with task-level overrides
+
+================
+File: src/renderer/src/utils/indexedDB.ts
+================
+interface DBEntry<T> {
+  id: string;
+  data: T;
+  createdAt: number;
+  updatedAt: number;
+}
+⋮----
+interface IndexedDBConfig {
+  dbName: string;
+  version: number;
+  stores: Record<string, string>;
+}
+⋮----
+class IndexedDBManager
+⋮----
+constructor(private config: IndexedDBConfig)
+⋮----
+private async init(): Promise<void>
+⋮----
+// Create object stores
+⋮----
+// Create indexes for common queries
+⋮----
+private async getStore(storeName: string, mode: IDBTransactionMode = 'readonly'): Promise<IDBObjectStore>
+⋮----
+async get<T>(storeName: string, id: string): Promise<T | null>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+async set<T>(storeName: string, id: string, data: T): Promise<void>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+async remove(storeName: string, id: string): Promise<void>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+async clearExpired(storeName: string, ttlMs: number): Promise<void>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+async getAll<T>(storeName: string): Promise<Array<
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// Create a singleton instance for UI preferences
 
 ================
 File: src/renderer/src/utils/notifications.ts
