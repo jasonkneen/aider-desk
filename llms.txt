@@ -1909,7 +1909,9 @@ File: src/common/locales/en.json
     "projectRule": "Project rule file",
     "agentRule": "Agent rule file",
     "projectFiles": "Project Files",
-    "rules": "Rule Files"
+    "rules": "Rule Files",
+    "search": "Search files",
+    "searchPlaceholder": "Search files..."
   },
   "modelSelector": {
     "mainModel": "Main model",
@@ -2993,7 +2995,9 @@ File: src/common/locales/zh.json
     "projectRule": "项目规则文件",
     "agentRule": "代理规则文件",
     "projectFiles": "项目文件",
-    "rules": "规则文件"
+    "rules": "规则文件",
+    "search": "搜索文件",
+    "searchPlaceholder": "搜索文件..."
   },
   "modelSelector": {
     "mainModel": "主模型",
@@ -3792,9 +3796,9 @@ export interface ApplicationAPI {
   setActiveProject: (baseDir: string) => Promise<ProjectData[]>;
   removeOpenProject: (baseDir: string) => Promise<ProjectData[]>;
   updateOpenProjectsOrder: (baseDirs: string[]) => Promise<ProjectData[]>;
-  updateMainModel: (baseDir: string, model: string) => void;
-  updateWeakModel: (baseDir: string, model: string) => void;
-  updateArchitectModel: (baseDir: string, model: string) => void;
+  updateMainModel: (baseDir: string, taskId: string, model: string) => void;
+  updateWeakModel: (baseDir: string, taskId: string, model: string) => void;
+  updateArchitectModel: (baseDir: string, taskId: string, model: string) => void;
   updateEditFormats: (baseDir: string, editFormats: Record<string, EditFormat>) => void;
   getProjectSettings: (baseDir: string) => Promise<ProjectSettings>;
   patchProjectSettings: (baseDir: string, settings: Partial<ProjectSettings>) => Promise<ProjectSettings>;
@@ -4164,6 +4168,9 @@ export interface WindowState {
   y: number | undefined;
   isMaximized: boolean;
 }
+⋮----
+// @deprecated: These properties are deprecated in favor of task-level settings
+// They are kept for backward compatibility and as defaults for new tasks
 ⋮----
 export type ProjectSettings = z.infer<typeof ProjectSettingsSchema>;
 ⋮----
@@ -7484,6 +7491,7 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { ContextFile, ContextMessage, TaskContext, TaskData } from '@common/types';
 import { fileExists } from '@common/utils';
+import { DEFAULT_AIDER_MAIN_MODEL } from '@common/agent';
 ⋮----
 import { AIDER_DESK_DIR, AIDER_DESK_TASKS_DIR } from '@/constants';
 import logger from '@/logger';
@@ -7606,6 +7614,7 @@ import { Task } from '@/task';
 import { migrateSessionsToTasks } from '@/project/migrations';
 import { WorktreeManager } from '@/worktrees';
 import { AIDER_DESK_WATCH_FILES_LOCK } from '@/constants';
+import { determineMainModel, determineWeakModel } from '@/utils';
 ⋮----
 export class Project
 ⋮----
@@ -7627,11 +7636,13 @@ public async start()
 ⋮----
 public async createNewTask()
 ⋮----
-private prepareTask(taskId: string = uuidv4())
+private prepareTask(taskId: string = uuidv4(), initialTaskData?: Partial<TaskData>)
 ⋮----
 private async loadTasks()
 ⋮----
 // Migrate sessions to tasks before starting
+⋮----
+public getMostRecentTask()
 ⋮----
 public getTask(taskId: string = INTERNAL_TASK_ID)
 ⋮----
@@ -8538,7 +8549,7 @@ import { unlinkSync } from 'fs';
 import fs from 'fs/promises';
 import path from 'path';
 ⋮----
-import { EditFormat, ModelsData, ProjectSettings, TokensInfoData } from '@common/types';
+import { EditFormat, ModelsData, TokensInfoData } from '@common/types';
 import { fileExists } from '@common/utils';
 import treeKill from 'tree-kill';
 import { DEFAULT_AIDER_MAIN_MODEL } from '@common/agent';
@@ -8843,6 +8854,7 @@ constructor(
     private readonly eventManager: EventManager,
     private readonly modelManager: ModelManager,
     private readonly worktreeManager: WorktreeManager,
+    initialTaskData?: Partial<TaskData>,
 )
 ⋮----
 private async getTaskAgentProfile(): Promise<AgentProfile | null>
@@ -8856,6 +8868,13 @@ private async getTaskAgentProfile(): Promise<AgentProfile | null>
 // Create a temporary profile with task-level overrides
 ⋮----
 private async loadTaskData()
+⋮----
+// Migrate missing task-level settings from project settings
+⋮----
+/**
+   * @deprecated Migrate missing task-level settings from project settings
+   */
+private async migrateFromProjectSettings()
 ⋮----
 /**
    * Generate a branch name from task name (first 7 words, separated by '-')
@@ -8876,7 +8895,7 @@ private generateBranchName(): string
 ⋮----
 // If result is empty, use taskId
 ⋮----
-public async saveTask(updates?: Partial<TaskData>)
+public async saveTask(updates?: Partial<TaskData>, updateTimestamps = true): Promise<TaskData>
 ⋮----
 public async init()
 ⋮----
@@ -9380,6 +9399,7 @@ import { v4 as uuidv4 } from 'uuid';
 import logger from '@/logger';
 import { TelemetryManager } from '@/telemetry';
 import { EventManager } from '@/events';
+import { WorktreeManager } from '@/worktrees/worktree-manager';
 ⋮----
 export interface TerminalInstance {
   id: string;
@@ -9402,7 +9422,7 @@ private getShellCommand(): string
 ⋮----
 private getShellArgs(): string[]
 ⋮----
-public createTerminal(baseDir: string, taskId: string, cols: number = 80, rows: number = 24): string
+public async createTerminal(baseDir: string, taskId: string, cols: number = 80, rows: number = 24): Promise<string>
 ⋮----
 // Handle data from terminal
 ⋮----
@@ -10563,13 +10583,11 @@ async getCustomCommands(baseDir: string): Promise<CustomCommand[]>
 ⋮----
 async runCustomCommand(baseDir: string, taskId: string, commandName: string, args: string[], mode: Mode): Promise<void>
 ⋮----
-updateMainModel(baseDir: string, mainModel: string): void
+async updateMainModel(baseDir: string, taskId: string, mainModel: string): Promise<void>
 ⋮----
-// Only clear weak model if not locked
+async updateWeakModel(baseDir: string, taskId: string, weakModel: string): Promise<void>
 ⋮----
-updateWeakModel(baseDir: string, weakModel: string): void
-⋮----
-updateArchitectModel(baseDir: string, architectModel: string): void
+async updateArchitectModel(baseDir: string, taskId: string, architectModel: string): Promise<void>
 ⋮----
 updateEditFormats(baseDir: string, updatedFormats: Record<string, EditFormat>): void
 ⋮----
@@ -10591,7 +10609,7 @@ closeTerminal(terminalId: string): void
 ⋮----
 getTerminalForTask(taskId: string): string | null
 ⋮----
-getTerminalsForTask(baseDir: string):
+getTerminalsForTask(taskId: string):
 ⋮----
 async mergeWorktreeToMain(baseDir: string, taskId: string, squash: boolean): Promise<void>
 ⋮----
@@ -11458,9 +11476,9 @@ addOpenProject(baseDir: string): Promise<ProjectData[]>
 setActiveProject(baseDir: string): Promise<ProjectData[]>
 removeOpenProject(baseDir: string): Promise<ProjectData[]>
 updateOpenProjectsOrder(baseDirs: string[]): Promise<ProjectData[]>
-updateMainModel(baseDir: string, model: string): void
-updateWeakModel(baseDir: string, model: string): void
-updateArchitectModel(baseDir: string, model: string): void
+updateMainModel(baseDir: string, taskId: string, model: string): void
+updateWeakModel(baseDir: string, taskId: string, model: string): void
+updateArchitectModel(baseDir: string, taskId: string, model: string): void
 updateEditFormats(baseDir: string, editFormats: Record<string, EditFormat>): void
 getProjectSettings(baseDir: string): Promise<ProjectSettings>
 patchProjectSettings(baseDir: string, settings: Partial<ProjectSettings>): Promise<ProjectSettings>
@@ -11571,7 +11589,7 @@ createTerminal(baseDir: string, taskId: string, cols?: number, rows?: number): P
 writeToTerminal(terminalId: string, data: string): Promise<boolean>
 resizeTerminal(terminalId: string, cols: number, rows: number): Promise<boolean>
 closeTerminal(terminalId: string): Promise<boolean>
-getTerminalForTask(baseDir: string): Promise<string | null>
+getTerminalForTask(taskId: string): Promise<string | null>
 getAllTerminalsForTask(taskId: string): Promise<Array<
 isManageServerSupported(): boolean
 ⋮----
@@ -12553,18 +12571,19 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import objectHash from 'object-hash';
 import { ControlledTreeEnvironment, Tree } from 'react-complex-tree';
 import { HiChevronDown, HiChevronRight, HiOutlineTrash, HiPlus, HiX } from 'react-icons/hi';
+import { MdOutlineSearch, MdOutlinePublic } from 'react-icons/md';
 import { BiCollapseVertical, BiExpandVertical } from 'react-icons/bi';
 import { TbPencilOff } from 'react-icons/tb';
-import { MdOutlinePublic } from 'react-icons/md';
 import { RiRobot2Line } from 'react-icons/ri';
 import { VscFileCode } from 'react-icons/vsc';
 import { useTranslation } from 'react-i18next';
-import { useLocalStorage } from '@reactuses/core';
+import { useLocalStorage, useDebounce } from '@reactuses/core';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 ⋮----
 import { StyledTooltip } from '../common/StyledTooltip';
 ⋮----
+import { Input } from '@/components/common/Input';
 import { useOS } from '@/hooks/useOS';
 import { useApi } from '@/contexts/ApiContext';
 ⋮----
@@ -12617,6 +12636,10 @@ const handleDragOver = (event: React.DragEvent<HTMLDivElement>) =>
 ⋮----
 const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) =>
 ⋮----
+const handleSearchToggle = () =>
+⋮----
+const handleSearchClose = () =>
+⋮----
 const dropFile = (item: TreeItem) => (e: React.MouseEvent<HTMLButtonElement>) =>
 ⋮----
 const addFile = (item: TreeItem) => (event: React.MouseEvent<HTMLButtonElement>) =>
@@ -12641,6 +12664,8 @@ onClick: () =>
 onClick=
 ⋮----
 data-tooltip-content=
+⋮----
+{/* Search Field */}
 ⋮----
 key={objectHash(treeData)} // Force re-render if data structure changes drastically
 ⋮----
@@ -15024,7 +15049,7 @@ onClick=
 ================
 File: src/renderer/src/components/project/FilesContextInfoContent.tsx
 ================
-import { TokensInfoData, Mode, ProjectSettings, ContextFile } from '@common/types';
+import { ContextFile, Mode, TaskData, TokensInfoData } from '@common/types';
 ⋮----
 import { ContextFiles } from '@/components/ContextFiles';
 import { CostInfo } from '@/components/CostInfo';
@@ -15042,8 +15067,8 @@ type Props = {
   restartTask: () => void;
   mode: Mode;
   showFileDialog: () => void;
-  projectSettings: ProjectSettings;
-  saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
+  task: TaskData;
+  updateTask: (updates: Partial<TaskData>) => void;
 };
 ⋮----
 export const FilesContextInfoContent = ({
@@ -15059,8 +15084,8 @@ export const FilesContextInfoContent = ({
   restartTask,
   mode,
   showFileDialog,
-  projectSettings,
-  saveProjectSettings,
+  task,
+  updateTask,
 }: Props) =>
 
 ================
@@ -15069,7 +15094,7 @@ File: src/renderer/src/components/project/MobileSidebar.tsx
 import React from 'react';
 import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
-import { Mode, TokensInfoData, ProjectSettings, ContextFile } from '@common/types';
+import { ContextFile, Mode, TaskData, TokensInfoData } from '@common/types';
 import { FiChevronDown } from 'react-icons/fi';
 ⋮----
 import { FilesContextInfoContent } from '@/components/project/FilesContextInfoContent';
@@ -15093,8 +15118,8 @@ type Props = {
   restartTask: () => void;
   mode: Mode;
   setAddFileDialogOptions: React.Dispatch<React.SetStateAction<AddFileDialogOptions | null>>;
-  projectSettings: ProjectSettings;
-  saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
+  task: TaskData;
+  updateTask: (updates: Partial<TaskData>) => void;
 };
 ⋮----
 export const MobileSidebar = ({
@@ -15112,8 +15137,8 @@ export const MobileSidebar = ({
   restartTask,
   mode,
   setAddFileDialogOptions,
-  projectSettings,
-  saveProjectSettings,
+  task,
+  updateTask,
 }: Props) =>
 ⋮----
 className=
@@ -15351,8 +15376,6 @@ type Props = {
 // Create a custom model object for the current model
 ⋮----
 taskModels.unshift(customModel); // Add to the beginning for visibility
-⋮----
-// Update task directly instead of agent profile
 ⋮----
 // optimistic update
 ⋮----
@@ -15616,8 +15639,6 @@ const handleModeChange = (mode: Mode) =>
 ⋮----
 const runPrompt = (prompt: string) =>
 ⋮----
-} // Should not happen if component is rendered
-⋮----
 // This submission is an edit of a previous message
 setEditingMessageIndex(null); // Clear editing state
 ⋮----
@@ -15634,8 +15655,6 @@ const handleRestartTask = () =>
 const handleRedoLastUserPrompt = () =>
 ⋮----
 // Keep messages up to and excluding the one being redone
-⋮----
-// Ensure projectSettings is available
 ⋮----
 const handleRemoveMessage = (messageToRemove: Message) =>
 ⋮----
@@ -15687,6 +15706,8 @@ answerQuestion=
 data-tooltip-content=
 ⋮----
 {/* Resizable wrapper for expanded state */}
+⋮----
+showFileDialog=
 
 ================
 File: src/renderer/src/components/project/TodoListItem.tsx
@@ -17298,7 +17319,7 @@ placeholder=
 ================
 File: src/renderer/src/components/CostInfo.tsx
 ================
-import { Mode, ProjectSettings, TokensInfoData } from '@common/types';
+import { Mode, TokensInfoData, TaskData } from '@common/types';
 import { ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IoChevronDown, IoChevronUp, IoClose } from 'react-icons/io5';
@@ -17315,8 +17336,8 @@ type Props = {
   restartTask?: () => void;
   maxInputTokens?: number;
   mode: Mode;
-  projectSettings: ProjectSettings;
-  saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
+  task: TaskData;
+  updateTask: (updates: Partial<TaskData>) => void;
 };
 ⋮----
 onClick=
@@ -17391,8 +17412,8 @@ title=
 ================
 File: src/renderer/src/components/TokenUsageBar.tsx
 ================
-import { Mode, ProjectSettings, TokensInfoData } from '@common/types';
-import { useCallback, useEffect, useRef, useState, MouseEvent } from 'react';
+import { Mode, TaskData, TokensInfoData } from '@common/types';
+import { MouseEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import debounce from 'lodash/debounce';
 import { clsx } from 'clsx';
@@ -17403,9 +17424,11 @@ type Props = {
   tokensInfo?: TokensInfoData | null;
   maxInputTokens?: number;
   mode: Mode;
-  projectSettings: ProjectSettings;
-  saveProjectSettings: (settings: Partial<ProjectSettings>) => void;
+  task: TaskData;
+  updateTask: (updates: Partial<TaskData>) => void;
 };
+⋮----
+// eslint-disable-next-line react-hooks/set-state-in-effect
 ⋮----
 className=
 ⋮----
