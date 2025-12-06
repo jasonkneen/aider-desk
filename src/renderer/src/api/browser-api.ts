@@ -360,6 +360,9 @@ export class BrowserApi implements ApplicationAPI {
   getAddableFiles(baseDir: string, taskId: string): Promise<string[]> {
     return this.post('/get-addable-files', { projectDir: baseDir, taskId });
   }
+  getAllFiles(baseDir: string, taskId: string, useGit?: boolean): Promise<string[]> {
+    return this.post('/get-all-files', { projectDir: baseDir, taskId, useGit });
+  }
   addFile(baseDir: string, taskId: string, filePath: string, readOnly?: boolean): void {
     this.post('/add-context-file', {
       projectDir: baseDir,

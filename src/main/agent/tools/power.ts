@@ -272,17 +272,6 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
       const absolutePath = path.resolve(task.getTaskDir(), filePath);
 
-      const addToGit = async () => {
-        try {
-          // Add the new file to git staging
-          await task.git.add(absolutePath);
-        } catch (gitError) {
-          const gitErrorMessage = gitError instanceof Error ? gitError.message : String(gitError);
-          task.addLogMessage('warning', `Failed to add new file ${absolutePath} to git staging area: ${gitErrorMessage}`, false, promptContext);
-          // Continue even if git add fails, as the file was created successfully
-        }
-      };
-
       try {
         await fs.mkdir(path.dirname(absolutePath), { recursive: true });
 
@@ -293,7 +282,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
               flag: 'wx',
               signal: abortSignal,
             });
-            await addToGit();
+            await task.addToGit(absolutePath, promptContext);
 
             return `Successfully created '${filePath}'.`;
           } catch (e) {
@@ -310,7 +299,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
             encoding: 'utf8',
             signal: abortSignal,
           });
-          await addToGit();
+          await task.addToGit(absolutePath, promptContext);
           return `Successfully written to '${filePath}' (overwritten).`;
         }
       } catch (error) {

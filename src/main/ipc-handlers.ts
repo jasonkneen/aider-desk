@@ -119,6 +119,10 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     return await eventsHandler.getAddableFiles(baseDir, taskId);
   });
 
+  ipcMain.handle('get-all-files', async (_, baseDir: string, taskId: string, useGit = true) => {
+    return await eventsHandler.getAllFiles(baseDir, taskId, useGit);
+  });
+
   ipcMain.handle('is-project-path', async (_, path: string) => {
     return await eventsHandler.isProjectPath(path);
   });

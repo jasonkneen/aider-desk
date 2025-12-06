@@ -4,6 +4,7 @@ import * as path from 'path';
 import { simpleGit } from 'simple-git';
 import filenamifyImport from 'filenamify';
 import slugify from 'slugify';
+import { glob } from 'glob';
 
 import logger from '@/logger';
 // @ts-expect-error filenamify is not typed properly
@@ -136,16 +137,69 @@ export const filterIgnoredFiles = async (projectBaseDir: string, filePaths: stri
   }
 };
 
-export const getAllFiles = async (baseDir: string): Promise<string[]> => {
+const isGitRepository = async (baseDir: string): Promise<boolean> => {
   try {
     const git = simpleGit(baseDir);
-    const result = await git.raw(['ls-files']);
-    const files = result.trim().split('\n').filter(Boolean);
-    logger.debug('Retrieved tracked files from Git', { count: files.length, baseDir });
+    await git.revparse(['--git-dir']);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const getAllFilesFromFS = async (baseDir: string): Promise<string[]> => {
+  try {
+    const pattern = path.join(baseDir, '**/*').replace(/\\/g, '/');
+    const files = await glob(pattern, {
+      nodir: true,
+      absolute: false,
+      dot: true,
+    });
+
+    // Convert to relative paths
+    const relativeFiles = files.map((file) => path.relative(baseDir, file).replace(/\\/g, '/'));
+
+    logger.debug('Retrieved files from filesystem', { count: relativeFiles.length, baseDir });
+    return relativeFiles;
+  } catch (error) {
+    logger.error('Failed to get files from filesystem', { error, baseDir });
+    return [];
+  }
+};
+
+export const getAllFiles = async (baseDir: string, useGit = true): Promise<string[]> => {
+  try {
+    if (useGit) {
+      // Try to use git first
+      try {
+        const git = simpleGit(baseDir);
+        const result = await git.raw(['ls-files']);
+        const files = result.trim().split('\n').filter(Boolean);
+        logger.debug('Retrieved tracked files from Git', { count: files.length, baseDir });
+        return files;
+      } catch (gitError) {
+        logger.warn('Failed to get tracked files from Git, falling back to filesystem', { error: gitError, baseDir });
+      }
+    }
+
+    // use filesystem when useGit is false or git fails
+    const files = await getAllFilesFromFS(baseDir);
+
+    // If it's a git repo, filter out ignored files
+    if (await isGitRepository(baseDir)) {
+      const filteredFiles = await filterIgnoredFiles(baseDir, files);
+      logger.debug('Filtered gitignored files from filesystem results', {
+        original: files.length,
+        filtered: filteredFiles.length,
+        baseDir,
+      });
+      return filteredFiles;
+    }
+
     return files;
   } catch (error) {
-    logger.warn('Failed to get tracked files from Git', { error, baseDir });
-    return []; // Return empty array if Git command fails
+    logger.error('Failed to get files', { error, baseDir, useGit });
+    return [];
   }
 };
 

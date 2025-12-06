@@ -78,6 +78,7 @@ interface TaskContextType {
   answerQuestion: (taskId: string, answer: string) => void;
   interruptResponse: (taskId: string) => void;
   updateTaskAgentProfile: (taskId: string, agentProfileId: string, provider: string, model: string) => void;
+  refreshAllFiles: (taskId: string, useGit?: boolean) => Promise<void>;
 }
 
 const TaskContext = createContext<TaskContextType | null>(null);
@@ -297,6 +298,22 @@ export const TaskProvider: React.FC<{
         agentProfileId,
         provider,
         model,
+      });
+    },
+    [api, baseDir],
+  );
+
+  const refreshAllFiles = useCallback(
+    async (taskId: string, useGit = true) => {
+      const refreshedFiles = await api.getAllFiles(baseDir, taskId, useGit);
+      setTaskStateMap((prev) => {
+        const newMap = new Map(prev);
+        const current = newMap.get(taskId) || EMPTY_TASK_STATE;
+        newMap.set(taskId, {
+          ...current,
+          allFiles: refreshedFiles,
+        });
+        return newMap;
       });
     },
     [api, baseDir],
@@ -758,6 +775,7 @@ export const TaskProvider: React.FC<{
         answerQuestion,
         interruptResponse,
         updateTaskAgentProfile,
+        refreshAllFiles,
       }}
     >
       {children}

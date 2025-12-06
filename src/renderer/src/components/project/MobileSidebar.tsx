@@ -27,6 +27,7 @@ type Props = {
   setAddFileDialogOptions: React.Dispatch<React.SetStateAction<AddFileDialogOptions | null>>;
   task: TaskData;
   updateTask: (updates: Partial<TaskData>) => void;
+  refreshAllFiles: (useGit?: boolean) => Promise<void>;
 };
 
 export const MobileSidebar = ({
@@ -46,6 +47,7 @@ export const MobileSidebar = ({
   setAddFileDialogOptions,
   task,
   updateTask,
+  refreshAllFiles,
 }: Props) => {
   return (
     <motion.div
@@ -76,6 +78,7 @@ export const MobileSidebar = ({
           }
           task={task}
           updateTask={updateTask}
+          refreshAllFiles={refreshAllFiles}
         />
       </div>
     </motion.div>

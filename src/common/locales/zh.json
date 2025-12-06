@@ -637,7 +637,11 @@
     "projectFiles": "项目文件",
     "rules": "规则文件",
     "search": "搜索文件",
-    "searchPlaceholder": "搜索文件..."
+    "searchPlaceholder": "搜索文件...",
+    "refresh": "刷新",
+    "useGit": "使用 Git",
+    "useGitEnabled": "Git 已启用 - 点击使用文件系统",
+    "useGitDisabled": "文件系统已启用 - 点击使用 Git"
   },
   "modelSelector": {
     "mainModel": "主模型",

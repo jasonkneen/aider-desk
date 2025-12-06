@@ -60,7 +60,8 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
   const { isMobile } = useResponsive();
   const api = useApi();
   const { models } = useModelProviders();
-  const { getTaskState, clearSession, restartTask, setMessages, setTodoItems, setAiderModelsData, answerQuestion, interruptResponse } = useTask();
+  const { getTaskState, clearSession, restartTask, setMessages, setTodoItems, setAiderModelsData, answerQuestion, interruptResponse, refreshAllFiles } =
+    useTask();
   const { getProfiles } = useAgents();
 
   const taskState = getTaskState(task.id);
@@ -544,6 +545,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
                   }
                   task={task}
                   updateTask={updateTask}
+                  refreshAllFiles={(useGit) => refreshAllFiles(task.id, useGit)}
                 />
               </div>
             </ResizableBox>
@@ -581,6 +583,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(({ project, task, updateT
           setAddFileDialogOptions={setAddFileDialogOptions}
           task={task}
           updateTask={updateTask}
+          refreshAllFiles={(useGit) => refreshAllFiles(task.id, useGit)}
         />
       )}
     </div>

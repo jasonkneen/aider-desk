@@ -16,6 +16,8 @@
 - added search functionality to Project Files
 - fixed Invalid Prompt issue with some OpenRouter models
 - added tools for managing tasks (list, get, get message, create, delete)
+- added refresh functionality for Project Files
+- added option to include non-git files in Project Files
 
 ## [0.42.1]
 

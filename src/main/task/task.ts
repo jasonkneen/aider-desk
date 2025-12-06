@@ -73,6 +73,7 @@ export class Task {
   private runPromptResolves: ((value: ResponseCompletedData[]) => void)[] = [];
   private autocompletionAllFiles: string[] | null = null;
   private agentRunResolves: (() => void)[] = [];
+  private git: SimpleGit;
 
   private readonly taskDataPath: string;
   private readonly contextManager: ContextManager;
@@ -80,8 +81,6 @@ export class Task {
   private readonly aiderManager: AiderManager;
 
   readonly task: TaskData;
-
-  git: SimpleGit;
 
   constructor(
     private readonly project: Project,
@@ -905,6 +904,18 @@ export class Task {
     this.findMessageConnectors('drop-file').forEach((connector) => connector.sendDropFileMessage(pathToSend, noUpdate));
   }
 
+  public async addToGit(absolutePath: string, promptContext?: PromptContext): Promise<void> {
+    try {
+      // Add the new file to git staging
+      await this.git.add(absolutePath);
+      await this.updateAutocompletionData(undefined, true);
+    } catch (gitError) {
+      const gitErrorMessage = gitError instanceof Error ? gitError.message : String(gitError);
+      this.addLogMessage('warning', `Failed to add new file ${absolutePath} to git staging area: ${gitErrorMessage}`, false, promptContext);
+      // Continue even if git add fails, as the file was created successfully
+    }
+  }
+
   private async sendContextFilesUpdated() {
     const mode = this.store.getProjectSettings(this.project.baseDir).currentMode;
     const allFiles = await this.getContextFiles(mode === 'agent');
@@ -1146,7 +1157,7 @@ export class Task {
 
     // Send to connectors that listen to 'update-models-info'
     this.findMessageConnectors('update-models-info').forEach((connector) => connector.sendUpdateModelsInfoMessage(modelsInfo));
-    this.sendRequestContextInfo();
+    await this.sendRequestContextInfo();
   }
 
   public async getAddableFiles(searchRegex?: string): Promise<string[]> {
@@ -1166,6 +1177,10 @@ export class Task {
     }
 
     return files;
+  }
+
+  public async getAllFiles(useGit = true): Promise<string[]> {
+    return getAllFiles(this.getTaskDir(), useGit);
   }
 
   public async getContextFiles(includeRuleFiles = false): Promise<ContextFile[]> {
@@ -1635,7 +1650,7 @@ export class Task {
     );
   }
 
-  public async updateAutocompletionData(words?: string[], force = false) {
+  public async updateAutocompletionData(words?: string[], force = false, useGit = true) {
     logger.debug('Updating autocompletion data', {
       baseDir: this.project.baseDir,
       taskId: this.taskId,
@@ -1645,7 +1660,7 @@ export class Task {
       this.eventManager.sendUpdateAutocompletion(this.project.baseDir, this.taskId, words);
     }
 
-    const allFiles = await getAllFiles(this.getTaskDir());
+    const allFiles = await getAllFiles(this.getTaskDir(), useGit);
     if (force || !this.autocompletionAllFiles || !isEqual(this.autocompletionAllFiles, allFiles)) {
       this.eventManager.sendUpdateAutocompletion(this.project.baseDir, this.taskId, words, allFiles);
     }

@@ -3,14 +3,15 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import objectHash from 'object-hash';
 import { ControlledTreeEnvironment, Tree } from 'react-complex-tree';
 import { HiChevronDown, HiChevronRight, HiOutlineTrash, HiPlus, HiX } from 'react-icons/hi';
-import { MdOutlineSearch, MdOutlinePublic } from 'react-icons/md';
+import { MdOutlinePublic, MdOutlineRefresh, MdOutlineSearch } from 'react-icons/md';
 import { BiCollapseVertical, BiExpandVertical } from 'react-icons/bi';
 import { TbPencilOff } from 'react-icons/tb';
 import { RiRobot2Line } from 'react-icons/ri';
 import { VscFileCode } from 'react-icons/vsc';
+import { FaGitSquare } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
-import { useLocalStorage, useDebounce } from '@reactuses/core';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useDebounce, useLocalStorage } from '@reactuses/core';
+import { AnimatePresence, motion } from 'framer-motion';
 import { clsx } from 'clsx';
 
 import { StyledTooltip } from '../common/StyledTooltip';
@@ -98,11 +99,12 @@ type Props = {
   contextFiles: ContextFile[];
   showFileDialog: () => void;
   tokensInfo?: TokensInfoData | null;
+  refreshAllFiles: (useGit?: boolean) => Promise<void>;
 };
 
 type SectionType = 'project' | 'context' | 'rules';
 
-export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFileDialog, tokensInfo }: Props) => {
+export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFileDialog, tokensInfo, refreshAllFiles }: Props) => {
   const { t } = useTranslation();
   const os = useOS();
   const api = useApi();
@@ -118,6 +120,8 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearchQuery = useDebounce(searchQuery, 50);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [useGit, setUseGit] = useLocalStorage(`context-files-use-git-${baseDir}`, true);
 
   const handleFileDrop = useCallback(
     async (event: React.DragEvent<HTMLDivElement>) => {
@@ -246,6 +250,23 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
     if (isSearchVisible) {
       setSearchQuery('');
     }
+  };
+
+  const handleRefreshFiles = async (useGit: boolean) => {
+    setIsRefreshing(true);
+    try {
+      await refreshAllFiles(useGit);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to refresh files:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const toggleUseGit = () => {
+    setUseGit(!useGit);
+    void handleRefreshFiles(!useGit);
   };
 
   const handleSearchClose = () => {
@@ -464,7 +485,7 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
           {!isOpen && <span className="text-2xs text-text-tertiary mr-2 bg-bg-secondary-light px-1.5 rounded-full">{count}</span>}
 
           {isOpen && (
-            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
               {actions}
             </div>
           )}
@@ -578,6 +599,14 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
         setProjectExpandedItems,
         <>
           <button
+            onClick={toggleUseGit}
+            className="p-1.5 rounded-md hover:bg-bg-tertiary transition-colors"
+            data-tooltip-id="context-files-tooltip"
+            data-tooltip-content={useGit ? t('contextFiles.useGitEnabled') : t('contextFiles.useGitDisabled')}
+          >
+            <FaGitSquare className={clsx('w-4 h-4', useGit ? 'text-text-primary' : 'text-text-muted')} />
+          </button>
+          <button
             onClick={() => setProjectExpandedItems(Object.keys(projectTreeData))}
             className="p-1.5 hover:bg-bg-tertiary rounded-md text-text-muted hover:text-text-primary transition-colors"
             data-tooltip-id="context-files-tooltip"
@@ -600,6 +629,15 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
             onClick={handleSearchToggle}
           >
             <MdOutlineSearch className="w-5 h-5 text-text-primary" />
+          </button>
+          <button
+            data-tooltip-id="context-files-tooltip"
+            data-tooltip-content={t('contextFiles.refresh')}
+            className="p-1 rounded-md hover:bg-bg-tertiary transition-colors"
+            onClick={() => handleRefreshFiles(useGit!)}
+            disabled={isRefreshing}
+          >
+            <MdOutlineRefresh className={`w-5 h-5 text-text-primary ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
         </>,
         false,

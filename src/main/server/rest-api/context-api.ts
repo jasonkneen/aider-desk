@@ -24,6 +24,12 @@ const GetAddableFilesSchema = z.object({
   searchRegex: z.string().optional(),
 });
 
+const GetAllFilesSchema = z.object({
+  projectDir: z.string().min(1, 'Project directory is required'),
+  taskId: z.string().min(1, 'Task ID is required'),
+  useGit: z.boolean().optional(),
+});
+
 export class ContextApi extends BaseApi {
   constructor(
     private readonly projectManager: ProjectManager,
@@ -97,6 +103,20 @@ export class ContextApi extends BaseApi {
         const { projectDir, taskId, searchRegex } = parsed;
         const addableFiles = await this.eventsHandler.getAddableFiles(projectDir, taskId, searchRegex);
         res.status(200).json(addableFiles);
+      }),
+    );
+
+    router.post(
+      '/get-all-files',
+      this.handleRequest(async (req, res) => {
+        const parsed = this.validateRequest(GetAllFilesSchema, req.body, res);
+        if (!parsed) {
+          return;
+        }
+
+        const { projectDir, taskId, useGit } = parsed;
+        const allFiles = await this.eventsHandler.getAllFiles(projectDir, taskId, useGit);
+        res.status(200).json(allFiles);
       }),
     );
   }

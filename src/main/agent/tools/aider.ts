@@ -102,12 +102,7 @@ export const createAiderToolset = (task: Task, profile: AgentProfile, promptCont
               task.addLogMessage('info', `Created new file: ${filePath}`);
               fileExists = true;
 
-              try {
-                await task.git.add(absolutePath);
-              } catch (gitError) {
-                const gitErrorMessage = gitError instanceof Error ? gitError.message : String(gitError);
-                task.addLogMessage('warning', `Failed to add new file ${filePath} to git staging area: ${gitErrorMessage}`);
-              }
+              await task.addToGit(absolutePath, promptContext);
               results.push(`Created and added file: ${filePath}`);
             } catch (error) {
               const errorMessage = error instanceof Error ? error.message : String(error);

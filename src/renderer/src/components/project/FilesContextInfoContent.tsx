@@ -18,6 +18,7 @@ type Props = {
   showFileDialog: () => void;
   task: TaskData;
   updateTask: (updates: Partial<TaskData>) => void;
+  refreshAllFiles: (useGit?: boolean) => Promise<void>;
 };
 
 export const FilesContextInfoContent = ({
@@ -35,6 +36,7 @@ export const FilesContextInfoContent = ({
   showFileDialog,
   task,
   updateTask,
+  refreshAllFiles,
 }: Props) => {
   return (
     <>
@@ -46,6 +48,7 @@ export const FilesContextInfoContent = ({
           contextFiles={contextFiles}
           showFileDialog={showFileDialog}
           tokensInfo={tokensInfo}
+          refreshAllFiles={refreshAllFiles}
         />
       </div>
       <CostInfo

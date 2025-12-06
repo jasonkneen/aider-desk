@@ -681,7 +681,11 @@
     "projectFiles": "Project Files",
     "rules": "Rule Files",
     "search": "Search files",
-    "searchPlaceholder": "Search files..."
+    "searchPlaceholder": "Search files...",
+    "refresh": "Refresh",
+    "useGit": "Use Git",
+    "useGitEnabled": "Git enabled - Click to use filesystem",
+    "useGitDisabled": "Filesystem enabled - Click to use Git"
   },
   "modelSelector": {
     "mainModel": "Main model",

@@ -221,6 +221,14 @@ export class EventsHandler {
     return this.projectManager.getProject(baseDir).getTask(taskId)?.getAddableFiles(searchRegex) || [];
   }
 
+  async getAllFiles(baseDir: string, taskId: string, useGit = true): Promise<string[]> {
+    const task = this.projectManager.getProject(baseDir).getTask(taskId);
+    if (!task) {
+      return [];
+    }
+    return task.getAllFiles(useGit);
+  }
+
   async addFile(baseDir: string, taskId: string, filePath: string, readOnly = false): Promise<void> {
     void this.projectManager.getProject(baseDir).getTask(taskId)?.addFile({ path: filePath, readOnly });
   }
