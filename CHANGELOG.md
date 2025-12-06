@@ -14,6 +14,7 @@
 - task-level selected mode and models
 - terminal view now correctly uses task directory in case of worktree mode
 - added search functionality to Project Files
+- fixed Invalid Prompt issue with some OpenRouter models
 
 ## [0.42.1]
 
