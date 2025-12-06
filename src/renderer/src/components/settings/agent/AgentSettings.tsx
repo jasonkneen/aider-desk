@@ -11,7 +11,7 @@ import {
 } from '@common/types';
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { FaChevronLeft, FaChevronRight, FaPaste, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaList, FaPaste, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
 import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat } from 'react-icons/md';
 import { DEFAULT_AGENT_PROFILE, DEFAULT_MODEL_TEMPERATURE, AVAILABLE_PROVIDERS, getProviderModelId } from '@common/agent';
 import { BiTrash } from 'react-icons/bi';
@@ -42,6 +42,13 @@ import {
   TODO_TOOL_GROUP_NAME,
   TODO_TOOL_SET_ITEMS,
   TODO_TOOL_UPDATE_ITEM_COMPLETION,
+  TASKS_TOOL_CREATE_TASK,
+  TASKS_TOOL_DELETE_TASK,
+  TASKS_TOOL_DESCRIPTIONS,
+  TASKS_TOOL_GET_TASK,
+  TASKS_TOOL_GET_TASK_MESSAGE,
+  TASKS_TOOL_GROUP_NAME,
+  TASKS_TOOL_LIST_TASKS,
 } from '@common/tools';
 import { useTranslation } from 'react-i18next';
 import { FaArrowRightFromBracket } from 'react-icons/fa6';
@@ -153,6 +160,33 @@ const tools: Record<string, GenericTool[]> = {
       description: TODO_TOOL_DESCRIPTIONS[TODO_TOOL_CLEAR_ITEMS],
     },
   ],
+  [TASKS_TOOL_GROUP_NAME]: [
+    {
+      groupName: TASKS_TOOL_GROUP_NAME,
+      name: TASKS_TOOL_LIST_TASKS,
+      description: TASKS_TOOL_DESCRIPTIONS[TASKS_TOOL_LIST_TASKS],
+    },
+    {
+      groupName: TASKS_TOOL_GROUP_NAME,
+      name: TASKS_TOOL_GET_TASK,
+      description: TASKS_TOOL_DESCRIPTIONS[TASKS_TOOL_GET_TASK],
+    },
+    {
+      groupName: TASKS_TOOL_GROUP_NAME,
+      name: TASKS_TOOL_GET_TASK_MESSAGE,
+      description: TASKS_TOOL_DESCRIPTIONS[TASKS_TOOL_GET_TASK_MESSAGE],
+    },
+    {
+      groupName: TASKS_TOOL_GROUP_NAME,
+      name: TASKS_TOOL_CREATE_TASK,
+      description: TASKS_TOOL_DESCRIPTIONS[TASKS_TOOL_CREATE_TASK],
+    },
+    {
+      groupName: TASKS_TOOL_GROUP_NAME,
+      name: TASKS_TOOL_DELETE_TASK,
+      description: TASKS_TOOL_DESCRIPTIONS[TASKS_TOOL_DELETE_TASK],
+    },
+  ],
 };
 
 // Helper functions for accordion summaries
@@ -228,6 +262,9 @@ const getGenericToolsSummary = (profile: AgentProfile) => {
   }
   if (profile.useTodoTools) {
     enabled.push(<MdOutlineChecklist key="todo" className="w-3 h-3 text-text-secondary" />);
+  }
+  if (profile.useTaskTools) {
+    enabled.push(<FaList key="tasks" className="w-3 h-3 text-text-secondary" />);
   }
   return enabled.length > 0 ? (
     <div className="flex items-center gap-2">
@@ -311,7 +348,9 @@ export const AgentSettings = ({
         setSelectedProfileId(initialProfileId);
       }
     }
-  }, [initialProfileId, agentProfiles, contexts]);
+    // only listen to initialProfileId change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialProfileId]);
 
   const [mcpServersExpanded, setMcpServersExpanded] = useState(false);
   const profileNameInputRef = useRef<HTMLInputElement>(null);
@@ -947,7 +986,8 @@ export const AgentSettings = ({
                         const isGroupEnabled =
                           (selectedProfile.usePowerTools && groupName === POWER_TOOL_GROUP_NAME) ||
                           (selectedProfile.useAiderTools && groupName === AIDER_TOOL_GROUP_NAME) ||
-                          (selectedProfile.useTodoTools && groupName === TODO_TOOL_GROUP_NAME);
+                          (selectedProfile.useTodoTools && groupName === TODO_TOOL_GROUP_NAME) ||
+                          (selectedProfile.useTaskTools && groupName === TASKS_TOOL_GROUP_NAME);
                         return (
                           <div key={groupName}>
                             <GenericToolGroupItem
@@ -964,6 +1004,8 @@ export const AgentSettings = ({
                                   handleProfileSettingChange('useAiderTools', enabled);
                                 } else if (groupName === TODO_TOOL_GROUP_NAME) {
                                   handleProfileSettingChange('useTodoTools', enabled);
+                                } else if (groupName === TASKS_TOOL_GROUP_NAME) {
+                                  handleProfileSettingChange('useTaskTools', enabled);
                                 }
                               }}
                             />

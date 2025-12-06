@@ -41,6 +41,7 @@ import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 
 import { createPowerToolset } from './tools/power';
 import { createTodoToolset } from './tools/todo';
+import { createTasksToolset } from './tools/tasks';
 import { getSystemPrompt } from './prompts';
 import { createAiderToolset } from './tools/aider';
 import { createHelpersToolset } from './tools/helpers';
@@ -342,6 +343,11 @@ export class Agent {
       Object.assign(toolSet, todoTools);
     }
 
+    if (profile.useTaskTools) {
+      const taskTools = createTasksToolset(task, profile, promptContext);
+      Object.assign(toolSet, taskTools);
+    }
+
     // Add helper tools
     const helperTools = createHelpersToolset();
     Object.assign(toolSet, helperTools);
@@ -499,7 +505,7 @@ export class Agent {
     abortSignal?: AbortSignal,
   ): Promise<ContextMessage[]> {
     // Set default values inside function body since await can't be used in parameter initializers
-    const contextMessages = initialContextMessages ?? task.getContextMessages();
+    const contextMessages = initialContextMessages ?? (await task.getContextMessages());
     const contextFiles = initialContextFiles ?? (await task.getContextFiles());
 
     const userRequestMessage: ContextUserMessage = {
@@ -1027,7 +1033,7 @@ export class Agent {
         return 0;
       }
 
-      const messages = await this.prepareMessages(task, profile, task.getContextMessages(), await task.getContextFiles());
+      const messages = await this.prepareMessages(task, profile, await task.getContextMessages(), await task.getContextFiles());
       const toolSet = await this.getAvailableTools(task, profile, provider);
       const systemPrompt = await getSystemPrompt(task, profile);
 
@@ -1195,7 +1201,7 @@ export class Agent {
       messages.length = 0;
       resultMessages.length = 0;
 
-      messages.push(...(await this.prepareMessages(task, profile, task.getContextMessages(), contextFiles)));
+      messages.push(...(await this.prepareMessages(task, profile, await task.getContextMessages(), contextFiles)));
       resultMessages.push({
         id: uuidv4(),
         role: 'user',

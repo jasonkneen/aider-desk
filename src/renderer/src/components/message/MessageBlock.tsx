@@ -15,6 +15,12 @@ import {
   POWER_TOOL_SEMANTIC_SEARCH,
   SUBAGENTS_TOOL_GROUP_NAME,
   SUBAGENTS_TOOL_RUN_TASK,
+  TASKS_TOOL_GROUP_NAME,
+  TASKS_TOOL_LIST_TASKS,
+  TASKS_TOOL_GET_TASK,
+  TASKS_TOOL_GET_TASK_MESSAGE,
+  TASKS_TOOL_CREATE_TASK,
+  TASKS_TOOL_DELETE_TASK,
 } from '@common/tools';
 
 import { CommandOutputMessageBlock } from './CommandOutputMessageBlock';
@@ -33,6 +39,11 @@ import { BashToolMessage } from './BashToolMessage';
 import { FetchToolMessage } from './FetchToolMessage';
 import { SemanticSearchToolMessage } from './SemanticSearchToolMessage';
 import { SubagentToolMessage } from './SubagentToolMessage';
+import { ListTasksToolMessage } from './ListTasksToolMessage';
+import { GetTaskToolMessage } from './GetTaskToolMessage';
+import { GetTaskMessageToolMessage } from './GetTaskMessageToolMessage';
+import { CreateTaskToolMessage } from './CreateTaskToolMessage';
+import { DeleteTaskToolMessage } from './DeleteTaskToolMessage';
 import { areMessagesEqual } from './utils';
 
 import {
@@ -127,6 +138,22 @@ const MessageBlockComponent = ({ baseDir, message, allFiles, renderMarkdown, com
         switch (toolMessage.toolName) {
           case SUBAGENTS_TOOL_RUN_TASK:
             return <SubagentToolMessage message={toolMessage} onRemove={remove} compact={compact} />;
+          default:
+            break;
+        }
+        break;
+      case TASKS_TOOL_GROUP_NAME:
+        switch (toolMessage.toolName) {
+          case TASKS_TOOL_LIST_TASKS:
+            return <ListTasksToolMessage message={toolMessage} onRemove={remove} compact={compact} />;
+          case TASKS_TOOL_GET_TASK:
+            return <GetTaskToolMessage message={toolMessage} onRemove={remove} compact={compact} />;
+          case TASKS_TOOL_GET_TASK_MESSAGE:
+            return <GetTaskMessageToolMessage message={toolMessage} onRemove={remove} compact={compact} />;
+          case TASKS_TOOL_CREATE_TASK:
+            return <CreateTaskToolMessage message={toolMessage} onRemove={remove} compact={compact} />;
+          case TASKS_TOOL_DELETE_TASK:
+            return <DeleteTaskToolMessage message={toolMessage} onRemove={remove} compact={compact} />;
           default:
             break;
         }

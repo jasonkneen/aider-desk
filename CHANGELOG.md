@@ -15,6 +15,7 @@
 - terminal view now correctly uses task directory in case of worktree mode
 - added search functionality to Project Files
 - fixed Invalid Prompt issue with some OpenRouter models
+- added tools for managing tasks (list, get, get message, create, delete)
 
 ## [0.42.1]
 

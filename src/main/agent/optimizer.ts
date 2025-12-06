@@ -35,7 +35,7 @@ export const optimizeMessages = (
 
   optimizedMessages = addImportantReminders(profile, projectProfiles, userRequestMessageIndex, optimizedMessages, task);
   optimizedMessages = convertImageToolResults(optimizedMessages);
-  optimizedMessages = removeDoubleToolCalls(optimizedMessages);
+  optimizedMessages = removeDuplicateToolCalls(optimizedMessages);
   optimizedMessages = optimizeAiderMessages(optimizedMessages);
   optimizedMessages = optimizeSubagentMessages(optimizedMessages);
 
@@ -269,7 +269,7 @@ const convertImageToolResults = (messages: ModelMessage[]): ModelMessage[] => {
  * This function detects this pattern (assistant tool call -> tool result -> same assistant tool call)
  * and modifies the result of the second tool call to return an error, preventing a loop.
  */
-const removeDoubleToolCalls = (messages: ModelMessage[]): ModelMessage[] => {
+const removeDuplicateToolCalls = (messages: ModelMessage[]): ModelMessage[] => {
   // Need at least 4 messages for the pattern: assistant, tool, assistant, tool
   if (messages.length < 4) {
     return messages;

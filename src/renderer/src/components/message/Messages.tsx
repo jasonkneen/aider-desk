@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { toPng } from 'html-to-image';
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
-import { IoPlayOutline } from 'react-icons/io5';
+import { IoPlay } from 'react-icons/io5';
 
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
@@ -134,7 +134,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
         {!processing && lastUserMessageIndex === processedMessages.length - 1 && (
           <div className="flex justify-center align-center py-4 px-6">
             <Button variant="outline" color="primary" size="xs" onClick={redoLastUserPrompt}>
-              <IoPlayOutline className="mr-1 w-4 h-4" />
+              <IoPlay className="mr-1 w-3 h-3" />
               {t('messages.execute')}
             </Button>
           </div>

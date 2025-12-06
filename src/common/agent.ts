@@ -16,6 +16,12 @@ import {
   POWER_TOOL_SEMANTIC_SEARCH,
   SUBAGENTS_TOOL_GROUP_NAME,
   SUBAGENTS_TOOL_RUN_TASK,
+  TASKS_TOOL_CREATE_TASK,
+  TASKS_TOOL_DELETE_TASK,
+  TASKS_TOOL_GET_TASK,
+  TASKS_TOOL_GET_TASK_MESSAGE,
+  TASKS_TOOL_GROUP_NAME,
+  TASKS_TOOL_LIST_TASKS,
   TOOL_GROUP_NAME_SEPARATOR,
 } from '@common/tools';
 
@@ -242,7 +248,7 @@ export const DEFAULT_AGENT_PROFILE: AgentProfile = {
   name: 'Default Agent',
   provider: 'anthropic',
   model: DEFAULT_PROVIDER_MODELS.anthropic!,
-  maxIterations: 100,
+  maxIterations: 250,
   minTimeBetweenToolCalls: 0,
   toolApprovals: {
     // aider tools
@@ -261,6 +267,12 @@ export const DEFAULT_AGENT_PROFILE: AgentProfile = {
     [`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_FETCH}`]: ToolApprovalState.Always,
     // subagent tools
     [`${SUBAGENTS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${SUBAGENTS_TOOL_RUN_TASK}`]: ToolApprovalState.Always,
+    // task tools
+    [`${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_LIST_TASKS}`]: ToolApprovalState.Always,
+    [`${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_GET_TASK}`]: ToolApprovalState.Always,
+    [`${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_GET_TASK_MESSAGE}`]: ToolApprovalState.Always,
+    [`${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_CREATE_TASK}`]: ToolApprovalState.Ask,
+    [`${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_DELETE_TASK}`]: ToolApprovalState.Ask,
   },
   toolSettings: {
     [`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_BASH}`]: {
@@ -274,6 +286,7 @@ export const DEFAULT_AGENT_PROFILE: AgentProfile = {
   useAiderTools: false,
   useTodoTools: true,
   useSubagents: true,
+  useTaskTools: false,
   customInstructions: '',
   enabledServers: [],
   subagent: {
@@ -356,6 +369,7 @@ export const INIT_PROJECT_AGENTS_PROFILE: AgentProfile = {
   useAiderTools: false,
   useTodoTools: false,
   useSubagents: false,
+  useTaskTools: false,
   toolApprovals: {
     ...DEFAULT_AGENT_PROFILE.toolApprovals,
     [`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_FILE_EDIT}`]: ToolApprovalState.Never,
@@ -375,6 +389,7 @@ export const COMPACT_CONVERSATION_AGENT_PROFILE: AgentProfile = {
   useAiderTools: false,
   useTodoTools: false,
   useSubagents: false,
+  useTaskTools: false,
   toolApprovals: {
     ...DEFAULT_AGENT_PROFILE.toolApprovals,
     [`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_FILE_EDIT}`]: ToolApprovalState.Never,
@@ -384,7 +399,6 @@ export const COMPACT_CONVERSATION_AGENT_PROFILE: AgentProfile = {
   },
 };
 
-// TODO: move to providers.ts
 export const getDefaultProviderParams = <T extends LlmProvider>(providerName: LlmProviderName): T => {
   let provider: LlmProvider;
 

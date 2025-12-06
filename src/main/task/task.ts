@@ -1169,7 +1169,7 @@ export class Task {
   }
 
   public async getContextFiles(includeRuleFiles = false): Promise<ContextFile[]> {
-    const contextFiles = this.contextManager.getContextFiles();
+    const contextFiles = await this.contextManager.getContextFilesEnsureLoaded();
 
     if (!includeRuleFiles) {
       return contextFiles;
@@ -1524,7 +1524,7 @@ export class Task {
     mode: Mode,
     customInstructions?: string,
     profile: AgentProfile | null = null,
-    contextMessages: ContextMessage[] = this.contextManager.getContextMessages(),
+    contextMessages?: ContextMessage[],
     promptContext?: PromptContext,
     abortSignal?: AbortSignal,
     waitForAgentCompletion = true,
@@ -1533,6 +1533,9 @@ export class Task {
     // Get profile if not provided
     if (!profile) {
       profile = await this.getTaskAgentProfile();
+    }
+    if (!contextMessages) {
+      contextMessages = await this.contextManager.getContextMessages();
     }
 
     const userMessage = contextMessages[0];
@@ -1590,7 +1593,7 @@ export class Task {
 
         this.contextManager.setContextMessages([userMessage, summaryMessage]);
 
-        await this.contextManager.loadMessages(this.contextManager.getContextMessages());
+        await this.contextManager.loadMessages(await this.contextManager.getContextMessages());
       }
     } else {
       const responses = await this.sendPromptToAider(getCompactConversationPrompt(customInstructions), undefined, 'ask', undefined, [], undefined);
@@ -1602,7 +1605,7 @@ export class Task {
           this.contextManager.addContextMessage(MessageRole.Assistant, extractSummary(response.content));
         }
       }
-      await this.contextManager.loadMessages(this.contextManager.getContextMessages());
+      await this.contextManager.loadMessages(await this.contextManager.getContextMessages());
     }
 
     await this.updateContextInfo();
@@ -1841,7 +1844,7 @@ export class Task {
 
     this.addLogMessage('loading', 'Analyzing project to create AGENTS.md...');
 
-    const messages = this.contextManager.getContextMessages();
+    const messages = await this.contextManager.getContextMessages();
     const files = this.contextManager.getContextFiles();
     // clear context before execution
     this.contextManager.clearMessages(false);
@@ -2267,7 +2270,7 @@ ${error.stderr}`,
     }
 
     // Copy messages
-    const messages = sourceTask.getContextMessages();
+    const messages = await sourceTask.getContextMessages();
     for (const message of messages) {
       this.contextManager.addContextMessage(message);
     }
@@ -2296,5 +2299,9 @@ ${error.stderr}`,
         void this.updateContextInfo();
       }
     }
+  }
+
+  public getProject(): Project {
+    return this.project;
   }
 }

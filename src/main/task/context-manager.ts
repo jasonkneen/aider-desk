@@ -19,6 +19,7 @@ const CURRENT_CONTEXT_VERSION = 2;
 export class ContextManager {
   private messages: ContextMessage[];
   private files: ContextFile[];
+  private loaded = false;
   private autosaveEnabled = false;
   private readonly storagePath: string;
 
@@ -65,7 +66,9 @@ export class ContextManager {
       message = roleOrMessage;
 
       if (roleOrMessage.role === 'assistant' && isMessageEmpty(message.content)) {
-        logger.debug('Skipping empty assistant message', { taskId: this.taskId });
+        logger.debug('Skipping empty assistant message', {
+          taskId: this.taskId,
+        });
         return;
       }
     }
@@ -192,6 +195,13 @@ export class ContextManager {
     return [...this.files];
   }
 
+  async getContextFilesEnsureLoaded(): Promise<ContextFile[]> {
+    if (!this.loaded) {
+      await this.load();
+    }
+    return [...this.files];
+  }
+
   setContextMessages(contextMessages: ContextMessage[], save = true) {
     logger.debug('Setting task context messages', {
       taskId: this.taskId,
@@ -204,7 +214,10 @@ export class ContextManager {
     }
   }
 
-  getContextMessages(): ContextMessage[] {
+  async getContextMessages(): Promise<ContextMessage[]> {
+    if (!this.loaded) {
+      await this.load();
+    }
     return [...this.messages];
   }
 
@@ -418,9 +431,14 @@ export class ContextManager {
       };
 
       await fs.writeFile(this.storagePath, JSON.stringify(contextData, null, 2), 'utf8');
-      logger.info(`Task context saved to ${this.storagePath}`, { taskId: this.taskId });
+      logger.info(`Task context saved to ${this.storagePath}`, {
+        taskId: this.taskId,
+      });
     } catch (error) {
-      logger.error('Failed to save task context:', { error, taskId: this.taskId });
+      logger.error('Failed to save task context:', {
+        error,
+        taskId: this.taskId,
+      });
       throw error;
     }
   }
@@ -467,7 +485,9 @@ export class ContextManager {
   async load(): Promise<void> {
     try {
       if (!(await fileExists(this.storagePath))) {
-        logger.debug('No existing task context found:', { taskId: this.taskId });
+        logger.debug('No existing task context found:', {
+          taskId: this.taskId,
+        });
         return;
       }
 
@@ -485,12 +505,18 @@ export class ContextManager {
 
       this.messages = migratedData.contextMessages || [];
       this.files = migratedData.contextFiles || [];
+      this.loaded = true;
 
       await this.cleanupContext();
 
-      logger.info(`Task context loaded from ${this.storagePath}`, { taskId: this.taskId });
+      logger.info(`Task context loaded from ${this.storagePath}`, {
+        taskId: this.taskId,
+      });
     } catch (error) {
-      logger.error('Failed to load task context:', { error, taskId: this.taskId });
+      logger.error('Failed to load task context:', {
+        error,
+        taskId: this.taskId,
+      });
       throw error;
     } finally {
       this.enableAutosave();
@@ -530,10 +556,15 @@ export class ContextManager {
     try {
       if (await fileExists(this.storagePath)) {
         await fs.unlink(this.storagePath);
-        logger.info(`Task context deleted: ${this.storagePath}`, { taskId: this.taskId });
+        logger.info(`Task context deleted: ${this.storagePath}`, {
+          taskId: this.taskId,
+        });
       }
     } catch (error) {
-      logger.error('Failed to delete task context:', { error, taskId: this.taskId });
+      logger.error('Failed to delete task context:', {
+        error,
+        taskId: this.taskId,
+      });
       throw error;
     }
   }

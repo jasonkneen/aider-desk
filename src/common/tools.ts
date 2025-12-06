@@ -89,3 +89,23 @@ export const TODO_TOOL_DESCRIPTIONS = {
   [TODO_TOOL_UPDATE_ITEM_COMPLETION]: 'Updates the completed status of a specific todo item by its name.',
   [TODO_TOOL_CLEAR_ITEMS]: 'Removes all existing todo items from the list.',
 } as const;
+
+export const TASKS_TOOL_GROUP_NAME = 'tasks';
+export const TASKS_TOOL_LIST_TASKS = 'list_tasks';
+export const TASKS_TOOL_GET_TASK = 'get_task';
+export const TASKS_TOOL_GET_TASK_MESSAGE = 'get_task_message';
+export const TASKS_TOOL_CREATE_TASK = 'create_task';
+export const TASKS_TOOL_DELETE_TASK = 'delete_task';
+
+export const TASKS_TOOL_DESCRIPTIONS = {
+  [TASKS_TOOL_LIST_TASKS]:
+    'List all tasks in the current project. Returns basic information for each task including id, name, and creation/update timestamps. Use this to get an overview of all available tasks before performing specific task operations.',
+  [TASKS_TOOL_GET_TASK]:
+    "Get comprehensive details about a specific task by its ID. Returns task metadata, current state, list of context files with their read-only status, and the total count of context messages. Use this to understand a task's configuration and context before working with it or its messages.",
+  [TASKS_TOOL_GET_TASK_MESSAGE]:
+    "Retrieve a specific message from a task's conversation history by message index and task ID. The first message (index 0) is always the user's initial prompt, and subsequent messages alternate between user and assistant. Use this to examine the conversation flow, understand previous interactions, or extract specific information from the task history.",
+  [TASKS_TOOL_CREATE_TASK]:
+    'Create a new task in the current project with an initial prompt. Optionally specify an agent profile ID to use different capabilities, or a model ID to override the default model. The new task will start with the provided prompt as its first user message. Use this to begin new work streams or separate different aspects of a project.',
+  [TASKS_TOOL_DELETE_TASK]:
+    'Permanently delete a task and all its associated data including messages, context files, and metadata. This action cannot be undone. Note that you cannot delete the currently active task. Use this to clean up completed or abandoned tasks, but be cautious as this removes all task history permanently.',
+} as const;

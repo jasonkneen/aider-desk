@@ -355,6 +355,7 @@ export interface AgentProfile {
   useAiderTools: boolean;
   useTodoTools: boolean;
   useSubagents: boolean;
+  useTaskTools: boolean;
   customInstructions: string;
   subagent: SubagentConfig;
   isSubagent?: boolean; // flag to indicate if this profile is being used as a subagent

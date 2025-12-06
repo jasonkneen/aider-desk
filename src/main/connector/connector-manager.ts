@@ -92,7 +92,7 @@ export class ConnectorManager {
         this.connectors.push(connector);
 
         const project = this.projectManager.getProject(message.baseDir);
-        project.addConnector(connector);
+        void project.addConnector(connector);
 
         message.contextFiles?.forEach((file) => project.getTask(connector.taskId)?.addFile(file));
         logger.info('Socket.IO registered project for base directory:', {
