@@ -75,6 +75,7 @@ src/
         helpers.ts
         power.ts
         subagents.ts
+        tasks.ts
         todo.ts
       agent-profile-manager.ts
       agent.ts
@@ -267,16 +268,21 @@ src/
           BashToolMessage.tsx
           CommandOutputMessageBlock.tsx
           CopyMessageButton.tsx
+          CreateTaskToolMessage.tsx
           CustomCommandBashBlock.tsx
+          DeleteTaskToolMessage.tsx
           ExpandableMessageBlock.tsx
           FetchToolMessage.tsx
           FileEditToolMessage.tsx
           FileReadToolMessage.tsx
           FileWriteToolMessage.tsx
+          GetTaskMessageToolMessage.tsx
+          GetTaskToolMessage.tsx
           GlobToolMessage.tsx
           GrepToolMessage.tsx
           GroupMessageBlock.tsx
           index.ts
+          ListTasksToolMessage.tsx
           LoadingMessageBlock.tsx
           LogMessageBlock.tsx
           MessageBar.tsx
@@ -1911,7 +1917,11 @@ File: src/common/locales/en.json
     "projectFiles": "Project Files",
     "rules": "Rule Files",
     "search": "Search files",
-    "searchPlaceholder": "Search files..."
+    "searchPlaceholder": "Search files...",
+    "refresh": "Refresh",
+    "useGit": "Use Git",
+    "useGitEnabled": "Git enabled - Click to use filesystem",
+    "useGitDisabled": "Filesystem enabled - Click to use Git"
   },
   "modelSelector": {
     "mainModel": "Main model",
@@ -2012,6 +2022,38 @@ File: src/common/locales/en.json
     "error": "Error while executing tool:",
     "denied": "Denied by user.",
     "deniedByReason": "Denied by user:\n{{reason}}",
+    "tasks": {
+      "listTasks": "List tasks",
+      "getTask": "Get task",
+      "getTaskMessage": "Get task message",
+      "createTask": "Create task",
+      "deleteTask": "Delete task",
+      "taskId": "Task ID",
+      "messageIndex": "Message Index",
+      "prompt": "Prompt",
+      "agentProfile": "Agent Profile",
+      "model": "Model",
+      "state": "State",
+      "contextFiles": "Context Files",
+      "contextMessages": "Context Messages",
+      "currentMode": "Current mode",
+      "role": "Role",
+      "usage": "Usage",
+      "noTasksFound": "No tasks found",
+      "taskNotFound": "Task not found",
+      "messageNotFound": "Message not found",
+      "taskCreatedSuccessfully": "Task created successfully",
+      "taskDeletedSuccessfully": "Task deleted successfully",
+      "cannotDeleteCurrentTask": "Cannot delete current task",
+      "active": "Active",
+      "completed": "Completed",
+      "archived": "Archived",
+      "user": "User",
+      "assistant": "Assistant",
+      "readOnly": "Read-only",
+      "createdAt": "Created at",
+      "updatedAt": "Updated at"
+    },
     "aider": {
       "addContextFiles": "Add file(s) to Aider's context:\n{{paths}}",
       "dropContextFiles": "Drop file(s) from Aider's context:\n{{paths}}",
@@ -2997,7 +3039,11 @@ File: src/common/locales/zh.json
     "projectFiles": "项目文件",
     "rules": "规则文件",
     "search": "搜索文件",
-    "searchPlaceholder": "搜索文件..."
+    "searchPlaceholder": "搜索文件...",
+    "refresh": "刷新",
+    "useGit": "使用 Git",
+    "useGitEnabled": "Git 已启用 - 点击使用文件系统",
+    "useGitDisabled": "文件系统已启用 - 点击使用 Git"
   },
   "modelSelector": {
     "mainModel": "主模型",
@@ -3117,6 +3163,38 @@ File: src/common/locales/zh.json
     "error": "执行工具时出错:",
     "denied": "拒绝访问",
     "deniedByReason": "用户拒绝: {{reason}}",
+    "tasks": {
+      "listTasks": "列出任务",
+      "getTask": "获取任务",
+      "getTaskMessage": "获取任务消息",
+      "createTask": "创建任务",
+      "deleteTask": "删除任务",
+      "taskId": "任务ID",
+      "messageIndex": "消息索引",
+      "prompt": "提示",
+      "agentProfile": "代理配置",
+      "model": "模型",
+      "state": "状态",
+      "contextFiles": "上下文文件",
+      "contextMessages": "上下文消息",
+      "currentMode": "当前模式",
+      "role": "角色",
+      "usage": "使用量",
+      "noTasksFound": "未找到任务",
+      "taskNotFound": "未找到任务",
+      "messageNotFound": "未找到消息",
+      "taskCreatedSuccessfully": "任务创建成功",
+      "taskDeletedSuccessfully": "任务删除成功",
+      "cannotDeleteCurrentTask": "无法删除当前任务",
+      "active": "活跃",
+      "completed": "已完成",
+      "archived": "已归档",
+      "user": "用户",
+      "assistant": "助手",
+      "readOnly": "只读",
+      "createdAt": "创建于",
+      "updatedAt": "更新于"
+    },
     "aider": {
       "addContextFiles": "添加文件到Aider上下文:\n{{paths}}",
       "dropContextFiles": "从Aider上下文删除文件:\n{{paths}}",
@@ -3512,6 +3590,12 @@ import {
   POWER_TOOL_SEMANTIC_SEARCH,
   SUBAGENTS_TOOL_GROUP_NAME,
   SUBAGENTS_TOOL_RUN_TASK,
+  TASKS_TOOL_CREATE_TASK,
+  TASKS_TOOL_DELETE_TASK,
+  TASKS_TOOL_GET_TASK,
+  TASKS_TOOL_GET_TASK_MESSAGE,
+  TASKS_TOOL_GROUP_NAME,
+  TASKS_TOOL_LIST_TASKS,
   TOOL_GROUP_NAME_SEPARATOR,
 } from '@common/tools';
 ⋮----
@@ -3703,13 +3787,14 @@ export type LlmProvider =
 ⋮----
 // subagent tools
 ⋮----
+// task tools
+⋮----
 // Power tools
 ⋮----
 // Aider
 ⋮----
 // Aider with Power Search
 ⋮----
-// TODO: move to providers.ts
 export const getDefaultProviderParams = <T extends LlmProvider>(providerName: LlmProviderName): T =>
 ⋮----
 region: 'us-east-1', // Default region
@@ -3804,6 +3889,7 @@ export interface ApplicationAPI {
   patchProjectSettings: (baseDir: string, settings: Partial<ProjectSettings>) => Promise<ProjectSettings>;
   getFilePathSuggestions: (currentPath: string, directoriesOnly?: boolean) => Promise<string[]>;
   getAddableFiles: (baseDir: string, taskId: string) => Promise<string[]>;
+  getAllFiles: (baseDir: string, taskId: string, useGit?: boolean) => Promise<string[]>;
   addFile: (baseDir: string, taskId: string, filePath: string, readOnly?: boolean) => void;
   isValidPath: (baseDir: string, path: string) => Promise<boolean>;
   isProjectPath: (path: string) => Promise<boolean>;
@@ -4273,6 +4359,7 @@ export interface AgentProfile {
   useAiderTools: boolean;
   useTodoTools: boolean;
   useSubagents: boolean;
+  useTaskTools: boolean;
   customInstructions: string;
   subagent: SubagentConfig;
   isSubagent?: boolean; // flag to indicate if this profile is being used as a subagent
@@ -4819,12 +4906,6 @@ const sanitize = (str: string) =>
 ⋮----
 // Add truncation indicator if file was limited
 ⋮----
-const addToGit = async () =>
-⋮----
-// Add the new file to git staging
-⋮----
-// Continue even if git add fails, as the file was created successfully
-⋮----
 absolute: false, // Keep paths relative to cwd for easier processing
 ⋮----
 // Convert to absolute paths for filtering, then back to relative
@@ -4902,6 +4983,46 @@ const findMessagesForToolCallId = (toolCallId: string) =>
 // Update promptContext to finished state with success
 ⋮----
 // Update promptContext to finished state with error
+
+================
+File: src/main/agent/tools/tasks.ts
+================
+import { tool, type ToolSet } from 'ai';
+import { z } from 'zod';
+import {
+  TASKS_TOOL_CREATE_TASK,
+  TASKS_TOOL_DELETE_TASK,
+  TASKS_TOOL_DESCRIPTIONS,
+  TASKS_TOOL_GET_TASK,
+  TASKS_TOOL_GET_TASK_MESSAGE,
+  TASKS_TOOL_GROUP_NAME,
+  TASKS_TOOL_LIST_TASKS,
+  TOOL_GROUP_NAME_SEPARATOR,
+} from '@common/tools';
+import { AgentProfile, MessageRole, PromptContext, TaskData, ToolApprovalState } from '@common/types';
+⋮----
+import { ApprovalManager } from './approval-manager';
+⋮----
+import { Task } from '@/task';
+⋮----
+export const createTasksToolset = (task: Task, profile: AgentProfile, promptContext?: PromptContext): ToolSet =>
+⋮----
+// Apply pagination
+⋮----
+// Handle negative indexing
+⋮----
+actualIndex = contextMessages.length + messageIndex; // e.g., -1 becomes length-1
+⋮----
+// Set initial task data
+⋮----
+// Parse modelId to extract provider and model
+⋮----
+// createNewTask returns TaskData, not Task instance
+// We need to get the actual Task instance to call methods on it
+⋮----
+// Add the initial prompt as a user message
+⋮----
+// Prevent deleting the current task
 
 ================
 File: src/main/agent/tools/todo.ts
@@ -5198,6 +5319,7 @@ import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 ⋮----
 import { createPowerToolset } from './tools/power';
 import { createTodoToolset } from './tools/todo';
+import { createTasksToolset } from './tools/tasks';
 import { getSystemPrompt } from './prompts';
 import { createAiderToolset } from './tools/aider';
 import { createHelpersToolset } from './tools/helpers';
@@ -5599,7 +5721,7 @@ const convertImageToolResults = (messages: ModelMessage[]): ModelMessage[] =>
  * This function detects this pattern (assistant tool call -> tool result -> same assistant tool call)
  * and modifies the result of the second tool call to return an error, preventing a loop.
  */
-const removeDoubleToolCalls = (messages: ModelMessage[]): ModelMessage[] =>
+const removeDuplicateToolCalls = (messages: ModelMessage[]): ModelMessage[] =>
 ⋮----
 // Need at least 4 messages for the pattern: assistant, tool, assistant, tool
 ⋮----
@@ -8687,9 +8809,11 @@ setContextFiles(contextFiles: ContextFile[], save = true)
 ⋮----
 getContextFiles(): ContextFile[]
 ⋮----
+async getContextFilesEnsureLoaded(): Promise<ContextFile[]>
+⋮----
 setContextMessages(contextMessages: ContextMessage[], save = true)
 ⋮----
-getContextMessages(): ContextMessage[]
+async getContextMessages(): Promise<ContextMessage[]>
 ⋮----
 clearContextFiles(save = true)
 ⋮----
@@ -9019,6 +9143,12 @@ public dropFile(filePath: string)
 ⋮----
 public sendDropFile(filePath: string, readOnly?: boolean, noUpdate?: boolean): void
 ⋮----
+public async addToGit(absolutePath: string, promptContext?: PromptContext): Promise<void>
+⋮----
+// Add the new file to git staging
+⋮----
+// Continue even if git add fails, as the file was created successfully
+⋮----
 private async sendContextFilesUpdated()
 ⋮----
 public async runCommand(command: string, addToHistory = true)
@@ -9074,6 +9204,8 @@ const extractModelInfo = (modelName: string | null | undefined) =>
 // Send to connectors that listen to 'update-models-info'
 ⋮----
 public async getAddableFiles(searchRegex?: string): Promise<string[]>
+⋮----
+public async getAllFiles(useGit = true): Promise<string[]>
 ⋮----
 public async getContextFiles(includeRuleFiles = false): Promise<ContextFile[]>
 ⋮----
@@ -9160,7 +9292,7 @@ public async compactConversation(
     mode: Mode,
     customInstructions?: string,
     profile: AgentProfile | null = null,
-    contextMessages: ContextMessage[] = this.contextManager.getContextMessages(),
+    contextMessages?: ContextMessage[],
     promptContext?: PromptContext,
     abortSignal?: AbortSignal,
     waitForAgentCompletion = true,
@@ -9185,7 +9317,7 @@ async updateContextInfo(checkContextFilesIncluded = false, checkRepoMapIncluded 
 ⋮----
 private async sendRequestContextInfo()
 ⋮----
-public async updateAutocompletionData(words?: string[], force = false)
+public async updateAutocompletionData(words?: string[], force = false, useGit = true)
 ⋮----
 async updateAgentEstimatedTokens(checkContextFilesIncluded = false, checkRepoMapIncluded = false)
 ⋮----
@@ -9318,6 +9450,8 @@ public async duplicateFrom(sourceTask: Task): Promise<void>
 // Copy worktree if exists
 ⋮----
 async agentProfileUpdated(oldProfile: AgentProfile, newProfile: AgentProfile)
+⋮----
+public getProject(): Project
 
 ================
 File: src/main/telemetry/index.ts
@@ -9552,6 +9686,7 @@ File: src/main/utils/file-system.ts
 import { simpleGit } from 'simple-git';
 import filenamifyImport from 'filenamify';
 import slugify from 'slugify';
+import { glob } from 'glob';
 ⋮----
 import logger from '@/logger';
 // @ts-expect-error filenamify is not typed properly
@@ -9588,9 +9723,19 @@ export const filterIgnoredFiles = async (projectBaseDir: string, filePaths: stri
 ⋮----
 // Return all files if git check fails (safer default)
 ⋮----
-export const getAllFiles = async (baseDir: string): Promise<string[]> =>
+const isGitRepository = async (baseDir: string): Promise<boolean> =>
 ⋮----
-return []; // Return empty array if Git command fails
+const getAllFilesFromFS = async (baseDir: string): Promise<string[]> =>
+⋮----
+// Convert to relative paths
+⋮----
+export const getAllFiles = async (baseDir: string, useGit = true): Promise<string[]> =>
+⋮----
+// Try to use git first
+⋮----
+// use filesystem when useGit is false or git fails
+⋮----
+// If it's a git repo, filter out ignored files
 ⋮----
 export const deriveDirName = (name: string, existingDirNames: Set<string>): string =>
 ⋮----
@@ -10563,6 +10708,8 @@ async loadInputHistory(baseDir: string): Promise<string[]>
 ⋮----
 async getAddableFiles(baseDir: string, taskId: string, searchRegex?: string): Promise<string[]>
 ⋮----
+async getAllFiles(baseDir: string, taskId: string, useGit = true): Promise<string[]>
+⋮----
 async addFile(baseDir: string, taskId: string, filePath: string, readOnly = false): Promise<void>
 ⋮----
 dropFile(baseDir: string, taskId: string, filePath: string): void
@@ -11484,6 +11631,7 @@ getProjectSettings(baseDir: string): Promise<ProjectSettings>
 patchProjectSettings(baseDir: string, settings: Partial<ProjectSettings>): Promise<ProjectSettings>
 getFilePathSuggestions(currentPath: string, directoriesOnly?: boolean): Promise<string[]>
 getAddableFiles(baseDir: string, taskId: string): Promise<string[]>
+getAllFiles(baseDir: string, taskId: string, useGit?: boolean): Promise<string[]>
 addFile(baseDir: string, taskId: string, filePath: string, readOnly?: boolean): void
 async isValidPath(baseDir: string, path: string): Promise<boolean>
 async isProjectPath(path: string): Promise<boolean>
@@ -12571,14 +12719,15 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import objectHash from 'object-hash';
 import { ControlledTreeEnvironment, Tree } from 'react-complex-tree';
 import { HiChevronDown, HiChevronRight, HiOutlineTrash, HiPlus, HiX } from 'react-icons/hi';
-import { MdOutlineSearch, MdOutlinePublic } from 'react-icons/md';
+import { MdOutlinePublic, MdOutlineRefresh, MdOutlineSearch } from 'react-icons/md';
 import { BiCollapseVertical, BiExpandVertical } from 'react-icons/bi';
 import { TbPencilOff } from 'react-icons/tb';
 import { RiRobot2Line } from 'react-icons/ri';
 import { VscFileCode } from 'react-icons/vsc';
+import { FaGitSquare } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
-import { useLocalStorage, useDebounce } from '@reactuses/core';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useDebounce, useLocalStorage } from '@reactuses/core';
+import { AnimatePresence, motion } from 'framer-motion';
 import { clsx } from 'clsx';
 ⋮----
 import { StyledTooltip } from '../common/StyledTooltip';
@@ -12610,6 +12759,7 @@ type Props = {
   contextFiles: ContextFile[];
   showFileDialog: () => void;
   tokensInfo?: TokensInfoData | null;
+  refreshAllFiles: (useGit?: boolean) => Promise<void>;
 };
 ⋮----
 type SectionType = 'project' | 'context' | 'rules';
@@ -12637,6 +12787,12 @@ const handleDragOver = (event: React.DragEvent<HTMLDivElement>) =>
 const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) =>
 ⋮----
 const handleSearchToggle = () =>
+⋮----
+const handleRefreshFiles = async (useGit: boolean) =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+const toggleUseGit = () =>
 ⋮----
 const handleSearchClose = () =>
 ⋮----
@@ -12738,6 +12894,31 @@ type Props = {
 const copyToClipboard = () =>
 
 ================
+File: src/renderer/src/components/message/CreateTaskToolMessage.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { RiCheckboxCircleFill, RiCloseCircleFill, RiErrorWarningFill } from 'react-icons/ri';
+import { CgSpinner } from 'react-icons/cg';
+import { MdAssignmentAdd } from 'react-icons/md';
+⋮----
+import { ToolMessage } from '@/types/message';
+import { CodeInline } from '@/components/common/CodeInline';
+import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+⋮----
+type Props = {
+  message: ToolMessage;
+  onRemove?: () => void;
+  compact?: boolean;
+};
+⋮----
+{/* Success Message */}
+⋮----
+{/* Task Details */}
+⋮----
+return <ExpandableMessageBlock title=
+
+================
 File: src/renderer/src/components/message/CustomCommandBashBlock.tsx
 ================
 import { useState } from 'react';
@@ -12753,6 +12934,29 @@ type Props = {
 };
 ⋮----
 const toggleAccordion = () =>
+
+================
+File: src/renderer/src/components/message/DeleteTaskToolMessage.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { RiCheckboxCircleFill, RiCloseCircleFill, RiErrorWarningFill } from 'react-icons/ri';
+import { CgSpinner } from 'react-icons/cg';
+import { LiaFolderMinusSolid } from 'react-icons/lia';
+⋮----
+import { ToolMessage } from '@/types/message';
+import { CodeInline } from '@/components/common/CodeInline';
+import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+⋮----
+type Props = {
+  message: ToolMessage;
+  onRemove?: () => void;
+  compact?: boolean;
+};
+⋮----
+{/* Success Message */}
+⋮----
+return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/ExpandableMessageBlock.tsx
@@ -12878,6 +13082,66 @@ const formatName = (name: string): string =>
 const getToolName = (): string =>
 
 ================
+File: src/renderer/src/components/message/GetTaskMessageToolMessage.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { RiMessage3Line, RiCheckboxCircleFill, RiErrorWarningFill, RiCloseCircleFill } from 'react-icons/ri';
+import { CgSpinner } from 'react-icons/cg';
+⋮----
+import { ToolMessage } from '@/types/message';
+import { CodeInline } from '@/components/common/CodeInline';
+import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+⋮----
+type Props = {
+  message: ToolMessage;
+  onRemove?: () => void;
+  compact?: boolean;
+};
+⋮----
+{/* Message Header */}
+⋮----
+{/* Message Content */}
+⋮----
+{/* Usage Report */}
+⋮----
+return <ExpandableMessageBlock title=
+
+================
+File: src/renderer/src/components/message/GetTaskToolMessage.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { RiCheckboxCircleFill, RiCloseCircleFill, RiErrorWarningFill } from 'react-icons/ri';
+import { CgSpinner } from 'react-icons/cg';
+import { MdAssignment } from 'react-icons/md';
+⋮----
+import { ToolMessage } from '@/types/message';
+import { CodeInline } from '@/components/common/CodeInline';
+import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+⋮----
+type Props = {
+  message: ToolMessage;
+  onRemove?: () => void;
+  compact?: boolean;
+};
+⋮----
+type ContextFile = {
+    path: string;
+    readOnly?: boolean;
+  };
+⋮----
+{/* Task Header */}
+⋮----
+{/* Task Configuration */}
+⋮----
+{/* Context Files */}
+⋮----
+{/* Context Messages Count */}
+⋮----
+return <ExpandableMessageBlock title=
+
+================
 File: src/renderer/src/components/message/GlobToolMessage.tsx
 ================
 import { useTranslation } from 'react-i18next';
@@ -12975,6 +13239,35 @@ const arePropsEqual = (prevProps: Props, nextProps: Props): boolean =>
 File: src/renderer/src/components/message/index.ts
 ================
 
+
+================
+File: src/renderer/src/components/message/ListTasksToolMessage.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { RiCheckboxCircleFill, RiCloseCircleFill, RiErrorWarningFill } from 'react-icons/ri';
+import { CgSpinner } from 'react-icons/cg';
+import { GrTasks } from 'react-icons/gr';
+⋮----
+import { ToolMessage } from '@/types/message';
+import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+⋮----
+type Props = {
+  message: ToolMessage;
+  onRemove?: () => void;
+  compact?: boolean;
+};
+⋮----
+type Task = {
+    id: string;
+    name: string;
+    archived?: boolean;
+    description?: string;
+    createdAt?: string;
+    updatedAt?: string;
+  };
+⋮----
+return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/LoadingMessageBlock.tsx
@@ -13080,6 +13373,12 @@ import {
   POWER_TOOL_SEMANTIC_SEARCH,
   SUBAGENTS_TOOL_GROUP_NAME,
   SUBAGENTS_TOOL_RUN_TASK,
+  TASKS_TOOL_GROUP_NAME,
+  TASKS_TOOL_LIST_TASKS,
+  TASKS_TOOL_GET_TASK,
+  TASKS_TOOL_GET_TASK_MESSAGE,
+  TASKS_TOOL_CREATE_TASK,
+  TASKS_TOOL_DELETE_TASK,
 } from '@common/tools';
 ⋮----
 import { CommandOutputMessageBlock } from './CommandOutputMessageBlock';
@@ -13098,6 +13397,11 @@ import { BashToolMessage } from './BashToolMessage';
 import { FetchToolMessage } from './FetchToolMessage';
 import { SemanticSearchToolMessage } from './SemanticSearchToolMessage';
 import { SubagentToolMessage } from './SubagentToolMessage';
+import { ListTasksToolMessage } from './ListTasksToolMessage';
+import { GetTaskToolMessage } from './GetTaskToolMessage';
+import { GetTaskMessageToolMessage } from './GetTaskMessageToolMessage';
+import { CreateTaskToolMessage } from './CreateTaskToolMessage';
+import { DeleteTaskToolMessage } from './DeleteTaskToolMessage';
 import { areMessagesEqual } from './utils';
 ⋮----
 import {
@@ -13135,7 +13439,7 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { toPng } from 'html-to-image';
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
-import { IoPlayOutline } from 'react-icons/io5';
+import { IoPlay } from 'react-icons/io5';
 ⋮----
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
@@ -13542,7 +13846,7 @@ import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef } fro
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { IoPlayOutline } from 'react-icons/io5';
+import { IoPlay } from 'react-icons/io5';
 ⋮----
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
@@ -15069,6 +15373,7 @@ type Props = {
   showFileDialog: () => void;
   task: TaskData;
   updateTask: (updates: Partial<TaskData>) => void;
+  refreshAllFiles: (useGit?: boolean) => Promise<void>;
 };
 ⋮----
 export const FilesContextInfoContent = ({
@@ -15086,6 +15391,7 @@ export const FilesContextInfoContent = ({
   showFileDialog,
   task,
   updateTask,
+  refreshAllFiles,
 }: Props) =>
 
 ================
@@ -15120,6 +15426,7 @@ type Props = {
   setAddFileDialogOptions: React.Dispatch<React.SetStateAction<AddFileDialogOptions | null>>;
   task: TaskData;
   updateTask: (updates: Partial<TaskData>) => void;
+  refreshAllFiles: (useGit?: boolean) => Promise<void>;
 };
 ⋮----
 export const MobileSidebar = ({
@@ -15139,6 +15446,7 @@ export const MobileSidebar = ({
   setAddFileDialogOptions,
   task,
   updateTask,
+  refreshAllFiles,
 }: Props) =>
 ⋮----
 className=
@@ -15708,6 +16016,8 @@ data-tooltip-content=
 {/* Resizable wrapper for expanded state */}
 ⋮----
 showFileDialog=
+⋮----
+refreshAllFiles=
 
 ================
 File: src/renderer/src/components/project/TodoListItem.tsx
@@ -16249,7 +16559,7 @@ import {
 } from '@common/types';
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { FaChevronLeft, FaChevronRight, FaPaste, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaList, FaPaste, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
 import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat } from 'react-icons/md';
 import { DEFAULT_AGENT_PROFILE, DEFAULT_MODEL_TEMPERATURE, AVAILABLE_PROVIDERS, getProviderModelId } from '@common/agent';
 import { BiTrash } from 'react-icons/bi';
@@ -16280,6 +16590,13 @@ import {
   TODO_TOOL_GROUP_NAME,
   TODO_TOOL_SET_ITEMS,
   TODO_TOOL_UPDATE_ITEM_COMPLETION,
+  TASKS_TOOL_CREATE_TASK,
+  TASKS_TOOL_DELETE_TASK,
+  TASKS_TOOL_DESCRIPTIONS,
+  TASKS_TOOL_GET_TASK,
+  TASKS_TOOL_GET_TASK_MESSAGE,
+  TASKS_TOOL_GROUP_NAME,
+  TASKS_TOOL_LIST_TASKS,
 } from '@common/tools';
 import { useTranslation } from 'react-i18next';
 import { FaArrowRightFromBracket } from 'react-icons/fa6';
@@ -16342,6 +16659,9 @@ type Props = {
 // Update contextIndex to match the target context
 ⋮----
 // Select the initial profile
+⋮----
+// only listen to initialProfileId change
+// eslint-disable-next-line react-hooks/exhaustive-deps
 ⋮----
 // Context navigation logic
 const navigateContext = (direction: 'prev' | 'next') =>
@@ -17683,13 +18003,8 @@ interface TaskContextType {
   answerQuestion: (taskId: string, answer: string) => void;
   interruptResponse: (taskId: string) => void;
   updateTaskAgentProfile: (taskId: string, agentProfileId: string, provider: string, model: string) => void;
+  refreshAllFiles: (taskId: string, useGit?: boolean) => Promise<void>;
 }
-⋮----
-export const TaskProvider: React.FC<{
-  baseDir: string;
-  tasks: TaskData[];
-  children: ReactNode;
-}> = (
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
@@ -17756,8 +18071,6 @@ const handleContextFilesUpdated = (
 const handleUpdateAiderModels = (data: ModelsData) =>
 ⋮----
 // eslint-disable-next-line no-console
-⋮----
-export const useTask = (): TaskContextType =>
 
 ================
 File: src/renderer/src/hooks/useAudioRecorder.ts
@@ -20980,7 +21293,7 @@ File: package.json
     "@probelabs/probe": "^0.6.0-rc161",
     "@reactuses/core": "^6.0.6",
     "@replit/codemirror-vim": "^6.3.0",
-    "@requesty/ai-sdk": "^2.1.0",
+    "@requesty/ai-sdk": "^2.1.2",
     "@smithy/eventstream-codec": "^2.0.0",
     "@smithy/protocol-http": "^3.3.0",
     "@smithy/signature-v4": "^2.0.0",
@@ -20995,7 +21308,7 @@ File: package.json
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/xterm": "^5.5.0",
-    "ai": "^5.0.104",
+    "ai": "^5.0.106",
     "axios": "^1.8.3",
     "babel-plugin-react-compiler": "^19.1.0-rc.3",
     "better-sqlite3": "^12.0.0",
