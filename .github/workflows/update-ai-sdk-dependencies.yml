@@ -48,43 +48,53 @@ jobs:
             "ollama-ai-provider-v2"
           )
 
-          # Function to get current major version
-          get_major_version() {
-            local package=$1
-            npm list $package --depth=0 2>/dev/null | grep $package | sed 's/.*@//' | cut -d. -f1
-          }
+          # Create changelog in memory (not as file)
+          changelog="# AI SDK Dependencies Update\n\n| Package | From | To |\n|---------|------|----|"
+          has_updates=false
 
-          # Function to get latest version respecting major version
-          get_latest_version() {
-            local package=$1
-            local current_major=$2
-            npm view $package version --json | jq -r "select(. | startswith(\"$current_major\"))"
-          }
-
-          # Update each package
+          # Update each package to latest stable version
           for package in "${packages[@]}"; do
             echo "Checking $package..."
             
-            # Get current version and major version
-            current_version=$(npm list $package --depth=0 --json 2>/dev/null | jq -r ".dependencies[\"$package\"] // empty")
+            # Get current version from package.json
+            current_version=$(cat package.json | jq -r ".dependencies[\"$package\"] // empty")
             if [ -z "$current_version" ]; then
               echo "Package $package not found in dependencies, skipping..."
               continue
             fi
             
-            current_major=$(echo $current_version | cut -d. -f1)
-            echo "Current version: $current_version (major: $current_major)"
+            # Get latest version
+            latest_version=$(npm view $package version)
             
-            # Get latest version with same major
-            latest_version=$(npm view $package version --json | jq -r "select(. | startswith(\"$current_major\"))")
+            echo "Current: $current_version, Latest: $latest_version"
             
-            if [ "$latest_version" != "$current_version" ]; then
+            # Normalize versions for comparison (remove caret)
+            current_clean=$(echo $current_version | sed 's/\^//')
+            latest_clean=$(echo $latest_version | sed 's/\^//')
+            
+            # Update if different
+            if [ "$current_clean" != "$latest_clean" ]; then
               echo "Updating $package from $current_version to $latest_version"
               npm install $package@$latest_version
+              
+              # Add to changelog
+              changelog="$changelog\n| $package | $current_version | $latest_version |"
+              has_updates=true
             else
               echo "$package is already up to date"
             fi
           done
+
+          # Save changelog to environment variable for PR (only if there are updates)
+          if [ "$has_updates" = true ]; then
+            echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+            echo -e "$changelog" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+          else
+            echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+            echo "No AI SDK dependencies needed updates." >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+          fi
 
       - name: Check for changes
         id: verify-changed-files
@@ -105,24 +115,9 @@ jobs:
           body: |
             ## Automated AI SDK Dependencies Update
             
-            This PR updates the following AI SDK packages to their latest versions while maintaining the same major version:
+            This PR updates AI SDK packages to their latest stable versions.
             
-            - `ai` - Main Vercel AI SDK package
-            - `@ai-sdk/provider` - Base provider package
-            - `@ai-sdk/amazon-bedrock` - AWS Bedrock provider
-            - `@ai-sdk/anthropic` - Anthropic Claude provider
-            - `@ai-sdk/azure` - Azure OpenAI provider
-            - `@ai-sdk/cerebras` - Cerebras provider
-            - `@ai-sdk/deepseek` - DeepSeek provider
-            - `@ai-sdk/google` - Google AI provider
-            - `@ai-sdk/google-vertex` - Google Vertex AI provider
-            - `@ai-sdk/groq` - Groq provider
-            - `@ai-sdk/openai` - OpenAI provider
-            - `@openrouter/ai-sdk-provider` - OpenRouter provider
-            - `@requesty/ai-sdk` - Requesty provider
-            - `ollama-ai-provider-v2` - Ollama provider
-            
-            The updates respect the current major version to ensure compatibility.
+            ${{ env.CHANGELOG }}
             
             ---
             
