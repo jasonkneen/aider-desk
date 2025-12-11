@@ -10,6 +10,7 @@ import { Store } from '@/store';
 import { EventManager } from '@/events';
 import { ModelManager } from '@/models';
 import { WorktreeManager } from '@/worktrees';
+import { MemoryManager } from '@/memory/memory-manager';
 
 export class ProjectManager {
   private projects: Project[] = [];
@@ -23,6 +24,7 @@ export class ProjectManager {
     private readonly modelManager: ModelManager,
     private readonly worktreeManager: WorktreeManager,
     private readonly agentProfileManager: AgentProfileManager,
+    private readonly memoryManager: MemoryManager,
   ) {}
 
   private findProject(baseDir: string): Project | undefined {
@@ -41,6 +43,7 @@ export class ProjectManager {
       this.modelManager,
       this.worktreeManager,
       this.agentProfileManager,
+      this.memoryManager,
     );
     this.projects.push(project);
     return project;

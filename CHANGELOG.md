@@ -3,6 +3,7 @@
 ## [UNRELEASED]
 
 - fixed issue with missing reasoning_content field when using deepseek-reasoner
+- added memory management system with agent integration
 
 ## [0.43.0]
 

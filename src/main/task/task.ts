@@ -59,6 +59,7 @@ import { ContextManager } from '@/task/context-manager';
 import { Project } from '@/project';
 import { AiderManager } from '@/task/aider-manager';
 import { WorktreeManager } from '@/worktrees';
+import { MemoryManager } from '@/memory/memory-manager';
 import { getElectronApp } from '@/app';
 
 export class Task {
@@ -94,6 +95,7 @@ export class Task {
     private readonly eventManager: EventManager,
     private readonly modelManager: ModelManager,
     private readonly worktreeManager: WorktreeManager,
+    private readonly memoryManager: MemoryManager,
     initialTaskData?: Partial<TaskData>,
   ) {
     this.task = {
@@ -111,7 +113,7 @@ export class Task {
     };
     this.taskDataPath = path.join(this.project.baseDir, AIDER_DESK_TASKS_DIR, this.taskId, 'settings.json');
     this.contextManager = new ContextManager(this, this.taskId);
-    this.agent = new Agent(this.store, this.agentProfileManager, this.mcpManager, this.modelManager, this.telemetryManager);
+    this.agent = new Agent(this.store, this.agentProfileManager, this.mcpManager, this.modelManager, this.telemetryManager, this.memoryManager);
     this.git = simpleGit(this.project.baseDir);
     this.aiderManager = new AiderManager(this, this.store, this.modelManager, this.eventManager, () => this.connectors);
 
@@ -2019,7 +2021,7 @@ ${error.stderr}`,
           return;
         }
 
-        const systemPrompt = await getSystemPrompt(this, profile, command.autoApprove ?? this.task.autoApprove);
+        const systemPrompt = await getSystemPrompt(this.store.getSettings(), this, profile, command.autoApprove ?? this.task.autoApprove);
 
         const messages = command.includeContext === false ? [] : undefined;
         const contextFiles = command.includeContext === false ? [] : undefined;

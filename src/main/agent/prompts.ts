@@ -2,7 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
 
-import { AgentProfile, ToolApprovalState } from '@common/types';
+import { AgentProfile, SettingsData, ToolApprovalState } from '@common/types';
 import {
   AIDER_TOOL_ADD_CONTEXT_FILES,
   AIDER_TOOL_DROP_CONTEXT_FILES,
@@ -25,13 +25,92 @@ import {
   TODO_TOOL_SET_ITEMS,
   TODO_TOOL_UPDATE_ITEM_COMPLETION,
   TOOL_GROUP_NAME_SEPARATOR,
+  MEMORY_TOOL_DELETE,
+  MEMORY_TOOL_GROUP_NAME,
+  MEMORY_TOOL_LIST,
+  MEMORY_TOOL_RETRIEVE,
+  MEMORY_TOOL_STORE,
 } from '@common/tools';
 
 import logger from '@/logger';
 import { Task } from '@/task';
 
-export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, autoApprove = task.task.autoApprove, additionalInstructions?: string) => {
-  const { useAiderTools, usePowerTools, useTodoTools, useSubagents } = agentProfile;
+const generateWorkflow = (
+  autoApprove: boolean,
+  useSubagents: boolean,
+  usePowerTools: boolean,
+  retrieveMemoryAllowed: boolean,
+  storeMemoryAllowed: boolean,
+): string => {
+  const steps: string[] = [];
+  let stepNumber = 1;
+
+  steps.push(`    <Step number="${stepNumber++}" title="Analyze User Request">
+      <Instruction>Deconstruct the request into actionable steps. Define the overarching goal and explicit completion conditions. Think step-by-step.</Instruction>
+    </Step>`);
+
+  if (retrieveMemoryAllowed) {
+    steps.push(`    <Step number="${stepNumber++}" title="Retrieve Memory">
+      <Instruction>Use memory tools to retrieve relevant information about user preferences, architectural decisions, and project history that may be applicable to the current task.</Instruction>
+    </Step>`);
+  }
+
+  steps.push(`    <Step number="${stepNumber++}" title="Gather Initial Context">
+      <Instruction>Use ${usePowerTools ? 'power-tools' : 'available tools (e.g., search, read file)'} to understand primary areas in the <WorkingDirectory> relevant to the request.</Instruction>
+    </Step>`);
+
+  steps.push(`    <Step number="${stepNumber++}" title="Identify All Relevant Files">
+      <Substep letter="a">Explicitly reason about all potentially affected/related files: dependencies, importers, imports, related modules, types, configs, tests, and usage examples.</Substep>
+      <Substep letter="b">Use tools (search, grep, dependency analysis where available) to locate related files throughout <WorkingDirectory>.</Substep>
+      <Substep letter="c">List all identified relevant files explicitly before proceeding.</Substep>
+      <Substep letter="d" autoApprove="${autoApprove}">${autoApprove ? 'IMPORTANT: User confirmation is not required as auto-approve is enabled. You can proceed.' : 'Await explicit user confirmation before proceeding.'}</Substep>
+    </Step>`);
+
+  steps.push(`    <Step number="${stepNumber++}" title="Develop Implementation Plan">
+      <Instruction>Using the confirmed file list, create a comprehensive multi-file change plan.${useSubagents ? ' If specialized subagents are available, consider using one for codebase analysis to assist in this step.' : ''}</Instruction>
+      <Instruction autoApprove="${autoApprove}">${autoApprove ? 'After presenting the plan, execute it automatically.' : 'Present the plan and await explicit user approval before changes. For example: "May I proceed? (y/n)"'}</Instruction>
+    </Step>`);
+
+  steps.push(`    <Step number="${stepNumber++}" title="Execute Implementation">
+      <Instruction>Apply planned changes using appropriate tools. Ensure all relevant files from Step 3 are in context before modifications.</Instruction>
+    </Step>`);
+
+  steps.push(`    <Step number="${stepNumber++}" title="Verify Changes">
+      <Instruction>Verify changes. ${useSubagents ? 'If a specialized subagent for code verification is available, prioritize its use. ' : ''}Otherwise, use available tools like linters or type checkers. Analyze outcomes and iterate to fix errors.</Instruction>
+    </Step>`);
+
+  if (useSubagents) {
+    steps.push(`    <Step number="${stepNumber++}" title="Review Changes">
+      <Instruction>After verification, especially for complex modifications, consider using a specialized subagent for code review to ensure high quality and adherence to best practices.</Instruction>
+    </Step>`);
+  }
+
+  steps.push(`    <Step number="${stepNumber++}" title="Assess Task Completion">
+      <Instruction>Evaluate whether completion conditions are met; loop back if not. Consider using a specialized subagent for review or testing if available.</Instruction>
+    </Step>`);
+
+  if (storeMemoryAllowed) {
+    steps.push(`    <Step number="${stepNumber++}" title="Store Memory">
+      <Instruction>Store ONLY general outcomes, decisions, patterns, and user preferences in memory for future reference. Focus on information that would be valuable for tasks in the future. Do not store task-specific information that is not relevant to future tasks.</Instruction>
+    </Step>`);
+  }
+
+  steps.push(`    <Step number="${stepNumber++}" title="Final Summary">
+      <Instruction>Summarize actions and confirm the overarching goal is achieved.</Instruction>
+    </Step>`);
+
+  return `  <Workflow>\n${steps.join('\n')}\n  </Workflow>`;
+};
+
+export const getSystemPrompt = async (
+  settings: SettingsData,
+  task: Task,
+  agentProfile: AgentProfile,
+  autoApprove = task.task.autoApprove ?? false,
+  additionalInstructions?: string,
+) => {
+  const { useAiderTools, usePowerTools = false, useTodoTools, useSubagents = false, useMemoryTools = false } = agentProfile;
+  const memoryEnabled = settings.memory.enabled && useMemoryTools;
   const rulesFilesXml = await getRulesContent(task, agentProfile);
   const customInstructions = [agentProfile.customInstructions, additionalInstructions].filter(Boolean).join('\n\n').trim();
 
@@ -51,6 +130,14 @@ export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, au
     usePowerTools && agentProfile.toolApprovals[`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_GREP}`] !== ToolApprovalState.Never;
   const bashAllowed =
     usePowerTools && agentProfile.toolApprovals[`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_BASH}`] !== ToolApprovalState.Never;
+  const retrieveMemoryAllowed =
+    memoryEnabled && agentProfile.toolApprovals[`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_RETRIEVE}`] !== ToolApprovalState.Never;
+  const storeMemoryAllowed =
+    memoryEnabled && agentProfile.toolApprovals[`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_STORE}`] !== ToolApprovalState.Never;
+  const listMemoriesAllowed =
+    memoryEnabled && agentProfile.toolApprovals[`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_LIST}`] !== ToolApprovalState.Never;
+  const deleteMemoryAllowed =
+    memoryEnabled && agentProfile.toolApprovals[`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_DELETE}`] !== ToolApprovalState.Never;
 
   // Check if any power tools are allowed
   const anyPowerToolsAllowed = semanticSearchAllowed || fileReadAllowed || fileWriteAllowed || fileEditAllowed || globAllowed || grepAllowed || bashAllowed;
@@ -82,51 +169,12 @@ export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, au
     <Directive id="tool-mandate">If uncertain about any part of the codebase, use tools to gather information. Do not guess.</Directive>
     <Directive id="prioritize-tools">Exhaust tool capabilities before asking the user.</Directive>
     <Directive id="code-changes-via-tools">Make code changes using tools only. Small illustrative snippets are allowed, not full patches.</Directive>
-  </CoreDirectives>
-
-  <Workflow>
-    <Step number="1" title="Analyze User Request">
-      <Instruction>Deconstruct the request into actionable steps. Define the overarching goal and explicit completion conditions. Think step-by-step.</Instruction>
-    </Step>
-    <Step number="2" title="Gather Initial Context">
-      <Instruction>Use ${usePowerTools ? 'power-tools' : 'available tools (e.g., search, read file)'} to understand primary areas in the <WorkingDirectory> relevant to the request.</Instruction>
-    </Step>
-    <Step number="3" title="Identify All Relevant Files">
-      <Substep letter="a">Explicitly reason about all potentially affected/related files: dependencies, importers, imports, related modules, types, configs, tests, and usage examples.</Substep>
-      <Substep letter="b">Use tools (search, grep, dependency analysis where available) to locate related files throughout <WorkingDirectory>.</Substep>
-      <Substep letter="c">List all identified relevant files explicitly before proceeding.</Substep>
-      <Substep letter="d" autoApprove="${autoApprove}">${autoApprove ? 'IMPORTANT: User confirmation is not required as auto-approve is enabled. You can proceed.' : 'Await explicit user confirmation before proceeding.'}</Substep>
-    </Step>
-    <Step number="4" title="Develop Implementation Plan">
-      <Instruction>Using the confirmed file list, create a comprehensive multi-file change plan.${
-        useSubagents ? ' If specialized subagents are available, consider using one for codebase analysis to assist in this step.' : ''
-      }</Instruction>
-      <Instruction autoApprove="${autoApprove}">${autoApprove ? 'After presenting the plan, execute it automatically.' : 'Present the plan and await explicit user approval before changes. For example: "May I proceed? (y/n)"'}</Instruction>
-    </Step>
-    <Step number="5" title="Execute Implementation">
-      <Instruction>Apply planned changes using appropriate tools. Ensure all relevant files from Step 3 are in context before modifications.</Instruction>
-    </Step>
-    <Step number="6" title="Verify Changes">
-      <Instruction>Verify changes. ${
-        useSubagents ? 'If a specialized subagent for code verification is available, prioritize its use. ' : ''
-      }Otherwise, use available tools like linters or type checkers. Analyze outcomes and iterate to fix errors.</Instruction>
-    </Step>
     ${
-      useSubagents
-        ? `
-    <Step number="7" title="Review Changes">
-      <Instruction>After verification, especially for complex modifications, consider using a specialized subagent for code review to ensure high quality and adherence to best practices.</Instruction>
-    </Step>
-    `
+      memoryEnabled
+        ? '<Directive id="memory-management">Proactively use memory tools to store important user preferences, architectural decisions, and task results for future context.</Directive>'
         : ''
     }
-    <Step number="${useSubagents ? 8 : 7}" title="Assess Task Completion">
-      <Instruction>Evaluate whether completion conditions are met; loop back if not.</Instruction>
-    </Step>
-    <Step number="${useSubagents ? 9 : 8}" title="Final Summary">
-      <Instruction>Summarize actions and confirm the overarching goal is achieved.</Instruction>
-    </Step>
-  </Workflow>
+  </CoreDirectives>
 
   <ToolUsageGuidelines>
     <Guideline id="assess-need">Determine the information required.</Guideline>
@@ -187,9 +235,31 @@ export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, au
   }
 
   ${
+    memoryEnabled
+      ? `
+  <MemoryTools group="${MEMORY_TOOL_GROUP_NAME}">
+    <Utilization>
+      ${retrieveMemoryAllowed ? '<Guideline>Retrieve relevant memories using ${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_RETRIEVE} at the beginning of a task to understand user preferences and project history.</Guideline>' : ''}
+      ${
+        storeMemoryAllowed
+          ? `      <Guideline>Proactively store important patterns, user preferences, and architectural decisions using ${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_STORE}. Do not wait for explicit instructions to store valuable context.</Guideline>
+      <Guideline>If the user explicitly asks to "remember" something, use ${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_STORE} immediately.</Guideline>
+      <Guideline>At the end of a significant task, think about the information that would be valuable to remember for future tasks and store it using ${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_STORE}. Do not store task-specific information that is not relevant to future tasks.</Guideline>`
+          : ''
+      }
+      ${listMemoriesAllowed ? `<Guideline>Use ${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_LIST} ONLY when explicitly requested by the user.</Guideline>` : ''}
+      ${deleteMemoryAllowed ? `<Guideline>Use ${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_DELETE} ONLY when explicitly requested by the user.</Guideline>` : ''}
+      <Guideline>IMPORTANT: Do not announce the usage of memory tools (e.g., "I will remember that"). Just call the tool silently.</Guideline>
+    </Utilization>
+  </MemoryTools>
+  `
+      : ''
+  }
+
+  ${
     useAiderTools
       ? `
-  <AiderTools enabled="true" group="${AIDER_TOOL_GROUP_NAME}">
+  <AiderTools group="${AIDER_TOOL_GROUP_NAME}">
     <Operation id="runPrompt" tool="${AIDER_TOOL_RUN_PROMPT}" prerequisites="identified-files,plan-confirmed">Use only after Steps 3 and 4 are completed.</Operation>
     <ContextManagement>
       <Operation id="add" tool="${AIDER_TOOL_ADD_CONTEXT_FILES}">Add ALL files identified in Step 3 and confirmed in Step 4 that are not already in context.</Operation>
@@ -213,7 +283,7 @@ export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, au
   ${
     anyPowerToolsAllowed
       ? `
-  <PowerTools enabled="true" group="${POWER_TOOL_GROUP_NAME}">
+  <PowerTools group="${POWER_TOOL_GROUP_NAME}">
     ${semanticSearchAllowed ? `<Tool id="semantic_search" name="${POWER_TOOL_SEMANTIC_SEARCH}" />` : ''}
     ${fileReadAllowed ? `<Tool id="file_read" name="${POWER_TOOL_FILE_READ}" />` : ''}
     ${fileWriteAllowed ? `<Tool id="file_write" name="${POWER_TOOL_FILE_WRITE}" />` : ''}
@@ -273,6 +343,9 @@ ${rulesFilesXml}
     </Rules>
 ${customInstructions ? `    <CustomInstructions><![CDATA[\n${customInstructions}\n]]></CustomInstructions>` : ''}
   </Knowledge>
+
+${generateWorkflow(autoApprove, useSubagents, usePowerTools, retrieveMemoryAllowed, storeMemoryAllowed)}
+
 </AiderDeskSystemPrompt>
 `.trim();
 };

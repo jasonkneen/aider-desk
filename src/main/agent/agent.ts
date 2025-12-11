@@ -45,11 +45,13 @@ import { createTasksToolset } from './tools/tasks';
 import { getSystemPrompt } from './prompts';
 import { createAiderToolset } from './tools/aider';
 import { createHelpersToolset } from './tools/helpers';
+import { createMemoryToolset } from './tools/memory';
 import { MCP_CLIENT_TIMEOUT, McpManager } from './mcp-manager';
 import { ApprovalManager } from './tools/approval-manager';
 import { ANSWER_RESPONSE_START_TAG, extractPromptContextFromToolResult, THINKING_RESPONSE_STAR_TAG } from './utils';
 import { extractReasoningMiddleware } from './middlewares/extract-reasoning-middleware';
 
+import { MemoryManager } from '@/memory/memory-manager';
 import { AIDER_DESK_PROJECT_RULES_DIR } from '@/constants';
 import { Task } from '@/task';
 import { Store } from '@/store';
@@ -73,6 +75,7 @@ export class Agent {
     private readonly mcpManager: McpManager,
     private readonly modelManager: ModelManager,
     private readonly telemetryManager: TelemetryManager,
+    private readonly memoryManager: MemoryManager,
   ) {}
 
   private async getFilesContentForPrompt(files: ContextFile[], task: Task): Promise<{ textFileContents: string[]; imageParts: ImagePart[] }> {
@@ -348,6 +351,11 @@ export class Agent {
       Object.assign(toolSet, taskTools);
     }
 
+    if (profile.useMemoryTools) {
+      const memoryTools = createMemoryToolset(task, profile, this.memoryManager, promptContext);
+      Object.assign(toolSet, memoryTools);
+    }
+
     // Add helper tools
     const helperTools = createHelpersToolset();
     Object.assign(toolSet, helperTools);
@@ -599,7 +607,7 @@ export class Agent {
       });
 
       if (!systemPrompt) {
-        systemPrompt = await getSystemPrompt(task, profile);
+        systemPrompt = await getSystemPrompt(this.store.getSettings(), task, profile);
       }
 
       // repairToolCall function that attempts to repair tool calls
@@ -1035,7 +1043,7 @@ export class Agent {
 
       const messages = await this.prepareMessages(task, profile, await task.getContextMessages(), await task.getContextFiles());
       const toolSet = await this.getAvailableTools(task, profile, provider);
-      const systemPrompt = await getSystemPrompt(task, profile);
+      const systemPrompt = await getSystemPrompt(this.store.getSettings(), task, profile);
 
       const cacheControl = this.modelManager.getCacheControl(profile, provider.provider);
 

@@ -356,6 +356,7 @@
       "aider": "Aider",
       "agents": "Agents",
       "server": "Server",
+      "memory": "Memory",
       "about": "About"
     },
     "gui": "Appearance",
@@ -590,6 +591,21 @@
       "markdownRendering": "Markdown rendering",
       "virtualizedRendering": "Use virtualized rendering (experimental)",
       "virtualizedRenderingTooltip": "Experimental feature that can improve performance when you have many messages in your conversation history by only rendering visible messages."
+    },
+    "memory": {
+      "title": "Memory",
+      "description": "Configure AI memory features to enhance conversation continuity and context retention across sessions.",
+      "enabled": {
+        "label": "Enable",
+        "description": "Enable AI memory to remember important information across conversations and sessions."
+      },
+      "model": {
+        "label": "Model"
+      },
+      "provider": {
+        "label": "Embedding Provider",
+        "description": "Choose the embedding provider to use for memory functionality"
+      }
     }
   },
   "messages": {
@@ -884,6 +900,31 @@
         "title": "Fetch",
         "contentTruncated": "Content truncated. Full content available in copy."
       }
+    },
+    "memory": {
+      "group": "Memory",
+      "storingMemory": "Storing memory...",
+      "retrievingMemories": "Retrieving memories...",
+      "deletingMemory": "Deleting memory...",
+      "listingMemories": "Listing memories...",
+      "memoryStored": "Memory stored.",
+      "memoryDeleted": "Memory deleted.",
+      "memoryId": "Memory ID",
+      "type": "Type",
+      "content": "Content",
+      "query": "Query",
+      "limit": "Limit",
+      "foundMemories": "Found {{count}} memories.",
+      "noMemoriesFound": "No relevant memories have been found.",
+      "noRelevantMemories": "No relevant memories have been found",
+      "storedMemoryDetails": "Stored Memory Details",
+      "deletedMemoryDetails": "Deleted Memory Details",
+      "retrievedMemories": "Retrieved Memories",
+      "memoryList": "Memory List",
+      "listedMemories": "Listing {{count}} memories.",
+      "ofType": "of type {{type}}",
+      "noMemoriesOfType": "No memories found of type: {{type}}",
+      "all": "All"
     },
     "subagents": {
       "groupRunning": "{{name}}: Subagent is working...",

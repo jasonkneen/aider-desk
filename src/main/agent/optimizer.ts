@@ -1,10 +1,13 @@
-import { type AgentProfile, InvocationMode, type TaskData } from '@common/types';
+import { type AgentProfile, InvocationMode, type TaskData, ToolApprovalState } from '@common/types';
 import { isSubagentEnabled } from '@common/agent';
 import { cloneDeep } from 'lodash';
 import { type ModelMessage, type ToolContent, type ToolResultPart, type UserModelMessage } from 'ai';
 import {
   AIDER_TOOL_GROUP_NAME,
   AIDER_TOOL_RUN_PROMPT,
+  MEMORY_TOOL_GROUP_NAME,
+  MEMORY_TOOL_RETRIEVE,
+  MEMORY_TOOL_STORE,
   SUBAGENTS_TOOL_GROUP_NAME,
   SUBAGENTS_TOOL_RUN_TASK,
   TODO_TOOL_GET_ITEMS,
@@ -100,13 +103,27 @@ const addImportantReminders = (
     );
 
     if (automaticSubagents.length > 0) {
-      const subagents = automaticSubagents.map((subagent) => `- ${subagent.name}`).join('\n');
+      const subagents = automaticSubagents.map((subagent) => `    - ${subagent.name}`).join('\n');
       reminders.push(`Use the following automatic subagents when appropriate based on their descriptions:\n${subagents}`);
     }
   }
 
   if (!task?.autoApprove && !profile.isSubagent) {
     reminders.push('Before making any complex changes, present the plan and wait for my approval.');
+  }
+
+  if (profile.useMemoryTools) {
+    const retrieveMemoryAllowed =
+      profile.toolApprovals[`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_RETRIEVE}`] !== ToolApprovalState.Never;
+    const storeMemoryAllowed = profile.toolApprovals[`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_STORE}`] !== ToolApprovalState.Never;
+    if (retrieveMemoryAllowed) {
+      reminders.push('Retrieve relevant memories using at the beginning of a task to see if there is any relevant information.');
+    }
+    if (storeMemoryAllowed) {
+      reminders.push(
+        'Store important general outcomes, decisions, patterns, and user preferences in memory for future tasks after the task is completed. Do not store task-specific information that is not relevant to future tasks.',
+      );
+    }
   }
 
   if (reminders.length === 0) {

@@ -2,7 +2,7 @@ import { createServer } from 'http';
 
 import type { BrowserWindow } from 'electron';
 
-import { McpManager, AgentProfileManager } from '@/agent';
+import { AgentProfileManager, McpManager } from '@/agent';
 import { CloudflareTunnelManager, ServerController } from '@/server';
 import { ConnectorManager } from '@/connector';
 import { ProjectManager } from '@/project';
@@ -13,6 +13,7 @@ import { TerminalManager } from '@/terminal';
 import { VersionsManager } from '@/versions';
 import { TelemetryManager } from '@/telemetry';
 import { WorktreeManager } from '@/worktrees';
+import { MemoryManager } from '@/memory/memory-manager';
 import { Store } from '@/store';
 import { SERVER_PORT } from '@/constants';
 import logger from '@/logger';
@@ -45,6 +46,10 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
   const dataManager = new DataManager();
   dataManager.init();
 
+  // Initialize memory manager
+  const memoryManager = new MemoryManager(store);
+  await memoryManager.init();
+
   const worktreeManager = new WorktreeManager();
 
   // Initialize agent profile manager
@@ -52,7 +57,17 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
   await agentProfileManager.start();
 
   // Initialize project manager
-  const projectManager = new ProjectManager(store, mcpManager, telemetryManager, dataManager, eventManager, modelManager, worktreeManager, agentProfileManager);
+  const projectManager = new ProjectManager(
+    store,
+    mcpManager,
+    telemetryManager,
+    dataManager,
+    eventManager,
+    modelManager,
+    worktreeManager,
+    agentProfileManager,
+    memoryManager,
+  );
 
   // Initialize terminal manager
   const terminalManager = new TerminalManager(eventManager, worktreeManager, telemetryManager);

@@ -57,6 +57,8 @@
     "@google/genai": "^1.30.0",
     "@headlessui/react": "^2.2.0",
     "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
+    "@huggingface/transformers": "^3.8.1",
+    "@lancedb/lancedb": "^0.22.3",
     "@openrouter/ai-sdk-provider": "^1.5.3",
     "@opentelemetry/auto-instrumentations-node": "^0.62.0",
     "@opentelemetry/sdk-node": "^0.203.0",

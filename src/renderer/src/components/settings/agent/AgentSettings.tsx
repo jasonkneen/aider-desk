@@ -11,7 +11,7 @@ import {
 } from '@common/types';
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { FaChevronLeft, FaChevronRight, FaList, FaPaste, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaList, FaPaste, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes, FaBrain } from 'react-icons/fa';
 import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat } from 'react-icons/md';
 import { DEFAULT_AGENT_PROFILE, DEFAULT_MODEL_TEMPERATURE, AVAILABLE_PROVIDERS, getProviderModelId } from '@common/agent';
 import { BiTrash } from 'react-icons/bi';
@@ -49,6 +49,12 @@ import {
   TASKS_TOOL_GET_TASK_MESSAGE,
   TASKS_TOOL_GROUP_NAME,
   TASKS_TOOL_LIST_TASKS,
+  MEMORY_TOOL_DELETE,
+  MEMORY_TOOL_DESCRIPTIONS,
+  MEMORY_TOOL_GROUP_NAME,
+  MEMORY_TOOL_LIST,
+  MEMORY_TOOL_RETRIEVE,
+  MEMORY_TOOL_STORE,
 } from '@common/tools';
 import { useTranslation } from 'react-i18next';
 import { FaArrowRightFromBracket } from 'react-icons/fa6';
@@ -187,6 +193,28 @@ const tools: Record<string, GenericTool[]> = {
       description: TASKS_TOOL_DESCRIPTIONS[TASKS_TOOL_DELETE_TASK],
     },
   ],
+  [MEMORY_TOOL_GROUP_NAME]: [
+    {
+      groupName: MEMORY_TOOL_GROUP_NAME,
+      name: MEMORY_TOOL_STORE,
+      description: MEMORY_TOOL_DESCRIPTIONS[MEMORY_TOOL_STORE],
+    },
+    {
+      groupName: MEMORY_TOOL_GROUP_NAME,
+      name: MEMORY_TOOL_RETRIEVE,
+      description: MEMORY_TOOL_DESCRIPTIONS[MEMORY_TOOL_RETRIEVE],
+    },
+    {
+      groupName: MEMORY_TOOL_GROUP_NAME,
+      name: MEMORY_TOOL_DELETE,
+      description: MEMORY_TOOL_DESCRIPTIONS[MEMORY_TOOL_DELETE],
+    },
+    {
+      groupName: MEMORY_TOOL_GROUP_NAME,
+      name: MEMORY_TOOL_LIST,
+      description: MEMORY_TOOL_DESCRIPTIONS[MEMORY_TOOL_LIST],
+    },
+  ],
 };
 
 // Helper functions for accordion summaries
@@ -265,6 +293,9 @@ const getGenericToolsSummary = (profile: AgentProfile) => {
   }
   if (profile.useTaskTools) {
     enabled.push(<FaList key="tasks" className="w-3 h-3 text-text-secondary" />);
+  }
+  if (profile.useMemoryTools) {
+    enabled.push(<FaBrain key="memory" className="w-3 h-3 text-text-secondary" />);
   }
   return enabled.length > 0 ? (
     <div className="flex items-center gap-2">
@@ -987,7 +1018,8 @@ export const AgentSettings = ({
                           (selectedProfile.usePowerTools && groupName === POWER_TOOL_GROUP_NAME) ||
                           (selectedProfile.useAiderTools && groupName === AIDER_TOOL_GROUP_NAME) ||
                           (selectedProfile.useTodoTools && groupName === TODO_TOOL_GROUP_NAME) ||
-                          (selectedProfile.useTaskTools && groupName === TASKS_TOOL_GROUP_NAME);
+                          (selectedProfile.useTaskTools && groupName === TASKS_TOOL_GROUP_NAME) ||
+                          (selectedProfile.useMemoryTools && groupName === MEMORY_TOOL_GROUP_NAME);
                         return (
                           <div key={groupName}>
                             <GenericToolGroupItem
@@ -1006,6 +1038,8 @@ export const AgentSettings = ({
                                   handleProfileSettingChange('useTodoTools', enabled);
                                 } else if (groupName === TASKS_TOOL_GROUP_NAME) {
                                   handleProfileSettingChange('useTaskTools', enabled);
+                                } else if (groupName === MEMORY_TOOL_GROUP_NAME) {
+                                  handleProfileSettingChange('useMemoryTools', enabled);
                                 }
                               }}
                             />

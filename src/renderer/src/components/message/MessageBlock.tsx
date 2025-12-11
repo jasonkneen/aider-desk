@@ -4,6 +4,11 @@ import {
   HELPERS_TOOL_GROUP_NAME,
   HELPERS_TOOL_INVALID_TOOL_ARGUMENTS,
   HELPERS_TOOL_NO_SUCH_TOOL,
+  MEMORY_TOOL_GROUP_NAME,
+  MEMORY_TOOL_STORE,
+  MEMORY_TOOL_RETRIEVE,
+  MEMORY_TOOL_DELETE,
+  MEMORY_TOOL_LIST,
   POWER_TOOL_BASH,
   POWER_TOOL_FETCH,
   POWER_TOOL_FILE_EDIT,
@@ -44,6 +49,10 @@ import { GetTaskToolMessage } from './GetTaskToolMessage';
 import { GetTaskMessageToolMessage } from './GetTaskMessageToolMessage';
 import { CreateTaskToolMessage } from './CreateTaskToolMessage';
 import { DeleteTaskToolMessage } from './DeleteTaskToolMessage';
+import { StoreMemoryToolMessage } from './StoreMemoryToolMessage';
+import { RetrieveMemoryToolMessage } from './RetrieveMemoryToolMessage';
+import { DeleteMemoryToolMessage } from './DeleteMemoryToolMessage';
+import { ListMemoriesToolMessage } from './ListMemoriesToolMessage';
 import { areMessagesEqual } from './utils';
 
 import {
@@ -154,6 +163,20 @@ const MessageBlockComponent = ({ baseDir, message, allFiles, renderMarkdown, com
             return <CreateTaskToolMessage message={toolMessage} onRemove={remove} compact={compact} />;
           case TASKS_TOOL_DELETE_TASK:
             return <DeleteTaskToolMessage message={toolMessage} onRemove={remove} compact={compact} />;
+          default:
+            break;
+        }
+        break;
+      case MEMORY_TOOL_GROUP_NAME:
+        switch (toolMessage.toolName) {
+          case MEMORY_TOOL_STORE:
+            return <StoreMemoryToolMessage message={toolMessage} onRemove={remove} compact={compact} />;
+          case MEMORY_TOOL_RETRIEVE:
+            return <RetrieveMemoryToolMessage message={toolMessage} onRemove={remove} compact={compact} />;
+          case MEMORY_TOOL_DELETE:
+            return <DeleteMemoryToolMessage message={toolMessage} onRemove={remove} compact={compact} />;
+          case MEMORY_TOOL_LIST:
+            return <ListMemoriesToolMessage message={toolMessage} onRemove={remove} compact={compact} />;
           default:
             break;
         }

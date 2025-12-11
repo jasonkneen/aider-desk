@@ -23,6 +23,11 @@ import {
   TASKS_TOOL_GROUP_NAME,
   TASKS_TOOL_LIST_TASKS,
   TOOL_GROUP_NAME_SEPARATOR,
+  MEMORY_TOOL_DELETE,
+  MEMORY_TOOL_GROUP_NAME,
+  MEMORY_TOOL_LIST,
+  MEMORY_TOOL_RETRIEVE,
+  MEMORY_TOOL_STORE,
 } from '@common/tools';
 
 export type LlmProviderName =
@@ -273,6 +278,11 @@ export const DEFAULT_AGENT_PROFILE: AgentProfile = {
     [`${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_GET_TASK_MESSAGE}`]: ToolApprovalState.Always,
     [`${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_CREATE_TASK}`]: ToolApprovalState.Ask,
     [`${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_DELETE_TASK}`]: ToolApprovalState.Ask,
+    // memory tools
+    [`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_STORE}`]: ToolApprovalState.Always,
+    [`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_RETRIEVE}`]: ToolApprovalState.Always,
+    [`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_DELETE}`]: ToolApprovalState.Never,
+    [`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_LIST}`]: ToolApprovalState.Never,
   },
   toolSettings: {
     [`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_BASH}`]: {
@@ -287,6 +297,7 @@ export const DEFAULT_AGENT_PROFILE: AgentProfile = {
   useTodoTools: true,
   useSubagents: true,
   useTaskTools: false,
+  useMemoryTools: true,
   customInstructions: '',
   enabledServers: [],
   subagent: {
@@ -370,6 +381,7 @@ export const INIT_PROJECT_AGENTS_PROFILE: AgentProfile = {
   useTodoTools: false,
   useSubagents: false,
   useTaskTools: false,
+  useMemoryTools: false,
   toolApprovals: {
     ...DEFAULT_AGENT_PROFILE.toolApprovals,
     [`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_FILE_EDIT}`]: ToolApprovalState.Never,
@@ -390,6 +402,7 @@ export const COMPACT_CONVERSATION_AGENT_PROFILE: AgentProfile = {
   useTodoTools: false,
   useSubagents: false,
   useTaskTools: false,
+  useMemoryTools: false,
   toolApprovals: {
     ...DEFAULT_AGENT_PROFILE.toolApprovals,
     [`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_FILE_EDIT}`]: ToolApprovalState.Never,

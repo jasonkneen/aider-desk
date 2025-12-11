@@ -1,5 +1,14 @@
 import { v4 as uuidv4 } from 'uuid';
-import { ProviderProfile, ProjectData, ProjectSettings, SettingsData, ProjectStartMode, SuggestionMode, WindowState } from '@common/types';
+import {
+  ProviderProfile,
+  ProjectData,
+  ProjectSettings,
+  SettingsData,
+  ProjectStartMode,
+  SuggestionMode,
+  WindowState,
+  MemoryEmbeddingProvider,
+} from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
 
 import { migrateSettingsV0toV1 } from './migrations/v0-to-v1';
@@ -64,6 +73,11 @@ export const DEFAULT_SETTINGS: SettingsData = {
       username: '',
       password: '',
     },
+  },
+  memory: {
+    enabled: true,
+    provider: MemoryEmbeddingProvider.SentenceTransformers,
+    model: 'Xenova/all-MiniLM-L6-v2',
   },
 };
 
@@ -142,6 +156,7 @@ export class Store {
       },
       mcpServers: settings.mcpServers || DEFAULT_SETTINGS.mcpServers,
       server: settings.server || DEFAULT_SETTINGS.server,
+      memory: settings.memory || DEFAULT_SETTINGS.memory,
     };
   }
 

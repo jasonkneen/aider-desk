@@ -2,7 +2,7 @@ import { Font, ProjectData, SettingsData, Theme, AgentProfile } from '@common/ty
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
-import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer } from 'react-icons/fa';
+import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer, FaBrain } from 'react-icons/fa';
 import { MdTerminal } from 'react-icons/md';
 
 import { useApi } from '@/contexts/ApiContext';
@@ -11,6 +11,7 @@ import { GeneralSettings } from '@/components/settings/GeneralSettings';
 import { AgentSettings } from '@/components/settings/agent/AgentSettings';
 import { AboutSettings } from '@/components/settings/AboutSettings';
 import { ServerSettings } from '@/components/settings/ServerSettings';
+import { MemorySettings } from '@/components/settings/MemorySettings';
 
 type Props = {
   settings: SettingsData;
@@ -27,7 +28,7 @@ type Props = {
   openProjects?: ProjectData[];
 };
 
-type PageId = 'general' | 'aider' | 'agents' | 'server' | 'about';
+type PageId = 'general' | 'aider' | 'agents' | 'memory' | 'server' | 'about';
 
 interface SidebarItem {
   id: string;
@@ -61,6 +62,7 @@ export const Settings = ({
     general: true,
     aider: true,
     agents: true,
+    memory: true,
     server: true,
   });
   const contentRef = useRef<HTMLDivElement>(null);
@@ -111,6 +113,12 @@ export const Settings = ({
           label: project.baseDir.split('/').pop() || project.baseDir,
         })),
       ],
+    },
+    {
+      id: 'memory',
+      pageId: 'memory',
+      label: t('settings.tabs.memory'),
+      icon: <FaBrain className="w-4 h-4" />,
     },
     ...(isServerManagementSupported
       ? [
@@ -209,6 +217,8 @@ export const Settings = ({
             selectedProfileContext={selectedProfileContext}
           />
         );
+      case 'memory':
+        return <MemorySettings settings={settings.memory} setSettings={(memoryConfig) => updateSettings({ ...settings, memory: memoryConfig })} />;
       case 'server':
         return <ServerSettings settings={settings} setSettings={updateSettings} />;
       case 'about':

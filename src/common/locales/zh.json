@@ -354,6 +354,7 @@
       "aider": "Aider",
       "agents": "代理",
       "server": "服务器",
+      "memory": "记忆",
       "about": "关于"
     },
     "gui": "GUI",
@@ -546,6 +547,38 @@
       "markdownRendering": "启用 Markdown 渲染",
       "virtualizedRendering": "使用虚拟化渲染（实验性）",
       "virtualizedRenderingTooltip": "实验性功能，当您在对话历史中有大量消息时可以通过仅渲染可见消息来提高性能。"
+    },
+    "memory": {
+      "title": "记忆设置",
+      "description": "配置 AI 记忆功能以增强对话连续性和跨会话的上下文保留能力。",
+      "general": {
+        "title": "通用设置",
+        "enabled": {
+          "label": "启用记忆",
+          "description": "启用 AI 记忆功能以在对话和会话之间记住重要信息。"
+        },
+        "model": {
+          "label": "模型"
+        },
+        "device": {
+          "label": "设备",
+          "description": "选择用于记忆处理和存储操作的设备。"
+        },
+        "provider": {
+          "label": "嵌入提供商",
+          "description": "选择用于记忆功能的嵌入提供商"
+        }
+      },
+      "advanced": {
+        "title": "高级设置",
+        "currentConfig": "当前配置",
+        "storage": "存储信息",
+        "storageLocation": "存储位置"
+      },
+      "status": {
+        "enabled": "记忆功能已启用并激活",
+        "description": "AI 记忆功能当前正在存储和检索对话上下文以提高响应质量。"
+      }
     }
   },
   "messages": {
@@ -855,6 +888,31 @@
         "title": "抓取网页内容",
         "contentTruncated": "内容已截断。完整内容可在复制中查看。"
       }
+    },
+    "memory": {
+      "group": "记忆",
+      "storingMemory": "正在存储记忆...",
+      "retrievingMemories": "正在检索记忆...",
+      "deletingMemory": "正在删除记忆...",
+      "listingMemories": "正在列出记忆...",
+      "memoryStored": "记忆已存储。",
+      "memoryDeleted": "记忆已删除。",
+      "memoryId": "记忆ID",
+      "type": "类型",
+      "content": "内容",
+      "query": "查询",
+      "limit": "限制",
+      "foundMemories": "找到 {{count}} 条记忆。",
+      "noMemoriesFound": "未找到相关记忆。",
+      "noRelevantMemories": "未找到相关记忆",
+      "storedMemoryDetails": "存储的记忆详情",
+      "deletedMemoryDetails": "删除的记忆详情",
+      "retrievedMemories": "检索到的记忆",
+      "memoryList": "记忆列表",
+      "listedMemories": "正在列出记忆。",
+      "ofType": "类型为 {{type}}",
+      "noMemoriesOfType": "未找到类型为 {{type}} 的记忆",
+      "all": "全部"
     },
     "subagents": {
       "groupRunning": "{{name}}: 子代理正在工作...",

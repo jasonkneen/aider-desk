@@ -72,6 +72,8 @@ export class EventsHandler {
     void this.projectManager.settingsChanged(oldSettings, newSettings);
     this.telemetryManager.settingsChanged(oldSettings, newSettings);
 
+    // Memory configuration changes require restart to take effect
+
     return this.store.getSettings();
   }
 

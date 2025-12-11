@@ -135,8 +135,8 @@ export const McpServerForm = ({ onSave, onCancel, servers }: Props) => {
   };
 
   return (
-    <div>
-      <div className="flex items-center space-between mb-3 text-text-primary w-full">
+    <div className="flex flex-col max-w-[960px] mx-auto p-10 h-full">
+      <div className="flex items-center space-between mb-3 text-text-primary">
         <div className="text-md font-medium uppercase flex-1">
           {servers && servers.length === 1
             ? t('mcpServer.editServer', { name: servers[0].name })
@@ -151,7 +151,7 @@ export const McpServerForm = ({ onSave, onCancel, servers }: Props) => {
           </div>
         )}
       </div>
-      <div className="mb-2">
+      <div className="mb-2 flex-grow max-h-[600px]">
         <TextArea
           placeholder={t('mcpServer.pasteServerAs', {
             example: MCP_SERVER_EXAMPLE_JSON,
@@ -160,7 +160,7 @@ export const McpServerForm = ({ onSave, onCancel, servers }: Props) => {
           })}
           value={configJSON}
           onChange={handleChange}
-          className={`w-full h-96 p-2 resize-none ${configJSON && !isValidJson ? 'border-error-emphasis focus:border-error-emphasis' : ''}`}
+          className={`w-full h-full p-2 resize-none ${configJSON && !isValidJson ? 'border-error-emphasis focus:border-error-emphasis' : ''}`}
         />
       </div>
       <div className="flex justify-between items-center gap-2">

@@ -356,6 +356,7 @@ export interface AgentProfile {
   useTodoTools: boolean;
   useSubagents: boolean;
   useTaskTools: boolean;
+  useMemoryTools: boolean;
   customInstructions: string;
   subagent: SubagentConfig;
   isSubagent?: boolean; // flag to indicate if this profile is being used as a subagent
@@ -408,6 +409,16 @@ export const FONTS = [
 ] as const;
 export type Font = (typeof FONTS)[number];
 
+export enum MemoryEmbeddingProvider {
+  SentenceTransformers = 'sentence-transformers',
+}
+
+export interface MemoryConfig {
+  enabled: boolean;
+  provider: MemoryEmbeddingProvider;
+  model: string;
+}
+
 export interface SettingsData {
   onboardingFinished?: boolean;
   language: string;
@@ -458,6 +469,7 @@ export interface SettingsData {
       password: string;
     };
   };
+  memory: MemoryConfig;
 }
 
 export interface ProviderProfile {
@@ -723,4 +735,19 @@ export interface TerminalExitData {
   taskId: string;
   exitCode: number;
   signal?: number;
+}
+
+export enum MemoryEntryType {
+  Task = 'task',
+  UserPreference = 'user-preference',
+  CodePattern = 'code-pattern',
+}
+
+export interface MemoryEntry {
+  id: string;
+  content: string;
+  type: MemoryEntryType;
+  taskId?: string;
+  projectId?: string;
+  timestamp: number;
 }

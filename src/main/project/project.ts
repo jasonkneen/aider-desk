@@ -17,6 +17,7 @@ import { EventManager } from '@/events';
 import { Task } from '@/task';
 import { migrateSessionsToTasks } from '@/project/migrations';
 import { WorktreeManager } from '@/worktrees';
+import { MemoryManager } from '@/memory/memory-manager';
 import { AIDER_DESK_WATCH_FILES_LOCK } from '@/constants';
 import { determineMainModel, determineWeakModel } from '@/utils';
 
@@ -40,6 +41,7 @@ export class Project {
     private readonly modelManager: ModelManager,
     private readonly worktreeManager: WorktreeManager,
     private readonly agentProfileManager: AgentProfileManager,
+    private readonly memoryManager: MemoryManager,
   ) {
     this.customCommandManager = new CustomCommandManager(this);
     // initialize global task
@@ -107,6 +109,7 @@ export class Project {
       this.eventManager,
       this.modelManager,
       this.worktreeManager,
+      this.memoryManager,
       initialTaskData,
     );
     this.tasks.set(taskId, task);
