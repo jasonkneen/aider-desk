@@ -53,11 +53,15 @@ export class MemoryManager {
       if (!this.embeddingPipelinePromise) {
         logger.info('Loading local embedding model... (this may take a moment on first run)');
         // @ts-expect-error type is too complex
-        this.embeddingPipelinePromise = pipeline('feature-extraction', config.model);
-        await this.embeddingPipelinePromise;
+        this.embeddingPipelinePromise = pipeline('feature-extraction', config.model, {
+          progress_callback: (progress) => {
+            logger.info('Loading local embedding model:', { progress: progress.status });
+          },
+        });
+        this.embeddingPipelinePromise.then(() => {
+          this.isInitialized = true;
+        });
       }
-
-      this.isInitialized = true;
 
       logger.info('Memory manager initialized successfully');
     } catch (error) {
@@ -146,8 +150,9 @@ export class MemoryManager {
    * @param projectId - The project to filter by
    * @param query - The user's search query
    * @param limit - Max number of memories to return (default 5)
+   * @param maxDistance - Maximum distance threshold for filtering (optional)
    */
-  async retrieveMemories(projectId: string, query: string, limit: number = 5): Promise<MemoryEntry[]> {
+  async retrieveMemories(projectId: string, query: string, limit: number = 5, maxDistance = 1.5): Promise<MemoryEntry[]> {
     if (!(await this.waitForInit()) || !this.isMemoryEnabled() || !this.db) {
       return [];
     }
@@ -158,25 +163,30 @@ export class MemoryManager {
 
     const queryVector = await this.getEmbedding(query);
 
-    // Perform Vector Search + SQL Filtering
+    // Perform Vector Search + SQL Filtering with distance information
     const results = await this.table
       .query()
       .nearestTo(queryVector) // Vector similarity search
       .where(`projectid = '${projectId}'`) // SQL-like filtering for the project
       .limit(limit)
-      .select(['id', 'content', 'type', 'timestamp', 'projectid', 'taskid'])
+      .select(['id', 'content', 'type', 'timestamp', 'projectid', 'taskid', '_distance'])
       .toArray();
+
+    // Filter by distance if threshold is provided
+    const filteredResults = maxDistance !== undefined ? results.filter((result) => (result._distance as number) <= maxDistance) : results;
 
     // Map results back to MemoryEntry interface
     // Note: LanceDB returns rows, we cast them to our interface
-    return results.map((result) => ({
-      id: result.id as string,
-      content: result.content as string,
-      type: result.type as MemoryEntryType,
-      timestamp: result.timestamp as number,
-      projectId: result.projectid as string,
-      taskId: result.taskid as string,
-    }));
+    return filteredResults.map((result) => {
+      return {
+        id: result.id as string,
+        content: result.content as string,
+        type: result.type as MemoryEntryType,
+        timestamp: result.timestamp as number,
+        projectId: result.projectid as string,
+        taskId: result.taskid as string,
+      };
+    });
   }
 
   async getMemory(id: string): Promise<MemoryEntry | null> {
