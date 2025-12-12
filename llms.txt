@@ -73,6 +73,7 @@ src/
         aider.ts
         approval-manager.ts
         helpers.ts
+        memory.ts
         power.ts
         subagents.ts
         tasks.ts
@@ -97,6 +98,8 @@ src/
     events/
       event-manager.ts
       index.ts
+    memory/
+      memory-manager.ts
     models/
       providers/
         anthropic.ts
@@ -270,6 +273,7 @@ src/
           CopyMessageButton.tsx
           CreateTaskToolMessage.tsx
           CustomCommandBashBlock.tsx
+          DeleteMemoryToolMessage.tsx
           DeleteTaskToolMessage.tsx
           ExpandableMessageBlock.tsx
           FetchToolMessage.tsx
@@ -282,6 +286,7 @@ src/
           GrepToolMessage.tsx
           GroupMessageBlock.tsx
           index.ts
+          ListMemoriesToolMessage.tsx
           ListTasksToolMessage.tsx
           LoadingMessageBlock.tsx
           LogMessageBlock.tsx
@@ -290,7 +295,9 @@ src/
           Messages.tsx
           ReflectedMessageBlock.tsx
           ResponseMessageBlock.tsx
+          RetrieveMemoryToolMessage.tsx
           SemanticSearchToolMessage.tsx
+          StoreMemoryToolMessage.tsx
           SubagentToolMessage.tsx
           ThinkingAnswerBlock.tsx
           ToolMessageBlock.tsx
@@ -393,6 +400,7 @@ src/
           AiderSettings.tsx
           GeneralSettings.tsx
           LanguageSelector.tsx
+          MemorySettings.tsx
           ServerSettings.tsx
           SettingsPage.tsx
         terminal/
@@ -1592,6 +1600,7 @@ File: src/common/locales/en.json
       "aider": "Aider",
       "agents": "Agents",
       "server": "Server",
+      "memory": "Memory",
       "about": "About"
     },
     "gui": "Appearance",
@@ -1826,6 +1835,21 @@ File: src/common/locales/en.json
       "markdownRendering": "Markdown rendering",
       "virtualizedRendering": "Use virtualized rendering (experimental)",
       "virtualizedRenderingTooltip": "Experimental feature that can improve performance when you have many messages in your conversation history by only rendering visible messages."
+    },
+    "memory": {
+      "title": "Memory",
+      "description": "Configure AI memory features to enhance conversation continuity and context retention across sessions.",
+      "enabled": {
+        "label": "Enable",
+        "description": "Enable AI memory to remember important information across conversations and sessions."
+      },
+      "model": {
+        "label": "Model"
+      },
+      "provider": {
+        "label": "Embedding Provider",
+        "description": "Choose the embedding provider to use for memory functionality"
+      }
     }
   },
   "messages": {
@@ -2120,6 +2144,31 @@ File: src/common/locales/en.json
         "title": "Fetch",
         "contentTruncated": "Content truncated. Full content available in copy."
       }
+    },
+    "memory": {
+      "group": "Memory",
+      "storingMemory": "Storing memory...",
+      "retrievingMemories": "Retrieving memories...",
+      "deletingMemory": "Deleting memory...",
+      "listingMemories": "Listing memories...",
+      "memoryStored": "Memory stored.",
+      "memoryDeleted": "Memory deleted.",
+      "memoryId": "Memory ID",
+      "type": "Type",
+      "content": "Content",
+      "query": "Query",
+      "limit": "Limit",
+      "foundMemories": "Found {{count}} memories.",
+      "noMemoriesFound": "No relevant memories have been found.",
+      "noRelevantMemories": "No relevant memories have been found",
+      "storedMemoryDetails": "Stored Memory Details",
+      "deletedMemoryDetails": "Deleted Memory Details",
+      "retrievedMemories": "Retrieved Memories",
+      "memoryList": "Memory List",
+      "listedMemories": "Listing {{count}} memories.",
+      "ofType": "of type {{type}}",
+      "noMemoriesOfType": "No memories found of type: {{type}}",
+      "all": "All"
     },
     "subagents": {
       "groupRunning": "{{name}}: Subagent is working...",
@@ -2756,6 +2805,7 @@ File: src/common/locales/zh.json
       "aider": "Aider",
       "agents": "代理",
       "server": "服务器",
+      "memory": "记忆",
       "about": "关于"
     },
     "gui": "GUI",
@@ -2948,6 +2998,38 @@ File: src/common/locales/zh.json
       "markdownRendering": "启用 Markdown 渲染",
       "virtualizedRendering": "使用虚拟化渲染（实验性）",
       "virtualizedRenderingTooltip": "实验性功能，当您在对话历史中有大量消息时可以通过仅渲染可见消息来提高性能。"
+    },
+    "memory": {
+      "title": "记忆设置",
+      "description": "配置 AI 记忆功能以增强对话连续性和跨会话的上下文保留能力。",
+      "general": {
+        "title": "通用设置",
+        "enabled": {
+          "label": "启用记忆",
+          "description": "启用 AI 记忆功能以在对话和会话之间记住重要信息。"
+        },
+        "model": {
+          "label": "模型"
+        },
+        "device": {
+          "label": "设备",
+          "description": "选择用于记忆处理和存储操作的设备。"
+        },
+        "provider": {
+          "label": "嵌入提供商",
+          "description": "选择用于记忆功能的嵌入提供商"
+        }
+      },
+      "advanced": {
+        "title": "高级设置",
+        "currentConfig": "当前配置",
+        "storage": "存储信息",
+        "storageLocation": "存储位置"
+      },
+      "status": {
+        "enabled": "记忆功能已启用并激活",
+        "description": "AI 记忆功能当前正在存储和检索对话上下文以提高响应质量。"
+      }
     }
   },
   "messages": {
@@ -3257,6 +3339,31 @@ File: src/common/locales/zh.json
         "title": "抓取网页内容",
         "contentTruncated": "内容已截断。完整内容可在复制中查看。"
       }
+    },
+    "memory": {
+      "group": "记忆",
+      "storingMemory": "正在存储记忆...",
+      "retrievingMemories": "正在检索记忆...",
+      "deletingMemory": "正在删除记忆...",
+      "listingMemories": "正在列出记忆...",
+      "memoryStored": "记忆已存储。",
+      "memoryDeleted": "记忆已删除。",
+      "memoryId": "记忆ID",
+      "type": "类型",
+      "content": "内容",
+      "query": "查询",
+      "limit": "限制",
+      "foundMemories": "找到 {{count}} 条记忆。",
+      "noMemoriesFound": "未找到相关记忆。",
+      "noRelevantMemories": "未找到相关记忆",
+      "storedMemoryDetails": "存储的记忆详情",
+      "deletedMemoryDetails": "删除的记忆详情",
+      "retrievedMemories": "检索到的记忆",
+      "memoryList": "记忆列表",
+      "listedMemories": "正在列出记忆。",
+      "ofType": "类型为 {{type}}",
+      "noMemoriesOfType": "未找到类型为 {{type}} 的记忆",
+      "all": "全部"
     },
     "subagents": {
       "groupRunning": "{{name}}: 子代理正在工作...",
@@ -3597,6 +3704,11 @@ import {
   TASKS_TOOL_GROUP_NAME,
   TASKS_TOOL_LIST_TASKS,
   TOOL_GROUP_NAME_SEPARATOR,
+  MEMORY_TOOL_DELETE,
+  MEMORY_TOOL_GROUP_NAME,
+  MEMORY_TOOL_LIST,
+  MEMORY_TOOL_RETRIEVE,
+  MEMORY_TOOL_STORE,
 } from '@common/tools';
 ⋮----
 export type LlmProviderName =
@@ -3788,6 +3900,8 @@ export type LlmProvider =
 // subagent tools
 ⋮----
 // task tools
+⋮----
+// memory tools
 ⋮----
 // Power tools
 ⋮----
@@ -4360,6 +4474,7 @@ export interface AgentProfile {
   useTodoTools: boolean;
   useSubagents: boolean;
   useTaskTools: boolean;
+  useMemoryTools: boolean;
   customInstructions: string;
   subagent: SubagentConfig;
   isSubagent?: boolean; // flag to indicate if this profile is being used as a subagent
@@ -4383,6 +4498,16 @@ export interface EnvironmentVariable {
 export type Theme = (typeof THEMES)[number];
 ⋮----
 export type Font = (typeof FONTS)[number];
+⋮----
+export enum MemoryEmbeddingProvider {
+  SentenceTransformers = 'sentence-transformers',
+}
+⋮----
+export interface MemoryConfig {
+  enabled: boolean;
+  provider: MemoryEmbeddingProvider;
+  model: string;
+}
 ⋮----
 export interface SettingsData {
   onboardingFinished?: boolean;
@@ -4434,6 +4559,7 @@ export interface SettingsData {
       password: string;
     };
   };
+  memory: MemoryConfig;
 }
 ⋮----
 export interface ProviderProfile {
@@ -4670,6 +4796,21 @@ export interface TerminalExitData {
   exitCode: number;
   signal?: number;
 }
+⋮----
+export enum MemoryEntryType {
+  Task = 'task',
+  UserPreference = 'user-preference',
+  CodePattern = 'code-pattern',
+}
+⋮----
+export interface MemoryEntry {
+  id: string;
+  content: string;
+  type: MemoryEntryType;
+  taskId?: string;
+  projectId?: string;
+  timestamp: number;
+}
 
 ================
 File: src/common/utils.ts
@@ -4850,6 +4991,36 @@ export const createHelpersToolset = (): ToolSet =>
 // This tool informs the LLM about the argument validation error.
 
 ================
+File: src/main/agent/tools/memory.ts
+================
+import { tool, type ToolSet } from 'ai';
+import { z } from 'zod';
+import { AgentProfile, MemoryEntryType, PromptContext, ToolApprovalState } from '@common/types';
+import {
+  MEMORY_TOOL_DELETE as TOOL_DELETE,
+  MEMORY_TOOL_DESCRIPTIONS,
+  MEMORY_TOOL_LIST as TOOL_LIST,
+  MEMORY_TOOL_RETRIEVE as TOOL_RETRIEVE,
+  MEMORY_TOOL_STORE as TOOL_STORE,
+  MEMORY_TOOL_GROUP_NAME as TOOL_GROUP_NAME,
+  TOOL_GROUP_NAME_SEPARATOR,
+} from '@common/tools';
+⋮----
+import { ApprovalManager } from './approval-manager';
+⋮----
+import { MemoryManager } from '@/memory/memory-manager';
+import { Task } from '@/task';
+import logger from '@/logger';
+⋮----
+export const createMemoryToolset = (task: Task, profile: AgentProfile, memoryManager: MemoryManager, promptContext?: PromptContext): ToolSet =>
+⋮----
+// Get the memory to show its content in the approval question
+⋮----
+// Filter by project and type if specified
+⋮----
+// Filter out tools that are set to Never in toolApprovals
+
+================
 File: src/main/agent/tools/power.ts
 ================
 import fs from 'fs/promises';
@@ -4965,6 +5136,7 @@ const generateSubagentsRunTaskDescription = (): string =>
 ⋮----
 useTodoTools: false, // Disable todo tools for simplicity,
 useSubagents: false, // Disable nested subagents
+useMemoryTools: targetSubagent.useMemoryTools ?? false, // Use memory tools if enabled, false by default
 ⋮----
 // Create promptContext with working group
 ⋮----
@@ -5323,11 +5495,13 @@ import { createTasksToolset } from './tools/tasks';
 import { getSystemPrompt } from './prompts';
 import { createAiderToolset } from './tools/aider';
 import { createHelpersToolset } from './tools/helpers';
+import { createMemoryToolset } from './tools/memory';
 import { MCP_CLIENT_TIMEOUT, McpManager } from './mcp-manager';
 import { ApprovalManager } from './tools/approval-manager';
 import { ANSWER_RESPONSE_START_TAG, extractPromptContextFromToolResult, THINKING_RESPONSE_STAR_TAG } from './utils';
 import { extractReasoningMiddleware } from './middlewares/extract-reasoning-middleware';
 ⋮----
+import { MemoryManager } from '@/memory/memory-manager';
 import { AIDER_DESK_PROJECT_RULES_DIR } from '@/constants';
 import { Task } from '@/task';
 import { Store } from '@/store';
@@ -5642,13 +5816,16 @@ private compareServerConfig(config: McpServerConfig, otherConfig: McpServerConfi
 ================
 File: src/main/agent/optimizer.ts
 ================
-import { type AgentProfile, InvocationMode, type TaskData } from '@common/types';
+import { type AgentProfile, InvocationMode, type TaskData, ToolApprovalState } from '@common/types';
 import { isSubagentEnabled } from '@common/agent';
 import { cloneDeep } from 'lodash';
 import { type ModelMessage, type ToolContent, type ToolResultPart, type UserModelMessage } from 'ai';
 import {
   AIDER_TOOL_GROUP_NAME,
   AIDER_TOOL_RUN_PROMPT,
+  MEMORY_TOOL_GROUP_NAME,
+  MEMORY_TOOL_RETRIEVE,
+  MEMORY_TOOL_STORE,
   SUBAGENTS_TOOL_GROUP_NAME,
   SUBAGENTS_TOOL_RUN_TASK,
   TODO_TOOL_GET_ITEMS,
@@ -5751,7 +5928,7 @@ import path from 'path';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
 ⋮----
-import { AgentProfile, ToolApprovalState } from '@common/types';
+import { AgentProfile, SettingsData, ToolApprovalState } from '@common/types';
 import {
   AIDER_TOOL_ADD_CONTEXT_FILES,
   AIDER_TOOL_DROP_CONTEXT_FILES,
@@ -5774,12 +5951,31 @@ import {
   TODO_TOOL_SET_ITEMS,
   TODO_TOOL_UPDATE_ITEM_COMPLETION,
   TOOL_GROUP_NAME_SEPARATOR,
+  MEMORY_TOOL_DELETE,
+  MEMORY_TOOL_GROUP_NAME,
+  MEMORY_TOOL_LIST,
+  MEMORY_TOOL_RETRIEVE,
+  MEMORY_TOOL_STORE,
 } from '@common/tools';
 ⋮----
 import logger from '@/logger';
 import { Task } from '@/task';
 ⋮----
-export const getSystemPrompt = async (task: Task, agentProfile: AgentProfile, autoApprove = task.task.autoApprove, additionalInstructions?: string) =>
+const generateWorkflow = (
+  autoApprove: boolean,
+  useSubagents: boolean,
+  usePowerTools: boolean,
+  retrieveMemoryAllowed: boolean,
+  storeMemoryAllowed: boolean,
+): string =>
+⋮----
+export const getSystemPrompt = async (
+  settings: SettingsData,
+  task: Task,
+  agentProfile: AgentProfile,
+  autoApprove = task.task.autoApprove ?? false,
+  additionalInstructions?: string,
+) =>
 ⋮----
 // Check individual power tool permissions
 ⋮----
@@ -6241,6 +6437,89 @@ private broadcastToEventConnectors(eventType: string, data: unknown): void
 File: src/main/events/index.ts
 ================
 
+
+================
+File: src/main/memory/memory-manager.ts
+================
+import { FeatureExtractionPipeline, pipeline } from '@huggingface/transformers';
+import { MemoryEntry, MemoryEntryType } from '@common/types';
+import { v4 as uuidv4 } from 'uuid';
+⋮----
+import { AIDER_DESK_MEMORY_FILE } from '@/constants';
+import logger from '@/logger';
+import { Store } from '@/store';
+⋮----
+export class MemoryManager
+⋮----
+constructor(private readonly store: Store)
+⋮----
+/**
+   * Initialize the database connection and the local embedding model.
+   * This must be called before using other methods.
+   */
+public async init(): Promise<void>
+⋮----
+// 1. Initialize the Database
+// Ensure directory exists
+⋮----
+// Check if table exists, if not, we create it lazily on the first add
+⋮----
+// 2. Initialize Local Embedding Model (Singleton pattern for the pipeline)
+⋮----
+// @ts-expect-error type is too complex
+⋮----
+private async waitForInit(): Promise<boolean>
+⋮----
+/**
+   * Generates a vector embedding for the given text using the local model.
+   */
+private async getEmbedding(text: string): Promise<number[]>
+⋮----
+// Generate embedding
+// pooling: 'mean' averages the token vectors to get a single sentence vector
+// normalize: true ensures the vector is unit length for cosine similarity
+⋮----
+// Convert Float32Array to standard number array for LanceDB
+⋮----
+/**
+   * Creates and stores a new memory for a specific project.
+   */
+async storeMemory(projectId: string, taskId: string, type: MemoryEntryType, content: string)
+⋮----
+// Create the table if it doesn't exist yet
+⋮----
+// Add to existing table
+⋮----
+/**
+   * Retrieves memories for a specific project relevant to the user's query.
+   * @param projectId - The project to filter by
+   * @param query - The user's search query
+   * @param limit - Max number of memories to return (default 5)
+   */
+async retrieveMemories(projectId: string, query: string, limit: number = 5): Promise<MemoryEntry[]>
+⋮----
+return []; // No memories exist yet
+⋮----
+// Perform Vector Search + SQL Filtering
+⋮----
+.nearestTo(queryVector) // Vector similarity search
+.where(`projectid = '${projectId}'`) // SQL-like filtering for the project
+⋮----
+// Map results back to MemoryEntry interface
+// Note: LanceDB returns rows, we cast them to our interface
+⋮----
+async getMemory(id: string): Promise<MemoryEntry | null>
+⋮----
+async deleteMemory(id: string): Promise<boolean>
+⋮----
+async getAllMemories(): Promise<MemoryEntry[]>
+⋮----
+// Map results back to MemoryEntry interface
+// Note: LanceDB returns rows, we cast them to our interface
+⋮----
+async clearAllMemories(): Promise<boolean>
+⋮----
+isMemoryEnabled(): boolean
 
 ================
 File: src/main/models/providers/anthropic.ts
@@ -7684,6 +7963,7 @@ import { Store } from '@/store';
 import { EventManager } from '@/events';
 import { ModelManager } from '@/models';
 import { WorktreeManager } from '@/worktrees';
+import { MemoryManager } from '@/memory/memory-manager';
 ⋮----
 export class ProjectManager
 ⋮----
@@ -7735,6 +8015,7 @@ import { EventManager } from '@/events';
 import { Task } from '@/task';
 import { migrateSessionsToTasks } from '@/project/migrations';
 import { WorktreeManager } from '@/worktrees';
+import { MemoryManager } from '@/memory/memory-manager';
 import { AIDER_DESK_WATCH_FILES_LOCK } from '@/constants';
 import { determineMainModel, determineWeakModel } from '@/utils';
 ⋮----
@@ -7750,6 +8031,7 @@ constructor(
     private readonly modelManager: ModelManager,
     private readonly worktreeManager: WorktreeManager,
     private readonly agentProfileManager: AgentProfileManager,
+    private readonly memoryManager: MemoryManager,
 )
 ⋮----
 // initialize global task
@@ -8518,7 +8800,16 @@ File: src/main/store/index.ts
 File: src/main/store/store.ts
 ================
 import { v4 as uuidv4 } from 'uuid';
-import { ProviderProfile, ProjectData, ProjectSettings, SettingsData, ProjectStartMode, SuggestionMode, WindowState } from '@common/types';
+import {
+  ProviderProfile,
+  ProjectData,
+  ProjectSettings,
+  SettingsData,
+  ProjectStartMode,
+  SuggestionMode,
+  WindowState,
+  MemoryEmbeddingProvider,
+} from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
 ⋮----
 import { migrateSettingsV0toV1 } from './migrations/v0-to-v1';
@@ -8962,6 +9253,7 @@ import { ContextManager } from '@/task/context-manager';
 import { Project } from '@/project';
 import { AiderManager } from '@/task/aider-manager';
 import { WorktreeManager } from '@/worktrees';
+import { MemoryManager } from '@/memory/memory-manager';
 import { getElectronApp } from '@/app';
 ⋮----
 export class Task
@@ -8978,6 +9270,7 @@ constructor(
     private readonly eventManager: EventManager,
     private readonly modelManager: ModelManager,
     private readonly worktreeManager: WorktreeManager,
+    private readonly memoryManager: MemoryManager,
     initialTaskData?: Partial<TaskData>,
 )
 ⋮----
@@ -10662,6 +10955,8 @@ loadSettings(): SettingsData
 ⋮----
 async saveSettings(newSettings: SettingsData): Promise<SettingsData>
 ⋮----
+// Memory configuration changes require restart to take effect
+⋮----
 getProjectSettings(baseDir: string): ProjectSettings
 ⋮----
 patchProjectSettings(baseDir: string, settings: Partial<ProjectSettings>): ProjectSettings
@@ -10966,7 +11261,7 @@ import { createServer } from 'http';
 ⋮----
 import type { BrowserWindow } from 'electron';
 ⋮----
-import { McpManager, AgentProfileManager } from '@/agent';
+import { AgentProfileManager, McpManager } from '@/agent';
 import { CloudflareTunnelManager, ServerController } from '@/server';
 import { ConnectorManager } from '@/connector';
 import { ProjectManager } from '@/project';
@@ -10977,6 +11272,7 @@ import { TerminalManager } from '@/terminal';
 import { VersionsManager } from '@/versions';
 import { TelemetryManager } from '@/telemetry';
 import { WorktreeManager } from '@/worktrees';
+import { MemoryManager } from '@/memory/memory-manager';
 import { Store } from '@/store';
 import { SERVER_PORT } from '@/constants';
 import logger from '@/logger';
@@ -10999,6 +11295,8 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
 // Initialize model manager
 ⋮----
 // Initialize data manager
+⋮----
+// Initialize memory manager
 ⋮----
 // Initialize agent profile manager
 ⋮----
@@ -12936,6 +13234,27 @@ type Props = {
 const toggleAccordion = () =>
 
 ================
+File: src/renderer/src/components/message/DeleteMemoryToolMessage.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { FaBrain, FaCheckCircle, FaExclamationTriangle, FaTimesCircle } from 'react-icons/fa';
+import { CgSpinner } from 'react-icons/cg';
+⋮----
+import { ToolMessage } from '@/types/message';
+import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+⋮----
+type Props = {
+  message: ToolMessage;
+  onRemove?: () => void;
+  compact?: boolean;
+};
+⋮----
+{/* Memory Details */}
+⋮----
+return <ExpandableMessageBlock title=
+
+================
 File: src/renderer/src/components/message/DeleteTaskToolMessage.tsx
 ================
 import { useTranslation } from 'react-i18next';
@@ -13241,6 +13560,32 @@ File: src/renderer/src/components/message/index.ts
 
 
 ================
+File: src/renderer/src/components/message/ListMemoriesToolMessage.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { FaBrain, FaCheckCircle, FaExclamationTriangle, FaTimesCircle } from 'react-icons/fa';
+import { CgSpinner } from 'react-icons/cg';
+⋮----
+import { ToolMessage } from '@/types/message';
+import { CodeInline } from '@/components/common/CodeInline';
+import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+⋮----
+type Props = {
+  message: ToolMessage;
+  onRemove?: () => void;
+  compact?: boolean;
+};
+⋮----
+// Handle array data (new format)
+⋮----
+{/* Memory List */}
+⋮----
+// Fallback for unexpected content (backward compatibility)
+⋮----
+return <ExpandableMessageBlock title=
+
+================
 File: src/renderer/src/components/message/ListTasksToolMessage.tsx
 ================
 import { useTranslation } from 'react-i18next';
@@ -13362,6 +13707,11 @@ import {
   HELPERS_TOOL_GROUP_NAME,
   HELPERS_TOOL_INVALID_TOOL_ARGUMENTS,
   HELPERS_TOOL_NO_SUCH_TOOL,
+  MEMORY_TOOL_GROUP_NAME,
+  MEMORY_TOOL_STORE,
+  MEMORY_TOOL_RETRIEVE,
+  MEMORY_TOOL_DELETE,
+  MEMORY_TOOL_LIST,
   POWER_TOOL_BASH,
   POWER_TOOL_FETCH,
   POWER_TOOL_FILE_EDIT,
@@ -13402,6 +13752,10 @@ import { GetTaskToolMessage } from './GetTaskToolMessage';
 import { GetTaskMessageToolMessage } from './GetTaskMessageToolMessage';
 import { CreateTaskToolMessage } from './CreateTaskToolMessage';
 import { DeleteTaskToolMessage } from './DeleteTaskToolMessage';
+import { StoreMemoryToolMessage } from './StoreMemoryToolMessage';
+import { RetrieveMemoryToolMessage } from './RetrieveMemoryToolMessage';
+import { DeleteMemoryToolMessage } from './DeleteMemoryToolMessage';
+import { ListMemoriesToolMessage } from './ListMemoriesToolMessage';
 import { areMessagesEqual } from './utils';
 ⋮----
 import {
@@ -13520,6 +13874,31 @@ export const ResponseMessageBlock = (
 className=
 
 ================
+File: src/renderer/src/components/message/RetrieveMemoryToolMessage.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { FaBrain, FaCheckCircle, FaExclamationTriangle, FaTimesCircle } from 'react-icons/fa';
+import { CgSpinner } from 'react-icons/cg';
+⋮----
+import { ToolMessage } from '@/types/message';
+import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+⋮----
+type Props = {
+  message: ToolMessage;
+  onRemove?: () => void;
+  compact?: boolean;
+};
+⋮----
+{/* Query parameters */}
+⋮----
+{/* Memory List */}
+⋮----
+// Fallback for unexpected content (backward compatibility)
+⋮----
+return <ExpandableMessageBlock title=
+
+================
 File: src/renderer/src/components/message/SemanticSearchToolMessage.tsx
 ================
 import { useTranslation } from 'react-i18next';
@@ -13537,6 +13916,27 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
 };
+⋮----
+return <ExpandableMessageBlock title=
+
+================
+File: src/renderer/src/components/message/StoreMemoryToolMessage.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { FaBrain, FaCheckCircle, FaExclamationTriangle, FaTimesCircle } from 'react-icons/fa';
+import { CgSpinner } from 'react-icons/cg';
+⋮----
+import { ToolMessage } from '@/types/message';
+import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+⋮----
+type Props = {
+  message: ToolMessage;
+  onRemove?: () => void;
+  compact?: boolean;
+};
+⋮----
+{/* Memory Details */}
 ⋮----
 return <ExpandableMessageBlock title=
 
@@ -16559,7 +16959,7 @@ import {
 } from '@common/types';
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { FaChevronLeft, FaChevronRight, FaList, FaPaste, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes } from 'react-icons/fa';
+import { FaChevronLeft, FaChevronRight, FaList, FaPaste, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes, FaBrain } from 'react-icons/fa';
 import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat } from 'react-icons/md';
 import { DEFAULT_AGENT_PROFILE, DEFAULT_MODEL_TEMPERATURE, AVAILABLE_PROVIDERS, getProviderModelId } from '@common/agent';
 import { BiTrash } from 'react-icons/bi';
@@ -16597,6 +16997,12 @@ import {
   TASKS_TOOL_GET_TASK_MESSAGE,
   TASKS_TOOL_GROUP_NAME,
   TASKS_TOOL_LIST_TASKS,
+  MEMORY_TOOL_DELETE,
+  MEMORY_TOOL_DESCRIPTIONS,
+  MEMORY_TOOL_GROUP_NAME,
+  MEMORY_TOOL_LIST,
+  MEMORY_TOOL_RETRIEVE,
+  MEMORY_TOOL_STORE,
 } from '@common/tools';
 import { useTranslation } from 'react-i18next';
 import { FaArrowRightFromBracket } from 'react-icons/fa6';
@@ -17105,6 +17511,33 @@ type Props = {
 };
 ⋮----
 export const LanguageSelector = (
+
+================
+File: src/renderer/src/components/settings/MemorySettings.tsx
+================
+import { MemoryConfig, MemoryEmbeddingProvider } from '@common/types';
+import { useTranslation } from 'react-i18next';
+⋮----
+import { Checkbox } from '../common/Checkbox';
+import { Select } from '../common/Select';
+import { Section } from '../common/Section';
+⋮----
+type Props = {
+  settings: MemoryConfig;
+  setSettings: (settings: MemoryConfig) => void;
+};
+⋮----
+const handleEnabledChange = (enabled: boolean) =>
+⋮----
+const handleModelChange = (model: string) =>
+⋮----
+const handleProviderChange = (provider: string) =>
+⋮----
+{/* Enable Memory */}
+⋮----
+{/* Provider Selection */}
+⋮----
+{/* Model Selection */}
 
 ================
 File: src/renderer/src/components/settings/ServerSettings.tsx
@@ -18971,7 +19404,7 @@ import { Font, ProjectData, SettingsData, Theme, AgentProfile } from '@common/ty
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
-import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer } from 'react-icons/fa';
+import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer, FaBrain } from 'react-icons/fa';
 import { MdTerminal } from 'react-icons/md';
 ⋮----
 import { useApi } from '@/contexts/ApiContext';
@@ -18980,6 +19413,7 @@ import { GeneralSettings } from '@/components/settings/GeneralSettings';
 import { AgentSettings } from '@/components/settings/agent/AgentSettings';
 import { AboutSettings } from '@/components/settings/AboutSettings';
 import { ServerSettings } from '@/components/settings/ServerSettings';
+import { MemorySettings } from '@/components/settings/MemorySettings';
 ⋮----
 type Props = {
   settings: SettingsData;
@@ -18996,7 +19430,7 @@ type Props = {
   openProjects?: ProjectData[];
 };
 ⋮----
-type PageId = 'general' | 'aider' | 'agents' | 'server' | 'about';
+type PageId = 'general' | 'aider' | 'agents' | 'memory' | 'server' | 'about';
 ⋮----
 interface SidebarItem {
   id: string;
@@ -19005,6 +19439,21 @@ interface SidebarItem {
   children?: { id: string; label: string }[];
   pageId: PageId;
 }
+⋮----
+export const Settings = ({
+  settings,
+  updateSettings,
+  onLanguageChange,
+  onZoomChange,
+  onThemeChange,
+  onFontChange,
+  onFontSizeChange,
+  initialPageId,
+  initialOptions,
+  agentProfiles,
+  setAgentProfiles,
+  openProjects,
+}: Props) =>
 ⋮----
 const scrollToSection = (sectionId: string) =>
 ⋮----
@@ -19019,6 +19468,8 @@ const handleChildClick = (pageId: PageId, sectionId: string) =>
 // Extract project baseDir from sectionId (format: agent-{baseDir})
 ⋮----
 const renderContent = () =>
+⋮----
+return <MemorySettings settings=
 ⋮----
 {/* Sidebar */}
 ⋮----
@@ -21260,13 +21711,13 @@ File: package.json
     "start:server": "AIDER_DESK_HEADLESS=true node out/server/runner.js"
   },
   "dependencies": {
-    "@ai-sdk/amazon-bedrock": "^3.0.67",
-    "@ai-sdk/anthropic": "^2.0.53",
+    "@ai-sdk/amazon-bedrock": "^3.0.68",
+    "@ai-sdk/anthropic": "^2.0.54",
     "@ai-sdk/azure": "^2.0.82",
     "@ai-sdk/cerebras": "^1.0.32",
     "@ai-sdk/deepseek": "^1.0.31",
-    "@ai-sdk/google": "^2.0.44",
-    "@ai-sdk/google-vertex": "^3.0.86",
+    "@ai-sdk/google": "^2.0.45",
+    "@ai-sdk/google-vertex": "^3.0.88",
     "@ai-sdk/groq": "^2.0.32",
     "@ai-sdk/openai": "^2.0.80",
     "@ai-sdk/provider": "^2.0.0",
@@ -21286,7 +21737,9 @@ File: package.json
     "@google/genai": "^1.30.0",
     "@headlessui/react": "^2.2.0",
     "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
-    "@openrouter/ai-sdk-provider": "^1.4.1",
+    "@huggingface/transformers": "^3.8.1",
+    "@lancedb/lancedb": "^0.22.3",
+    "@openrouter/ai-sdk-provider": "^1.5.3",
     "@opentelemetry/auto-instrumentations-node": "^0.62.0",
     "@opentelemetry/sdk-node": "^0.203.0",
     "@opentelemetry/sdk-trace-base": "^2.0.1",
@@ -21308,7 +21761,7 @@ File: package.json
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/xterm": "^5.5.0",
-    "ai": "^5.0.108",
+    "ai": "^5.0.109",
     "axios": "^1.8.3",
     "babel-plugin-react-compiler": "^19.1.0-rc.3",
     "better-sqlite3": "^12.0.0",
