@@ -91,6 +91,8 @@ module.exports = {
           'aider-tools': 'var(--color-agent-aider-tools)',
           'power-tools': 'var(--color-agent-power-tools)',
           'todo-tools': 'var(--color-agent-todo-tools)',
+          'tasks-tools': 'var(--color-agent-tasks-tools)',
+          'memory-tools': 'var(--color-agent-memory-tools)',
           'context-files': 'var(--color-agent-context-files)',
           'repo-map': 'var(--color-agent-repo-map)',
         },

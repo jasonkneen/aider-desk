@@ -7,6 +7,8 @@ import { AgentProfile, TaskData, ToolApprovalState } from '@common/types';
 import { BiCog } from 'react-icons/bi';
 import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 import { useHotkeys } from 'react-hotkeys-hook';
+import { LuBrain } from 'react-icons/lu';
+import { GrTasks } from 'react-icons/gr';
 
 import { McpServerSelectorItem } from './McpServerSelectorItem';
 
@@ -209,6 +211,8 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
             {activeProfile.useAiderTools && <MdOutlineHdrAuto className="w-3.5 h-3.5 text-agent-aider-tools opacity-90" />}
             {activeProfile.usePowerTools && <MdFlashOn className="w-3.5 h-3.5 text-agent-power-tools opacity-70" />}
             {activeProfile.useTodoTools && <MdOutlineChecklist className="w-3.5 h-3.5 text-agent-todo-tools opacity-70" />}
+            {activeProfile.useTaskTools && <GrTasks className="w-3.5 h-3.5 text-agent-tasks-tools opacity-70" />}
+            {activeProfile.useMemoryTools && <LuBrain className="w-3 h-3 text-agent-memory-tools opacity-70" />}
             {activeProfile.includeContextFiles && <MdOutlineFileCopy className="w-3 h-3 text-agent-context-files opacity-70" />}
             {activeProfile.includeRepoMap && <MdOutlineMap className="w-3 h-3 text-agent-repo-map opacity-70" />}
           </>
@@ -321,6 +325,20 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
                   onClick={() => handleToggleProfileSetting('useTodoTools', !activeProfile.useTodoTools)}
                   className="p-1.5 hover:bg-bg-secondary rounded-md"
                   tooltip={`${t('settings.agent.useTodoTools')} (Alt + T)`}
+                  tooltipId="agent-selector-tooltip"
+                />
+                <IconButton
+                  icon={<GrTasks className={clsx('w-3.5 h-3.5', activeProfile.useTaskTools ? 'text-agent-tasks-tools' : 'text-text-muted opacity-50')} />}
+                  onClick={() => handleToggleProfileSetting('useTaskTools', !activeProfile.useTaskTools)}
+                  className="p-1.5 hover:bg-bg-secondary rounded-md"
+                  tooltip={t('settings.agent.useTaskTools')}
+                  tooltipId="agent-selector-tooltip"
+                />
+                <IconButton
+                  icon={<LuBrain className={clsx('w-3.5 h-3.5', activeProfile.useMemoryTools ? 'text-agent-memory-tools' : 'text-text-muted opacity-50')} />}
+                  onClick={() => handleToggleProfileSetting('useMemoryTools', !activeProfile.useMemoryTools)}
+                  className="p-1.5 hover:bg-bg-secondary rounded-md"
+                  tooltip={t('settings.agent.useMemoryTools')}
                   tooltipId="agent-selector-tooltip"
                 />
                 <IconButton

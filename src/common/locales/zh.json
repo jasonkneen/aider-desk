@@ -394,6 +394,8 @@
       "useAiderTools": "使用Aider工具",
       "usePowerTools": "使用 Power 工具",
       "useTodoTools": "使用 Todo 工具",
+      "useTaskTools": "使用任务工具",
+      "useMemoryTools": "使用记忆工具",
       "includeContextFiles": "包含上下文文件",
       "includeFilesTooltip": "将上下文文件内容添加到代理的聊天中。这将增加令牌使用量。",
       "includeRepoMap": "包含仓库地图",

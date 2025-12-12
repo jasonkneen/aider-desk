@@ -801,8 +801,6 @@ export class EventsHandler {
     if (oldProfile) {
       this.projectManager.agentProfileUpdated(oldProfile, profile);
     }
-
-    return this.agentProfileManager.getAllProfiles();
   }
 
   async deleteAgentProfile(profileId: string) {

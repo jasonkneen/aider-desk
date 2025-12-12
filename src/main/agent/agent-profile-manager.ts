@@ -517,7 +517,7 @@ export class AgentProfileManager {
     await this.saveProfileToFile(profile, configPath);
 
     // Reload profiles to update the cache
-    await this.reloadProfiles(agentsDir);
+    await this.debounceReloadProfiles(agentsDir);
   }
 
   public async updateProfile(profile: AgentProfile): Promise<void> {
@@ -533,10 +533,9 @@ export class AgentProfileManager {
 
     const agentsDir = getAgentsDirForProfile(existingContext.agentProfile);
     const configPath = path.join(agentsDir, existingContext.dirName, 'config.json');
-    await this.saveProfileToFile(profile, configPath);
 
-    // Reload profiles to update the cache
-    await this.reloadProfiles(agentsDir);
+    existingContext.agentProfile = profile;
+    await this.saveProfileToFile(profile, configPath);
   }
 
   public async deleteProfile(profileId: string): Promise<void> {
@@ -557,7 +556,7 @@ export class AgentProfileManager {
     }
 
     // Reload profiles to update the cache
-    await this.reloadProfiles(agentsDir);
+    await this.debounceReloadProfiles(agentsDir);
   }
 
   public getProfile(profileId: string): AgentProfile | undefined {

@@ -339,18 +339,21 @@ export class Project {
       .filter((task) => task.id !== INTERNAL_TASK_ID);
   }
 
-  forEachTask(callback: (task: Task) => void) {
-    this.tasks.forEach(callback);
+  forEachTask(callback: (task: Task) => void, initializedOnly = true) {
+    this.tasks
+      .values()
+      .filter((task) => !initializedOnly || task.isInitialized())
+      .forEach(callback);
   }
 
   async settingsChanged(oldSettings: SettingsData, newSettings: SettingsData) {
-    this.tasks.forEach((task) => {
+    this.forEachTask((task) => {
       void task.settingsChanged(oldSettings, newSettings);
     });
   }
 
   async projectSettingsChanged(oldSettings: ProjectSettings, newSettings: ProjectSettings) {
-    this.tasks.forEach((task) => {
+    this.forEachTask((task) => {
       void task.projectSettingsChanged(oldSettings, newSettings);
     });
   }

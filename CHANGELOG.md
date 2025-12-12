@@ -4,6 +4,8 @@
 
 - fixed issue with missing reasoning_content field when using deepseek-reasoner
 - added memory management system with agent integration
+- added Use memory tools and Use task tools quick actions to Agent selector
+- optimized agent profile update and related event handling
 
 ## [0.43.0]
 

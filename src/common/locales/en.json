@@ -397,6 +397,8 @@
       "useAiderTools": "Use Aider tools",
       "usePowerTools": "Use Power tools",
       "useTodoTools": "Use Todo tools",
+      "useTaskTools": "Use Task tools",
+      "useMemoryTools": "Use Memory tools",
       "includeContextFiles": "Include context files",
       "includeFilesTooltip": "Adds content of context files into the chat of agent. This will increase token usage.",
       "includeRepoMap": "Include repository map",

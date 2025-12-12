@@ -2309,6 +2309,10 @@ ${error.stderr}`,
   }
 
   async agentProfileUpdated(oldProfile: AgentProfile, newProfile: AgentProfile) {
+    if (!this.initialized) {
+      return;
+    }
+
     const taskAgentProfile = await this.getTaskAgentProfile();
 
     if (taskAgentProfile?.id === newProfile.id) {
@@ -2320,5 +2324,9 @@ ${error.stderr}`,
 
   public getProject(): Project {
     return this.project;
+  }
+
+  public isInitialized() {
+    return this.initialized;
   }
 }
