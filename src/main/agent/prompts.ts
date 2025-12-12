@@ -51,7 +51,7 @@ const generateWorkflow = (
 
   if (retrieveMemoryAllowed) {
     steps.push(`    <Step number="${stepNumber++}" title="Retrieve Memory">
-      <Instruction>Use memory tools to retrieve relevant information about user preferences, architectural decisions, and project history that may be applicable to the current task.</Instruction>
+      <Instruction>Use memory tools to retrieve only information that may affect current decisions and is intended to be reusable across tasks (e.g., user preferences, architectural decisions, reusable patterns). Ignore task-specific execution details.</Instruction>
     </Step>`);
   }
 
@@ -91,7 +91,10 @@ const generateWorkflow = (
 
   if (storeMemoryAllowed) {
     steps.push(`    <Step number="${stepNumber++}" title="Store Memory">
-      <Instruction>Store ONLY general outcomes, decisions, patterns, and user preferences in memory for future reference. Focus on information that would be valuable for tasks in the future. Do not store task-specific information that is not relevant to future tasks.</Instruction>
+      <Instruction>Consider whether anything should be stored in memory. Default to storing nothing.</Instruction>
+      <Instruction>Store a memory ONLY if ALL are true: (1) reusable across future tasks, (2) stable (unlikely to change soon), (3) actionable (changes future behavior), and (4) it is a user preference, an architectural decision, or a repeated codebase pattern.</Instruction>
+      <Instruction>NEVER store: task progress/status, one-off bug details, transient implementation notes, file lists from a single task, logs/stack traces, secrets/tokens/credentials/PII, or anything directly derivable from repository content.</Instruction>
+      <Instruction>If the user explicitly asks to "remember" something, store it only if it is not disallowed above.</Instruction>
     </Step>`);
   }
 
@@ -171,7 +174,7 @@ export const getSystemPrompt = async (
     <Directive id="code-changes-via-tools">Make code changes using tools only. Small illustrative snippets are allowed, not full patches.</Directive>
     ${
       memoryEnabled
-        ? '<Directive id="memory-management">Proactively use memory tools to store important user preferences, architectural decisions, and task results for future context.</Directive>'
+        ? '<Directive id="memory-management">Use memory tools with strict eligibility filtering. Store a memory ONLY if it is reusable across future tasks, stable, and actionable, and it captures a user preference, an architectural decision, or a repeated codebase pattern. NEVER store task progress/status, one-off bug details, transient implementation notes, file lists from a single task, logs/stack traces, secrets/tokens/credentials/PII, or anything directly derivable from repository content.</Directive>'
         : ''
     }
   </CoreDirectives>
@@ -239,12 +242,13 @@ export const getSystemPrompt = async (
       ? `
   <MemoryTools group="${MEMORY_TOOL_GROUP_NAME}">
     <Utilization>
-      ${retrieveMemoryAllowed ? '<Guideline>Retrieve relevant memories using ${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_RETRIEVE} at the beginning of a task to understand user preferences and project history.</Guideline>' : ''}
+      ${retrieveMemoryAllowed ? '<Guideline>Retrieve relevant memories using ${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_RETRIEVE} at the beginning of a task to understand user preferences, architectural decisions, and reusable patterns that may affect this task. Ignore task-specific execution details.</Guideline>' : ''}
       ${
         storeMemoryAllowed
-          ? `      <Guideline>Proactively store important patterns, user preferences, and architectural decisions using ${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_STORE}. Do not wait for explicit instructions to store valuable context.</Guideline>
-      <Guideline>If the user explicitly asks to "remember" something, use ${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_STORE} immediately.</Guideline>
-      <Guideline>At the end of a significant task, think about the information that would be valuable to remember for future tasks and store it using ${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_STORE}. Do not store task-specific information that is not relevant to future tasks.</Guideline>`
+          ? `      <Guideline>Before storing any memory, apply a strict eligibility filter. Store a memory ONLY if ALL are true: (1) reusable across future tasks, (2) stable (unlikely to change soon), (3) actionable (changes future behavior), and (4) it is a user preference, an architectural decision, or a repeated codebase pattern.</Guideline>
+      <Guideline>NEVER store: task progress/status, one-off bug details, transient implementation notes, file lists from a single task, logs/stack traces, secrets/tokens/credentials/PII, or anything directly derivable from repository content.</Guideline>
+      <Guideline>If the user explicitly asks to "remember" something, store it only if it is not disallowed above.</Guideline>
+      <Guideline>At the end of a significant task, default to storing nothing unless something clearly passes the eligibility filter.</Guideline>`
           : ''
       }
       ${listMemoriesAllowed ? `<Guideline>Use ${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_LIST} ONLY when explicitly requested by the user.</Guideline>` : ''}
