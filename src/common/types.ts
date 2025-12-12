@@ -384,6 +384,8 @@ export const THEMES = [
   'serenity',
   'cappuccino',
   'fresh',
+  'botanical-garden',
+  'botanical-garden-dark',
 ] as const;
 export type Theme = (typeof THEMES)[number];
 
