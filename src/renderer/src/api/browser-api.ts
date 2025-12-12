@@ -41,6 +41,7 @@ import {
   VersionsInfo,
   VoiceSession,
   AgentProfile,
+  MemoryEntry,
 } from '@common/types';
 import { ApplicationAPI } from '@common/api';
 import axios, { type AxiosInstance } from 'axios';
@@ -755,6 +756,25 @@ export class BrowserApi implements ApplicationAPI {
       projectDir: baseDir,
       taskId,
     });
+  }
+
+  // Memory operations
+  listAllMemories(): Promise<MemoryEntry[]> {
+    return this.get('/memories');
+  }
+
+  deleteMemory(id: string): Promise<boolean> {
+    return this.delete<{ ok: boolean }>(`/memories/${id}`).then((r) => r.ok);
+  }
+
+  deleteProjectMemories(projectId: string): Promise<number> {
+    return this.apiClient
+      .delete<{ deletedCount: number }>('/memories', {
+        data: {
+          projectId,
+        },
+      })
+      .then((r) => r.data.deletedCount);
   }
 
   // Agent profile operations

@@ -25,12 +25,14 @@ import {
   VersionsInfo,
   VoiceSession,
   AgentProfile,
+  MemoryEntry,
 } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
 
 import type { BrowserWindow } from 'electron';
 
 import { McpManager, AgentProfileManager } from '@/agent';
+import { MemoryManager } from '@/memory/memory-manager';
 import { ModelManager } from '@/models';
 import { ProjectManager } from '@/project';
 import { CloudflareTunnelManager } from '@/server';
@@ -58,6 +60,7 @@ export class EventsHandler {
     private cloudflareTunnelManager: CloudflareTunnelManager,
     private eventManager: EventManager,
     private readonly agentProfileManager: AgentProfileManager,
+    private readonly memoryManager: MemoryManager,
   ) {}
 
   loadSettings(): SettingsData {
@@ -810,5 +813,17 @@ export class EventsHandler {
 
   async updateAgentProfilesOrder(agentProfiles: AgentProfile[]) {
     await this.agentProfileManager.updateAgentProfilesOrder(agentProfiles);
+  }
+
+  async listAllMemories(): Promise<MemoryEntry[]> {
+    return await this.memoryManager.getAllMemories();
+  }
+
+  async deleteMemory(id: string): Promise<boolean> {
+    return await this.memoryManager.deleteMemory(id);
+  }
+
+  async deleteProjectMemories(projectId: string): Promise<number> {
+    return await this.memoryManager.deleteMemoriesForProject(projectId);
   }
 }

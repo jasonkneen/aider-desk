@@ -407,4 +407,17 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
   ipcMain.handle('update-agent-profiles-order', async (_, agentProfiles: AgentProfile[]) => {
     return await eventsHandler.updateAgentProfilesOrder(agentProfiles);
   });
+
+  // Memory handlers
+  ipcMain.handle('list-all-memories', async () => {
+    return await eventsHandler.listAllMemories();
+  });
+
+  ipcMain.handle('delete-memory', async (_, id: string) => {
+    return await eventsHandler.deleteMemory(id);
+  });
+
+  ipcMain.handle('delete-project-memories', async (_, projectId: string) => {
+    return await eventsHandler.deleteProjectMemories(projectId);
+  });
 };

@@ -9,3 +9,4 @@ export * from './system-api';
 export * from './todo-api';
 export * from './mcp-api';
 export * from './providers-api';
+export * from './memory-api';

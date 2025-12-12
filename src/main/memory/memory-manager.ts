@@ -250,6 +250,23 @@ export class MemoryManager {
     }));
   }
 
+  async deleteMemoriesForProject(projectId: string): Promise<number> {
+    if (!(await this.waitForInit()) || !this.isMemoryEnabled() || !this.db || !this.table) {
+      return 0;
+    }
+
+    try {
+      const results = await this.table.query().where(`projectid = '${projectId}'`).select(['id']).toArray();
+      const ids = results.map((r) => (r as { id: string }).id).filter(Boolean);
+      await Promise.all(ids.map((id) => this.table!.delete(`id = '${id}'`)));
+      logger.info('Deleted project memories', { projectId, count: ids.length });
+      return ids.length;
+    } catch (error) {
+      logger.error('Failed to delete project memories:', error);
+      return 0;
+    }
+  }
+
   async clearAllMemories(): Promise<boolean> {
     if (!this.isInitialized || !this.isMemoryEnabled() || !this.db) {
       return false;

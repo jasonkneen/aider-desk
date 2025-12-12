@@ -598,7 +598,7 @@
       "virtualizedRenderingTooltip": "Experimental feature that can improve performance when you have many messages in your conversation history by only rendering visible messages."
     },
     "memory": {
-      "title": "Memory",
+      "configuration": "Configuration",
       "description": "Configure AI memory features to enhance conversation continuity and context retention across sessions.",
       "enabled": {
         "label": "Enable",
@@ -610,6 +610,21 @@
       "provider": {
         "label": "Embedding Provider",
         "description": "Choose the embedding provider to use for memory functionality"
+      },
+      "memories": {
+        "title": "Memories",
+        "project": "Project",
+        "allProjects": "All projects",
+        "loading": "Loading memories...",
+        "empty": "No memories found.",
+        "delete": "Delete",
+        "deleteAllForProject": "Delete all for project",
+        "deleteDialogTitle": "Delete memory",
+        "deleteDialogText": "Delete memory",
+        "deleteProjectDialogTitle": "Delete project memories",
+        "deleteProjectDialogText": "Delete all memories for project",
+        "projectId": "projectId",
+        "id": "id"
       }
     }
   },

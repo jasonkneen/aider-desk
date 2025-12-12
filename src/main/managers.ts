@@ -95,6 +95,7 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
     cloudflareTunnelManager,
     eventManager,
     agentProfileManager,
+    memoryManager,
   );
 
   // Create and initialize REST API controller with the server

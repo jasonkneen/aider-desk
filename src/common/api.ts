@@ -41,6 +41,7 @@ import {
   VersionsInfo,
   VoiceSession,
   AgentProfile,
+  MemoryEntry,
 } from '@common/types';
 
 export interface ApplicationAPI {
@@ -194,4 +195,9 @@ export interface ApplicationAPI {
   updateAgentProfile: (profile: AgentProfile, baseDir?: string) => Promise<AgentProfile[]>;
   deleteAgentProfile: (profileId: string, baseDir?: string) => Promise<AgentProfile[]>;
   updateAgentProfilesOrder: (agentProfiles: AgentProfile[]) => Promise<void>;
+
+  // Memory operations
+  listAllMemories: () => Promise<MemoryEntry[]>;
+  deleteMemory: (id: string) => Promise<boolean>;
+  deleteProjectMemories: (projectId: string) => Promise<number>;
 }
