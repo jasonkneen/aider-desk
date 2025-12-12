@@ -14,14 +14,12 @@ import { ModelManager } from '@/models';
 import { CustomCommandManager } from '@/custom-commands';
 import { TelemetryManager } from '@/telemetry';
 import { EventManager } from '@/events';
-import { Task } from '@/task';
+import { INTERNAL_TASK_ID, Task } from '@/task';
 import { migrateSessionsToTasks } from '@/project/migrations';
 import { WorktreeManager } from '@/worktrees';
 import { MemoryManager } from '@/memory/memory-manager';
 import { AIDER_DESK_WATCH_FILES_LOCK } from '@/constants';
 import { determineMainModel, determineWeakModel } from '@/utils';
-
-const INTERNAL_TASK_ID = 'internal';
 
 export class Project {
   private readonly customCommandManager: CustomCommandManager;
@@ -182,6 +180,10 @@ export class Project {
       });
     }
     return task || null;
+  }
+
+  public getInternalTask() {
+    return this.getTask(INTERNAL_TASK_ID);
   }
 
   public getProjectSettings() {

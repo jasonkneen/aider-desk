@@ -6,6 +6,7 @@
 - added memory management system with agent integration
 - added Use memory tools and Use task tools quick actions to Agent selector
 - optimized agent profile update and related event handling
+- added Skill tools for activating skills in Agent mode
 
 ## [0.43.0]
 

@@ -46,6 +46,7 @@ import { getSystemPrompt } from './prompts';
 import { createAiderToolset } from './tools/aider';
 import { createHelpersToolset } from './tools/helpers';
 import { createMemoryToolset } from './tools/memory';
+import { createSkillsToolset } from './tools/skills';
 import { MCP_CLIENT_TIMEOUT, McpManager } from './mcp-manager';
 import { ApprovalManager } from './tools/approval-manager';
 import { ANSWER_RESPONSE_START_TAG, extractPromptContextFromToolResult, THINKING_RESPONSE_STAR_TAG } from './utils';
@@ -354,6 +355,11 @@ export class Agent {
     if (profile.useMemoryTools) {
       const memoryTools = createMemoryToolset(task, profile, this.memoryManager, promptContext);
       Object.assign(toolSet, memoryTools);
+    }
+
+    if (profile.useSkillsTools) {
+      const skillsTools = await createSkillsToolset(task, profile, promptContext);
+      Object.assign(toolSet, skillsTools);
     }
 
     // Add helper tools

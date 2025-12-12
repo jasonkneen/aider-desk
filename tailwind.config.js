@@ -93,6 +93,7 @@ module.exports = {
           'todo-tools': 'var(--color-agent-todo-tools)',
           'tasks-tools': 'var(--color-agent-tasks-tools)',
           'memory-tools': 'var(--color-agent-memory-tools)',
+          'skills-tools': 'var(--color-agent-skills-tools)',
           'context-files': 'var(--color-agent-context-files)',
           'repo-map': 'var(--color-agent-repo-map)',
         },

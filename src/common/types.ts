@@ -357,6 +357,7 @@ export interface AgentProfile {
   useSubagents: boolean;
   useTaskTools: boolean;
   useMemoryTools: boolean;
+  useSkillsTools: boolean;
   customInstructions: string;
   subagent: SubagentConfig;
   isSubagent?: boolean; // flag to indicate if this profile is being used as a subagent

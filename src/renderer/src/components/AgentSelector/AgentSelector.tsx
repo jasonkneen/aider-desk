@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdSave } from 'react-icons/md';
+import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdSave, MdPsychology } from 'react-icons/md';
 import { RiToolsFill } from 'react-icons/ri';
 import { clsx } from 'clsx';
 import { AgentProfile, TaskData, ToolApprovalState } from '@common/types';
@@ -81,6 +81,26 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
   useHotkeys(
     'alt+r',
     () => handleToggleProfileSetting('includeRepoMap', !activeProfile?.includeRepoMap),
+    {
+      enabled: isActive,
+      enableOnContentEditable: true,
+    },
+    [handleToggleProfileSetting],
+  );
+
+  useHotkeys(
+    'alt+m',
+    () => handleToggleProfileSetting('useMemoryTools', !activeProfile?.useMemoryTools),
+    {
+      enabled: isActive,
+      enableOnContentEditable: true,
+    },
+    [handleToggleProfileSetting],
+  );
+
+  useHotkeys(
+    'alt+s',
+    () => handleToggleProfileSetting('useSkillsTools', !activeProfile?.useSkillsTools),
     {
       enabled: isActive,
       enableOnContentEditable: true,
@@ -213,6 +233,7 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
             {activeProfile.useTodoTools && <MdOutlineChecklist className="w-3.5 h-3.5 text-agent-todo-tools opacity-70" />}
             {activeProfile.useTaskTools && <GrTasks className="w-3.5 h-3.5 text-agent-tasks-tools opacity-70" />}
             {activeProfile.useMemoryTools && <LuBrain className="w-3 h-3 text-agent-memory-tools opacity-70" />}
+            {activeProfile.useSkillsTools && <MdPsychology className="w-3.5 h-3.5 text-agent-skills-tools opacity-70" />}
             {activeProfile.includeContextFiles && <MdOutlineFileCopy className="w-3 h-3 text-agent-context-files opacity-70" />}
             {activeProfile.includeRepoMap && <MdOutlineMap className="w-3 h-3 text-agent-repo-map opacity-70" />}
           </>
@@ -301,7 +322,7 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
           {/* Quick Settings */}
           {activeProfile && (
             <div className="px-3 py-2">
-              <div className="flex items-center justify-end gap-1">
+              <div className="flex items-center justify-end">
                 <IconButton
                   icon={
                     <MdOutlineHdrAuto className={clsx('w-3.5 h-3.5', activeProfile.useAiderTools ? 'text-agent-aider-tools' : 'text-text-muted opacity-50')} />
@@ -338,7 +359,14 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
                   icon={<LuBrain className={clsx('w-3.5 h-3.5', activeProfile.useMemoryTools ? 'text-agent-memory-tools' : 'text-text-muted opacity-50')} />}
                   onClick={() => handleToggleProfileSetting('useMemoryTools', !activeProfile.useMemoryTools)}
                   className="p-1.5 hover:bg-bg-secondary rounded-md"
-                  tooltip={t('settings.agent.useMemoryTools')}
+                  tooltip={`${t('settings.agent.useMemoryTools')} (Alt + M)`}
+                  tooltipId="agent-selector-tooltip"
+                />
+                <IconButton
+                  icon={<MdPsychology className={clsx('w-4 h-4', activeProfile.useSkillsTools ? 'text-agent-skills-tools' : 'text-text-muted opacity-50')} />}
+                  onClick={() => handleToggleProfileSetting('useSkillsTools', !activeProfile.useSkillsTools)}
+                  className="p-1.5 hover:bg-bg-secondary rounded-md"
+                  tooltip={`${t('settings.agent.useSkillsTools')} (Alt + S)`}
                   tooltipId="agent-selector-tooltip"
                 />
                 <IconButton

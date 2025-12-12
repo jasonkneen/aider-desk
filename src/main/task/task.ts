@@ -62,6 +62,8 @@ import { WorktreeManager } from '@/worktrees';
 import { MemoryManager } from '@/memory/memory-manager';
 import { getElectronApp } from '@/app';
 
+export const INTERNAL_TASK_ID = 'internal';
+
 export class Task {
   private initialized = false;
   private connectors: Connector[] = [];
@@ -176,7 +178,9 @@ export class Task {
     // Migrate missing task-level settings from project settings
     await this.migrateFromProjectSettings();
 
-    this.git = simpleGit(this.getTaskDir());
+    if (await fileExists(this.getTaskDir())) {
+      this.git = simpleGit(this.getTaskDir());
+    }
   }
 
   /**
@@ -224,7 +228,16 @@ export class Task {
     return `${WORKTREE_BRANCH_PREFIX}${cleanBranchName || this.taskId}`;
   }
 
+  private isInternal() {
+    return this.taskId === INTERNAL_TASK_ID;
+  }
+
   public async saveTask(updates?: Partial<TaskData>, updateTimestamps = true): Promise<TaskData> {
+    if (this.isInternal()) {
+      // Internal task is not saved
+      return this.task;
+    }
+
     logger.debug('Saving task data', {
       baseDir: this.project.baseDir,
       taskId: this.taskId,
@@ -426,8 +439,8 @@ export class Task {
   }
 
   private async cleanUpEmptyTask() {
-    if (!(await fileExists(this.taskDataPath))) {
-      logger.info('Removing empty task folder', {
+    if (this.isInternal() || !(await fileExists(this.taskDataPath))) {
+      logger.info(`Removing ${this.isInternal() ? 'internal' : 'empty'} task folder`, {
         baseDir: this.project.baseDir,
         taskId: this.taskId,
       });
@@ -439,7 +452,7 @@ export class Task {
         }
         await fs.rm(taskDir, { recursive: true, force: true });
       } catch (error) {
-        logger.error('Failed to remove empty task folder', {
+        logger.error('Failed to remove task folder', {
           baseDir: this.project.baseDir,
           taskId: this.taskId,
           error: error instanceof Error ? error.message : String(error),

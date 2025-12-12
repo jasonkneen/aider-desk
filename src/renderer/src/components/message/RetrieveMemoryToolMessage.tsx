@@ -83,16 +83,6 @@ export const RetrieveMemoryToolMessage = ({ message, onRemove, compact = false }
     }
 
     if (Array.isArray(content)) {
-      if (content.length === 0) {
-        return (
-          <div className="px-4 py-1 text-2xs text-text-tertiary bg-bg-secondary">
-            <div className="border border-border-dark-light rounded bg-bg-primary-light px-3 py-2">
-              <div className="text-text-muted">{t('toolMessage.memory.noRelevantMemories')}</div>
-            </div>
-          </div>
-        );
-      }
-
       return (
         <div className="px-4 py-1 text-2xs text-text-tertiary bg-bg-secondary">
           <div className="space-y-3">
@@ -106,19 +96,27 @@ export const RetrieveMemoryToolMessage = ({ message, onRemove, compact = false }
               </div>
             </div>
             {/* Memory List */}
-            <div className="space-y-2">
-              {content.map((memory) => (
-                <div key={memory.id} className="border border-border-dark-light rounded bg-bg-primary-light p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-3xs text-text-muted bg-bg-secondary px-2 py-1 rounded">{memory.type}</span>
-                    <span className="text-3xs text-text-muted">{new Date(memory.timestamp).toLocaleDateString()}</span>
+            {content.length > 0 ? (
+              <div className="space-y-2">
+                {content.map((memory) => (
+                  <div key={memory.id} className="border border-border-dark-light rounded bg-bg-primary-light p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-3xs text-text-muted bg-bg-secondary px-2 py-1 rounded">{memory.type}</span>
+                      <span className="text-3xs text-text-muted">{new Date(memory.timestamp).toLocaleDateString()}</span>
+                    </div>
+                    <pre className="whitespace-pre-wrap text-2xs text-text-primary max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth">
+                      {memory.content}
+                    </pre>
                   </div>
-                  <pre className="whitespace-pre-wrap text-2xs text-text-primary max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth">
-                    {memory.content}
-                  </pre>
+                ))}
+              </div>
+            ) : (
+              <div className="text-2xs text-text-tertiary bg-bg-secondary">
+                <div className="border border-border-dark-light rounded bg-bg-primary-light px-3 py-2">
+                  <div className="text-text-muted">{t('toolMessage.memory.noRelevantMemories')}</div>
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       );

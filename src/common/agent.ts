@@ -16,6 +16,8 @@ import {
   POWER_TOOL_SEMANTIC_SEARCH,
   SUBAGENTS_TOOL_GROUP_NAME,
   SUBAGENTS_TOOL_RUN_TASK,
+  SKILLS_TOOL_ACTIVATE_SKILL,
+  SKILLS_TOOL_GROUP_NAME,
   TASKS_TOOL_CREATE_TASK,
   TASKS_TOOL_DELETE_TASK,
   TASKS_TOOL_GET_TASK,
@@ -272,6 +274,8 @@ export const DEFAULT_AGENT_PROFILE: AgentProfile = {
     [`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_FETCH}`]: ToolApprovalState.Always,
     // subagent tools
     [`${SUBAGENTS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${SUBAGENTS_TOOL_RUN_TASK}`]: ToolApprovalState.Always,
+    // skills tools
+    [`${SKILLS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${SKILLS_TOOL_ACTIVATE_SKILL}`]: ToolApprovalState.Always,
     // task tools
     [`${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_LIST_TASKS}`]: ToolApprovalState.Always,
     [`${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_GET_TASK}`]: ToolApprovalState.Always,
@@ -298,6 +302,7 @@ export const DEFAULT_AGENT_PROFILE: AgentProfile = {
   useSubagents: true,
   useTaskTools: false,
   useMemoryTools: true,
+  useSkillsTools: true,
   customInstructions: '',
   enabledServers: [],
   subagent: {
@@ -382,6 +387,7 @@ export const INIT_PROJECT_AGENTS_PROFILE: AgentProfile = {
   useSubagents: false,
   useTaskTools: false,
   useMemoryTools: false,
+  useSkillsTools: false,
   toolApprovals: {
     ...DEFAULT_AGENT_PROFILE.toolApprovals,
     [`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_FILE_EDIT}`]: ToolApprovalState.Never,
@@ -403,6 +409,7 @@ export const COMPACT_CONVERSATION_AGENT_PROFILE: AgentProfile = {
   useSubagents: false,
   useTaskTools: false,
   useMemoryTools: false,
+  useSkillsTools: false,
   toolApprovals: {
     ...DEFAULT_AGENT_PROFILE.toolApprovals,
     [`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_FILE_EDIT}`]: ToolApprovalState.Never,

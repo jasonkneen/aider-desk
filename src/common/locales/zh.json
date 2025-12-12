@@ -396,6 +396,7 @@
       "useTodoTools": "使用 Todo 工具",
       "useTaskTools": "使用任务工具",
       "useMemoryTools": "使用记忆工具",
+      "useSkillsTools": "使用 Skills 工具",
       "includeContextFiles": "包含上下文文件",
       "includeFilesTooltip": "将上下文文件内容添加到代理的聊天中。这将增加令牌使用量。",
       "includeRepoMap": "包含仓库地图",
@@ -504,7 +505,9 @@
       "charcoal": "炭灰",
       "aurora": "极光",
       "serenity": "宁静",
-      "fresh": "清新"
+      "fresh": "清新",
+      "botanical-garden": "植物园",
+      "botanical-garden-dark": "植物园（深色）"
     },
     "aiderRestartConfirm": {
       "title": "需要重启",

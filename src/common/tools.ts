@@ -23,6 +23,9 @@ export const POWER_TOOL_FETCH = 'fetch';
 export const SUBAGENTS_TOOL_GROUP_NAME = 'subagents';
 export const SUBAGENTS_TOOL_RUN_TASK = 'run_task';
 
+export const SKILLS_TOOL_GROUP_NAME = 'skills';
+export const SKILLS_TOOL_ACTIVATE_SKILL = 'activate_skill';
+
 export const AIDER_TOOL_DESCRIPTIONS = {
   [AIDER_TOOL_GET_CONTEXT_FILES]: 'Get all files currently in the context for Aider to read or edit',
   [AIDER_TOOL_ADD_CONTEXT_FILES]: `Adds file(s) to the Aider context for reading or editing.
@@ -87,6 +90,10 @@ const myFunction = () => {
   [POWER_TOOL_FETCH]:
     'Fetches and returns the content of a web page from a specified URL. Useful for retrieving web content, documentation, or external resources.',
   [SUBAGENTS_TOOL_RUN_TASK]: 'Description is generated dynamically based on enabled agent profiles with subagent functionality.',
+} as const;
+
+export const SKILLS_TOOL_DESCRIPTIONS = {
+  [SKILLS_TOOL_ACTIVATE_SKILL]: 'Description is generated dynamically based on discovered skills.',
 } as const;
 
 export const TODO_TOOL_GROUP_NAME = 'todo';

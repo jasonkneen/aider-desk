@@ -30,6 +30,8 @@ import {
   MEMORY_TOOL_LIST,
   MEMORY_TOOL_RETRIEVE,
   MEMORY_TOOL_STORE,
+  SKILLS_TOOL_ACTIVATE_SKILL,
+  SKILLS_TOOL_GROUP_NAME,
 } from '@common/tools';
 
 import logger from '@/logger';
@@ -39,6 +41,7 @@ const generateWorkflow = (
   autoApprove: boolean,
   useSubagents: boolean,
   usePowerTools: boolean,
+  skillsAllowed: boolean,
   retrieveMemoryAllowed: boolean,
   storeMemoryAllowed: boolean,
 ): string => {
@@ -48,6 +51,13 @@ const generateWorkflow = (
   steps.push(`    <Step number="${stepNumber++}" title="Analyze User Request">
       <Instruction>Deconstruct the request into actionable steps. Define the overarching goal and explicit completion conditions. Think step-by-step.</Instruction>
     </Step>`);
+
+  if (skillsAllowed) {
+    steps.push(`    <Step number="${stepNumber++}" title="Skills">
+      <Instruction>If the user's request is related to any of the available skills, activate the relevant skill at the very beginning of the task using the skills tool. This must happen before retrieving memory.</Instruction>
+      <Instruction>Only do this when skill tools are available.</Instruction>
+    </Step>`);
+  }
 
   if (retrieveMemoryAllowed) {
     steps.push(`    <Step number="${stepNumber++}" title="Retrieve Memory">
@@ -112,7 +122,7 @@ export const getSystemPrompt = async (
   autoApprove = task.task.autoApprove ?? false,
   additionalInstructions?: string,
 ) => {
-  const { useAiderTools, usePowerTools = false, useTodoTools, useSubagents = false, useMemoryTools = false } = agentProfile;
+  const { useAiderTools, usePowerTools = false, useTodoTools, useSubagents = false, useMemoryTools = false, useSkillsTools = false } = agentProfile;
   const memoryEnabled = settings.memory.enabled && useMemoryTools;
   const rulesFilesXml = await getRulesContent(task, agentProfile);
   const customInstructions = [agentProfile.customInstructions, additionalInstructions].filter(Boolean).join('\n\n').trim();
@@ -141,6 +151,10 @@ export const getSystemPrompt = async (
     memoryEnabled && agentProfile.toolApprovals[`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_LIST}`] !== ToolApprovalState.Never;
   const deleteMemoryAllowed =
     memoryEnabled && agentProfile.toolApprovals[`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_DELETE}`] !== ToolApprovalState.Never;
+
+  const skillsAllowed =
+    useSkillsTools &&
+    agentProfile.toolApprovals[`${SKILLS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${SKILLS_TOOL_ACTIVATE_SKILL}`] !== ToolApprovalState.Never;
 
   // Check if any power tools are allowed
   const anyPowerToolsAllowed = semanticSearchAllowed || fileReadAllowed || fileWriteAllowed || fileEditAllowed || globAllowed || grepAllowed || bashAllowed;
@@ -348,7 +362,7 @@ ${rulesFilesXml}
 ${customInstructions ? `    <CustomInstructions><![CDATA[\n${customInstructions}\n]]></CustomInstructions>` : ''}
   </Knowledge>
 
-${generateWorkflow(autoApprove, useSubagents, usePowerTools, retrieveMemoryAllowed, storeMemoryAllowed)}
+${generateWorkflow(autoApprove, useSubagents, usePowerTools, skillsAllowed, retrieveMemoryAllowed, storeMemoryAllowed)}
 
 </AiderDeskSystemPrompt>
 `.trim();

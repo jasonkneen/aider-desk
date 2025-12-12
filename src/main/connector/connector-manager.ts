@@ -124,6 +124,10 @@ export class ConnectorManager {
               readOnly: message.readOnly,
             }),
           );
+          project.getInternalTask()?.addFile({
+            path: message.path,
+            readOnly: message.readOnly,
+          });
         }
       } else if (isDropFileMessage(message)) {
         const connector = this.findConnectorBySocket(socket);
@@ -136,6 +140,7 @@ export class ConnectorManager {
           project.getTask(connector.taskId)?.dropFile(message.path);
         } else {
           project.forEachTask((task) => task.dropFile(message.path));
+          project.getInternalTask()?.dropFile(message.path);
         }
       } else if (isUpdateAutocompletionMessage(message)) {
         const connector = this.findConnectorBySocket(socket);
