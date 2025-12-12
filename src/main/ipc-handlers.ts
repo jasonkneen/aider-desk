@@ -420,4 +420,8 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
   ipcMain.handle('delete-project-memories', async (_, projectId: string) => {
     return await eventsHandler.deleteProjectMemories(projectId);
   });
+
+  ipcMain.handle('get-memory-embedding-progress', async () => {
+    return eventsHandler.getMemoryEmbeddingProgress();
+  });
 };

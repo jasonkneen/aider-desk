@@ -62,5 +62,12 @@ export class MemoryApi extends BaseApi {
         res.status(200).json({ deletedCount });
       }),
     );
+
+    router.get(
+      '/memories/embedding-progress',
+      this.handleRequest(async (_req, res) => {
+        res.status(200).json(this.eventsHandler.getMemoryEmbeddingProgress());
+      }),
+    );
   }
 }

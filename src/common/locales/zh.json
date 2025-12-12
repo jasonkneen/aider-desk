@@ -567,6 +567,11 @@
         "label": "嵌入提供商",
         "description": "选择用于记忆功能的嵌入提供商"
       },
+      "embeddingProgress": {
+        "loadingModel": "正在加载嵌入模型：{{status}}",
+        "reEmbedding": "正在重新嵌入记忆：{{done}}/{{total}}",
+        "error": "嵌入迁移失败：{{error}}"
+      },
       "memories": {
         "title": "记忆",
         "project": "项目",

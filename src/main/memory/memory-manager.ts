@@ -2,19 +2,27 @@ import * as fs from 'fs';
 
 import * as lancedb from '@lancedb/lancedb';
 import { FeatureExtractionPipeline, pipeline } from '@huggingface/transformers';
-import { MemoryEntry, MemoryEntryType } from '@common/types';
+import { MemoryConfig, MemoryEmbeddingProgress, MemoryEmbeddingProgressPhase, MemoryEntry, MemoryEntryType, SettingsData } from '@common/types';
 import { v4 as uuidv4 } from 'uuid';
 
-import { AIDER_DESK_MEMORY_FILE } from '@/constants';
+import { AIDER_DESK_CACHE_DIR, AIDER_DESK_MEMORY_FILE } from '@/constants';
 import logger from '@/logger';
 import { Store } from '@/store';
 
 export class MemoryManager {
   private db: lancedb.Connection | null = null;
   private table: lancedb.Table | null = null;
-  private embeddingPipelinePromise: Promise<FeatureExtractionPipeline> | null = null;
+  private embeddingPipelinePromise: Promise<FeatureExtractionPipeline | null> | null = null;
   private isInitialized = false;
   private readonly tableName = 'memories';
+
+  private embeddingProgress: MemoryEmbeddingProgress = {
+    phase: MemoryEmbeddingProgressPhase.Idle,
+    status: null,
+    done: 0,
+    total: 0,
+    finished: true,
+  };
 
   constructor(private readonly store: Store) {}
 
@@ -22,14 +30,12 @@ export class MemoryManager {
    * Initialize the database connection and the local embedding model.
    * This must be called before using other methods.
    */
-  public async init(): Promise<void> {
+  public async init(config: MemoryConfig = this.store.getSettings().memory): Promise<void> {
     if (this.isInitialized) {
       return;
     }
 
     try {
-      const config = this.store.getSettings().memory;
-
       if (!config.enabled) {
         logger.info('Memory system is disabled');
         return;
@@ -52,22 +58,57 @@ export class MemoryManager {
       // 2. Initialize Local Embedding Model (Singleton pattern for the pipeline)
       if (!this.embeddingPipelinePromise) {
         logger.info('Loading local embedding model... (this may take a moment on first run)');
-        // @ts-expect-error type is too complex
+        this.embeddingProgress = {
+          phase: MemoryEmbeddingProgressPhase.LoadingModel,
+          status: null,
+          done: 0,
+          total: 0,
+          finished: false,
+        };
+
         this.embeddingPipelinePromise = pipeline('feature-extraction', config.model, {
+          cache_dir: AIDER_DESK_CACHE_DIR,
           progress_callback: (progress) => {
-            logger.info('Loading local embedding model:', { progress: progress.status });
+            // @ts-expect-error progress is not typed properly
+            const status = `${Number(progress.progress).toFixed(2)}%`;
+            if (status) {
+              this.embeddingProgress.status = status;
+            }
           },
-        });
-        this.embeddingPipelinePromise.then(() => {
-          this.isInitialized = true;
-        });
+        })
+          .then((p) => {
+            this.isInitialized = true;
+            this.embeddingProgress = {
+              phase: MemoryEmbeddingProgressPhase.Done,
+              status: this.embeddingProgress.status,
+              done: this.embeddingProgress.total,
+              total: this.embeddingProgress.total,
+              finished: true,
+            };
+            return p;
+          })
+          .catch((error) => {
+            this.embeddingProgress = {
+              phase: MemoryEmbeddingProgressPhase.Error,
+              status: this.embeddingProgress.status,
+              done: this.embeddingProgress.done,
+              total: this.embeddingProgress.total,
+              finished: true,
+              error: error instanceof Error ? error.message : String(error),
+            };
+            logger.error('Failed to load local embedding model:', error);
+            throw error;
+          });
       }
 
       logger.info('Memory manager initialized successfully');
     } catch (error) {
-      logger.error('Failed to initialize memory manager:', error);
-      throw error;
+      logger.error('Failed to initialize memory manager:', { error: error instanceof Error ? error.message : String(error) });
     }
+  }
+
+  getProgress(): MemoryEmbeddingProgress {
+    return this.embeddingProgress;
   }
 
   private async waitForInit(): Promise<boolean> {
@@ -80,6 +121,165 @@ export class MemoryManager {
     return this.isInitialized;
   }
 
+  async settingsChanged(oldSettings: SettingsData, newSettings: SettingsData): Promise<void> {
+    const oldProvider = oldSettings.memory.provider;
+    const oldModel = oldSettings.memory.model;
+    const newProvider = newSettings.memory.provider;
+    const newModel = newSettings.memory.model;
+
+    if (!oldSettings.memory.enabled && newSettings.memory.enabled && !this.isInitialized) {
+      // init with old settings before migration
+      await this.init({
+        ...oldSettings.memory,
+        enabled: true,
+      });
+      await this.waitForInit();
+    }
+
+    const embeddingConfigChanged = oldProvider !== newProvider || oldModel !== newModel;
+    if (!embeddingConfigChanged) {
+      return;
+    }
+
+    logger.info('Memory embedding settings changed. Reloading embedding pipeline and re-embedding stored memories...', {
+      oldProvider,
+      oldModel,
+      newProvider,
+      newModel,
+    });
+
+    this.embeddingProgress = {
+      phase: MemoryEmbeddingProgressPhase.LoadingModel,
+      status: null,
+      done: 0,
+      total: 0,
+      finished: false,
+    };
+
+    this.isInitialized = false;
+
+    const migrate = async () => {
+      if (!this.embeddingPipelinePromise) {
+        logger.info('No embedding pipeline promise found during migration, skipping');
+        return;
+      }
+
+      await this.embeddingPipelinePromise;
+
+      if (!this.db) {
+        logger.info('No database connection found during migration, skipping');
+        try {
+          if (!fs.existsSync(AIDER_DESK_MEMORY_FILE)) {
+            fs.mkdirSync(AIDER_DESK_MEMORY_FILE, { recursive: true });
+          }
+          this.db = await lancedb.connect(AIDER_DESK_MEMORY_FILE);
+        } catch (error) {
+          logger.error('Failed to connect memory DB during migration:', error);
+          return;
+        }
+      }
+
+      if (!this.table) {
+        logger.info('No memory table found during migration, skipping');
+        try {
+          const tableNames = await this.db.tableNames();
+          if (!tableNames.includes(this.tableName)) {
+            return;
+          }
+          this.table = await this.db.openTable(this.tableName);
+        } catch (error) {
+          logger.error('Failed to open memory table during migration:', error);
+          return;
+        }
+      }
+
+      try {
+        const rows = await this.table.query().select(['id', 'content']).toArray();
+
+        this.embeddingProgress = {
+          phase: MemoryEmbeddingProgressPhase.ReEmbedding,
+          status: this.embeddingProgress.status,
+          done: 0,
+          total: rows.length,
+          finished: false,
+        };
+
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i] as { id?: string; content?: string };
+          if (!row?.id || !row?.content) {
+            continue;
+          }
+
+          const vector = await this.getEmbedding(row.content);
+          await this.table.update({ where: `id = '${row.id}'`, values: { vector } });
+
+          this.embeddingProgress.done = i + 1;
+
+          if ((i + 1) % 50 === 0) {
+            logger.info('Re-embedding memories progress', { done: i + 1, total: rows.length });
+          }
+        }
+
+        this.embeddingProgress = {
+          phase: MemoryEmbeddingProgressPhase.Done,
+          status: this.embeddingProgress.status,
+          done: rows.length,
+          total: rows.length,
+          finished: true,
+        };
+
+        logger.info('Re-embedding memories completed', { total: rows.length });
+      } catch (error) {
+        this.embeddingProgress = {
+          phase: MemoryEmbeddingProgressPhase.Error,
+          status: this.embeddingProgress.status,
+          done: this.embeddingProgress.done,
+          total: this.embeddingProgress.total,
+          finished: true,
+          error: error instanceof Error ? error.message : String(error),
+        };
+        logger.error('Failed to re-embed memories:', error);
+      }
+    };
+
+    logger.info('Loading local embedding model... (this may take a moment on first run)');
+    this.embeddingPipelinePromise = pipeline('feature-extraction', newModel, {
+      cache_dir: AIDER_DESK_CACHE_DIR,
+      progress_callback: (progress) => {
+        // @ts-expect-error progress is not typed properly
+        const status = `${Number(progress.progress).toFixed(2)}%`;
+        if (status) {
+          this.embeddingProgress.status = status;
+        }
+      },
+    })
+      .then(async (p) => {
+        this.isInitialized = true;
+        this.embeddingProgress = {
+          phase: MemoryEmbeddingProgressPhase.ReEmbedding,
+          status: this.embeddingProgress.status,
+          done: this.embeddingProgress.total,
+          total: this.embeddingProgress.total,
+          finished: true,
+        };
+        return p;
+      })
+      .catch((error) => {
+        this.embeddingProgress = {
+          phase: MemoryEmbeddingProgressPhase.Error,
+          status: this.embeddingProgress.status,
+          done: this.embeddingProgress.done,
+          total: this.embeddingProgress.total,
+          finished: true,
+          error: error instanceof Error ? error.message : String(error),
+        };
+        logger.error('Failed to load local embedding model:', error);
+        return null;
+      });
+
+    await migrate();
+  }
+
   /**
    * Generates a vector embedding for the given text using the local model.
    */
@@ -87,11 +287,13 @@ export class MemoryManager {
     await this.waitForInit();
 
     if (!this.isInitialized) {
+      logger.error('Embedding pipeline not initialized. Call initialize() first.');
       throw new Error('Embedding pipeline not initialized. Call initialize() first.');
     }
 
     const pipeline = await this.embeddingPipelinePromise;
     if (!pipeline) {
+      logger.error('Embedding pipeline not initialized. Call initialize() first.');
       throw new Error('Embedding pipeline not initialized. Call initialize() first.');
     }
 
@@ -161,6 +363,12 @@ export class MemoryManager {
       return []; // No memories exist yet
     }
 
+    logger.info('Retrieving memories', {
+      projectId,
+      query,
+      limit,
+      maxDistance,
+    });
     const queryVector = await this.getEmbedding(query);
 
     // Perform Vector Search + SQL Filtering with distance information
@@ -171,6 +379,14 @@ export class MemoryManager {
       .limit(limit)
       .select(['id', 'content', 'type', 'timestamp', 'projectid', 'taskid', '_distance'])
       .toArray();
+
+    logger.info('Retrieved memories', {
+      projectId,
+      query,
+      limit,
+      maxDistance,
+      count: results.length,
+    });
 
     // Filter by distance if threshold is provided
     const filteredResults = maxDistance !== undefined ? results.filter((result) => (result._distance as number) <= maxDistance) : results;

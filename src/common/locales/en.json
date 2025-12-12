@@ -611,6 +611,11 @@
         "label": "Embedding Provider",
         "description": "Choose the embedding provider to use for memory functionality"
       },
+      "embeddingProgress": {
+        "loadingModel": "Loading embedding model: {{status}}",
+        "reEmbedding": "Re-embedding memories: {{done}}/{{total}}",
+        "error": "Embedding migration failed: {{error}}"
+      },
       "memories": {
         "title": "Memories",
         "project": "Project",

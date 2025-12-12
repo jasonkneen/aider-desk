@@ -200,4 +200,5 @@ export interface ApplicationAPI {
   listAllMemories: () => Promise<MemoryEntry[]>;
   deleteMemory: (id: string) => Promise<boolean>;
   deleteProjectMemories: (projectId: string) => Promise<number>;
+  getMemoryEmbeddingProgress: () => Promise<import('@common/types').MemoryEmbeddingProgress>;
 }

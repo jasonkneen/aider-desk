@@ -1,4 +1,4 @@
-import { MemoryConfig, MemoryEmbeddingProvider, MemoryEntry } from '@common/types';
+import { MemoryConfig, MemoryEmbeddingProvider, MemoryEntry, MemoryEmbeddingProgress, MemoryEmbeddingProgressPhase } from '@common/types';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaTrash } from 'react-icons/fa';
@@ -52,6 +52,8 @@ export const MemorySettings = ({ settings, setSettings }: Props) => {
   const [memoryToDelete, setMemoryToDelete] = useState<MemoryEntry | null>(null);
   const [isDeleteProjectDialogOpen, setIsDeleteProjectDialogOpen] = useState(false);
 
+  const [embeddingProgress, setEmbeddingProgress] = useState<MemoryEmbeddingProgress | null>(null);
+
   const loadMemories = async () => {
     const all = await api.listAllMemories();
     setMemories(all);
@@ -61,6 +63,43 @@ export const MemorySettings = ({ settings, setSettings }: Props) => {
     void loadMemories();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    let timeoutId: number | null = null;
+    let isCancelled = false;
+
+    const poll = async () => {
+      try {
+        const progress = await api.getMemoryEmbeddingProgress();
+        if (isCancelled) {
+          return;
+        }
+        setEmbeddingProgress(progress);
+
+        if (!progress.finished) {
+          timeoutId = window.setTimeout(() => {
+            void poll();
+          }, 1000);
+        }
+      } catch {
+        if (isCancelled) {
+          return;
+        }
+        timeoutId = window.setTimeout(() => {
+          void poll();
+        }, 2000);
+      }
+    };
+
+    void poll();
+
+    return () => {
+      isCancelled = true;
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [api, settings.model, settings.provider]);
 
   const projectOptions = useMemo(() => {
     const ids = new Set<string>();
@@ -164,6 +203,19 @@ export const MemorySettings = ({ settings, setSettings }: Props) => {
                 />
                 <p className="text-xs text-text-secondary mt-1">{LOCAL_MODELS.find((m) => m.value === settings.model)?.description}</p>
               </div>
+            </div>
+          )}
+          {embeddingProgress && embeddingProgress.phase !== MemoryEmbeddingProgressPhase.Idle && (
+            <div className="text-2xs text-text-muted">
+              {embeddingProgress.phase === MemoryEmbeddingProgressPhase.LoadingModel && (
+                <span>{t('settings.memory.embeddingProgress.loadingModel', { status: embeddingProgress.status || '-' })}</span>
+              )}
+              {embeddingProgress.phase === MemoryEmbeddingProgressPhase.ReEmbedding && (
+                <span>{t('settings.memory.embeddingProgress.reEmbedding', { done: embeddingProgress.done, total: embeddingProgress.total })}</span>
+              )}
+              {embeddingProgress.phase === MemoryEmbeddingProgressPhase.Error && (
+                <span className="text-error">{t('settings.memory.embeddingProgress.error', { error: embeddingProgress.error || '' })}</span>
+              )}
             </div>
           )}
         </div>

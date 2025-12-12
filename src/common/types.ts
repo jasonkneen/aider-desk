@@ -422,6 +422,23 @@ export interface MemoryConfig {
   model: string;
 }
 
+export enum MemoryEmbeddingProgressPhase {
+  Idle = 'idle',
+  LoadingModel = 'loading-model',
+  ReEmbedding = 're-embedding',
+  Done = 'done',
+  Error = 'error',
+}
+
+export interface MemoryEmbeddingProgress {
+  phase: MemoryEmbeddingProgressPhase;
+  status: string | null;
+  done: number;
+  total: number;
+  finished: boolean;
+  error?: string;
+}
+
 export interface SettingsData {
   onboardingFinished?: boolean;
   language: string;

@@ -42,6 +42,7 @@ import {
   VoiceSession,
   AgentProfile,
   MemoryEntry,
+  MemoryEmbeddingProgress,
 } from '@common/types';
 import { ApplicationAPI } from '@common/api';
 import axios, { type AxiosInstance } from 'axios';
@@ -765,6 +766,10 @@ export class BrowserApi implements ApplicationAPI {
 
   deleteMemory(id: string): Promise<boolean> {
     return this.delete<{ ok: boolean }>(`/memories/${id}`).then((r) => r.ok);
+  }
+
+  getMemoryEmbeddingProgress(): Promise<MemoryEmbeddingProgress> {
+    return this.get('/memories/embedding-progress');
   }
 
   deleteProjectMemories(projectId: string): Promise<number> {

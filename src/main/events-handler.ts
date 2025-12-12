@@ -74,8 +74,7 @@ export class EventsHandler {
     this.mcpManager.settingsChanged(oldSettings, newSettings);
     void this.projectManager.settingsChanged(oldSettings, newSettings);
     this.telemetryManager.settingsChanged(oldSettings, newSettings);
-
-    // Memory configuration changes require restart to take effect
+    void this.memoryManager.settingsChanged(oldSettings, newSettings);
 
     return this.store.getSettings();
   }
@@ -825,5 +824,9 @@ export class EventsHandler {
 
   async deleteProjectMemories(projectId: string): Promise<number> {
     return await this.memoryManager.deleteMemoriesForProject(projectId);
+  }
+
+  getMemoryEmbeddingProgress() {
+    return this.memoryManager.getProgress();
   }
 }
