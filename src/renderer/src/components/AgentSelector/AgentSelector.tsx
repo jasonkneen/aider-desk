@@ -43,26 +43,29 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
 
   const profiles = useMemo(() => getProfiles(projectDir), [getProfiles, projectDir]);
 
-  const activeProfile = useMemo(() => {
+  const activeTaskProfile = useMemo(() => {
     return resolveAgentProfile(task, projectSettings?.agentProfileId, profiles);
   }, [task, projectSettings?.agentProfileId, profiles]);
+  const activeGlobalProfile = useMemo(() => {
+    return profiles.find((p) => p.id === (task.agentProfileId || projectSettings?.agentProfileId));
+  }, [profiles, projectSettings?.agentProfileId, task.agentProfileId]);
   const { mcpServers = {} } = settings || {};
-  const { enabledServers = [], toolApprovals = {} } = activeProfile || {};
+  const { enabledServers = [], toolApprovals = {} } = activeTaskProfile || {};
   const handleToggleProfileSetting = useCallback(
     (setting: keyof AgentProfile, value: boolean) => {
-      if (activeProfile) {
-        const updatedProfile = { ...activeProfile, [setting]: value };
+      if (activeGlobalProfile) {
+        const updatedProfile = { ...activeGlobalProfile, [setting]: value };
         void updateProfile(updatedProfile);
       }
     },
-    [activeProfile, updateProfile],
+    [activeGlobalProfile, updateProfile],
   );
 
   useClickOutside(selectorRef, () => setSelectorVisible(false));
 
   useHotkeys(
     'alt+t',
-    () => handleToggleProfileSetting('useTodoTools', !activeProfile?.useTodoTools),
+    () => handleToggleProfileSetting('useTodoTools', !activeTaskProfile?.useTodoTools),
     {
       enabled: isActive,
       enableOnContentEditable: true,
@@ -71,7 +74,7 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
   );
   useHotkeys(
     'alt+f',
-    () => handleToggleProfileSetting('includeContextFiles', !activeProfile?.includeContextFiles),
+    () => handleToggleProfileSetting('includeContextFiles', !activeTaskProfile?.includeContextFiles),
     {
       enabled: isActive,
       enableOnContentEditable: true,
@@ -80,7 +83,7 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
   );
   useHotkeys(
     'alt+r',
-    () => handleToggleProfileSetting('includeRepoMap', !activeProfile?.includeRepoMap),
+    () => handleToggleProfileSetting('includeRepoMap', !activeTaskProfile?.includeRepoMap),
     {
       enabled: isActive,
       enableOnContentEditable: true,
@@ -90,7 +93,7 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
 
   useHotkeys(
     'alt+m',
-    () => handleToggleProfileSetting('useMemoryTools', !activeProfile?.useMemoryTools),
+    () => handleToggleProfileSetting('useMemoryTools', !activeTaskProfile?.useMemoryTools),
     {
       enabled: isActive,
       enableOnContentEditable: true,
@@ -100,7 +103,7 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
 
   useHotkeys(
     'alt+s',
-    () => handleToggleProfileSetting('useSkillsTools', !activeProfile?.useSkillsTools),
+    () => handleToggleProfileSetting('useSkillsTools', !activeTaskProfile?.useSkillsTools),
     {
       enabled: isActive,
       enableOnContentEditable: true,
@@ -151,7 +154,7 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
     void calculateEnabledTools();
   }, [enabledServers, mcpServers, toolApprovals, api]);
 
-  if (!activeProfile && profiles.length === 0) {
+  if (!activeTaskProfile && profiles.length === 0) {
     return <div className="text-xs text-text-muted-light">{t('common.loading')}</div>;
   }
 
@@ -164,21 +167,21 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
   };
 
   const handleSaveAsProjectDefault = async () => {
-    if (activeProfile) {
+    if (activeTaskProfile) {
       setSelectorVisible(false);
       await saveProjectSettings({
-        agentProfileId: activeProfile.id,
+        agentProfileId: activeTaskProfile.id,
       });
     }
   };
 
   const handleToggleServer = (serverName: string) => {
-    if (activeProfile) {
-      const currentEnabledServers = activeProfile.enabledServers || [];
+    if (activeGlobalProfile) {
+      const currentEnabledServers = activeGlobalProfile.enabledServers || [];
       const isEnabled = currentEnabledServers.includes(serverName);
 
       let newEnabledServers: string[];
-      const newToolApprovals = { ...activeProfile.toolApprovals };
+      const newToolApprovals = { ...activeGlobalProfile.toolApprovals };
 
       if (isEnabled) {
         newEnabledServers = currentEnabledServers.filter((s) => s !== serverName);
@@ -193,7 +196,7 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
       }
 
       const updatedProfile = {
-        ...activeProfile,
+        ...activeGlobalProfile,
         enabledServers: newEnabledServers,
         toolApprovals: newToolApprovals,
       };
@@ -206,7 +209,7 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
   };
 
   const handleOpenAgentProfiles = () => {
-    showSettingsPage?.('agents', activeProfile ? { agentProfileId: activeProfile.id } : undefined);
+    showSettingsPage?.('agents', activeTaskProfile ? { agentProfileId: activeTaskProfile.id } : undefined);
     setSelectorVisible(false);
   };
 
@@ -223,19 +226,19 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
         )}
       >
         <RiToolsFill className="w-3.5 h-3.5" />
-        {activeProfile ? (
+        {activeTaskProfile ? (
           <>
-            <span className="text-2xs truncate max-w-[250px] -mb-0.5">{activeProfile.name}</span>
+            <span className="text-2xs truncate max-w-[250px] -mb-0.5">{activeTaskProfile.name}</span>
             <span className="text-2xs font-mono text-text-muted">({enabledToolsCount ?? '...'})</span>
 
-            {activeProfile.useAiderTools && <MdOutlineHdrAuto className="w-3.5 h-3.5 text-agent-aider-tools opacity-90" />}
-            {activeProfile.usePowerTools && <MdFlashOn className="w-3.5 h-3.5 text-agent-power-tools opacity-70" />}
-            {activeProfile.useTodoTools && <MdOutlineChecklist className="w-3.5 h-3.5 text-agent-todo-tools opacity-70" />}
-            {activeProfile.useTaskTools && <GrTasks className="w-3.5 h-3.5 text-agent-tasks-tools opacity-70" />}
-            {activeProfile.useMemoryTools && <LuBrain className="w-3 h-3 text-agent-memory-tools opacity-70" />}
-            {activeProfile.useSkillsTools && <MdPsychology className="w-3.5 h-3.5 text-agent-skills-tools opacity-70" />}
-            {activeProfile.includeContextFiles && <MdOutlineFileCopy className="w-3 h-3 text-agent-context-files opacity-70" />}
-            {activeProfile.includeRepoMap && <MdOutlineMap className="w-3 h-3 text-agent-repo-map opacity-70" />}
+            {activeTaskProfile.useAiderTools && <MdOutlineHdrAuto className="w-3.5 h-3.5 text-agent-aider-tools opacity-90" />}
+            {activeTaskProfile.usePowerTools && <MdFlashOn className="w-3.5 h-3.5 text-agent-power-tools opacity-70" />}
+            {activeTaskProfile.useTodoTools && <MdOutlineChecklist className="w-3.5 h-3.5 text-agent-todo-tools opacity-70" />}
+            {activeTaskProfile.useTaskTools && <GrTasks className="w-3.5 h-3.5 text-agent-tasks-tools opacity-70" />}
+            {activeTaskProfile.useMemoryTools && <LuBrain className="w-3 h-3 text-agent-memory-tools opacity-70" />}
+            {activeTaskProfile.useSkillsTools && <MdPsychology className="w-3.5 h-3.5 text-agent-skills-tools opacity-70" />}
+            {activeTaskProfile.includeContextFiles && <MdOutlineFileCopy className="w-3 h-3 text-agent-context-files opacity-70" />}
+            {activeTaskProfile.includeRepoMap && <MdOutlineMap className="w-3 h-3 text-agent-repo-map opacity-70" />}
           </>
         ) : (
           <span className="text-2xs truncate max-w-[250px] -mb-0.5">{t('agentProfiles.selectProfile')}</span>
@@ -249,7 +252,7 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
             <div className="flex items-center justify-between mb-2 pl-3 pr-2">
               <span className="text-xs font-medium text-text-secondary uppercase">{t('agentProfiles.title')}</span>
               <div className="flex items-center gap-1">
-                {activeProfile && (
+                {activeTaskProfile && (
                   <IconButton
                     icon={<MdSave className="w-4 h-4" />}
                     onClick={handleSaveAsProjectDefault}
@@ -273,11 +276,11 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
                   key={profile.id}
                   className={clsx(
                     'pl-6 pr-2 py-1 cursor-pointer transition-colors text-2xs relative',
-                    profile.id === activeProfile?.id ? 'bg-bg-secondary-light text-text-primary' : 'hover:bg-bg-secondary-light text-text-tertiary ',
+                    profile.id === activeTaskProfile?.id ? 'bg-bg-secondary-light text-text-primary' : 'hover:bg-bg-secondary-light text-text-tertiary ',
                   )}
                   onClick={() => handleSwitchProfile(profile.id)}
                 >
-                  {profile.id === activeProfile?.id && (
+                  {profile.id === activeTaskProfile?.id && (
                     <MdCheck className="w-3 h-3 absolute left-1.5 top-1/2 transform -translate-y-1/2 text-agent-auto-approve" />
                   )}
                   <span className="truncate block">{profile.name}&nbsp;</span>
@@ -287,7 +290,7 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
           </div>
 
           {/* MCP Servers */}
-          {activeProfile && (
+          {activeTaskProfile && (
             <div className="border-b border-border-default-dark">
               <Accordion
                 title={
@@ -309,7 +312,7 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
                         key={serverName}
                         serverName={serverName}
                         disabled={!enabledServers.includes(serverName)}
-                        toolApprovals={activeProfile?.toolApprovals || {}}
+                        toolApprovals={activeTaskProfile?.toolApprovals || {}}
                         onToggle={handleToggleServer}
                       />
                     ))
@@ -320,51 +323,61 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
           )}
 
           {/* Quick Settings */}
-          {activeProfile && (
+          {activeTaskProfile && (
             <div className="px-3 py-2">
               <div className="flex items-center justify-end">
                 <IconButton
                   icon={
-                    <MdOutlineHdrAuto className={clsx('w-3.5 h-3.5', activeProfile.useAiderTools ? 'text-agent-aider-tools' : 'text-text-muted opacity-50')} />
+                    <MdOutlineHdrAuto
+                      className={clsx('w-3.5 h-3.5', activeTaskProfile.useAiderTools ? 'text-agent-aider-tools' : 'text-text-muted opacity-50')}
+                    />
                   }
-                  onClick={() => handleToggleProfileSetting('useAiderTools', !activeProfile.useAiderTools)}
+                  onClick={() => handleToggleProfileSetting('useAiderTools', !activeTaskProfile.useAiderTools)}
                   className="p-1.5 hover:bg-bg-secondary rounded-md"
                   tooltip={t('settings.agent.useAiderTools')}
                   tooltipId="agent-selector-tooltip"
                 />
                 <IconButton
-                  icon={<MdFlashOn className={clsx('w-3.5 h-3.5', activeProfile.usePowerTools ? 'text-agent-power-tools' : 'text-text-muted opacity-50')} />}
-                  onClick={() => handleToggleProfileSetting('usePowerTools', !activeProfile.usePowerTools)}
+                  icon={
+                    <MdFlashOn className={clsx('w-3.5 h-3.5', activeTaskProfile.usePowerTools ? 'text-agent-power-tools' : 'text-text-muted opacity-50')} />
+                  }
+                  onClick={() => handleToggleProfileSetting('usePowerTools', !activeTaskProfile.usePowerTools)}
                   className="p-1.5 hover:bg-bg-secondary rounded-md"
                   tooltip={t('settings.agent.usePowerTools')}
                   tooltipId="agent-selector-tooltip"
                 />
                 <IconButton
                   icon={
-                    <MdOutlineChecklist className={clsx('w-3.5 h-3.5', activeProfile.useTodoTools ? 'text-agent-todo-tools' : 'text-text-muted opacity-50')} />
+                    <MdOutlineChecklist
+                      className={clsx('w-3.5 h-3.5', activeTaskProfile.useTodoTools ? 'text-agent-todo-tools' : 'text-text-muted opacity-50')}
+                    />
                   }
-                  onClick={() => handleToggleProfileSetting('useTodoTools', !activeProfile.useTodoTools)}
+                  onClick={() => handleToggleProfileSetting('useTodoTools', !activeTaskProfile.useTodoTools)}
                   className="p-1.5 hover:bg-bg-secondary rounded-md"
                   tooltip={`${t('settings.agent.useTodoTools')} (Alt + T)`}
                   tooltipId="agent-selector-tooltip"
                 />
                 <IconButton
-                  icon={<GrTasks className={clsx('w-3.5 h-3.5', activeProfile.useTaskTools ? 'text-agent-tasks-tools' : 'text-text-muted opacity-50')} />}
-                  onClick={() => handleToggleProfileSetting('useTaskTools', !activeProfile.useTaskTools)}
+                  icon={<GrTasks className={clsx('w-3.5 h-3.5', activeTaskProfile.useTaskTools ? 'text-agent-tasks-tools' : 'text-text-muted opacity-50')} />}
+                  onClick={() => handleToggleProfileSetting('useTaskTools', !activeTaskProfile.useTaskTools)}
                   className="p-1.5 hover:bg-bg-secondary rounded-md"
                   tooltip={t('settings.agent.useTaskTools')}
                   tooltipId="agent-selector-tooltip"
                 />
                 <IconButton
-                  icon={<LuBrain className={clsx('w-3.5 h-3.5', activeProfile.useMemoryTools ? 'text-agent-memory-tools' : 'text-text-muted opacity-50')} />}
-                  onClick={() => handleToggleProfileSetting('useMemoryTools', !activeProfile.useMemoryTools)}
+                  icon={
+                    <LuBrain className={clsx('w-3.5 h-3.5', activeTaskProfile.useMemoryTools ? 'text-agent-memory-tools' : 'text-text-muted opacity-50')} />
+                  }
+                  onClick={() => handleToggleProfileSetting('useMemoryTools', !activeTaskProfile.useMemoryTools)}
                   className="p-1.5 hover:bg-bg-secondary rounded-md"
                   tooltip={`${t('settings.agent.useMemoryTools')} (Alt + M)`}
                   tooltipId="agent-selector-tooltip"
                 />
                 <IconButton
-                  icon={<MdPsychology className={clsx('w-4 h-4', activeProfile.useSkillsTools ? 'text-agent-skills-tools' : 'text-text-muted opacity-50')} />}
-                  onClick={() => handleToggleProfileSetting('useSkillsTools', !activeProfile.useSkillsTools)}
+                  icon={
+                    <MdPsychology className={clsx('w-4 h-4', activeTaskProfile.useSkillsTools ? 'text-agent-skills-tools' : 'text-text-muted opacity-50')} />
+                  }
+                  onClick={() => handleToggleProfileSetting('useSkillsTools', !activeTaskProfile.useSkillsTools)}
                   className="p-1.5 hover:bg-bg-secondary rounded-md"
                   tooltip={`${t('settings.agent.useSkillsTools')} (Alt + S)`}
                   tooltipId="agent-selector-tooltip"
@@ -372,17 +385,19 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
                 <IconButton
                   icon={
                     <MdOutlineFileCopy
-                      className={clsx('w-3.5 h-3.5', activeProfile.includeContextFiles ? 'text-agent-context-files' : 'text-text-muted opacity-50')}
+                      className={clsx('w-3.5 h-3.5', activeTaskProfile.includeContextFiles ? 'text-agent-context-files' : 'text-text-muted opacity-50')}
                     />
                   }
-                  onClick={() => handleToggleProfileSetting('includeContextFiles', !activeProfile.includeContextFiles)}
+                  onClick={() => handleToggleProfileSetting('includeContextFiles', !activeTaskProfile.includeContextFiles)}
                   className="p-1.5 hover:bg-bg-secondary rounded-md"
                   tooltip={`${t('settings.agent.includeContextFiles')} (Alt + F)`}
                   tooltipId="agent-selector-tooltip"
                 />
                 <IconButton
-                  icon={<MdOutlineMap className={clsx('w-3.5 h-3.5', activeProfile.includeRepoMap ? 'text-agent-repo-map' : 'text-text-muted opacity-50')} />}
-                  onClick={() => handleToggleProfileSetting('includeRepoMap', !activeProfile.includeRepoMap)}
+                  icon={
+                    <MdOutlineMap className={clsx('w-3.5 h-3.5', activeTaskProfile.includeRepoMap ? 'text-agent-repo-map' : 'text-text-muted opacity-50')} />
+                  }
+                  onClick={() => handleToggleProfileSetting('includeRepoMap', !activeTaskProfile.includeRepoMap)}
                   className="p-1.5 hover:bg-bg-secondary rounded-md"
                   tooltip={`${t('settings.agent.includeRepoMap')} (Alt + R)`}
                   tooltipId="agent-selector-tooltip"
