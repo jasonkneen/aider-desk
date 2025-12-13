@@ -17,6 +17,7 @@ import {
   TodoApi,
   UsageApi,
   MemoryApi,
+  VoiceApi,
 } from '@/server/rest-api';
 import { AUTH_PASSWORD, AUTH_USERNAME, SERVER_PORT } from '@/constants';
 import logger from '@/logger';
@@ -111,6 +112,7 @@ export class ServerController {
     new ProvidersApi(this.eventsHandler).registerRoutes(apiRouter);
     new AgentApi(this.eventsHandler).registerRoutes(apiRouter);
     new MemoryApi(this.eventsHandler).registerRoutes(apiRouter);
+    new VoiceApi(this.eventsHandler).registerRoutes(apiRouter);
 
     // Mount the API router globally under /api
     this.app.use('/api', apiRouter);

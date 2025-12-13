@@ -3,7 +3,7 @@ import { existsSync, statSync } from 'fs';
 
 import { compareBaseDirs, delay } from '@common/utils';
 import { electronApp, is, optimizer } from '@electron-toolkit/utils';
-import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
+import { app, BrowserWindow, dialog, Menu, session, shell } from 'electron';
 
 import icon from '../../resources/icon.png?asset';
 
@@ -206,6 +206,19 @@ const initWindow = async (store: Store): Promise<BrowserWindow> => {
     await beforeQuit();
     process.exit(0);
   });
+
+  if (process.platform === 'darwin') {
+    // Allow renderer getUserMedia() microphone access.
+    // Without this, Electron may never surface the macOS TCC permission prompt and the mic stays unavailable.
+    session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
+      if (permission === 'media') {
+        callback(true);
+        return;
+      }
+
+      callback(false);
+    });
+  }
 
   // Initialize IPC handlers
   setupIpcHandlers(eventsHandler, serverController);

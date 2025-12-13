@@ -12,6 +12,8 @@
 - properly reading API_KEY environment variables for some providers when using Aider modes
 - updated link to telemetry docs
 - user message correctly stored before Aider returns response in case of interrupt or error
+- fixed microphone permission issue on macOS
+- added voice support to browser client
 
 ## [0.43.0]
 

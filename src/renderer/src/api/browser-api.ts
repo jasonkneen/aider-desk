@@ -540,8 +540,7 @@ export class BrowserApi implements ApplicationAPI {
 
   // Voice API
   createVoiceSession(provider: ProviderProfile): Promise<VoiceSession> {
-    void provider;
-    throw new UnsupportedError('createVoiceSession not supported in browser mode');
+    return this.post('/voice/session', { provider });
   }
 
   addSettingsUpdatedListener(callback: (data: SettingsData) => void): () => void {

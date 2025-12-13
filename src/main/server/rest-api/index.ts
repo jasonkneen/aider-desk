@@ -10,3 +10,4 @@ export * from './todo-api';
 export * from './mcp-api';
 export * from './providers-api';
 export * from './memory-api';
+export * from './voice-api';

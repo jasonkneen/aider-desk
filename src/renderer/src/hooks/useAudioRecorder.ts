@@ -91,15 +91,16 @@ export const useAudioRecorder = (): UseAudioRecorderType => {
     }
 
     try {
+      // Create voice session first.
+      // On macOS this is also where we trigger the OS-level microphone permission prompt.
+      const session = await api.createVoiceSession(voiceProviderProfile);
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: true,
         video: false,
       });
       streamRef.current = stream;
       setMediaStream(stream);
-
-      // Create voice session
-      const session = await api.createVoiceSession(voiceProviderProfile);
 
       // Create and configure voice provider
       const voiceProvider = createVoiceProvider(voiceProviderProfile.provider.name);

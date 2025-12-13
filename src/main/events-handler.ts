@@ -45,6 +45,7 @@ import logger from '@/logger';
 import { getDefaultProjectSettings, getEffectiveEnvironmentVariable, getFilePathSuggestions, isProjectPath, isValidPath, scrapeWeb } from '@/utils';
 import { AIDER_DESK_TMP_DIR, LOGS_DIR } from '@/constants';
 import { EventManager } from '@/events';
+import { isElectron } from '@/app';
 
 export class EventsHandler {
   constructor(
@@ -110,6 +111,17 @@ export class EventsHandler {
   }
 
   async createVoiceSession(providerProfile: ProviderProfile): Promise<VoiceSession> {
+    if (process.platform === 'darwin' && isElectron()) {
+      const { systemPreferences } = await import('electron');
+      const status = systemPreferences.getMediaAccessStatus('microphone');
+      if (status !== 'granted') {
+        const granted = await systemPreferences.askForMediaAccess('microphone');
+        if (!granted) {
+          throw new Error('Microphone access is required to use Voice. Please enable it in System Settings.');
+        }
+      }
+    }
+
     return await this.modelManager.createVoiceSession(providerProfile);
   }
 
