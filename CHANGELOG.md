@@ -7,6 +7,7 @@
 - added Use memory tools and Use task tools quick actions to Agent selector
 - optimized agent profile update and related event handling
 - added Skill tools for activating skills in Agent mode
+- properly passing max_tokens when using Aider modes
 
 ## [0.43.0]
 

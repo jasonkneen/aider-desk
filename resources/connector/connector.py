@@ -12,7 +12,7 @@ import uuid
 from pathlib import Path
 from typing import Dict, Optional, Any, Coroutine
 from aider import models, utils
-from aider.models import model_info_manager
+from aider.models import model_info_manager, ModelSettings
 from aider.coders import Coder
 from aider.commands import Commands
 from aider.io import InputOutput, AutoCompleter
@@ -35,6 +35,22 @@ class PromptContext:
 nest_asyncio.apply()
 
 confirmation_result = None
+
+def update_model_params(models_info, model):
+  model.info = model.get_model_info(model.name)
+  max_input_tokens = model.info.get('max_input_tokens') if model.info else None
+  if max_input_tokens:
+    model.max_chat_history_tokens = min(max(max_input_tokens / 16, 1024), 8192)
+  max_output_tokens = model.info.get('max_output_tokens') if model.info else None
+  if max_output_tokens is not None:
+    if model.extra_params is None:
+      model.extra_params = {}
+    if "gpt-5" in model.name:
+      model.extra_params["max_completion_tokens"] = max_output_tokens
+    elif model.extra_params.get("max_completion_tokens") is None:
+      model.extra_params["max_tokens"] = max_output_tokens
+  temperature = models_info.get(model.name, {}).get('temperature')
+  model.use_temperature = temperature if temperature is not None else False
 
 def wait_for_async(connector, coroutine):
   try:
@@ -157,8 +173,7 @@ class PromptExecutor:
 
         # check if we have temperature info for the architect model
         if self.connector.models_info and self.connector.models_info.get(architect_model):
-          temperature = self.connector.models_info.get(architect_model).get('temperature')
-          running_model.use_temperature = temperature if temperature is not None else False
+          update_model_params(self.connector.models_info, running_model)
 
         sequence_number = -1
 
@@ -1023,6 +1038,8 @@ class Connector:
         await self.send_autocompletion(files)
 
     except Exception as e:
+      import traceback
+      traceback.print_exc()
       self.coder.io.tool_error(f"Exception in connector: {str(e)}")
       return
 
@@ -1356,24 +1373,14 @@ class Connector:
         "litellm_provider": model_id.split("/")[0],
         "mode": "chat"
       }
+      self.coder.io.tool_output(f"Updated model: {model_id} with {transformed_data[model_id]}")
 
     # Update the model_info_manager.local_model_metadata
     model_info_manager.local_model_metadata.update(transformed_data)
 
-    self.coder.main_model.info = self.coder.main_model.get_model_info(self.coder.main_model.name)
-    max_input_tokens = self.coder.main_model.info.get('max_input_tokens') if self.coder.main_model.info else None
-    if max_input_tokens:
-      self.coder.main_model.max_chat_history_tokens = min(max(max_input_tokens / 16, 1024), 8192)
-    temperature = models_info.get(self.coder.main_model.name, {}).get('temperature')
-    self.coder.main_model.use_temperature = temperature if temperature is not None else False
-
+    update_model_params(models_info, self.coder.main_model)
     if self.coder.main_model.weak_model:
-      self.coder.main_model.weak_model.info = self.coder.main_model.weak_model.get_model_info(self.coder.main_model.weak_model.name)
-      max_input_tokens = self.coder.main_model.weak_model.info.get('max_input_tokens') if self.coder.main_model.weak_model.info else None
-      if max_input_tokens:
-        self.coder.main_model.weak_model.max_chat_history_tokens = min(max(max_input_tokens / 16, 1024), 8192)
-      temperature = models_info.get(self.coder.main_model.weak_model.name, {}).get('temperature')
-      self.coder.main_model.weak_model.use_temperature = temperature if temperature is not None else False
+      update_model_params(models_info, self.coder.main_model.weak_model)
 
     # Log the updated models info
     for model_id, info in transformed_data.items():
@@ -1449,6 +1456,7 @@ def setup_telemetry():
   # Set OpenRouter site and app name
   os.environ["OR_SITE_URL"] = 'https://aiderdesk.hotovo.com'
   os.environ["OR_APP_NAME"] = 'AiderDesk'
+  os.environ["LITELLM_LOG"] = "DEBUG"
 
 if __name__ == "__main__":
   main()
