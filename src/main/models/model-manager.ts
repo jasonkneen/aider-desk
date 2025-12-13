@@ -519,7 +519,7 @@ export class ModelManager {
     logger.info(`Bulk updated ${modelUpdates.length} model overrides for ${affectedProviderIds.size} providers`);
   }
 
-  getAiderModelMapping(modelName: string): AiderModelMapping {
+  getAiderModelMapping(modelName: string, projectDir: string): AiderModelMapping {
     const providers = this.store.getProviders();
     const [providerId, ...modelIdParts] = modelName.split('/');
     const modelId = modelIdParts.join('/');
@@ -540,10 +540,10 @@ export class ModelManager {
       };
     }
 
-    return this.getProviderAiderMapping(provider, modelId);
+    return this.getProviderAiderMapping(provider, modelId, projectDir);
   }
 
-  private getProviderAiderMapping(provider: ProviderProfile, modelId: string): AiderModelMapping {
+  private getProviderAiderMapping(provider: ProviderProfile, modelId: string, projectDir: string): AiderModelMapping {
     const strategy = this.providerRegistry[provider.provider.name];
     if (!strategy) {
       return {
@@ -552,7 +552,7 @@ export class ModelManager {
       };
     }
 
-    return strategy.getAiderMapping(provider, modelId);
+    return strategy.getAiderMapping(provider, modelId, this.store.getSettings(), projectDir);
   }
 
   getModel(providerId: string, modelId: string, useModelInfoFallback = false): Model | undefined {

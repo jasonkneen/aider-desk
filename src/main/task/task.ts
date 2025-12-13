@@ -678,7 +678,7 @@ export class Task {
     this.currentPromptContext = promptContext;
 
     const architectModel = this.aiderManager.getArchitectModel();
-    const architectModelMapping = architectModel ? this.modelManager.getAiderModelMapping(architectModel) : null;
+    const architectModelMapping = architectModel ? this.modelManager.getAiderModelMapping(architectModel, this.getProjectDir()) : null;
 
     this.findMessageConnectors('prompt').forEach((connector) => {
       connector.sendPromptMessage(prompt, promptContext, mode, architectModelMapping?.modelName, messages, files, options);
@@ -1145,14 +1145,14 @@ export class Task {
     // Extract info for main model
     const mainModelInfo = extractModelInfo(aiderModelsData.mainModel);
     if (mainModelInfo) {
-      modelsInfo[this.modelManager.getAiderModelMapping(aiderModelsData.mainModel).modelName] = mainModelInfo;
+      modelsInfo[this.modelManager.getAiderModelMapping(aiderModelsData.mainModel, this.getProjectDir()).modelName] = mainModelInfo;
     }
 
     // Extract info for weak model
     if (aiderModelsData.weakModel) {
       const weakModelInfo = extractModelInfo(aiderModelsData.weakModel);
       if (weakModelInfo) {
-        modelsInfo[this.modelManager.getAiderModelMapping(aiderModelsData.weakModel).modelName] = weakModelInfo;
+        modelsInfo[this.modelManager.getAiderModelMapping(aiderModelsData.weakModel, this.getProjectDir()).modelName] = weakModelInfo;
       }
     }
 
@@ -1160,7 +1160,7 @@ export class Task {
     if (aiderModelsData.architectModel) {
       const architectModelInfo = extractModelInfo(aiderModelsData.architectModel);
       if (architectModelInfo) {
-        modelsInfo[this.modelManager.getAiderModelMapping(aiderModelsData.architectModel).modelName] = architectModelInfo;
+        modelsInfo[this.modelManager.getAiderModelMapping(aiderModelsData.architectModel, this.getProjectDir()).modelName] = architectModelInfo;
       }
     }
 

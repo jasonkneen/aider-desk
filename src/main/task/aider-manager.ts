@@ -66,14 +66,14 @@ export class AiderManager {
     const thinkingTokens = this.task.task.thinkingTokens;
     const environmentVariables = getEnvironmentVariablesForAider(settings, this.task.getProjectDir());
 
-    const mainModelMapping = this.modelManager.getAiderModelMapping(mainModel);
+    const mainModelMapping = this.modelManager.getAiderModelMapping(mainModel, this.task.getProjectDir());
     const mainModelName = mainModelMapping.modelName;
     const envFromMain = mainModelMapping.environmentVariables;
 
     let envFromWeak = {};
     let weakModelName: string | null = null;
     if (weakModel) {
-      const weakModelMapping = this.modelManager.getAiderModelMapping(weakModel);
+      const weakModelMapping = this.modelManager.getAiderModelMapping(weakModel, this.task.getProjectDir());
       weakModelName = weakModelMapping.modelName;
       envFromWeak = weakModelMapping.environmentVariables;
     }
@@ -383,14 +383,14 @@ export class AiderManager {
   }
 
   public updateModels(mainModel: string, weakModel: string | null, editFormat: EditFormat = 'diff'): void {
-    const mainModelMapping = this.modelManager.getAiderModelMapping(mainModel);
+    const mainModelMapping = this.modelManager.getAiderModelMapping(mainModel, this.task.getProjectDir());
     const mainModelName = mainModelMapping.modelName;
     const envFromMain = mainModelMapping.environmentVariables;
 
     let envFromWeak = {};
     let weakModelName: string | null = null;
     if (weakModel) {
-      const weakModelMapping = this.modelManager.getAiderModelMapping(weakModel);
+      const weakModelMapping = this.modelManager.getAiderModelMapping(weakModel, this.task.getProjectDir());
       weakModelName = weakModelMapping.modelName;
       envFromWeak = weakModelMapping.environmentVariables;
     }

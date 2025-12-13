@@ -51,13 +51,18 @@ export const hasMinimaxEnvVars = (settings: SettingsData): boolean => {
   return !!getEffectiveEnvironmentVariable('MINIMAX_API_KEY', settings, undefined)?.value;
 };
 
-export const getMinimaxAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {
+export const getMinimaxAiderMapping = (provider: ProviderProfile, modelId: string, settings: SettingsData, projectDir: string): AiderModelMapping => {
   const minimaxProvider = provider.provider as MinimaxProvider;
   const envVars: Record<string, string> = {};
 
+  envVars.OPENAI_API_BASE = 'https://api.minimax.io/v1';
   if (minimaxProvider.apiKey) {
     envVars.OPENAI_API_KEY = minimaxProvider.apiKey;
-    envVars.OPENAI_API_BASE = 'https://api.minimax.io/v1';
+  } else {
+    const effectiveVar = getEffectiveEnvironmentVariable('MINIMAX_API_KEY', settings, projectDir);
+    if (effectiveVar) {
+      envVars.OPENAI_API_KEY = effectiveVar.value;
+    }
   }
 
   return {

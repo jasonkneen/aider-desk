@@ -75,12 +75,17 @@ const hasGpustackEnvVars = (settings: SettingsData): boolean => {
   return hasApiKey || hasBaseUrl;
 };
 
-const getGpustackAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {
+const getGpustackAiderMapping = (provider: ProviderProfile, modelId: string, settings: SettingsData, projectDir: string): AiderModelMapping => {
   const gpustackProvider = provider.provider as GpustackProvider;
   const envVars: Record<string, string> = {};
 
   if (gpustackProvider.apiKey) {
     envVars.OPENAI_API_KEY = gpustackProvider.apiKey;
+  } else {
+    const effectiveVar = getEffectiveEnvironmentVariable('GPUSTACK_API_KEY', settings, projectDir);
+    if (effectiveVar) {
+      envVars.OPENAI_API_KEY = effectiveVar.value;
+    }
   }
   if (gpustackProvider.baseUrl) {
     envVars.OPENAI_API_BASE = `${gpustackProvider.baseUrl}/v1-openai`;

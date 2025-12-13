@@ -60,12 +60,17 @@ const loadZaiPlanModels = async (profile: ProviderProfile, settings: SettingsDat
 
 const hasZaiPlanEnvVars = (): boolean => false;
 
-const getZaiPlanAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {
+const getZaiPlanAiderMapping = (provider: ProviderProfile, modelId: string, settings: SettingsData, projectDir: string): AiderModelMapping => {
   const zaiProvider = provider.provider as ZaiPlanProvider;
   const envVars: Record<string, string> = {};
 
   if (zaiProvider.apiKey) {
     envVars.OPENAI_API_KEY = zaiProvider.apiKey;
+  } else {
+    const effectiveVar = getEffectiveEnvironmentVariable('ZAI_API_KEY', settings, projectDir);
+    if (effectiveVar) {
+      envVars.OPENAI_API_KEY = effectiveVar.value;
+    }
   }
 
   // Set the base URL for ZAI Plan

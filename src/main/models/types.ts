@@ -77,7 +77,7 @@ export interface LlmProviderStrategy {
   /**
    * Generates Aider-compatible model mapping with environment variables
    */
-  getAiderMapping: (provider: ProviderProfile, modelId: string) => AiderModelMapping;
+  getAiderMapping: (provider: ProviderProfile, modelId: string, settings: SettingsData, projectDir: string) => AiderModelMapping;
 
   // === Optional Configuration Helper Functions ===
   /**

@@ -102,7 +102,7 @@ export const hasRequestyEnvVars = (settings: SettingsData): boolean => {
   return !!getEffectiveEnvironmentVariable('REQUESTY_API_KEY', settings, undefined)?.value;
 };
 
-export const getRequestyAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping => {
+export const getRequestyAiderMapping = (provider: ProviderProfile, modelId: string, settings: SettingsData, projectDir: string): AiderModelMapping => {
   const requestyProvider = provider.provider as RequestyProvider;
   const envVars: Record<string, string> = {
     OPENAI_API_BASE: 'https://router.requesty.ai/v1',
@@ -110,6 +110,11 @@ export const getRequestyAiderMapping = (provider: ProviderProfile, modelId: stri
 
   if (requestyProvider.apiKey) {
     envVars.OPENAI_API_KEY = requestyProvider.apiKey;
+  } else {
+    const effectiveVar = getEffectiveEnvironmentVariable('REQUESTY_API_KEY', settings, projectDir);
+    if (effectiveVar) {
+      envVars.OPENAI_API_KEY = effectiveVar.value;
+    }
   }
 
   // Requesty doesn't have direct Aider support, so we use OpenAI-compatible endpoint

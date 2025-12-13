@@ -9,6 +9,7 @@
 - added Skill tools for activating skills in Agent mode
 - properly passing max_tokens when using Aider modes
 - architect model is now correctly set for a task
+- properly reading API_KEY environment variables for some providers when using Aider modes
 
 ## [0.43.0]
 
