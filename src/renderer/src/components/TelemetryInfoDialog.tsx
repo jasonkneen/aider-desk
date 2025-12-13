@@ -43,7 +43,7 @@ export const TelemetryInfoDialog = () => {
             components={{
               a: (
                 <a
-                  href="https://github.com/hotovo/aider-desk/blob/main/docs/telemetry.md"
+                  href="https://aiderdesk.hotovo.com/docs/configuration/telemetry"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-info-lighter hover:underline"

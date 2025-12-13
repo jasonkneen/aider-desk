@@ -10,6 +10,7 @@
 - properly passing max_tokens when using Aider modes
 - architect model is now correctly set for a task
 - properly reading API_KEY environment variables for some providers when using Aider modes
+- updated link to telemetry docs
 
 ## [0.43.0]
 
