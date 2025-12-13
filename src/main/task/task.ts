@@ -574,16 +574,16 @@ export class Task {
       startedAt: new Date().toISOString(),
     });
 
-    const responses = await this.sendPromptToAider(prompt, promptContext, mode, undefined, undefined, undefined);
-    logger.debug('Responses:', { responses });
-
-    // add messages to session
+    // Persist user message to the task context before running Aider so it can be redone even if the first call fails.
     this.contextManager.addContextMessage({
       id: promptContext.id,
       role: MessageRole.User,
       content: prompt,
       promptContext,
     });
+
+    const responses = await this.sendPromptToAider(prompt, promptContext, mode, undefined, undefined, undefined);
+    logger.debug('Responses:', { responses });
 
     for (const response of responses) {
       if (response.content || response.reflectedMessage) {
