@@ -75,6 +75,7 @@ src/
         helpers.ts
         memory.ts
         power.ts
+        skills.ts
         subagents.ts
         tasks.ts
         todo.ts
@@ -136,6 +137,7 @@ src/
         context-api.ts
         index.ts
         mcp-api.ts
+        memory-api.ts
         project-api.ts
         prompt-api.ts
         providers-api.ts
@@ -494,6 +496,8 @@ src/
         Settings.tsx
       themes/
         theme-aurora.scss
+        theme-botanical-garden-dark.scss
+        theme-botanical-garden.scss
         theme-bw.scss
         theme-cappuccino.scss
         theme-charcoal.scss
@@ -1641,6 +1645,9 @@ File: src/common/locales/en.json
       "useAiderTools": "Use Aider tools",
       "usePowerTools": "Use Power tools",
       "useTodoTools": "Use Todo tools",
+      "useTaskTools": "Use Task tools",
+      "useMemoryTools": "Use Memory tools",
+      "useSkillsTools": "Use Skills tools",
       "includeContextFiles": "Include context files",
       "includeFilesTooltip": "Adds content of context files into the chat of agent. This will increase token usage.",
       "includeRepoMap": "Include repository map",
@@ -1751,7 +1758,9 @@ File: src/common/locales/en.json
       "aurora": "Aurora",
       "serenity": "Serenity",
       "cappuccino": "Cappuccino",
-      "fresh": "Fresh"
+      "fresh": "Fresh",
+      "botanical-garden": "Botanical Garden",
+      "botanical-garden-dark": "Botanical Garden (Dark)"
     },
     "aiderRestartConfirm": {
       "title": "Restart Required",
@@ -1837,7 +1846,7 @@ File: src/common/locales/en.json
       "virtualizedRenderingTooltip": "Experimental feature that can improve performance when you have many messages in your conversation history by only rendering visible messages."
     },
     "memory": {
-      "title": "Memory",
+      "configuration": "Configuration",
       "description": "Configure AI memory features to enhance conversation continuity and context retention across sessions.",
       "enabled": {
         "label": "Enable",
@@ -1849,6 +1858,26 @@ File: src/common/locales/en.json
       "provider": {
         "label": "Embedding Provider",
         "description": "Choose the embedding provider to use for memory functionality"
+      },
+      "embeddingProgress": {
+        "loadingModel": "Loading embedding model: {{status}}",
+        "reEmbedding": "Re-embedding memories: {{done}}/{{total}}",
+        "error": "Embedding migration failed: {{error}}"
+      },
+      "memories": {
+        "title": "Memories",
+        "project": "Project",
+        "allProjects": "All projects",
+        "loading": "Loading memories...",
+        "empty": "No memories found.",
+        "delete": "Delete",
+        "deleteAllForProject": "Delete all for project",
+        "deleteDialogTitle": "Delete memory",
+        "deleteDialogText": "Delete memory",
+        "deleteProjectDialogTitle": "Delete project memories",
+        "deleteProjectDialogText": "Delete all memories for project",
+        "projectId": "projectId",
+        "id": "id"
       }
     }
   },
@@ -2845,6 +2874,9 @@ File: src/common/locales/zh.json
       "useAiderTools": "使用Aider工具",
       "usePowerTools": "使用 Power 工具",
       "useTodoTools": "使用 Todo 工具",
+      "useTaskTools": "使用任务工具",
+      "useMemoryTools": "使用记忆工具",
+      "useSkillsTools": "使用 Skills 工具",
       "includeContextFiles": "包含上下文文件",
       "includeFilesTooltip": "将上下文文件内容添加到代理的聊天中。这将增加令牌使用量。",
       "includeRepoMap": "包含仓库地图",
@@ -2953,7 +2985,9 @@ File: src/common/locales/zh.json
       "charcoal": "炭灰",
       "aurora": "极光",
       "serenity": "宁静",
-      "fresh": "清新"
+      "fresh": "清新",
+      "botanical-garden": "植物园",
+      "botanical-garden-dark": "植物园（深色）"
     },
     "aiderRestartConfirm": {
       "title": "需要重启",
@@ -3000,35 +3034,38 @@ File: src/common/locales/zh.json
       "virtualizedRenderingTooltip": "实验性功能，当您在对话历史中有大量消息时可以通过仅渲染可见消息来提高性能。"
     },
     "memory": {
-      "title": "记忆设置",
+      "configuration": "配置",
       "description": "配置 AI 记忆功能以增强对话连续性和跨会话的上下文保留能力。",
-      "general": {
-        "title": "通用设置",
-        "enabled": {
-          "label": "启用记忆",
-          "description": "启用 AI 记忆功能以在对话和会话之间记住重要信息。"
-        },
-        "model": {
-          "label": "模型"
-        },
-        "device": {
-          "label": "设备",
-          "description": "选择用于记忆处理和存储操作的设备。"
-        },
-        "provider": {
-          "label": "嵌入提供商",
-          "description": "选择用于记忆功能的嵌入提供商"
-        }
+      "enabled": {
+        "label": "启用",
+        "description": "启用 AI 记忆功能以在对话和会话之间记住重要信息。"
       },
-      "advanced": {
-        "title": "高级设置",
-        "currentConfig": "当前配置",
-        "storage": "存储信息",
-        "storageLocation": "存储位置"
+      "model": {
+        "label": "模型"
       },
-      "status": {
-        "enabled": "记忆功能已启用并激活",
-        "description": "AI 记忆功能当前正在存储和检索对话上下文以提高响应质量。"
+      "provider": {
+        "label": "嵌入提供商",
+        "description": "选择用于记忆功能的嵌入提供商"
+      },
+      "embeddingProgress": {
+        "loadingModel": "正在加载嵌入模型：{{status}}",
+        "reEmbedding": "正在重新嵌入记忆：{{done}}/{{total}}",
+        "error": "嵌入迁移失败：{{error}}"
+      },
+      "memories": {
+        "title": "记忆",
+        "project": "项目",
+        "allProjects": "所有项目",
+        "loading": "正在加载记忆...",
+        "empty": "未找到记忆。",
+        "delete": "删除",
+        "deleteAllForProject": "删除该项目的全部记忆",
+        "deleteDialogTitle": "删除记忆",
+        "deleteDialogText": "删除记忆",
+        "deleteProjectDialogTitle": "删除项目记忆",
+        "deleteProjectDialogText": "删除该项目的所有记忆",
+        "projectId": "projectId",
+        "id": "id"
       }
     }
   },
@@ -3697,6 +3734,8 @@ import {
   POWER_TOOL_SEMANTIC_SEARCH,
   SUBAGENTS_TOOL_GROUP_NAME,
   SUBAGENTS_TOOL_RUN_TASK,
+  SKILLS_TOOL_ACTIVATE_SKILL,
+  SKILLS_TOOL_GROUP_NAME,
   TASKS_TOOL_CREATE_TASK,
   TASKS_TOOL_DELETE_TASK,
   TASKS_TOOL_GET_TASK,
@@ -3899,6 +3938,8 @@ export type LlmProvider =
 ⋮----
 // subagent tools
 ⋮----
+// skills tools
+⋮----
 // task tools
 ⋮----
 // memory tools
@@ -3965,6 +4006,7 @@ import {
   VersionsInfo,
   VoiceSession,
   AgentProfile,
+  MemoryEntry,
 } from '@common/types';
 ⋮----
 export interface ApplicationAPI {
@@ -4118,6 +4160,12 @@ export interface ApplicationAPI {
   updateAgentProfile: (profile: AgentProfile, baseDir?: string) => Promise<AgentProfile[]>;
   deleteAgentProfile: (profileId: string, baseDir?: string) => Promise<AgentProfile[]>;
   updateAgentProfilesOrder: (agentProfiles: AgentProfile[]) => Promise<void>;
+
+  // Memory operations
+  listAllMemories: () => Promise<MemoryEntry[]>;
+  deleteMemory: (id: string) => Promise<boolean>;
+  deleteProjectMemories: (projectId: string) => Promise<number>;
+  getMemoryEmbeddingProgress: () => Promise<import('@common/types').MemoryEmbeddingProgress>;
 }
 ⋮----
 // Todo operations
@@ -4131,6 +4179,8 @@ export interface ApplicationAPI {
 // Worktree merge operations
 ⋮----
 // Agent profile operations
+⋮----
+// Memory operations
 
 ================
 File: src/common/tools.ts
@@ -4475,6 +4525,7 @@ export interface AgentProfile {
   useSubagents: boolean;
   useTaskTools: boolean;
   useMemoryTools: boolean;
+  useSkillsTools: boolean;
   customInstructions: string;
   subagent: SubagentConfig;
   isSubagent?: boolean; // flag to indicate if this profile is being used as a subagent
@@ -4507,6 +4558,23 @@ export interface MemoryConfig {
   enabled: boolean;
   provider: MemoryEmbeddingProvider;
   model: string;
+}
+⋮----
+export enum MemoryEmbeddingProgressPhase {
+  Idle = 'idle',
+  LoadingModel = 'loading-model',
+  ReEmbedding = 're-embedding',
+  Done = 'done',
+  Error = 'error',
+}
+⋮----
+export interface MemoryEmbeddingProgress {
+  phase: MemoryEmbeddingProgressPhase;
+  status: string | null;
+  done: number;
+  total: number;
+  finished: boolean;
+  error?: string;
 }
 ⋮----
 export interface SettingsData {
@@ -5104,6 +5172,47 @@ const searchRegex = new RegExp(searchTerm, caseSensitive ? undefined : 'i'); // 
 // Filter out tools that are set to Never in toolApprovals
 
 ================
+File: src/main/agent/tools/skills.ts
+================
+import fs from 'fs/promises';
+import path from 'path';
+import { homedir } from 'os';
+⋮----
+import { tool, type ToolSet } from 'ai';
+import { loadFront } from 'yaml-front-matter';
+import { z } from 'zod';
+import { SKILLS_TOOL_ACTIVATE_SKILL, SKILLS_TOOL_GROUP_NAME, TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
+import { AgentProfile, PromptContext, ToolApprovalState } from '@common/types';
+⋮----
+import { ApprovalManager } from './approval-manager';
+⋮----
+import { AIDER_DESK_DIR } from '@/constants';
+import { Task } from '@/task';
+⋮----
+type SkillLocation = 'global' | 'project';
+⋮----
+type Skill = {
+  name: string;
+  description: string;
+  location: SkillLocation;
+  dirPath: string;
+};
+⋮----
+const parseSkillFrontMatter = (markdown: string):
+⋮----
+const safeReadDir = async (dirPath: string): Promise<string[]> =>
+⋮----
+const safeStat = async (filePath: string): Promise<import('fs').Stats | null> =>
+⋮----
+const loadSkillsFromDir = async (skillsRootDir: string, location: SkillLocation): Promise<Skill[]> =>
+⋮----
+const getActivateSkillDescription = (skills: Skill[]): string =>
+⋮----
+export const createSkillsToolset = async (task: Task, profile: AgentProfile, promptContext?: PromptContext): Promise<ToolSet> =>
+⋮----
+const generateActivateSkillDescription = async (): Promise<string> =>
+
+================
 File: src/main/agent/tools/subagents.ts
 ================
 import { tool, type ToolSet } from 'ai';
@@ -5387,8 +5496,6 @@ public async createProfile(profile: AgentProfile, projectDir?: string): Promise<
 ⋮----
 public async updateProfile(profile: AgentProfile): Promise<void>
 ⋮----
-// Reload profiles to update the cache
-⋮----
 public async deleteProfile(profileId: string): Promise<void>
 ⋮----
 // Reload profiles to update the cache
@@ -5496,6 +5603,7 @@ import { getSystemPrompt } from './prompts';
 import { createAiderToolset } from './tools/aider';
 import { createHelpersToolset } from './tools/helpers';
 import { createMemoryToolset } from './tools/memory';
+import { createSkillsToolset } from './tools/skills';
 import { MCP_CLIENT_TIMEOUT, McpManager } from './mcp-manager';
 import { ApprovalManager } from './tools/approval-manager';
 import { ANSWER_RESPONSE_START_TAG, extractPromptContextFromToolResult, THINKING_RESPONSE_STAR_TAG } from './utils';
@@ -5956,6 +6064,8 @@ import {
   MEMORY_TOOL_LIST,
   MEMORY_TOOL_RETRIEVE,
   MEMORY_TOOL_STORE,
+  SKILLS_TOOL_ACTIVATE_SKILL,
+  SKILLS_TOOL_GROUP_NAME,
 } from '@common/tools';
 ⋮----
 import logger from '@/logger';
@@ -5965,6 +6075,7 @@ const generateWorkflow = (
   autoApprove: boolean,
   useSubagents: boolean,
   usePowerTools: boolean,
+  skillsAllowed: boolean,
   retrieveMemoryAllowed: boolean,
   storeMemoryAllowed: boolean,
 ): string =>
@@ -6442,10 +6553,10 @@ File: src/main/events/index.ts
 File: src/main/memory/memory-manager.ts
 ================
 import { FeatureExtractionPipeline, pipeline } from '@huggingface/transformers';
-import { MemoryEntry, MemoryEntryType } from '@common/types';
+import { MemoryConfig, MemoryEmbeddingProgress, MemoryEmbeddingProgressPhase, MemoryEntry, MemoryEntryType, SettingsData } from '@common/types';
 import { v4 as uuidv4 } from 'uuid';
 ⋮----
-import { AIDER_DESK_MEMORY_FILE } from '@/constants';
+import { AIDER_DESK_CACHE_DIR, AIDER_DESK_MEMORY_FILE } from '@/constants';
 import logger from '@/logger';
 import { Store } from '@/store';
 ⋮----
@@ -6457,7 +6568,7 @@ constructor(private readonly store: Store)
    * Initialize the database connection and the local embedding model.
    * This must be called before using other methods.
    */
-public async init(): Promise<void>
+public async init(config: MemoryConfig = this.store.getSettings().memory): Promise<void>
 ⋮----
 // 1. Initialize the Database
 // Ensure directory exists
@@ -6466,9 +6577,19 @@ public async init(): Promise<void>
 ⋮----
 // 2. Initialize Local Embedding Model (Singleton pattern for the pipeline)
 ⋮----
-// @ts-expect-error type is too complex
+// @ts-expect-error progress is not typed properly
+⋮----
+getProgress(): MemoryEmbeddingProgress
 ⋮----
 private async waitForInit(): Promise<boolean>
+⋮----
+async settingsChanged(oldSettings: SettingsData, newSettings: SettingsData): Promise<void>
+⋮----
+// init with old settings before migration
+⋮----
+const migrate = async () =>
+⋮----
+// @ts-expect-error progress is not typed properly
 ⋮----
 /**
    * Generates a vector embedding for the given text using the local model.
@@ -6495,15 +6616,18 @@ async storeMemory(projectId: string, taskId: string, type: MemoryEntryType, cont
    * @param projectId - The project to filter by
    * @param query - The user's search query
    * @param limit - Max number of memories to return (default 5)
+   * @param maxDistance - Maximum distance threshold for filtering (optional)
    */
-async retrieveMemories(projectId: string, query: string, limit: number = 5): Promise<MemoryEntry[]>
+async retrieveMemories(projectId: string, query: string, limit: number = 5, maxDistance = 1.5): Promise<MemoryEntry[]>
 ⋮----
 return []; // No memories exist yet
 ⋮----
-// Perform Vector Search + SQL Filtering
+// Perform Vector Search + SQL Filtering with distance information
 ⋮----
 .nearestTo(queryVector) // Vector similarity search
 .where(`projectid = '${projectId}'`) // SQL-like filtering for the project
+⋮----
+// Filter by distance if threshold is provided
 ⋮----
 // Map results back to MemoryEntry interface
 // Note: LanceDB returns rows, we cast them to our interface
@@ -6516,6 +6640,8 @@ async getAllMemories(): Promise<MemoryEntry[]>
 ⋮----
 // Map results back to MemoryEntry interface
 // Note: LanceDB returns rows, we cast them to our interface
+⋮----
+async deleteMemoriesForProject(projectId: string): Promise<number>
 ⋮----
 async clearAllMemories(): Promise<boolean>
 ⋮----
@@ -8012,7 +8138,7 @@ import { ModelManager } from '@/models';
 import { CustomCommandManager } from '@/custom-commands';
 import { TelemetryManager } from '@/telemetry';
 import { EventManager } from '@/events';
-import { Task } from '@/task';
+import { INTERNAL_TASK_ID, Task } from '@/task';
 import { migrateSessionsToTasks } from '@/project/migrations';
 import { WorktreeManager } from '@/worktrees';
 import { MemoryManager } from '@/memory/memory-manager';
@@ -8050,6 +8176,8 @@ public getMostRecentTask()
 ⋮----
 public getTask(taskId: string = INTERNAL_TASK_ID)
 ⋮----
+public getInternalTask()
+⋮----
 public getProjectSettings()
 ⋮----
 public addConnector(connector: Connector)
@@ -8078,7 +8206,7 @@ public async duplicateTask(taskId: string): Promise<TaskData>
 ⋮----
 async getTasks(): Promise<TaskData[]>
 ⋮----
-forEachTask(callback: (task: Task) => void)
+forEachTask(callback: (task: Task) => void, initializedOnly = true)
 ⋮----
 async settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
 ⋮----
@@ -8229,6 +8357,22 @@ registerRoutes(router: Router): void
 // Load MCP server tools
 ⋮----
 // Reload MCP servers
+
+================
+File: src/main/server/rest-api/memory-api.ts
+================
+import { Router } from 'express';
+import { z } from 'zod';
+⋮----
+import { BaseApi } from './base-api';
+⋮----
+import { EventsHandler } from '@/events-handler';
+⋮----
+export class MemoryApi extends BaseApi
+⋮----
+constructor(private readonly eventsHandler: EventsHandler)
+⋮----
+registerRoutes(router: Router): void
 
 ================
 File: src/main/server/rest-api/project-api.ts
@@ -8530,7 +8674,20 @@ import { join } from 'path';
 import express, { NextFunction, Request, Response } from 'express';
 import cors from 'cors';
 ⋮----
-import { AgentApi, CommandsApi, ContextApi, McpApi, ProjectApi, PromptApi, ProvidersApi, SettingsApi, SystemApi, TodoApi, UsageApi } from '@/server/rest-api';
+import {
+  AgentApi,
+  CommandsApi,
+  ContextApi,
+  McpApi,
+  ProjectApi,
+  PromptApi,
+  ProvidersApi,
+  SettingsApi,
+  SystemApi,
+  TodoApi,
+  UsageApi,
+  MemoryApi,
+} from '@/server/rest-api';
 import { AUTH_PASSWORD, AUTH_USERNAME, SERVER_PORT } from '@/constants';
 import logger from '@/logger';
 import { ProjectManager } from '@/project';
@@ -9312,7 +9469,11 @@ private generateBranchName(): string
 ⋮----
 // If result is empty, use taskId
 ⋮----
+private isInternal()
+⋮----
 public async saveTask(updates?: Partial<TaskData>, updateTimestamps = true): Promise<TaskData>
+⋮----
+// Internal task is not saved
 ⋮----
 public async init()
 ⋮----
@@ -9745,6 +9906,8 @@ public async duplicateFrom(sourceTask: Task): Promise<void>
 async agentProfileUpdated(oldProfile: AgentProfile, newProfile: AgentProfile)
 ⋮----
 public getProject(): Project
+⋮----
+public isInitialized()
 
 ================
 File: src/main/telemetry/index.ts
@@ -10928,12 +11091,14 @@ import {
   VersionsInfo,
   VoiceSession,
   AgentProfile,
+  MemoryEntry,
 } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
 ⋮----
 import type { BrowserWindow } from 'electron';
 ⋮----
 import { McpManager, AgentProfileManager } from '@/agent';
+import { MemoryManager } from '@/memory/memory-manager';
 import { ModelManager } from '@/models';
 import { ProjectManager } from '@/project';
 import { CloudflareTunnelManager } from '@/server';
@@ -10954,8 +11119,6 @@ constructor(
 loadSettings(): SettingsData
 ⋮----
 async saveSettings(newSettings: SettingsData): Promise<SettingsData>
-⋮----
-// Memory configuration changes require restart to take effect
 ⋮----
 getProjectSettings(baseDir: string): ProjectSettings
 ⋮----
@@ -11152,6 +11315,14 @@ async updateAgentProfile(profile: AgentProfile)
 async deleteAgentProfile(profileId: string)
 ⋮----
 async updateAgentProfilesOrder(agentProfiles: AgentProfile[])
+⋮----
+async listAllMemories(): Promise<MemoryEntry[]>
+⋮----
+async deleteMemory(id: string): Promise<boolean>
+⋮----
+async deleteProjectMemories(projectId: string): Promise<number>
+⋮----
+getMemoryEmbeddingProgress()
 
 ================
 File: src/main/index.ts
@@ -11243,6 +11414,8 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
 // Cloudflare tunnel handlers
 ⋮----
 // Agent profile handlers
+⋮----
+// Memory handlers
 
 ================
 File: src/main/logger.ts
@@ -11775,6 +11948,8 @@ const listener = (_: Electron.IpcRendererEvent, data: SettingsData) =>
 ⋮----
 // Agent profile operations
 ⋮----
+// Memory operations
+⋮----
 // eslint-disable-next-line no-console
 
 ================
@@ -11823,6 +11998,8 @@ import {
   VersionsInfo,
   VoiceSession,
   AgentProfile,
+  MemoryEntry,
+  MemoryEmbeddingProgress,
 } from '@common/types';
 import { ApplicationAPI } from '@common/api';
 import axios, { type AxiosInstance } from 'axios';
@@ -12060,6 +12237,15 @@ applyUncommittedChanges(baseDir: string, taskId: string): Promise<void>
 ⋮----
 revertLastMerge(baseDir: string, taskId: string): Promise<void>
 ⋮----
+// Memory operations
+listAllMemories(): Promise<MemoryEntry[]>
+⋮----
+deleteMemory(id: string): Promise<boolean>
+⋮----
+getMemoryEmbeddingProgress(): Promise<MemoryEmbeddingProgress>
+⋮----
+deleteProjectMemories(projectId: string): Promise<number>
+⋮----
 // Agent profile operations
 getAllAgentProfiles(baseDir?: string): Promise<AgentProfile[]>
 ⋮----
@@ -12076,13 +12262,15 @@ File: src/renderer/src/components/AgentSelector/AgentSelector.tsx
 ================
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdSave } from 'react-icons/md';
+import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdSave, MdPsychology } from 'react-icons/md';
 import { RiToolsFill } from 'react-icons/ri';
 import { clsx } from 'clsx';
 import { AgentProfile, TaskData, ToolApprovalState } from '@common/types';
 import { BiCog } from 'react-icons/bi';
 import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 import { useHotkeys } from 'react-hotkeys-hook';
+import { LuBrain } from 'react-icons/lu';
+import { GrTasks } from 'react-icons/gr';
 ⋮----
 import { McpServerSelectorItem } from './McpServerSelectorItem';
 ⋮----
@@ -12110,7 +12298,9 @@ const calculateEnabledTools = async () =>
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
-if (activeProfile)
+if (activeTaskProfile)
+⋮----
+if (activeGlobalProfile)
 ⋮----
 // Remove tool approvals for this server
 ⋮----
@@ -12124,11 +12314,9 @@ onClick=
 ⋮----
 {/* Quick Settings */}
 ⋮----
-<MdOutlineHdrAuto className=
+className=
 ⋮----
-<MdOutlineChecklist className=
-⋮----
-icon=
+<LuBrain className=
 
 ================
 File: src/renderer/src/components/AgentSelector/index.ts
@@ -16960,7 +17148,7 @@ import {
 import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { FaChevronLeft, FaChevronRight, FaList, FaPaste, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes, FaBrain } from 'react-icons/fa';
-import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat } from 'react-icons/md';
+import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat, MdPsychology } from 'react-icons/md';
 import { DEFAULT_AGENT_PROFILE, DEFAULT_MODEL_TEMPERATURE, AVAILABLE_PROVIDERS, getProviderModelId } from '@common/agent';
 import { BiTrash } from 'react-icons/bi';
 import { clsx } from 'clsx';
@@ -17003,6 +17191,7 @@ import {
   MEMORY_TOOL_LIST,
   MEMORY_TOOL_RETRIEVE,
   MEMORY_TOOL_STORE,
+  SKILLS_TOOL_GROUP_NAME,
 } from '@common/tools';
 import { useTranslation } from 'react-i18next';
 import { FaArrowRightFromBracket } from 'react-icons/fa6';
@@ -17515,17 +17704,35 @@ export const LanguageSelector = (
 ================
 File: src/renderer/src/components/settings/MemorySettings.tsx
 ================
-import { MemoryConfig, MemoryEmbeddingProvider } from '@common/types';
+import { MemoryConfig, MemoryEmbeddingProvider, MemoryEntry, MemoryEmbeddingProgress, MemoryEmbeddingProgressPhase } from '@common/types';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FaTrash } from 'react-icons/fa';
 ⋮----
 import { Checkbox } from '../common/Checkbox';
 import { Select } from '../common/Select';
 import { Section } from '../common/Section';
 ⋮----
+import { useApi } from '@/contexts/ApiContext';
+import { Button } from '@/components/common/Button';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { IconButton } from '@/components/common/IconButton';
+import { CodeInline } from '@/components/common/CodeInline';
+⋮----
 type Props = {
   settings: MemoryConfig;
   setSettings: (settings: MemoryConfig) => void;
 };
+⋮----
+const loadMemories = async () =>
+⋮----
+// eslint-disable-next-line react-hooks/exhaustive-deps
+⋮----
+const poll = async () =>
+⋮----
+const handleDeleteMemory = async () =>
+⋮----
+const handleDeleteProjectMemories = async () =>
 ⋮----
 const handleEnabledChange = (enabled: boolean) =>
 ⋮----
@@ -17533,11 +17740,13 @@ const handleModelChange = (model: string) =>
 ⋮----
 const handleProviderChange = (provider: string) =>
 ⋮----
-{/* Enable Memory */}
+label=
 ⋮----
-{/* Provider Selection */}
+onClick=
 ⋮----
-{/* Model Selection */}
+title=
+⋮----
+confirmButtonText=
 
 ================
 File: src/renderer/src/components/settings/ServerSettings.tsx
@@ -19587,10 +19796,234 @@ File: src/renderer/src/themes/theme-aurora.scss
   --color-agent-aider-tools: #D4A574;
   --color-agent-power-tools: #B47BC4;
   --color-agent-todo-tools: #5A8BC4;
+  --color-agent-tasks-tools: #7BC4C4;
+  --color-agent-memory-tools: #D4A5B4;
+  --color-agent-skills-tools: #76cc99;
   --color-agent-context-files: #E4B584;
   --color-agent-repo-map: #9DD4D4;
   --color-agent-ai-request: #E07B7B;
   --color-agent-sub-agent: #7B9DE0;
+}
+
+================
+File: src/renderer/src/themes/theme-botanical-garden-dark.scss
+================
+.theme-botanical-garden-dark {
+
+  --color-bg-primary: #121513;
+  --color-bg-primary-light: #171c19;
+  --color-bg-primary-light-strong: #171c1980;
+  --color-bg-secondary: #1c241f;
+  --color-bg-secondary-light: #232e27;
+  --color-bg-secondary-light-strongest: #232e27f2;
+  --color-bg-tertiary: #2a3a30;
+  --color-bg-tertiary-emphasis: #2a3a304c;
+  --color-bg-tertiary-strong: #2a3a307f;
+  --color-bg-fourth: #314738;
+  --color-bg-fourth-muted: #31473833;
+  --color-bg-fourth-emphasis: #3147384c;
+  --color-bg-fifth: #3d5a46;
+  --color-bg-selection: #3b4b40;
+  --color-bg-code-block: #141616;
+
+  --color-bg-diff-viewer-old-primary: #3a1d16;
+  --color-bg-diff-viewer-old-secondary: #2a1510;
+  --color-bg-diff-viewer-new-primary: #0c2617;
+  --color-bg-diff-viewer-new-secondary: #081c11;
+
+  --color-text-primary: #f5f3ed;
+  --color-text-secondary: #c9c6bf;
+  --color-text-tertiary: #b5b2ab;
+  --color-text-muted-light: #9a9791;
+  --color-text-muted: #6a726c;
+  --color-text-muted-dark: #3f4d44;
+  --color-text-dark: #2a3a30;
+
+  --color-border-dark: #1c241f;
+  --color-border-dark-light: #232e27;
+  --color-border-dark-light-strong: #232e2780;
+  --color-border-default-dark: #2a3a30;
+  --color-border-default: #314738;
+  --color-border-accent: #4a7c59;
+  --color-border-light: #c9c6bf;
+
+  --color-accent-primary: #4a7c59;
+  --color-accent-secondary: #5d8a6a;
+  --color-accent-light: #83ad8e;
+
+  --color-success: #4a7c59;
+  --color-success-light: #83ad8e;
+  --color-success-subtle: #4a7c591a;
+  --color-success-muted: #4a7c5933;
+  --color-success-emphasis: #4a7c594c;
+
+  --color-warning: #f9a620;
+  --color-warning-subtle: #f9a62019;
+  --color-warning-emphasis: #f9a6204c;
+  --color-warning-light: #fbbf4b;
+  --color-warning-text: #1a1a1a;
+
+  --color-error: #b7472a;
+  --color-error-dark: #7a2a18;
+  --color-error-subtle: #b7472a1a;
+  --color-error-muted: #b7472a26;
+  --color-error-emphasis: #b7472a4c;
+  --color-error-strong: #b7472a80;
+  --color-error-light: #d26b52;
+  --color-error-lighter: #e39a87;
+  --color-error-lightest: #f0c3b7;
+
+  --color-info: #3b82f6;
+  --color-info-light: #60a5fa;
+  --color-info-lighter: #93c5fd;
+  --color-info-lightest: #bfdbfe;
+  --color-info-subtle: #3b82f61a;
+  --color-info-light-muted: #3b82f633;
+  --color-info-light-emphasis: #3b82f64c;
+
+  // Button-specific colors
+  --color-button-primary: #f9a620;
+  --color-button-primary-light: #fbbf4b;
+  --color-button-primary-subtle: #f9a62019;
+  --color-button-primary-emphasis: #f9a6204c;
+  --color-button-primary-text: #1a1a1a;
+
+  --color-button-secondary: #4a7c59;
+  --color-button-secondary-light: #83ad8e;
+  --color-button-secondary-subtle: #4a7c591a;
+  --color-button-secondary-emphasis: #4a7c594c;
+  --color-button-secondary-text: #f5f3ed;
+
+  --color-button-danger: #b7472a;
+  --color-button-danger-light: #d26b52;
+  --color-button-danger-subtle: #b7472a1a;
+  --color-button-danger-emphasis: #b7472a4c;
+  --color-button-danger-text: #f5f3ed;
+
+  --color-input-bg: #171c19;
+  --color-input-border: #314738;
+  --color-input-text: #f5f3ed;
+
+  --color-agent-auto-approve: #83ad8e;
+  --color-agent-aider-tools: #f9a620;
+  --color-agent-power-tools: #c084fc;
+  --color-agent-todo-tools: #38bdf8;
+  --color-agent-tasks-tools: #10b981;
+  --color-agent-memory-tools: #f472b6;
+  --color-agent-skills-tools: #c7d392;
+  --color-agent-context-files: #f9a620;
+  --color-agent-repo-map: #93c5fd;
+  --color-agent-ai-request: #b7472a;
+  --color-agent-sub-agent: #4a7c59;
+}
+
+================
+File: src/renderer/src/themes/theme-botanical-garden.scss
+================
+.theme-botanical-garden {
+
+  --color-bg-primary: #f5f3ed;
+  --color-bg-primary-light: #faf8f2;
+  --color-bg-primary-light-strong: #faf8f280;
+  --color-bg-secondary: #f0ede5;
+  --color-bg-secondary-light: #ebe7dd;
+  --color-bg-secondary-light-strongest: #ebe7ddf2;
+  --color-bg-tertiary: #e8e4da;
+  --color-bg-tertiary-emphasis: #e8e4da4c;
+  --color-bg-tertiary-strong: #e8e4da7f;
+  --color-bg-fourth: #e3dfd4;
+  --color-bg-fourth-muted: #e3dfd433;
+  --color-bg-fourth-emphasis: #e3dfd44c;
+  --color-bg-fifth: #ded9ce;
+  --color-bg-selection: #4a7c5933;
+  --color-bg-code-block: #2d3a2f;
+
+  --color-bg-diff-viewer-old-primary: #f4e8e6;
+  --color-bg-diff-viewer-old-secondary: #f0e0dd;
+  --color-bg-diff-viewer-new-primary: #e8f4e8;
+  --color-bg-diff-viewer-new-secondary: #ddf0dd;
+
+  --color-text-primary: #2d3a2f;
+  --color-text-secondary: #3d4a3f;
+  --color-text-tertiary: #4d5a4f;
+  --color-text-muted-light: #6d7a6f;
+  --color-text-muted: #8d9a8f;
+  --color-text-muted-dark: #adbaaf;
+  --color-text-dark: #4a7c59;
+
+  --color-border-dark: #d4d0c5;
+  --color-border-dark-light: #dad6cb;
+  --color-border-dark-light-strong: #dad6cb80;
+  --color-border-default-dark: #e0dccf;
+  --color-border-default: #e6e2d5;
+  --color-border-accent: #4a7c59;
+  --color-border-light: #ece8db;
+
+  --color-accent-primary: #4a7c59;
+  --color-accent-secondary: #f9a620;
+  --color-accent-light: #6d8c79;
+
+  --color-success: #4a7c59;
+  --color-success-light: #5d8a6a;
+  --color-success-subtle: #4a7c591a;
+  --color-success-muted: #4a7c5933;
+  --color-success-emphasis: #4a7c594c;
+
+  --color-warning: #f9a620;
+  --color-warning-subtle: #f9a62019;
+  --color-warning-emphasis: #f9a6204c;
+  --color-warning-light: #fab440;
+  --color-warning-text: #2d3a2f;
+
+  --color-error: #b7472a;
+  --color-error-dark: #953722;
+  --color-error-subtle: #b7472a1a;
+  --color-error-muted: #b7472a26;
+  --color-error-emphasis: #b7472a4c;
+  --color-error-strong: #b7472a80;
+  --color-error-light: #c75f42;
+  --color-error-lighter: #d7775a;
+  --color-error-lightest: #e78f72;
+
+  --color-info: #4a7a9a;
+  --color-info-light: #5d8fb0;
+  --color-info-lighter: #7aa3c2;
+  --color-info-lightest: #97b8d4;
+  --color-info-subtle: #4a7a9a1a;
+  --color-info-light-muted: #4a7a9a33;
+  --color-info-light-emphasis: #4a7a9a4c;
+
+  // Button-specific colors
+  --color-button-primary: #4a7c59;
+  --color-button-primary-light: #5d8a6a;
+  --color-button-primary-subtle: #4a7c5919;
+  --color-button-primary-emphasis: #4a7c594c;
+  --color-button-primary-text: #f5f3ed;
+
+  --color-button-secondary: #f9a620;
+  --color-button-secondary-light: #fab440;
+  --color-button-secondary-subtle: #f9a6201a;
+  --color-button-secondary-emphasis: #f9a6204c;
+  --color-button-secondary-text: #2d3a2f;
+
+  --color-button-danger: #b7472a;
+  --color-button-danger-light: #c75f42;
+  --color-button-danger-subtle: #b7472a1a;
+  --color-button-danger-emphasis: #b7472a4c;
+  --color-button-danger-text: #f5f3ed;
+
+  --color-input-bg: #faf8f2;
+  --color-input-border: #d4d0c5;
+  --color-input-text: #2d3a2f;
+
+  --color-agent-auto-approve: #4a7c59;
+  --color-agent-aider-tools: #f9a620;
+  --color-agent-power-tools: #8a6a9a;
+  --color-agent-todo-tools: #4a7a9a;
+  --color-agent-context-files: #9a8a4a;
+  --color-agent-repo-map: #6a8a9a;
+  --color-agent-ai-request: #b7472a;
+  --color-agent-sub-agent: #4a6a9a;
 }
 
 ================
@@ -19696,6 +20129,9 @@ File: src/renderer/src/themes/theme-bw.scss
   --color-agent-aider-tools: #808080;
   --color-agent-power-tools: #606060;
   --color-agent-todo-tools: #404040;
+  --color-agent-tasks-tools: #707070;
+  --color-agent-memory-tools: #505050;
+  --color-agent-skills-tools: #404040;
   --color-agent-context-files: #202020;
   --color-agent-repo-map: #000000;
   --color-agent-ai-request: #505050;
@@ -19805,6 +20241,9 @@ File: src/renderer/src/themes/theme-cappuccino.scss
   --color-agent-aider-tools: #fb923c;
   --color-agent-power-tools: #c084fc;
   --color-agent-todo-tools: #38bdf8;
+  --color-agent-tasks-tools: #6ee7b7;
+  --color-agent-memory-tools: #f9a8d4;
+  --color-agent-skills-tools: #79acac;
   --color-agent-context-files: #facc15;
   --color-agent-repo-map: #60a5fa;
   --color-agent-ai-request: #d97706;
@@ -19815,35 +20254,35 @@ File: src/renderer/src/themes/theme-cappuccino.scss
 File: src/renderer/src/themes/theme-charcoal.scss
 ================
 .theme-charcoal {
-  
-  --color-bg-primary: #1a1a1a; 
-  --color-bg-primary-light: #242424; 
+
+  --color-bg-primary: #1a1a1a;
+  --color-bg-primary-light: #242424;
   --color-bg-primary-light-strong: #24242480;
-  --color-bg-secondary: #2d2d2d; 
-  --color-bg-secondary-light: #363636; 
+  --color-bg-secondary: #2d2d2d;
+  --color-bg-secondary-light: #363636;
   --color-bg-secondary-light-strongest: #363636f2;
-  --color-bg-tertiary: #404040; 
+  --color-bg-tertiary: #404040;
   --color-bg-tertiary-emphasis: #4040404c;
   --color-bg-tertiary-strong: #4040407f;
-  --color-bg-fourth: #4a4a4a; 
+  --color-bg-fourth: #4a4a4a;
   --color-bg-fourth-muted: #4a4a4a33;
   --color-bg-fourth-emphasis: #4a4a4a4c;
-  --color-bg-fifth: #545454; 
+  --color-bg-fifth: #545454;
   --color-bg-selection: #404040;
-  --color-bg-code-block: #141414; 
+  --color-bg-code-block: #141414;
 
   --color-bg-diff-viewer-old-primary: #3f1d25;
   --color-bg-diff-viewer-old-secondary: #2c141a;
   --color-bg-diff-viewer-new-primary: #022c22;
   --color-bg-diff-viewer-new-secondary: #011f19;
 
-  --color-text-primary: #ffffff; 
-  --color-text-secondary: #e8e8e8; 
-  --color-text-tertiary: #cccccc; 
-  --color-text-muted-light: #a8a8a8; 
-  --color-text-muted: #808080; 
-  --color-text-muted-dark: #666666; 
-  --color-text-dark: #404040; 
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #e8e8e8;
+  --color-text-tertiary: #cccccc;
+  --color-text-muted-light: #a8a8a8;
+  --color-text-muted: #808080;
+  --color-text-muted-dark: #666666;
+  --color-text-dark: #404040;
 
   --color-border-dark: #2d2d2d;
   --color-border-dark-light: #363636;
@@ -19853,23 +20292,23 @@ File: src/renderer/src/themes/theme-charcoal.scss
   --color-border-accent: #545454;
   --color-border-light: #808080;
 
-  --color-accent-primary: #d4af37; 
-  --color-accent-secondary: #c0c0c0; 
-  --color-accent-light: #e8e8e8; 
+  --color-accent-primary: #d4af37;
+  --color-accent-secondary: #c0c0c0;
+  --color-accent-light: #e8e8e8;
 
-  --color-success: #4ade80; 
+  --color-success: #4ade80;
   --color-success-light: #86efac;
   --color-success-subtle: #4ade801a;
   --color-success-muted: #4ade8033;
   --color-success-emphasis: #4ade804c;
 
-  --color-warning: #fbbf24; 
+  --color-warning: #fbbf24;
   --color-warning-subtle: #fbbf2419;
   --color-warning-emphasis: #fbbf244c;
   --color-warning-light: #fcd34d;
   --color-warning-text: #1a1a1a;
 
-  --color-error: #f87171; 
+  --color-error: #f87171;
   --color-error-dark: #dc2626;
   --color-error-subtle: #f871711a;
   --color-error-muted: #f8717126;
@@ -19914,6 +20353,9 @@ File: src/renderer/src/themes/theme-charcoal.scss
   --color-agent-aider-tools: #fb923c;
   --color-agent-power-tools: #c084fc;
   --color-agent-todo-tools: #60a5fa;
+  --color-agent-tasks-tools: #34d399;
+  --color-agent-memory-tools: #f472b6;
+  --color-agent-skills-tools: #447da6;
   --color-agent-context-files: #facc15;
   --color-agent-repo-map: #93c5fd;
   --color-agent-ai-request: #ef4444;
@@ -20023,6 +20465,9 @@ File: src/renderer/src/themes/theme-dark.scss
   --color-agent-aider-tools: #fb923c;
   --color-agent-power-tools: #c084fc;
   --color-agent-todo-tools: #38bdf8;
+  --color-agent-tasks-tools: #10b981;
+  --color-agent-memory-tools: #f472b6;
+  --color-agent-skills-tools: #c7d392;
   --color-agent-context-files: #facc15;
   --color-agent-repo-map: #60a5fa;
   --color-agent-ai-request: #884239;
@@ -20132,6 +20577,9 @@ File: src/renderer/src/themes/theme-forest.scss
   --color-agent-aider-tools: #b8854a;
   --color-agent-power-tools: #8a6a9a;
   --color-agent-todo-tools: #4a7a9a;
+  --color-agent-tasks-tools: #6a9a7a;
+  --color-agent-memory-tools: #9a7a8a;
+  --color-agent-skills-tools: #8b5a6a;
   --color-agent-context-files: #9a8a4a;
   --color-agent-repo-map: #6a8a9a;
   --color-agent-ai-request: #9a4a4a;
@@ -20248,6 +20696,9 @@ File: src/renderer/src/themes/theme-fresh.scss
   --color-agent-aider-tools: #f59e0b;
   --color-agent-power-tools: #8b5cf6;
   --color-agent-todo-tools: #3b82f6;
+  --color-agent-tasks-tools: #14b8a6;
+  --color-agent-memory-tools: #f472b6;
+  --color-agent-skills-tools: #a78bfa;
   --color-agent-context-files: #06b6d4;
   --color-agent-repo-map: #10b981;
   --color-agent-ai-request: #ef4444;
@@ -20357,6 +20808,9 @@ File: src/renderer/src/themes/theme-lavender.scss
   --color-agent-aider-tools: #b8864a;
   --color-agent-power-tools: #8875b4;
   --color-agent-todo-tools: #5a7ac8;
+  --color-agent-tasks-tools: #7a9a6a;
+  --color-agent-memory-tools: #b48a9a;
+  --color-agent-skills-tools: #c084fc;
   --color-agent-context-files: #a68b4a;
   --color-agent-repo-map: #6c8cd4;
   --color-agent-ai-request: #c85a7a;
@@ -20367,7 +20821,7 @@ File: src/renderer/src/themes/theme-lavender.scss
 File: src/renderer/src/themes/theme-light.scss
 ================
 .theme-light {
-  
+
   --color-bg-primary: #ffffff;
   --color-bg-primary-light: #f8f9fa;
   --color-bg-primary-light-strong: #f8f9fa80;
@@ -20466,6 +20920,9 @@ File: src/renderer/src/themes/theme-light.scss
   --color-agent-aider-tools: #fb923c;
   --color-agent-power-tools: #c084fc;
   --color-agent-todo-tools: #38bdf8;
+  --color-agent-tasks-tools: #059669;
+  --color-agent-memory-tools: #ec4899;
+  --color-agent-skills-tools: #9d42f3;
   --color-agent-context-files: #facc15;
   --color-agent-repo-map: #60a5fa;
   --color-agent-ai-request: #dc2626;
@@ -20476,7 +20933,7 @@ File: src/renderer/src/themes/theme-light.scss
 File: src/renderer/src/themes/theme-midnight.scss
 ================
 .theme-midnight {
-  
+
   --color-bg-primary: #000000;
   --color-bg-primary-light: #080808;
   --color-bg-primary-light-strong: #08080880;
@@ -20575,6 +21032,9 @@ File: src/renderer/src/themes/theme-midnight.scss
   --color-agent-aider-tools: #ff8000;
   --color-agent-power-tools: #ff00ff;
   --color-agent-todo-tools: #00ffff;
+  --color-agent-tasks-tools: #00ff88;
+  --color-agent-memory-tools: #ff00aa;
+  --color-agent-skills-tools: #ae7fa3;
   --color-agent-context-files: #ffff00;
   --color-agent-repo-map: #0080ff;
   --color-agent-ai-request: #ff0000;
@@ -20585,7 +21045,7 @@ File: src/renderer/src/themes/theme-midnight.scss
 File: src/renderer/src/themes/theme-neon.scss
 ================
 .theme-neon {
-  
+
   --color-bg-primary: #0d1117;
   --color-bg-primary-light: #161b22;
   --color-bg-primary-light-strong: #161b2280;
@@ -20684,6 +21144,9 @@ File: src/renderer/src/themes/theme-neon.scss
   --color-agent-aider-tools: #ff9900;
   --color-agent-power-tools: #cc66ff;
   --color-agent-todo-tools: #3366ff;
+  --color-agent-tasks-tools: #00ffcc;
+  --color-agent-memory-tools: #ff66cc;
+  --color-agent-skills-tools: #8ac3e1;
   --color-agent-context-files: #ffcc00;
   --color-agent-repo-map: #00ccff;
   --color-agent-ai-request: #ff0066;
@@ -20694,61 +21157,61 @@ File: src/renderer/src/themes/theme-neon.scss
 File: src/renderer/src/themes/theme-neopunk.scss
 ================
 .theme-neopunk {
-  
-  --color-bg-primary: #0a0a0f; 
-  --color-bg-primary-light: #14141e; 
+
+  --color-bg-primary: #0a0a0f;
+  --color-bg-primary-light: #14141e;
   --color-bg-primary-light-strong: #14141e80;
-  --color-bg-secondary: #1a1a2e; 
-  --color-bg-secondary-light: #16213e; 
+  --color-bg-secondary: #1a1a2e;
+  --color-bg-secondary-light: #16213e;
   --color-bg-secondary-light-strongest: #16213ef2;
-  --color-bg-tertiary: #0f3460; 
-  --color-bg-tertiary-emphasis: #ff00ff4c; 
-  --color-bg-tertiary-strong: #ff00ff7f; 
-  --color-bg-fourth: #16213e; 
-  --color-bg-fourth-muted: #00ffff33; 
-  --color-bg-fourth-emphasis: #00ffff4c; 
-  --color-bg-fifth: #e94560; 
-  --color-bg-selection: #ff00ff40; 
-  --color-bg-code-block: #050508; 
+  --color-bg-tertiary: #0f3460;
+  --color-bg-tertiary-emphasis: #ff00ff4c;
+  --color-bg-tertiary-strong: #ff00ff7f;
+  --color-bg-fourth: #16213e;
+  --color-bg-fourth-muted: #00ffff33;
+  --color-bg-fourth-emphasis: #00ffff4c;
+  --color-bg-fifth: #e94560;
+  --color-bg-selection: #ff00ff40;
+  --color-bg-code-block: #050508;
 
-  --color-bg-diff-viewer-old-primary: #4a0e0e; 
-  --color-bg-diff-viewer-old-secondary: #2a0808; 
-  --color-bg-diff-viewer-new-primary: #0a4a2a; 
-  --color-bg-diff-viewer-new-secondary: #062a18; 
+  --color-bg-diff-viewer-old-primary: #4a0e0e;
+  --color-bg-diff-viewer-old-secondary: #2a0808;
+  --color-bg-diff-viewer-new-primary: #0a4a2a;
+  --color-bg-diff-viewer-new-secondary: #062a18;
 
-  --color-text-primary: #ffffff; 
-  --color-text-secondary: #00ffff; 
-  --color-text-tertiary: #ff00ff; 
-  --color-text-muted-light: #00ff88; 
-  --color-text-muted: #0f3460; 
-  --color-text-muted-dark: #16213e; 
-  --color-text-dark: #1a1a2e; 
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #00ffff;
+  --color-text-tertiary: #ff00ff;
+  --color-text-muted-light: #00ff88;
+  --color-text-muted: #0f3460;
+  --color-text-muted-dark: #16213e;
+  --color-text-dark: #1a1a2e;
 
   --color-border-dark: #1a1a2e;
   --color-border-dark-light: #16213e;
   --color-border-dark-light-strong: #16213e80;
   --color-border-default-dark: #0f3460;
-  --color-border-default: #00ffff; 
-  --color-border-accent: #ff00ff; 
-  --color-border-light: #00ff88; 
+  --color-border-default: #00ffff;
+  --color-border-accent: #ff00ff;
+  --color-border-light: #00ff88;
 
-  --color-accent-primary: #00ffff; 
-  --color-accent-secondary: #ff00ff; 
-  --color-accent-light: #00ff88; 
+  --color-accent-primary: #00ffff;
+  --color-accent-secondary: #ff00ff;
+  --color-accent-light: #00ff88;
 
-  --color-success: #00ff88; 
+  --color-success: #00ff88;
   --color-success-light: #44ff99;
   --color-success-subtle: #00ff881a;
   --color-success-muted: #00ff8833;
   --color-success-emphasis: #00ff884c;
 
-  --color-warning: #ffaa00; 
+  --color-warning: #ffaa00;
   --color-warning-subtle: #ffaa0019;
   --color-warning-emphasis: #ffaa004c;
   --color-warning-light: #ffcc33;
   --color-warning-text: #0a0a0f;
 
-  --color-error: #ff3366; 
+  --color-error: #ff3366;
   --color-error-dark: #cc0044;
   --color-error-subtle: #ff33661a;
   --color-error-muted: #ff336626;
@@ -20793,6 +21256,9 @@ File: src/renderer/src/themes/theme-neopunk.scss
   --color-agent-aider-tools: #ff6600;
   --color-agent-power-tools: #ff00ff;
   --color-agent-todo-tools: #00ccff;
+  --color-agent-tasks-tools: #00ffaa;
+  --color-agent-memory-tools: #ff00aa;
+  --color-agent-skills-tools: #2bbc20;
   --color-agent-context-files: #ffff00;
   --color-agent-repo-map: #ff0099;
   --color-agent-ai-request: #ff3366;
@@ -20803,35 +21269,35 @@ File: src/renderer/src/themes/theme-neopunk.scss
 File: src/renderer/src/themes/theme-ocean.scss
 ================
 .theme-ocean {
-  
-  --color-bg-primary: #0c4a6e; 
-  --color-bg-primary-light: #075985; 
+
+  --color-bg-primary: #0c4a6e;
+  --color-bg-primary-light: #075985;
   --color-bg-primary-light-strong: #07598580;
-  --color-bg-secondary: #0369a1; 
-  --color-bg-secondary-light: #0284c7; 
+  --color-bg-secondary: #0369a1;
+  --color-bg-secondary-light: #0284c7;
   --color-bg-secondary-light-strongest: #0284c7f2;
-  --color-bg-tertiary: #0ea5e9; 
+  --color-bg-tertiary: #0ea5e9;
   --color-bg-tertiary-emphasis: #0ea5e94c;
   --color-bg-tertiary-strong: #0ea5e97f;
-  --color-bg-fourth: #38bdf8; 
+  --color-bg-fourth: #38bdf8;
   --color-bg-fourth-muted: #38bdf833;
   --color-bg-fourth-emphasis: #38bdf84c;
-  --color-bg-fifth: #7dd3fc; 
+  --color-bg-fifth: #7dd3fc;
   --color-bg-selection: #0ea5e9;
-  --color-bg-code-block: #082f49; 
+  --color-bg-code-block: #082f49;
 
-  --color-bg-diff-viewer-old-primary: #7c2d12; 
-  --color-bg-diff-viewer-old-secondary: #571c0c; 
-  --color-bg-diff-viewer-new-primary: #134e4a; 
-  --color-bg-diff-viewer-new-secondary: #0f3027; 
+  --color-bg-diff-viewer-old-primary: #7c2d12;
+  --color-bg-diff-viewer-old-secondary: #571c0c;
+  --color-bg-diff-viewer-new-primary: #134e4a;
+  --color-bg-diff-viewer-new-secondary: #0f3027;
 
-  --color-text-primary: #f0f9ff; 
-  --color-text-secondary: #bae6fd; 
-  --color-text-tertiary: #7dd3fc; 
-  --color-text-muted-light: #38bdf8; 
-  --color-text-muted: #0ea5e9; 
-  --color-text-muted-dark: #0284c7; 
-  --color-text-dark: #0369a1; 
+  --color-text-primary: #f0f9ff;
+  --color-text-secondary: #bae6fd;
+  --color-text-tertiary: #7dd3fc;
+  --color-text-muted-light: #38bdf8;
+  --color-text-muted: #0ea5e9;
+  --color-text-muted-dark: #0284c7;
+  --color-text-dark: #0369a1;
 
   --color-border-dark: #0369a1;
   --color-border-dark-light: #0284c7;
@@ -20841,23 +21307,23 @@ File: src/renderer/src/themes/theme-ocean.scss
   --color-border-accent: #7dd3fc;
   --color-border-light: #bae6fd;
 
-  --color-accent-primary: #7dd3fc; 
-  --color-accent-secondary: #38bdf8; 
-  --color-accent-light: #bae6fd; 
+  --color-accent-primary: #7dd3fc;
+  --color-accent-secondary: #38bdf8;
+  --color-accent-light: #bae6fd;
 
-  --color-success: #06b6d4; 
-  --color-success-light: #22d3ee; 
+  --color-success: #06b6d4;
+  --color-success-light: #22d3ee;
   --color-success-subtle: #06b6d41a;
   --color-success-muted: #06b6d433;
   --color-success-emphasis: #06b6d44c;
 
-  --color-warning: #f59e0b; 
+  --color-warning: #f59e0b;
   --color-warning-subtle: #f59e0b19;
   --color-warning-emphasis: #f59e0b4c;
-  --color-warning-light: #fbbf24; 
-  --color-warning-text: #0c4a6e; 
+  --color-warning-light: #fbbf24;
+  --color-warning-text: #0c4a6e;
 
-  --color-error: #dc2626; 
+  --color-error: #dc2626;
   --color-error-dark: #991b1b;
   --color-error-subtle: #dc26261a;
   --color-error-muted: #dc262626;
@@ -20902,6 +21368,9 @@ File: src/renderer/src/themes/theme-ocean.scss
   --color-agent-aider-tools: #f59e0b;
   --color-agent-power-tools: #8b5cf6;
   --color-agent-todo-tools: #38bdf8;
+  --color-agent-tasks-tools: #14b8a6;
+  --color-agent-memory-tools: #a78bfa;
+  --color-agent-skills-tools: #3d92cd;
   --color-agent-context-files: #06b6d4;
   --color-agent-repo-map: #60a5fa;
   --color-agent-ai-request: #dc2626;
@@ -21011,6 +21480,9 @@ File: src/renderer/src/themes/theme-serenity.scss
   --color-agent-aider-tools: #d4b887;
   --color-agent-power-tools: #b5a394;
   --color-agent-todo-tools: #9aa8bd;
+  --color-agent-tasks-tools: #8a7f73;
+  --color-agent-memory-tools: #9d8b7a;
+  --color-agent-skills-tools: #a68a7a;
   --color-agent-context-files: #c9b896;
   --color-agent-repo-map: #b5c2d1;
   --color-agent-ai-request: #a66b5b;
@@ -21034,6 +21506,8 @@ File: src/renderer/src/themes/themes.scss
 @use 'theme-serenity.scss';
 @use 'theme-cappuccino.scss';
 @use 'theme-fresh.scss';
+@use 'theme-botanical-garden.scss';
+@use 'theme-botanical-garden-dark.scss';
 
 ================
 File: src/renderer/src/types/message.ts
