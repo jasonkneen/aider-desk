@@ -567,6 +567,10 @@
         "label": "嵌入提供商",
         "description": "选择用于记忆功能的嵌入提供商"
       },
+      "maxDistance": {
+        "label": "相关性阈值",
+        "description": "值越高会检索到更多（但相关性更低）的记忆。值越低会检索到更少（但相关性更高）的记忆。"
+      },
       "embeddingProgress": {
         "loadingModel": "正在加载嵌入模型：{{status}}",
         "reEmbedding": "正在重新嵌入记忆：{{done}}/{{total}}",

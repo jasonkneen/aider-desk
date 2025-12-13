@@ -352,9 +352,8 @@ export class MemoryManager {
    * @param projectId - The project to filter by
    * @param query - The user's search query
    * @param limit - Max number of memories to return (default 5)
-   * @param maxDistance - Maximum distance threshold for filtering (optional)
    */
-  async retrieveMemories(projectId: string, query: string, limit: number = 5, maxDistance = 1.5): Promise<MemoryEntry[]> {
+  async retrieveMemories(projectId: string, query: string, limit: number = 5): Promise<MemoryEntry[]> {
     if (!(await this.waitForInit()) || !this.isMemoryEnabled() || !this.db) {
       return [];
     }
@@ -362,6 +361,8 @@ export class MemoryManager {
     if (!this.table) {
       return []; // No memories exist yet
     }
+
+    const maxDistance = this.store.getSettings().memory.maxDistance;
 
     logger.info('Retrieving memories', {
       projectId,
@@ -388,8 +389,7 @@ export class MemoryManager {
       count: results.length,
     });
 
-    // Filter by distance if threshold is provided
-    const filteredResults = maxDistance !== undefined ? results.filter((result) => (result._distance as number) <= maxDistance) : results;
+    const filteredResults = results.filter((result) => (result._distance as number) <= maxDistance);
 
     // Map results back to MemoryEntry interface
     // Note: LanceDB returns rows, we cast them to our interface

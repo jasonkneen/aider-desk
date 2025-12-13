@@ -1,4 +1,4 @@
-import { MemoryConfig, MemoryEmbeddingProvider, MemoryEntry, MemoryEmbeddingProgress, MemoryEmbeddingProgressPhase } from '@common/types';
+import { MemoryEmbeddingProgress, MemoryEmbeddingProgressPhase, MemoryEmbeddingProvider, MemoryEntry, SettingsData } from '@common/types';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaTrash } from 'react-icons/fa';
@@ -12,11 +12,8 @@ import { Button } from '@/components/common/Button';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { IconButton } from '@/components/common/IconButton';
 import { CodeInline } from '@/components/common/CodeInline';
-
-type Props = {
-  settings: MemoryConfig;
-  setSettings: (settings: MemoryConfig) => void;
-};
+import { Slider } from '@/components/common/Slider';
+import { InfoIcon } from '@/components/common/InfoIcon';
 
 const EMBEDDING_PROVIDERS = [{ value: 'sentence-transformers', label: 'Local' }];
 
@@ -42,6 +39,11 @@ const LOCAL_MODELS = [
     description: 'Highest quality, slower',
   },
 ];
+
+type Props = {
+  settings: SettingsData;
+  setSettings: (settings: SettingsData) => void;
+};
 
 export const MemorySettings = ({ settings, setSettings }: Props) => {
   const { t } = useTranslation();
@@ -99,7 +101,7 @@ export const MemorySettings = ({ settings, setSettings }: Props) => {
         window.clearTimeout(timeoutId);
       }
     };
-  }, [api, settings.model, settings.provider]);
+  }, [api, settings.memory.model, settings.memory.provider]);
 
   const projectOptions = useMemo(() => {
     const ids = new Set<string>();
@@ -148,21 +150,40 @@ export const MemorySettings = ({ settings, setSettings }: Props) => {
   const handleEnabledChange = (enabled: boolean) => {
     setSettings({
       ...settings,
-      enabled,
+      memory: {
+        ...settings.memory,
+        enabled,
+      },
     });
   };
 
   const handleModelChange = (model: string) => {
     setSettings({
       ...settings,
-      model,
+      memory: {
+        ...settings.memory,
+        model,
+      },
     });
   };
 
   const handleProviderChange = (provider: string) => {
     setSettings({
       ...settings,
-      provider: provider as MemoryEmbeddingProvider,
+      memory: {
+        ...settings.memory,
+        provider: provider as MemoryEmbeddingProvider,
+      },
+    });
+  };
+
+  const handleMaxDistanceChange = (value: number) => {
+    setSettings({
+      ...settings,
+      memory: {
+        ...settings.memory,
+        maxDistance: value,
+      },
     });
   };
 
@@ -172,14 +193,14 @@ export const MemorySettings = ({ settings, setSettings }: Props) => {
         <div className="px-4 py-5 space-y-4">
           <div className="text-xs py-2">{t('settings.memory.description')}</div>
 
-          <Checkbox label={t('settings.memory.enabled.label')} checked={settings.enabled} onChange={handleEnabledChange} size="md" />
+          <Checkbox label={t('settings.memory.enabled.label')} checked={settings.memory.enabled} onChange={handleEnabledChange} size="md" />
 
-          {settings.enabled && (
-            <div className="grid grid-cols-2 gap-x-6">
+          {settings.memory.enabled && (
+            <div className="grid grid-cols-2 gap-x-6 gap-y-5">
               <div>
                 <Select
                   label={t('settings.memory.provider.label')}
-                  value={settings.provider}
+                  value={settings.memory.provider}
                   onChange={handleProviderChange}
                   options={EMBEDDING_PROVIDERS.map((provider) => ({
                     value: provider.value,
@@ -193,7 +214,7 @@ export const MemorySettings = ({ settings, setSettings }: Props) => {
               <div>
                 <Select
                   label={t('settings.memory.model.label')}
-                  value={settings.model}
+                  value={settings.memory.model}
                   onChange={handleModelChange}
                   options={LOCAL_MODELS.map((model) => ({
                     value: model.value,
@@ -201,20 +222,49 @@ export const MemorySettings = ({ settings, setSettings }: Props) => {
                   }))}
                   className="w-full"
                 />
-                <p className="text-xs text-text-secondary mt-1">{LOCAL_MODELS.find((m) => m.value === settings.model)?.description}</p>
+                <p className="text-xs text-text-secondary mt-1">{LOCAL_MODELS.find((m) => m.value === settings.memory.model)?.description}</p>
+              </div>
+
+              <div>
+                <Slider
+                  label={
+                    <div className="flex items-center text-xs gap-1">
+                      <span>{t('settings.memory.maxDistance.label')}</span>
+                      <InfoIcon tooltip={t('settings.memory.maxDistance.description')} className="ml-1" />
+                    </div>
+                  }
+                  min={0}
+                  max={2}
+                  step={0.1}
+                  value={settings.memory.maxDistance}
+                  onChange={handleMaxDistanceChange}
+                />
               </div>
             </div>
           )}
           {embeddingProgress && embeddingProgress.phase !== MemoryEmbeddingProgressPhase.Idle && (
             <div className="text-2xs text-text-muted">
               {embeddingProgress.phase === MemoryEmbeddingProgressPhase.LoadingModel && (
-                <span>{t('settings.memory.embeddingProgress.loadingModel', { status: embeddingProgress.status || '-' })}</span>
+                <span>
+                  {t('settings.memory.embeddingProgress.loadingModel', {
+                    status: embeddingProgress.status || '-',
+                  })}
+                </span>
               )}
               {embeddingProgress.phase === MemoryEmbeddingProgressPhase.ReEmbedding && (
-                <span>{t('settings.memory.embeddingProgress.reEmbedding', { done: embeddingProgress.done, total: embeddingProgress.total })}</span>
+                <span>
+                  {t('settings.memory.embeddingProgress.reEmbedding', {
+                    done: embeddingProgress.done,
+                    total: embeddingProgress.total,
+                  })}
+                </span>
               )}
               {embeddingProgress.phase === MemoryEmbeddingProgressPhase.Error && (
-                <span className="text-error">{t('settings.memory.embeddingProgress.error', { error: embeddingProgress.error || '' })}</span>
+                <span className="text-error">
+                  {t('settings.memory.embeddingProgress.error', {
+                    error: embeddingProgress.error || '',
+                  })}
+                </span>
               )}
             </div>
           )}

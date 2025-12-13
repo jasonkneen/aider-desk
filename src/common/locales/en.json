@@ -611,6 +611,10 @@
         "label": "Embedding Provider",
         "description": "Choose the embedding provider to use for memory functionality"
       },
+      "maxDistance": {
+        "label": "Relevance threshold",
+        "description": "Higher values retrieve more (and less relevant) memories. Lower values retrieve fewer (and more relevant) memories."
+      },
       "embeddingProgress": {
         "loadingModel": "Loading embedding model: {{status}}",
         "reEmbedding": "Re-embedding memories: {{done}}/{{total}}",

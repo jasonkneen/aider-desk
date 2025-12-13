@@ -420,6 +420,7 @@ export interface MemoryConfig {
   enabled: boolean;
   provider: MemoryEmbeddingProvider;
   model: string;
+  maxDistance: number;
 }
 
 export enum MemoryEmbeddingProgressPhase {

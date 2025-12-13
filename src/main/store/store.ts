@@ -78,6 +78,7 @@ export const DEFAULT_SETTINGS: SettingsData = {
     enabled: true,
     provider: MemoryEmbeddingProvider.SentenceTransformers,
     model: 'Xenova/all-MiniLM-L6-v2',
+    maxDistance: 1.5,
   },
 };
 
@@ -156,7 +157,10 @@ export class Store {
       },
       mcpServers: settings.mcpServers || DEFAULT_SETTINGS.mcpServers,
       server: settings.server || DEFAULT_SETTINGS.server,
-      memory: settings.memory || DEFAULT_SETTINGS.memory,
+      memory: {
+        ...DEFAULT_SETTINGS.memory,
+        ...settings?.memory,
+      },
     };
   }
 

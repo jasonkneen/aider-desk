@@ -36,7 +36,7 @@ export const Slider = ({ label, min, max, step = 1, value, onChange, className =
   return (
     <div className={`${className}`}>
       {label && (
-        <div className="flex justify-between items-center mb-1">
+        <div className="flex justify-between items-center">
           <label className="block text-sm font-medium text-text-primary">{label}</label>
           {showValue && <span className="text-sm font-medium text-text-primary">{value}</span>}
         </div>

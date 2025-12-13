@@ -218,7 +218,7 @@ export const Settings = ({
           />
         );
       case 'memory':
-        return <MemorySettings settings={settings.memory} setSettings={(memoryConfig) => updateSettings({ ...settings, memory: memoryConfig })} />;
+        return <MemorySettings settings={settings} setSettings={updateSettings} />;
       case 'server':
         return <ServerSettings settings={settings} setSettings={updateSettings} />;
       case 'about':
