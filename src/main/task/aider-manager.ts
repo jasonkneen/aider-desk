@@ -444,7 +444,7 @@ export class AiderManager {
   }
 
   public getArchitectModel(): string | null {
-    return this.store.getProjectSettings(this.task.getProjectDir()).architectModel || null;
+    return this.task.task.architectModel || this.store.getProjectSettings(this.task.getProjectDir()).architectModel || null;
   }
 
   public getAiderModelsData(): ModelsData | null {

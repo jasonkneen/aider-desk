@@ -8,6 +8,7 @@
 - optimized agent profile update and related event handling
 - added Skill tools for activating skills in Agent mode
 - properly passing max_tokens when using Aider modes
+- architect model is now correctly set for a task
 
 ## [0.43.0]
 
