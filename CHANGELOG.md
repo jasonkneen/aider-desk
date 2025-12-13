@@ -15,6 +15,7 @@
 - fixed microphone permission issue on macOS
 - added voice support to browser client
 - added voice settings with microphone selection and additional configuration
+- added Auto Approve lock on project level for new tasks
 
 ## [0.43.0]
 

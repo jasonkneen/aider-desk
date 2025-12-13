@@ -298,5 +298,6 @@ export const getDefaultProjectSettings = (
     modelEditFormats: {},
     currentMode: 'code',
     agentProfileId: defaultAgentProfileId,
+    autoApproveLocked: false,
   };
 };

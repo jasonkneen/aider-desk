@@ -79,7 +79,11 @@ export class Project {
       };
     }
 
-    const task = this.prepareTask(undefined, initialTaskData);
+    const projectSettings = this.getProjectSettings();
+    const task = this.prepareTask(undefined, {
+      ...initialTaskData,
+      autoApprove: projectSettings.autoApproveLocked ? true : initialTaskData?.autoApprove,
+    });
     this.eventManager.sendTaskCreated(task.task);
     await task.init();
 

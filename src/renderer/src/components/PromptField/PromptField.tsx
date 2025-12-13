@@ -17,7 +17,7 @@ import { useDebounce } from '@reactuses/core';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useTranslation } from 'react-i18next';
 import { BiSend } from 'react-icons/bi';
-import { MdDoneAll, MdPlaylistRemove, MdSave, MdStop, MdMic, MdMicOff } from 'react-icons/md';
+import { MdPlaylistRemove, MdSave, MdStop, MdMic, MdMicOff } from 'react-icons/md';
 import { VscTerminal } from 'react-icons/vsc';
 import { clsx } from 'clsx';
 
@@ -30,10 +30,11 @@ import { showErrorNotification } from '@/utils/notifications';
 import { Button } from '@/components/common/Button';
 import { useCustomCommands } from '@/hooks/useCustomCommands';
 import { useApi } from '@/contexts/ApiContext';
+import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
-import { IconButton } from '@/components/common/IconButton';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { AudioAnalyzer } from '@/components/PromptField/AudioAnalyzer';
+import { AutoApprove } from '@/components/PromptField/AutoApprove';
 
 const External = Annotation.define<boolean>();
 
@@ -191,6 +192,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
     const editorRef = useRef<ReactCodeMirrorRef>(null);
     const customCommands = useCustomCommands(baseDir);
     const api = useApi();
+    const { projectSettings, saveProjectSettings } = useProjectSettings();
 
     const {
       isRecording,
@@ -350,6 +352,12 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
         }, 0);
       },
     }));
+
+    const handleAutoApproveLockChanged = (locked: boolean) => {
+      void saveProjectSettings({
+        autoApproveLocked: locked,
+      });
+    };
 
     const prepareForNextPrompt = useCallback(() => {
       setTextWithDispatch('');
@@ -1031,29 +1039,12 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
             {mode === 'agent' && (
               <>
                 <AgentSelector projectDir={baseDir} task={task} isActive={isActive} showSettingsPage={showSettingsPage} />
-                <div
-                  className="flex items-center ml-1 group"
-                  data-tooltip-id="prompt-field-tooltip"
-                  data-tooltip-content={t('promptField.autoApproveTooltip')}
-                  data-tooltip-delay-show={800}
-                  onClick={() => {
-                    const newValue = !task?.autoApprove;
-                    onAutoApproveChanged?.(newValue);
-                  }}
-                >
-                  <IconButton
-                    icon={
-                      <MdDoneAll
-                        className={`w-3.5 h-3.5 ${task?.autoApprove ? 'text-agent-auto-approve' : 'text-text-muted group-hover:text-text-tertiary'}`}
-                      />
-                    }
-                  />
-                  <div
-                    className={`cursor-pointer text-2xs ml-1 focus:outline-none ${task?.autoApprove ? 'text-text-primary' : 'text-text-muted group-hover:text-text-tertiary'}`}
-                  >
-                    {t('promptField.autoApprove')}
-                  </div>
-                </div>
+                <AutoApprove
+                  enabled={!!task?.autoApprove}
+                  locked={projectSettings?.autoApproveLocked ?? false}
+                  onChange={onAutoApproveChanged}
+                  onLockChange={handleAutoApproveLockChanged}
+                />
               </>
             )}
             <div className="flex-grow" />

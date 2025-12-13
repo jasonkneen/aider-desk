@@ -252,6 +252,7 @@ export const ProjectSettingsSchema = z.object({
   currentMode: z.enum(['code', 'ask', 'architect', 'context', 'agent']),
   contextCompactingThreshold: z.number().optional(),
   weakModelLocked: z.boolean().optional(),
+  autoApproveLocked: z.boolean().default(false),
 });
 
 export type ProjectSettings = z.infer<typeof ProjectSettingsSchema>;

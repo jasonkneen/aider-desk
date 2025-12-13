@@ -1003,6 +1003,7 @@
     "saveError": "Failed to save prompt: {{error}}",
     "autoApprove": "Auto Approve",
     "autoApproveTooltip": "When enabled, automatically approve tool executions without asking for confirmation",
+    "autoApproveLockTooltip": "Locking keeps Auto Approve enabled for newly created tasks",
     "placeholders": {
       "0": "Update the UserValidator class to add email format validation...",
       "1": "Fix the memory leak in DataProcessor.processBatch() by closing...",
