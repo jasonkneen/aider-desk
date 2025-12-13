@@ -528,7 +528,10 @@ class ConnectorInputOutput(InputOutput):
         return False
 
       if self.prompt_context.auto_approve:
-        return True
+        if question == "Edit the files?":
+          result = "y"
+        else:
+          return True
 
     if result is None:
       result = wait_for_async(self.connector, ask_question())

@@ -582,7 +582,9 @@ export class Task {
       promptContext,
     });
 
-    const responses = await this.sendPromptToAider(prompt, promptContext, mode, undefined, undefined, undefined);
+    const responses = await this.sendPromptToAider(prompt, promptContext, mode, undefined, undefined, {
+      autoApprove: this.task.autoApprove,
+    });
     logger.debug('Responses:', { responses });
 
     for (const response of responses) {

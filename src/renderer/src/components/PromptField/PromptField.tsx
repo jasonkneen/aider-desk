@@ -1036,17 +1036,13 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
           </div>
           <div className="relative w-full flex items-center gap-1.5">
             <ModeSelector mode={mode} onModeChange={onModeChanged} />
-            {mode === 'agent' && (
-              <>
-                <AgentSelector projectDir={baseDir} task={task} isActive={isActive} showSettingsPage={showSettingsPage} />
-                <AutoApprove
-                  enabled={!!task?.autoApprove}
-                  locked={projectSettings?.autoApproveLocked ?? false}
-                  onChange={onAutoApproveChanged}
-                  onLockChange={handleAutoApproveLockChanged}
-                />
-              </>
-            )}
+            {mode === 'agent' && <AgentSelector projectDir={baseDir} task={task} isActive={isActive} showSettingsPage={showSettingsPage} />}
+            <AutoApprove
+              enabled={!!task?.autoApprove}
+              locked={projectSettings?.autoApproveLocked ?? false}
+              onChange={onAutoApproveChanged}
+              onLockChange={handleAutoApproveLockChanged}
+            />
             <div className="flex-grow" />
             {toggleTerminal && (
               <Button

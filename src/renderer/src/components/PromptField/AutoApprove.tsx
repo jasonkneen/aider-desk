@@ -16,6 +16,9 @@ export const AutoApprove = ({ enabled, locked, onChange, onLockChange }: Props) 
 
   const handleClick = () => {
     onChange?.(!enabled);
+    if (enabled) {
+      onLockChange?.(false);
+    }
   };
 
   const handleLockClick = () => {
