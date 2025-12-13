@@ -1,5 +1,5 @@
 import { createOpenAI } from '@ai-sdk/openai';
-import { isOpenAiProvider, LlmProvider, OpenAiProvider } from '@common/agent';
+import { DEFAULT_VOICE_SYSTEM_INSTRUCTIONS, isOpenAiProvider, LlmProvider, OpenAiProvider, OpenAiVoiceModel } from '@common/agent';
 import { Model, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData, VoiceSession } from '@common/types';
 
 import type { LanguageModelUsage, ToolSet } from 'ai';
@@ -238,7 +238,10 @@ const createOpenAIVoiceSession = async (profile: ProviderProfile, settings: Sett
   try {
     // Generate ephemeral token for OpenAI Realtime API
     // This creates a short-lived token specifically for Realtime API usage
-    const model = 'gpt-4o-transcribe';
+    const model = provider.voice?.model ?? OpenAiVoiceModel.Gpt4oTranscribe;
+    const language = provider.voice?.language ?? 'en';
+    const prompt = provider.voice?.systemInstructions ?? DEFAULT_VOICE_SYSTEM_INSTRUCTIONS;
+    const idleTimeoutMs = provider.voice?.idleTimeoutMs ?? 5000;
     const response = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
       headers: {
@@ -251,16 +254,16 @@ const createOpenAIVoiceSession = async (profile: ProviderProfile, settings: Sett
           audio: {
             input: {
               transcription: {
-                language: 'en',
+                language,
                 model,
-                prompt: 'Expect words related to programming, development, and technology.',
+                prompt,
               },
               turn_detection: {
                 type: 'server_vad',
                 prefix_padding_ms: 300,
                 silence_duration_ms: 500,
                 threshold: 0.5,
-                idle_timeout_ms: 5000,
+                idle_timeout_ms: idleTimeoutMs,
               },
               noise_reduction: {
                 type: 'near_field',
@@ -289,6 +292,7 @@ const createOpenAIVoiceSession = async (profile: ProviderProfile, settings: Sett
     return {
       ephemeralToken,
       model,
+      idleTimeoutMs,
     };
   } catch (error) {
     logger.error('Failed to create OpenAI voice session:', error);

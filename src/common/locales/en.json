@@ -352,14 +352,36 @@
     "title": "Settings",
     "tabs": {
       "general": "General",
-      "providers": "Providers",
       "aider": "Aider",
       "agents": "Agents",
-      "server": "Server",
       "memory": "Memory",
+      "voice": "Voice",
+      "server": "Server",
       "about": "About"
     },
     "gui": "Appearance",
+    "voice": {
+      "title": "Voice",
+      "providerProfile": "Provider profile",
+      "model": "Model",
+      "idleTimeout": "Idle timeout (seconds)",
+      "idleTimeoutHelp": "Stops recording after this much silence",
+      "systemInstructions": "System instructions",
+      "microphone": "Microphone",
+      "microphoneDefault": "Default",
+      "microphoneUnknown": "Unknown microphone",
+      "noSupportedProviders": "No supported voice providers configured. Configure Gemini or OpenAI via Model Library.",
+      "openai": {
+        "title": "OpenAI",
+        "model": "Model",
+        "language": "Language"
+      },
+      "gemini": {
+        "title": "Gemini",
+        "model": "Model",
+        "temperature": "Temperature"
+      }
+    },
     "startup": {
       "title": "Start Up",
       "emptyTask": "Start with empty task",

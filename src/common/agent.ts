@@ -57,6 +57,14 @@ export interface LlmProviderBase {
   voiceEnabled?: boolean;
 }
 
+export const DEFAULT_VOICE_SYSTEM_INSTRUCTIONS = 'Expect words related to programming, development, and technology.';
+
+export interface VoiceControlSettings {
+  idleTimeoutMs: number;
+  systemInstructions: string;
+  inputDeviceId?: string;
+}
+
 export interface OllamaProvider extends LlmProviderBase {
   name: 'ollama';
   baseUrl: string;
@@ -82,11 +90,22 @@ export const AVAILABLE_PROVIDERS: LlmProviderName[] = [
   'zai-plan',
 ];
 
+export enum OpenAiVoiceModel {
+  Gpt4oMiniTranscribe = 'gpt-4o-mini-transcribe',
+  Gpt4oTranscribe = 'gpt-4o-transcribe',
+}
+
+export interface OpenAiVoiceControlSettings extends VoiceControlSettings {
+  model: OpenAiVoiceModel;
+  language: string;
+}
+
 export interface OpenAiProvider extends LlmProviderBase {
   name: 'openai';
   apiKey: string;
   reasoningEffort?: ReasoningEffort;
   useWebSearch: boolean;
+  voice?: Partial<OpenAiVoiceControlSettings>;
 }
 export const isOpenAiProvider = (provider: LlmProviderBase): provider is OpenAiProvider => provider.name === 'openai';
 
@@ -105,6 +124,15 @@ export interface AnthropicProvider extends LlmProviderBase {
 }
 export const isAnthropicProvider = (provider: LlmProviderBase): provider is AnthropicProvider => provider.name === 'anthropic';
 
+export enum GeminiVoiceModel {
+  GeminiLive25FlashNativeAudio = 'gemini-live-2.5-flash-native-audio',
+}
+
+export interface GeminiVoiceControlSettings extends VoiceControlSettings {
+  model: GeminiVoiceModel;
+  temperature: number;
+}
+
 export interface GeminiProvider extends LlmProviderBase {
   name: 'gemini';
   apiKey: string;
@@ -112,6 +140,7 @@ export interface GeminiProvider extends LlmProviderBase {
   includeThoughts: boolean;
   thinkingBudget: number;
   useSearchGrounding: boolean;
+  voice?: Partial<GeminiVoiceControlSettings>;
 }
 
 export const isGeminiProvider = (provider: LlmProviderBase): provider is GeminiProvider => provider.name === 'gemini';
@@ -433,6 +462,12 @@ export const getDefaultProviderParams = <T extends LlmProvider>(providerName: Ll
         name: 'openai',
         apiKey: '',
         useWebSearch: false,
+        voice: {
+          idleTimeoutMs: 5000,
+          systemInstructions: DEFAULT_VOICE_SYSTEM_INSTRUCTIONS,
+          model: OpenAiVoiceModel.Gpt4oTranscribe,
+          language: 'en',
+        },
       } satisfies OpenAiProvider;
       break;
     case 'azure':
@@ -457,6 +492,12 @@ export const getDefaultProviderParams = <T extends LlmProvider>(providerName: Ll
         includeThoughts: false,
         thinkingBudget: 0,
         customBaseUrl: '',
+        voice: {
+          idleTimeoutMs: 5000,
+          systemInstructions: DEFAULT_VOICE_SYSTEM_INSTRUCTIONS,
+          model: GeminiVoiceModel.GeminiLive25FlashNativeAudio,
+          temperature: 0.7,
+        },
       } satisfies GeminiProvider;
       break;
     case 'vertex-ai':

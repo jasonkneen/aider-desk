@@ -11,6 +11,7 @@ export interface VoiceSessionConfig {
   token: string;
   model: string;
   mediaStream: MediaStream;
+  idleTimeoutMs: number;
   onTranscription: (text: string) => void;
   onError: (error: Error) => void;
   onSessionStateChange?: (state: VoiceSessionState) => void;

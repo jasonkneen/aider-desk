@@ -355,9 +355,32 @@
       "agents": "代理",
       "server": "服务器",
       "memory": "记忆",
+      "voice": "语音",
       "about": "关于"
     },
     "gui": "GUI",
+    "voice": {
+      "title": "语音",
+      "providerProfile": "提供者配置",
+      "model": "模型",
+      "idleTimeout": "空闲超时（秒）",
+      "idleTimeoutHelp": "静音达到该时间后自动停止录音",
+      "systemInstructions": "系统指令",
+      "microphone": "麦克风",
+      "microphoneDefault": "默认",
+      "microphoneUnknown": "未知麦克风",
+      "noSupportedProviders": "未配置支持的语音提供者。请通过模型库配置 Gemini 或 OpenAI。",
+      "openai": {
+        "title": "OpenAI",
+        "model": "模型",
+        "language": "语言"
+      },
+      "gemini": {
+        "title": "Gemini",
+        "model": "模型",
+        "temperature": "温度"
+      }
+    },
     "startup": {
       "title": "启动",
       "emptyTask": "启动时创建新任务",

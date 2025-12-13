@@ -511,6 +511,7 @@ export interface AgentProfilesUpdatedData {
 export interface VoiceSession {
   ephemeralToken: string;
   model: string;
+  idleTimeoutMs: number;
 }
 
 export interface Group {

@@ -134,9 +134,10 @@ export class GeminiVoiceProvider implements VoiceProvider {
           clearTimeout(this.silenceTimeoutRef);
         }
       } else {
-        // Check for silence (no audio for 5 seconds)
+        // Check for silence
         const timeSinceLastAudio = Date.now() - this.lastAudioTimeRef;
-        if (timeSinceLastAudio > 5000 && !this.silenceTimeoutRef) {
+        const idleTimeoutMs = this.config?.idleTimeoutMs ?? 5000;
+        if (timeSinceLastAudio > idleTimeoutMs && !this.silenceTimeoutRef) {
           this.silenceTimeoutRef = setTimeout(() => {
             this.stopRecordingCallback?.();
           }, 100);

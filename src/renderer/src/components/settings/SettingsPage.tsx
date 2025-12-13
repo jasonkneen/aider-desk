@@ -1,4 +1,4 @@
-import { ProjectData, SettingsData } from '@common/types';
+import { ProjectData, ProviderProfile, SettingsData } from '@common/types';
 import { useEffect, useMemo, useState } from 'react';
 import { isEqual } from 'lodash';
 import { useTranslation } from 'react-i18next';
@@ -26,11 +26,29 @@ export const SettingsPage = ({ onClose, initialPageId, initialOptions, openProje
   const [localSettings, setLocalSettings] = useState<SettingsData | null>(originalSettings);
   const [agentProfiles, setAgentProfiles] = useState(originalAgentProfiles);
 
+  const [providers, setProviders] = useState<ProviderProfile[]>([]);
+  const [originalProviders, setOriginalProviders] = useState<ProviderProfile[]>([]);
+
   useEffect(() => {
     if (originalSettings) {
       setLocalSettings(originalSettings);
     }
   }, [originalSettings]);
+
+  useEffect(() => {
+    const loadProviders = async () => {
+      try {
+        const data = await api.getProviders();
+        setProviders(data);
+        setOriginalProviders(data);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load providers:', error);
+      }
+    };
+
+    void loadProviders();
+  }, [api]);
 
   useEffect(() => {
     setAgentProfiles(originalAgentProfiles);
@@ -39,8 +57,9 @@ export const SettingsPage = ({ onClose, initialPageId, initialOptions, openProje
   const hasChanges = useMemo(() => {
     const settingsChanged = localSettings && originalSettings && !isEqual(localSettings, originalSettings);
     const agentProfilesChanged = !isEqual(agentProfiles, originalAgentProfiles);
-    return settingsChanged || agentProfilesChanged;
-  }, [localSettings, originalSettings, agentProfiles, originalAgentProfiles]);
+    const providersChanged = !isEqual(providers, originalProviders);
+    return settingsChanged || agentProfilesChanged || providersChanged;
+  }, [localSettings, originalSettings, agentProfiles, originalAgentProfiles, providers, originalProviders]);
 
   const handleCancel = () => {
     if (originalSettings && localSettings?.language !== originalSettings.language) {
@@ -66,14 +85,25 @@ export const SettingsPage = ({ onClose, initialPageId, initialOptions, openProje
       void api.reloadMcpServers(originalSettings.mcpServers || {});
     }
 
-    // Reset agent profiles to original
     setAgentProfiles(originalAgentProfiles);
+    setProviders(originalProviders);
     onClose();
   };
 
   const handleSave = async () => {
     if (localSettings) {
       await saveSettings(localSettings);
+    }
+
+    try {
+      if (!isEqual(providers, originalProviders)) {
+        const updatedProviders = await api.updateProviders(providers);
+        setProviders(updatedProviders);
+        setOriginalProviders(updatedProviders);
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to save providers:', error);
     }
 
     // Save agent profile changes
@@ -157,6 +187,8 @@ export const SettingsPage = ({ onClose, initialPageId, initialOptions, openProje
             agentProfiles={agentProfiles}
             setAgentProfiles={setAgentProfiles}
             openProjects={openProjects}
+            providers={providers}
+            setProviders={setProviders}
           />
         )}
       </div>

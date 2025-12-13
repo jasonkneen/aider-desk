@@ -2,11 +2,12 @@ import { ReactNode, TextareaHTMLAttributes } from 'react';
 
 export type Props = TextareaHTMLAttributes<HTMLTextAreaElement> & {
   label?: ReactNode;
+  wrapperClassName?: string;
 };
 
-export const TextArea = ({ label, className = '', ...props }: Props) => {
+export const TextArea = ({ label, wrapperClassName, className = '', ...props }: Props) => {
   return (
-    <>
+    <div className={wrapperClassName}>
       {label && <label className="block text-sm font-medium text-text-primary mb-1">{label}</label>}
       <textarea
         spellCheck={false}
@@ -17,6 +18,6 @@ export const TextArea = ({ label, className = '', ...props }: Props) => {
         scrollbar-thumb-bg-fourth
         ${className}`}
       />
-    </>
+    </div>
   );
 };

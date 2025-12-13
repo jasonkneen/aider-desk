@@ -1,8 +1,8 @@
-import { Font, ProjectData, SettingsData, Theme, AgentProfile } from '@common/types';
+import { Font, ProjectData, SettingsData, Theme, AgentProfile, ProviderProfile } from '@common/types';
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
-import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer, FaBrain } from 'react-icons/fa';
+import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer, FaBrain, FaMicrophone } from 'react-icons/fa';
 import { MdTerminal } from 'react-icons/md';
 
 import { useApi } from '@/contexts/ApiContext';
@@ -12,6 +12,7 @@ import { AgentSettings } from '@/components/settings/agent/AgentSettings';
 import { AboutSettings } from '@/components/settings/AboutSettings';
 import { ServerSettings } from '@/components/settings/ServerSettings';
 import { MemorySettings } from '@/components/settings/MemorySettings';
+import { VoiceSettings } from '@/components/settings/VoiceSettings';
 
 type Props = {
   settings: SettingsData;
@@ -26,9 +27,11 @@ type Props = {
   agentProfiles?: AgentProfile[];
   setAgentProfiles?: (profiles: AgentProfile[]) => void;
   openProjects?: ProjectData[];
+  providers?: ProviderProfile[];
+  setProviders?: (providers: ProviderProfile[]) => void;
 };
 
-type PageId = 'general' | 'aider' | 'agents' | 'memory' | 'server' | 'about';
+type PageId = 'general' | 'aider' | 'agents' | 'memory' | 'voice' | 'server' | 'about';
 
 interface SidebarItem {
   id: string;
@@ -51,6 +54,8 @@ export const Settings = ({
   agentProfiles,
   setAgentProfiles,
   openProjects,
+  providers,
+  setProviders,
 }: Props) => {
   const { t } = useTranslation();
   const api = useApi();
@@ -119,6 +124,12 @@ export const Settings = ({
       pageId: 'memory',
       label: t('settings.tabs.memory'),
       icon: <FaBrain className="w-4 h-4" />,
+    },
+    {
+      id: 'voice',
+      pageId: 'voice',
+      label: t('settings.tabs.voice'),
+      icon: <FaMicrophone className="w-4 h-4" />,
     },
     ...(isServerManagementSupported
       ? [
@@ -219,6 +230,8 @@ export const Settings = ({
         );
       case 'memory':
         return <MemorySettings settings={settings} setSettings={updateSettings} />;
+      case 'voice':
+        return <VoiceSettings providers={providers} setProviders={setProviders} initialProviderId={initialOptions?.providerId as string | undefined} />;
       case 'server':
         return <ServerSettings settings={settings} setSettings={updateSettings} />;
       case 'about':

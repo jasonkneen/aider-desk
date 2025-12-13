@@ -1,5 +1,5 @@
 import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, VoiceSession } from '@common/types';
-import { GeminiProvider, isGeminiProvider, LlmProvider } from '@common/agent';
+import { DEFAULT_VOICE_SYSTEM_INSTRUCTIONS, GeminiProvider, GeminiVoiceModel, isGeminiProvider, LlmProvider } from '@common/agent';
 import { createGoogleGenerativeAI, google, type GoogleGenerativeAIProviderOptions } from '@ai-sdk/google';
 import { Modality } from '@google/genai';
 
@@ -236,7 +236,10 @@ const createGeminiVoiceSession = async (profile: ProviderProfile, settings: Sett
     });
 
     // Default to the model specified in requirements or fallback
-    const modelId = 'gemini-2.5-flash-native-audio-preview-09-2025';
+    const modelId = provider.voice?.model ?? GeminiVoiceModel.GeminiLive25FlashNativeAudio;
+    const temperature = provider.voice?.temperature ?? 0.7;
+    const systemInstruction = provider.voice?.systemInstructions ?? DEFAULT_VOICE_SYSTEM_INSTRUCTIONS;
+    const idleTimeoutMs = provider.voice?.idleTimeoutMs ?? 5000;
 
     // Create ephemeral token
     // The token is valid for 1 minute for session initiation, and 30 minutes for the session duration by default.
@@ -244,7 +247,7 @@ const createGeminiVoiceSession = async (profile: ProviderProfile, settings: Sett
     const token = await client.authTokens.create({
       config: {
         uses: 1,
-        expireTime: expireTime,
+        expireTime,
         liveConnectConstraints: {
           model: modelId,
           config: {
@@ -254,8 +257,9 @@ const createGeminiVoiceSession = async (profile: ProviderProfile, settings: Sett
                 disabled: true,
               },
             },
-            temperature: 0.7,
+            temperature,
             responseModalities: [Modality.AUDIO],
+            systemInstruction,
           },
         },
         httpOptions: {
@@ -269,6 +273,7 @@ const createGeminiVoiceSession = async (profile: ProviderProfile, settings: Sett
     return {
       ephemeralToken: token.name || '',
       model: modelId,
+      idleTimeoutMs,
     };
   } catch (error) {
     logger.error('Failed to create Gemini voice session:', error);

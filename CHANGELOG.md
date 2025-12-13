@@ -14,6 +14,7 @@
 - user message correctly stored before Aider returns response in case of interrupt or error
 - fixed microphone permission issue on macOS
 - added voice support to browser client
+- added voice settings with microphone selection and additional configuration
 
 ## [0.43.0]
 

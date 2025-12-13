@@ -10,11 +10,11 @@ type Props = {
 
 export const DefaultModelOverrides = ({ provider, overrides, onChange }: Props) => {
   // Convert overrides to LlmProvider format
-  const fullProvider: LlmProvider = {
+  const fullProvider = {
     ...getDefaultProviderParams(provider.name),
     ...provider,
     ...overrides,
-  };
+  } as LlmProvider;
 
   // Convert back to overrides format
   const handleDisableStreamingChange = (disableStreaming: boolean) => {
