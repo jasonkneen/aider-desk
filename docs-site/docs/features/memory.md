@@ -33,13 +33,13 @@ Open: `Settings → Memory`
 
 In `Settings → Agent`, enable **Use Memory Tools** for the agent profile you will use.
 
-![Agent Settings - Use Memory Tools](./images/agent-settings-use-memory-tools.gif)
+![Agent Settings - Use Memory Tools](../images/agent-settings-use-memory-tools.gif)
 
 ### Enable “Use memory tools” in AgentSelector
 
 You can also toggle memory tools per-task from the Agent selector.
 
-![Agent Selector - Use memory tools toggle](./images/agent-selector-use-memory-tools.gif)
+![Agent Selector - Use memory tools toggle](../images/agent-selector-use-memory-tools.gif)
 
 ## Memory Tools
 
