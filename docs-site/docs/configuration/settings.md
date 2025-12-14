@@ -37,6 +37,14 @@ Configure the powerful Agent Mode.
 - **Tool Approvals**: Set permissions for each tool on a per-profile basis.
 See [Agent Mode](../agent-mode/agent-mode.md) and [MCP Servers](../agent-mode/mcp-servers.md) for more information.
 
+### Memory
+
+Configure the built-in long-term Memory system.
+- **Enable/disable Memory**
+- **Embedding model selection** and similarity tuning
+- **View and delete stored memories**
+See [Memory](../features/memory.md) for details.
+
 ### About
 
 View version information for AiderDesk and the integrated Aider library.
