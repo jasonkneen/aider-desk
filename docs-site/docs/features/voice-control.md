@@ -18,23 +18,42 @@ Voice control is currently supported with the following AI providers:
 
 ## Enabling Voice Control
 
-### Step 1: Configure Provider with API Key
+### Step 1: Configure a Provider Profile
 
-First, ensure you have a provider (OpenAI or Gemini) configured with a valid API key:
+Voice control uses the provider profile that has **Voice Control** enabled (OpenAI or Gemini).
 
-1. Open the **Model Library** (click the database icon in the top bar)
-2. Select your preferred provider (OpenAI or Gemini)
+1. Open the **Model Library** (database icon in the top bar)
+2. Select your preferred provider profile (OpenAI or Gemini)
 3. Enter your API key in the provider settings
 4. Save the configuration
 
-### Step 2: Enable Voice Control
+### Step 2: Enable Voice Control (Model Library)
 
-1. In the **Model Library**, select your configured provider
-2. Scroll down to the **Voice Control** section
-3. Check the **"Enable Voice Control"** checkbox
-4. Save the changes
+You can enable voice control directly on a provider profile:
 
-The voice control toggle will now appear in the chat interface.
+1. Open the **Model Library**
+2. Select the provider profile you configured in Step 1
+3. Find the **Voice Control** section
+4. Enable **Voice Control** and save
+
+> **Note**: Only one provider profile can have voice control enabled at a time.
+
+### Step 3: Configure Voice Options (Settings → Voice)
+
+Use **Settings → Voice** for the detailed configuration:
+
+1. Open **Settings**
+2. Go to the **Voice** tab
+3. Select the **Provider Profile** you want to use for voice control
+4. Configure voice options as needed:
+   - **Model** (provider-specific)
+   - **Microphone** (choose a device or keep **Default**)
+   - **Idle timeout** (silence duration before auto-stop; default is 5 seconds)
+   - **System instructions** (what the speech-to-text session should expect)
+   - OpenAI: **Language**
+   - Gemini: **Temperature**
+
+The microphone icon will appear in the chat input when a supported provider profile has voice enabled.
 
 ## Using Voice Control
 
@@ -52,7 +71,7 @@ Once voice control is enabled, you'll see a microphone icon in the chat input ar
 As you speak, the system will transcribe your speech in real-time:
 
 - **Live Transcription**: Text appears as you speak
-- **Automatic Silence Detection**: Recording stops automatically after 5 seconds of silence
+- **Automatic Silence Detection**: Recording stops automatically after the configured idle timeout (default: 5 seconds)
 - **Visual Feedback**: Audio level indicators show when your voice is being detected
 
 ### After Recording
@@ -82,8 +101,8 @@ The voice control system uses Web Audio API for:
 
 #### Gemini Integration  
 - Uses Google GenAI SDK for live audio input
-- Processes audio at 16kHz sample rate
-- Implements silence detection with configurable thresholds
+- Uses the voice model `gemini-2.5-flash-native-audio-preview-12-2025` (current default)
+- Implements an idle timeout (silence) auto-stop (default: 5 seconds)
 
 ### Security and Privacy
 
@@ -103,9 +122,8 @@ The voice control system uses Web Audio API for:
 
 ### Current Limitations
 
-- **One Provider at a Time**: Only one provider can have voice control enabled
-- **English Only**: Currently optimized for English speech recognition
-- **No Voice Commands**: Voice control only transcribes speech, doesn't execute voice commands
+- **One Provider at a Time**: Only one provider profile can have voice control enabled
+- **No Voice Commands**: Voice control only transcribes speech, it doesn't execute voice commands
 - **No Audio Playback**: The system doesn't provide text-to-speech capabilities
 
 ### Platform Support
@@ -121,13 +139,14 @@ The voice control system uses Web Audio API for:
 #### Microphone Not Working
 1. Check if your microphone is connected and working
 2. Verify microphone permissions in your system settings
-3. Ensure no other application is using the microphone
-4. Try refreshing the application
+3. In **Settings → Voice**, try selecting a specific microphone device (instead of **Default**)
+4. Ensure no other application is using the microphone
+5. Restart the application
 
 #### Voice Control Not Available
-1. Verify you have a provider configured with a valid API key
-2. Check that voice control is enabled in the Model Library
-3. Ensure only one provider has voice control enabled
+1. Verify you have a provider profile configured with a valid API key
+2. Open **Settings → Voice** and select a supported provider profile (OpenAI/Gemini)
+3. Ensure only one provider profile has voice control enabled
 4. Restart the application if changes don't take effect
 
 #### Poor Transcription Quality
@@ -148,30 +167,29 @@ The voice control system uses Web Audio API for:
 
 The voice control system includes several configurable parameters:
 
-- **Silence Detection**: Automatically stops recording after 5 seconds of silence
-- **Audio Threshold**: Minimum audio level to detect voice input (0.01 default)
-- **Sample Rate**: Audio processing at 16kHz for optimal compatibility
+- **Microphone**: Select a specific input device (or keep **Default**)
+- **Idle timeout**: Automatically stops recording after a period of silence (default: 5 seconds)
 
 ### Provider Settings
 
-Each provider has specific configuration options:
+Each provider has specific configuration options (available in **Settings → Voice**):
 
 #### OpenAI
-- **Model**: Uses OpenAI's real-time speech-to-text model
-- **Language**: Currently optimized for English
-- **Audio Format**: PCM audio at 16kHz
+- **Model**: `gpt-4o-transcribe` or `gpt-4o-mini-transcribe`
+- **Language**: Selectable (default: `en`)
+- **System instructions**: Customizable
+- **Idle timeout**: Customizable
 
 #### Gemini
-- **Model**: Uses Gemini's live audio input capabilities
-- **Language**: Supports multiple languages (English optimized)
-- **Audio Format**: PCM audio with base64 encoding
+- **Model**: `gemini-2.5-flash-native-audio-preview-12-2025` (current default)
+- **Temperature**: Slider from 0 to 1 (default: 0.7)
+- **System instructions**: Customizable
+- **Idle timeout**: Customizable
 
 ## Future Enhancements
 
 Planned improvements for voice control include:
 
-- **Multi-language Support**: Extended language support for transcription
 - **Voice Commands**: Ability to execute commands through voice
 - **Multiple Provider Support**: Enable voice control on multiple providers simultaneously
-- **Custom Audio Settings**: User-configurable audio thresholds and silence detection
 - **Text-to-Speech**: Add audio feedback for system responses
