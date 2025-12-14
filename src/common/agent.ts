@@ -62,7 +62,6 @@ export const DEFAULT_VOICE_SYSTEM_INSTRUCTIONS = 'Expect words related to progra
 export interface VoiceControlSettings {
   idleTimeoutMs: number;
   systemInstructions: string;
-  inputDeviceId?: string;
 }
 
 export interface OllamaProvider extends LlmProviderBase {
@@ -125,7 +124,7 @@ export interface AnthropicProvider extends LlmProviderBase {
 export const isAnthropicProvider = (provider: LlmProviderBase): provider is AnthropicProvider => provider.name === 'anthropic';
 
 export enum GeminiVoiceModel {
-  GeminiLive25FlashNativeAudio = 'gemini-live-2.5-flash-native-audio',
+  GeminiLive25FlashNativeAudio = 'gemini-2.5-flash-native-audio-preview-12-2025',
 }
 
 export interface GeminiVoiceControlSettings extends VoiceControlSettings {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useLocalStorage } from '@reactuses/core';
 import { ProviderProfile } from '@common/types';
 import {
   DEFAULT_VOICE_SYSTEM_INSTRUCTIONS,
@@ -221,7 +222,9 @@ export const VoiceSettings = ({ providers: localProviders, setProviders: setLoca
     }
   };
 
+  const [inputDeviceId, setInputDeviceId] = useLocalStorage<string | undefined>('voice-microphone-device-id', undefined);
   const [audioInputs, setAudioInputs] = useState<AudioDeviceOption[]>([]);
+
   useEffect(() => {
     const loadDevices = async () => {
       try {
@@ -252,42 +255,8 @@ export const VoiceSettings = ({ providers: localProviders, setProviders: setLoca
   }, [t]);
 
   const handleInputDeviceChange = (value: string) => {
-    if (!selectedProfile) {
-      return;
-    }
-
     const inputDeviceId = value === DEFAULT_MIC_DEVICE_ID ? undefined : value;
-
-    if (selectedProfile.provider.name === 'openai') {
-      const provider = selectedProfile.provider as OpenAiProvider;
-      const updated: ProviderProfile = {
-        ...selectedProfile,
-        provider: {
-          ...provider,
-          voice: {
-            ...provider.voice,
-            inputDeviceId,
-          },
-        },
-      };
-      handleUpdateProfile(updated);
-      return;
-    }
-
-    if (selectedProfile.provider.name === 'gemini') {
-      const provider = selectedProfile.provider as GeminiProvider;
-      const updated: ProviderProfile = {
-        ...selectedProfile,
-        provider: {
-          ...provider,
-          voice: {
-            ...provider.voice,
-            inputDeviceId,
-          },
-        },
-      };
-      handleUpdateProfile(updated);
-    }
+    setInputDeviceId(inputDeviceId);
   };
 
   const handleSystemInstructionsChange = (value: string) => {
@@ -348,20 +317,11 @@ export const VoiceSettings = ({ providers: localProviders, setProviders: setLoca
         ? ((selectedProfile.provider as GeminiProvider).voice?.systemInstructions ?? DEFAULT_VOICE_SYSTEM_INSTRUCTIONS)
         : DEFAULT_VOICE_SYSTEM_INSTRUCTIONS;
 
-  const inputDeviceId =
-    selectedProfile?.provider.name === 'openai'
-      ? (selectedProfile.provider as OpenAiProvider).voice?.inputDeviceId
-      : selectedProfile?.provider.name === 'gemini'
-        ? (selectedProfile.provider as GeminiProvider).voice?.inputDeviceId
-        : undefined;
-
   const providerName = selectedProfile?.provider.name as SupportedVoiceProviderName | undefined;
 
   const microphoneOptions: Option[] = useMemo(() => {
     return [{ label: t('settings.voice.microphoneDefault'), value: DEFAULT_MIC_DEVICE_ID }, ...audioInputs.map((d) => ({ label: d.label, value: d.value }))];
   }, [audioInputs, t]);
-
-  const microphoneValue = inputDeviceId ?? DEFAULT_MIC_DEVICE_ID;
 
   const openAiModelOptions: Option[] = [
     { label: OpenAiVoiceModel.Gpt4oMiniTranscribe, value: OpenAiVoiceModel.Gpt4oMiniTranscribe },
@@ -523,7 +483,12 @@ export const VoiceSettings = ({ providers: localProviders, setProviders: setLoca
             </div>
 
             <div className="grid grid-cols-2 gap-4 items-end">
-              <Select label={t('settings.voice.microphone')} options={microphoneOptions} value={microphoneValue} onChange={handleInputDeviceChange} />
+              <Select
+                label={t('settings.voice.microphone')}
+                options={microphoneOptions}
+                value={!inputDeviceId || inputDeviceId === 'undefined' ? DEFAULT_MIC_DEVICE_ID : inputDeviceId}
+                onChange={handleInputDeviceChange}
+              />
               <Input
                 label={
                   <div className="flex items-center text-sm">

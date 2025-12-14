@@ -1,5 +1,4 @@
 import { useCallback, useRef, useState } from 'react';
-import { isGeminiProvider, isOpenAiProvider } from '@common/agent';
 
 import { useApi } from '@/contexts/ApiContext';
 import { useModelProviders } from '@/contexts/ModelProviderContext';
@@ -95,17 +94,12 @@ export const useAudioRecorder = (): UseAudioRecorderType => {
       // Create voice session first.
       // On macOS this is also where we trigger the OS-level microphone permission prompt.
       const session = await api.createVoiceSession(voiceProviderProfile);
-
-      const inputDeviceId = isOpenAiProvider(voiceProviderProfile.provider)
-        ? voiceProviderProfile.provider.voice?.inputDeviceId
-        : isGeminiProvider(voiceProviderProfile.provider)
-          ? voiceProviderProfile.provider.voice?.inputDeviceId
-          : undefined;
+      const inputDeviceId = localStorage.getItem('voice-microphone-device-id') || undefined;
 
       let stream: MediaStream;
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          audio: inputDeviceId ? { deviceId: { exact: inputDeviceId } } : true,
+          audio: inputDeviceId && inputDeviceId !== 'undefined' ? { deviceId: { exact: inputDeviceId } } : true,
           video: false,
         });
       } catch (e) {
