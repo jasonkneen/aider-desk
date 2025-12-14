@@ -67,13 +67,13 @@ If skills exist on disk but **Skills Tools are disabled**, the agent won’t be 
 
 In `Settings → Agent`, enable **Use Skills Tools** for the agent profile you will use.
 
-![Agent Settings - Use Skills Tools](./images/agent-settings-use-skills-tools.gif)
+![Agent Settings - Use Skills Tools](../images/agent-settings-use-skills-tools.gif)
 
 ### Enable “Use skills tools” in AgentSelector
 
 You can also toggle skills tools per-task from the Agent selector.
 
-![Agent Selector - Use skills tools toggle](./images/agent-selector-use-skills-tools.gif)
+![Agent Selector - Use skills tools toggle](../images/agent-selector-use-skills-tools.gif)
 
 ## Skills Tools
 
