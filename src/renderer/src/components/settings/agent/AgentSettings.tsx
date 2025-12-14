@@ -66,6 +66,7 @@ import { GenericToolGroupItem } from './GenericToolGroupItem';
 import { AgentRules } from './AgentRules';
 import { SortableAgentProfileItem } from './SortableAgentProfileItem';
 
+import { getPathBasename } from '@/utils/path-utils';
 import { IconButton } from '@/components/common/IconButton';
 import { Button } from '@/components/common/Button';
 import { ModelSelector } from '@/components/ModelSelector';
@@ -425,7 +426,7 @@ export const AgentSettings = ({
       return 'Global';
     }
     const project = openProjects.find((p) => p.baseDir === profileContext);
-    return project ? project.baseDir.split('/').pop() || project.baseDir : profileContext;
+    return project ? getPathBasename(project.baseDir) : profileContext;
   };
 
   // Update filtered profiles when context changes

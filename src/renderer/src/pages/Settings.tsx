@@ -5,6 +5,7 @@ import { clsx } from 'clsx';
 import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer, FaBrain, FaMicrophone } from 'react-icons/fa';
 import { MdTerminal } from 'react-icons/md';
 
+import { getPathBasename } from '@/utils/path-utils';
 import { useApi } from '@/contexts/ApiContext';
 import { AiderSettings } from '@/components/settings/AiderSettings';
 import { GeneralSettings } from '@/components/settings/GeneralSettings';
@@ -115,7 +116,7 @@ export const Settings = ({
       children: [
         ...(openProjects || []).map((project) => ({
           id: `agent-${project.baseDir}`,
-          label: project.baseDir.split('/').pop() || project.baseDir,
+          label: getPathBasename(project.baseDir),
         })),
       ],
     },
