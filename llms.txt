@@ -145,6 +145,7 @@ src/
         system-api.ts
         todo-api.ts
         usage-api.ts
+        voice-api.ts
       cloudflare-tunnel-manager.ts
       index.ts
       runner.ts
@@ -378,6 +379,7 @@ src/
           WorktreeRevertButton.tsx
         PromptField/
           AudioAnalyzer.tsx
+          AutoApprove.tsx
           CommandSuggestion.tsx
           EditFormatSelector.tsx
           index.ts
@@ -405,6 +407,7 @@ src/
           MemorySettings.tsx
           ServerSettings.tsx
           SettingsPage.tsx
+          VoiceSettings.tsx
         terminal/
           Terminal.scss
           Terminal.tsx
@@ -552,6 +555,14 @@ def __init__(self, id: str, group=None, auto_approve=False, deny_commands=False)
 ⋮----
 confirmation_result = None
 ⋮----
+def update_model_params(models_info, model)
+⋮----
+max_input_tokens = model.info.get('max_input_tokens') if model.info else None
+⋮----
+max_output_tokens = model.info.get('max_output_tokens') if model.info else None
+⋮----
+temperature = models_info.get(model.name, {}).get('temperature')
+⋮----
 def wait_for_async(connector, coroutine)
 ⋮----
 # Called from the main thread
@@ -628,8 +639,6 @@ running_model = self.connector.coder.main_model
 running_model = models.Model(architect_model, weak_model=coder_model.weak_model.name, editor_model=coder_model.name)
 ⋮----
 # check if we have temperature info for the architect model
-⋮----
-temperature = self.connector.models_info.get(architect_model).get('temperature')
 ⋮----
 sequence_number = -1
 ⋮----
@@ -1137,14 +1146,6 @@ max_input_tokens = info.get("maxInputTokens")
 ⋮----
 # Update the model_info_manager.local_model_metadata
 ⋮----
-max_input_tokens = self.coder.main_model.info.get('max_input_tokens') if self.coder.main_model.info else None
-⋮----
-temperature = models_info.get(self.coder.main_model.name, {}).get('temperature')
-⋮----
-max_input_tokens = self.coder.main_model.weak_model.info.get('max_input_tokens') if self.coder.main_model.weak_model.info else None
-⋮----
-temperature = models_info.get(self.coder.main_model.weak_model.name, {}).get('temperature')
-⋮----
 # Log the updated models info
 ⋮----
 def main(argv=None)
@@ -1600,14 +1601,36 @@ File: src/common/locales/en.json
     "title": "Settings",
     "tabs": {
       "general": "General",
-      "providers": "Providers",
       "aider": "Aider",
       "agents": "Agents",
-      "server": "Server",
       "memory": "Memory",
+      "voice": "Voice",
+      "server": "Server",
       "about": "About"
     },
     "gui": "Appearance",
+    "voice": {
+      "title": "Voice",
+      "providerProfile": "Provider profile",
+      "model": "Model",
+      "idleTimeout": "Idle timeout (seconds)",
+      "idleTimeoutHelp": "Stops recording after this much silence",
+      "systemInstructions": "System instructions",
+      "microphone": "Microphone",
+      "microphoneDefault": "Default",
+      "microphoneUnknown": "Unknown microphone",
+      "noSupportedProviders": "No supported voice providers configured. Configure Gemini or OpenAI via Model Library.",
+      "openai": {
+        "title": "OpenAI",
+        "model": "Model",
+        "language": "Language"
+      },
+      "gemini": {
+        "title": "Gemini",
+        "model": "Model",
+        "temperature": "Temperature"
+      }
+    },
     "startup": {
       "title": "Start Up",
       "emptyTask": "Start with empty task",
@@ -1858,6 +1881,10 @@ File: src/common/locales/en.json
       "provider": {
         "label": "Embedding Provider",
         "description": "Choose the embedding provider to use for memory functionality"
+      },
+      "maxDistance": {
+        "label": "Relevance threshold",
+        "description": "Higher values retrieve more (and less relevant) memories. Lower values retrieve fewer (and more relevant) memories."
       },
       "embeddingProgress": {
         "loadingModel": "Loading embedding model: {{status}}",
@@ -2225,6 +2252,7 @@ File: src/common/locales/en.json
     "saveError": "Failed to save prompt: {{error}}",
     "autoApprove": "Auto Approve",
     "autoApproveTooltip": "When enabled, automatically approve tool executions without asking for confirmation",
+    "autoApproveLockTooltip": "Locking keeps Auto Approve enabled for newly created tasks",
     "placeholders": {
       "0": "Update the UserValidator class to add email format validation...",
       "1": "Fix the memory leak in DataProcessor.processBatch() by closing...",
@@ -2835,9 +2863,32 @@ File: src/common/locales/zh.json
       "agents": "代理",
       "server": "服务器",
       "memory": "记忆",
+      "voice": "语音",
       "about": "关于"
     },
     "gui": "GUI",
+    "voice": {
+      "title": "语音",
+      "providerProfile": "提供者配置",
+      "model": "模型",
+      "idleTimeout": "空闲超时（秒）",
+      "idleTimeoutHelp": "静音达到该时间后自动停止录音",
+      "systemInstructions": "系统指令",
+      "microphone": "麦克风",
+      "microphoneDefault": "默认",
+      "microphoneUnknown": "未知麦克风",
+      "noSupportedProviders": "未配置支持的语音提供者。请通过模型库配置 Gemini 或 OpenAI。",
+      "openai": {
+        "title": "OpenAI",
+        "model": "模型",
+        "language": "语言"
+      },
+      "gemini": {
+        "title": "Gemini",
+        "model": "模型",
+        "temperature": "温度"
+      }
+    },
     "startup": {
       "title": "启动",
       "emptyTask": "启动时创建新任务",
@@ -3046,6 +3097,10 @@ File: src/common/locales/zh.json
       "provider": {
         "label": "嵌入提供商",
         "description": "选择用于记忆功能的嵌入提供商"
+      },
+      "maxDistance": {
+        "label": "相关性阈值",
+        "description": "值越高会检索到更多（但相关性更低）的记忆。值越低会检索到更少（但相关性更高）的记忆。"
       },
       "embeddingProgress": {
         "loadingModel": "正在加载嵌入模型：{{status}}",
@@ -3426,6 +3481,7 @@ File: src/common/locales/zh.json
     "saveError": "保存提示失败: {{error}}",
     "autoApprove": "自动批准",
     "autoApproveTooltip": "启用后，自动批准工具执行而无需请求确认",
+    "autoApproveLockTooltip": "锁定后，新建任务将保持自动批准开启",
     "placeholders": {
       "0": "更新 UserValidator 类以添加邮箱格式验证...",
       "1": "修复 DataProcessor.processBatch() 中的内存泄漏，通过关闭...",
@@ -3775,9 +3831,25 @@ export interface LlmProviderBase {
   voiceEnabled?: boolean;
 }
 ⋮----
+export interface VoiceControlSettings {
+  idleTimeoutMs: number;
+  systemInstructions: string;
+  inputDeviceId?: string;
+}
+⋮----
 export interface OllamaProvider extends LlmProviderBase {
   name: 'ollama';
   baseUrl: string;
+}
+⋮----
+export enum OpenAiVoiceModel {
+  Gpt4oMiniTranscribe = 'gpt-4o-mini-transcribe',
+  Gpt4oTranscribe = 'gpt-4o-transcribe',
+}
+⋮----
+export interface OpenAiVoiceControlSettings extends VoiceControlSettings {
+  model: OpenAiVoiceModel;
+  language: string;
 }
 ⋮----
 export interface OpenAiProvider extends LlmProviderBase {
@@ -3785,6 +3857,7 @@ export interface OpenAiProvider extends LlmProviderBase {
   apiKey: string;
   reasoningEffort?: ReasoningEffort;
   useWebSearch: boolean;
+  voice?: Partial<OpenAiVoiceControlSettings>;
 }
 export const isOpenAiProvider = (provider: LlmProviderBase): provider is OpenAiProvider
 ⋮----
@@ -3803,6 +3876,15 @@ export interface AnthropicProvider extends LlmProviderBase {
 }
 export const isAnthropicProvider = (provider: LlmProviderBase): provider is AnthropicProvider
 ⋮----
+export enum GeminiVoiceModel {
+  GeminiLive25FlashNativeAudio = 'gemini-live-2.5-flash-native-audio',
+}
+⋮----
+export interface GeminiVoiceControlSettings extends VoiceControlSettings {
+  model: GeminiVoiceModel;
+  temperature: number;
+}
+⋮----
 export interface GeminiProvider extends LlmProviderBase {
   name: 'gemini';
   apiKey: string;
@@ -3810,6 +3892,7 @@ export interface GeminiProvider extends LlmProviderBase {
   includeThoughts: boolean;
   thinkingBudget: number;
   useSearchGrounding: boolean;
+  voice?: Partial<GeminiVoiceControlSettings>;
 }
 ⋮----
 export const isGeminiProvider = (provider: LlmProviderBase): provider is GeminiProvider
@@ -4558,6 +4641,7 @@ export interface MemoryConfig {
   enabled: boolean;
   provider: MemoryEmbeddingProvider;
   model: string;
+  maxDistance: number;
 }
 ⋮----
 export enum MemoryEmbeddingProgressPhase {
@@ -4648,6 +4732,7 @@ export interface AgentProfilesUpdatedData {
 export interface VoiceSession {
   ephemeralToken: string;
   model: string;
+  idleTimeoutMs: number;
 }
 ⋮----
 export interface Group {
@@ -6616,9 +6701,8 @@ async storeMemory(projectId: string, taskId: string, type: MemoryEntryType, cont
    * @param projectId - The project to filter by
    * @param query - The user's search query
    * @param limit - Max number of memories to return (default 5)
-   * @param maxDistance - Maximum distance threshold for filtering (optional)
    */
-async retrieveMemories(projectId: string, query: string, limit: number = 5, maxDistance = 1.5): Promise<MemoryEntry[]>
+async retrieveMemories(projectId: string, query: string, limit: number = 5): Promise<MemoryEntry[]>
 ⋮----
 return []; // No memories exist yet
 ⋮----
@@ -6626,8 +6710,6 @@ return []; // No memories exist yet
 ⋮----
 .nearestTo(queryVector) // Vector similarity search
 .where(`projectid = '${projectId}'`) // SQL-like filtering for the project
-⋮----
-// Filter by distance if threshold is provided
 ⋮----
 // Map results back to MemoryEntry interface
 // Note: LanceDB returns rows, we cast them to our interface
@@ -6920,7 +7002,7 @@ export const getDefaultUsageReport = (task: Task, provider: ProviderProfile, mod
 File: src/main/models/providers/gemini.ts
 ================
 import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, VoiceSession } from '@common/types';
-import { GeminiProvider, isGeminiProvider, LlmProvider } from '@common/agent';
+import { DEFAULT_VOICE_SYSTEM_INSTRUCTIONS, GeminiProvider, GeminiVoiceModel, isGeminiProvider, LlmProvider } from '@common/agent';
 import { createGoogleGenerativeAI, google, type GoogleGenerativeAIProviderOptions } from '@ai-sdk/google';
 import { Modality } from '@google/genai';
 ⋮----
@@ -7014,7 +7096,7 @@ const loadGpustackModels = async (profile: ProviderProfile, settings: SettingsDa
 ⋮----
 const hasGpustackEnvVars = (settings: SettingsData): boolean =>
 ⋮----
-const getGpustackAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
+const getGpustackAiderMapping = (provider: ProviderProfile, modelId: string, settings: SettingsData, projectDir: string): AiderModelMapping =>
 ⋮----
 // Use openai prefix for GPUStack providers (compatible with OpenAI format)
 ⋮----
@@ -7139,7 +7221,7 @@ cacheWriteInputTokenCost: 0.00000004, // 0.04 per 1M tokens
 ⋮----
 export const hasMinimaxEnvVars = (settings: SettingsData): boolean =>
 ⋮----
-export const getMinimaxAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
+export const getMinimaxAiderMapping = (provider: ProviderProfile, modelId: string, settings: SettingsData, projectDir: string): AiderModelMapping =>
 ⋮----
 // === LLM Creation Functions ===
 export const createMinimaxLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
@@ -7270,7 +7352,7 @@ const getOpenAiCompatibleProviderOptions = (provider: LlmProvider, model: Model)
 File: src/main/models/providers/openai.ts
 ================
 import { createOpenAI } from '@ai-sdk/openai';
-import { isOpenAiProvider, LlmProvider, OpenAiProvider } from '@common/agent';
+import { DEFAULT_VOICE_SYSTEM_INSTRUCTIONS, isOpenAiProvider, LlmProvider, OpenAiProvider, OpenAiVoiceModel } from '@common/agent';
 import { Model, ProviderProfile, ReasoningEffort, SettingsData, UsageReportData, VoiceSession } from '@common/types';
 ⋮----
 import type { LanguageModelUsage, ToolSet } from 'ai';
@@ -7481,7 +7563,7 @@ const loadRequestyModels = async (profile: ProviderProfile, settings: SettingsDa
 ⋮----
 export const hasRequestyEnvVars = (settings: SettingsData): boolean =>
 ⋮----
-export const getRequestyAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
+export const getRequestyAiderMapping = (provider: ProviderProfile, modelId: string, settings: SettingsData, projectDir: string): AiderModelMapping =>
 ⋮----
 // Requesty doesn't have direct Aider support, so we use OpenAI-compatible endpoint
 ⋮----
@@ -7624,7 +7706,7 @@ temperature: 0.1, // Default temperature for ZAI models
 ⋮----
 const hasZaiPlanEnvVars = (): boolean
 ⋮----
-const getZaiPlanAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
+const getZaiPlanAiderMapping = (provider: ProviderProfile, modelId: string, settings: SettingsData, projectDir: string): AiderModelMapping =>
 ⋮----
 // Set the base URL for ZAI Plan
 ⋮----
@@ -7798,9 +7880,9 @@ async updateModels(modelUpdates: Array<
 ⋮----
 // Reload models for all affected providers at once
 ⋮----
-getAiderModelMapping(modelName: string): AiderModelMapping
+getAiderModelMapping(modelName: string, projectDir: string): AiderModelMapping
 ⋮----
-private getProviderAiderMapping(provider: ProviderProfile, modelId: string): AiderModelMapping
+private getProviderAiderMapping(provider: ProviderProfile, modelId: string, projectDir: string): AiderModelMapping
 ⋮----
 getModel(providerId: string, modelId: string, useModelInfoFallback = false): Model | undefined
 ⋮----
@@ -7920,7 +8002,7 @@ export interface LlmProviderStrategy {
   /**
    * Generates Aider-compatible model mapping with environment variables
    */
-  getAiderMapping: (provider: ProviderProfile, modelId: string) => AiderModelMapping;
+  getAiderMapping: (provider: ProviderProfile, modelId: string, settings: SettingsData, projectDir: string) => AiderModelMapping;
 
   // === Optional Configuration Helper Functions ===
   /**
@@ -8620,6 +8702,22 @@ constructor(private readonly eventsHandler: EventsHandler)
 registerRoutes(router: Router): void
 
 ================
+File: src/main/server/rest-api/voice-api.ts
+================
+import { Router } from 'express';
+import { z } from 'zod';
+⋮----
+import { BaseApi } from './base-api';
+⋮----
+import { EventsHandler } from '@/events-handler';
+⋮----
+export class VoiceApi extends BaseApi
+⋮----
+constructor(private readonly eventsHandler: EventsHandler)
+⋮----
+registerRoutes(router: Router): void
+
+================
 File: src/main/server/cloudflare-tunnel-manager.ts
 ================
 import { CloudflareTunnelStatus } from '@common/types';
@@ -8687,6 +8785,7 @@ import {
   TodoApi,
   UsageApi,
   MemoryApi,
+  VoiceApi,
 } from '@/server/rest-api';
 import { AUTH_PASSWORD, AUTH_USERNAME, SERVER_PORT } from '@/constants';
 import logger from '@/logger';
@@ -9523,7 +9622,7 @@ public async savePromptOnly(prompt: string): Promise<void>
 ⋮----
 public async runPromptInAider(prompt: string, promptContext: PromptContext, mode?: Mode): Promise<ResponseCompletedData[]>
 ⋮----
-// add messages to session
+// Persist user message to the task context before running Aider so it can be redone even if the first call fails.
 ⋮----
 // Create enhanced assistant message with full metadata
 ⋮----
@@ -11111,6 +11210,7 @@ import logger from '@/logger';
 import { getDefaultProjectSettings, getEffectiveEnvironmentVariable, getFilePathSuggestions, isProjectPath, isValidPath, scrapeWeb } from '@/utils';
 import { AIDER_DESK_TMP_DIR, LOGS_DIR } from '@/constants';
 import { EventManager } from '@/events';
+import { isElectron } from '@/app';
 ⋮----
 export class EventsHandler
 ⋮----
@@ -11332,7 +11432,7 @@ import { existsSync, statSync } from 'fs';
 ⋮----
 import { compareBaseDirs, delay } from '@common/utils';
 import { electronApp, is, optimizer } from '@electron-toolkit/utils';
-import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
+import { app, BrowserWindow, dialog, Menu, session, shell } from 'electron';
 ⋮----
 import icon from '../../resources/icon.png?asset';
 ⋮----
@@ -11362,6 +11462,9 @@ const saveWindowState = (): void =>
 const beforeQuit = async (event?: Electron.Event) =>
 ⋮----
 // Handle CTRL+C (SIGINT)
+⋮----
+// Allow renderer getUserMedia() microphone access.
+// Without this, Electron may never surface the macOS TCC permission prompt and the mic stays unavailable.
 ⋮----
 // Initialize IPC handlers
 ⋮----
@@ -13063,6 +13166,7 @@ import { ReactNode, TextareaHTMLAttributes } from 'react';
 ⋮----
 export type Props = TextareaHTMLAttributes<HTMLTextAreaElement> & {
   label?: ReactNode;
+  wrapperClassName?: string;
 };
 ⋮----
 export const TextArea = (
@@ -16812,6 +16916,26 @@ const draw = () =>
 // Draw bar
 
 ================
+File: src/renderer/src/components/PromptField/AutoApprove.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { MdDoneAll } from 'react-icons/md';
+import { VscLock, VscUnlock } from 'react-icons/vsc';
+⋮----
+import { IconButton } from '@/components/common/IconButton';
+⋮----
+type Props = {
+  enabled: boolean;
+  locked: boolean;
+  onChange?: (enabled: boolean) => void;
+  onLockChange?: (locked: boolean) => void;
+};
+⋮----
+const handleClick = () =>
+⋮----
+const handleLockClick = () =>
+
+================
 File: src/renderer/src/components/PromptField/CommandSuggestion.tsx
 ================
 import { useTranslation } from 'react-i18next';
@@ -16927,7 +17051,7 @@ import { useDebounce } from '@reactuses/core';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useTranslation } from 'react-i18next';
 import { BiSend } from 'react-icons/bi';
-import { MdDoneAll, MdPlaylistRemove, MdSave, MdStop, MdMic, MdMicOff } from 'react-icons/md';
+import { MdPlaylistRemove, MdSave, MdStop, MdMic, MdMicOff } from 'react-icons/md';
 import { VscTerminal } from 'react-icons/vsc';
 import { clsx } from 'clsx';
 ⋮----
@@ -16940,10 +17064,11 @@ import { showErrorNotification } from '@/utils/notifications';
 import { Button } from '@/components/common/Button';
 import { useCustomCommands } from '@/hooks/useCustomCommands';
 import { useApi } from '@/contexts/ApiContext';
+import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
-import { IconButton } from '@/components/common/IconButton';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { AudioAnalyzer } from '@/components/PromptField/AudioAnalyzer';
+import { AutoApprove } from '@/components/PromptField/AutoApprove';
 ⋮----
 const isPathLike = (input: string): boolean =>
 ⋮----
@@ -17010,6 +17135,8 @@ const completionSource = async (context: CompletionContext): Promise<CompletionR
 // Ensure cursor is at the end after setting text
 ⋮----
 // Ensure cursor is at the end after appending text
+⋮----
+const handleAutoApproveLockChanged = (locked: boolean) =>
 ⋮----
 url = commandArgs; // Only URL provided
 ⋮----
@@ -17704,7 +17831,7 @@ export const LanguageSelector = (
 ================
 File: src/renderer/src/components/settings/MemorySettings.tsx
 ================
-import { MemoryConfig, MemoryEmbeddingProvider, MemoryEntry, MemoryEmbeddingProgress, MemoryEmbeddingProgressPhase } from '@common/types';
+import { MemoryEmbeddingProgress, MemoryEmbeddingProgressPhase, MemoryEmbeddingProvider, MemoryEntry, SettingsData } from '@common/types';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FaTrash } from 'react-icons/fa';
@@ -17718,10 +17845,12 @@ import { Button } from '@/components/common/Button';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { IconButton } from '@/components/common/IconButton';
 import { CodeInline } from '@/components/common/CodeInline';
+import { Slider } from '@/components/common/Slider';
+import { InfoIcon } from '@/components/common/InfoIcon';
 ⋮----
 type Props = {
-  settings: MemoryConfig;
-  setSettings: (settings: MemoryConfig) => void;
+  settings: SettingsData;
+  setSettings: (settings: SettingsData) => void;
 };
 ⋮----
 const loadMemories = async () =>
@@ -17740,7 +17869,11 @@ const handleModelChange = (model: string) =>
 ⋮----
 const handleProviderChange = (provider: string) =>
 ⋮----
+const handleMaxDistanceChange = (value: number) =>
+⋮----
 label=
+⋮----
+<span>
 ⋮----
 onClick=
 ⋮----
@@ -17813,7 +17946,7 @@ tooltip=
 ================
 File: src/renderer/src/components/settings/SettingsPage.tsx
 ================
-import { ProjectData, SettingsData } from '@common/types';
+import { ProjectData, ProviderProfile, SettingsData } from '@common/types';
 import { useEffect, useMemo, useState } from 'react';
 import { isEqual } from 'lodash';
 import { useTranslation } from 'react-i18next';
@@ -17832,13 +17965,17 @@ type Props = {
   openProjects?: ProjectData[];
 };
 ⋮----
+const loadProviders = async () =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
 const handleCancel = () =>
 ⋮----
 // Updated to use settings.mcpServers directly
 ⋮----
-// Reset agent profiles to original
-⋮----
 const handleSave = async () =>
+⋮----
+// eslint-disable-next-line no-console
 ⋮----
 // Save agent profile changes
 ⋮----
@@ -17861,6 +17998,86 @@ const handleLanguageChange = (language: string) =>
 const handleZoomChange = (zoomLevel: number) =>
 ⋮----
 <ModalOverlayLayout title=
+
+================
+File: src/renderer/src/components/settings/VoiceSettings.tsx
+================
+import { useEffect, useMemo, useState } from 'react';
+import { ProviderProfile } from '@common/types';
+import {
+  DEFAULT_VOICE_SYSTEM_INSTRUCTIONS,
+  GeminiProvider,
+  GeminiVoiceModel,
+  OpenAiProvider,
+  OpenAiVoiceModel,
+  isGeminiProvider,
+  isOpenAiProvider,
+} from '@common/agent';
+import { useTranslation } from 'react-i18next';
+⋮----
+import { useModelProviders } from '@/contexts/ModelProviderContext';
+import { Section } from '@/components/common/Section';
+import { Select, Option } from '@/components/common/Select';
+import { Input } from '@/components/common/Input';
+import { TextArea } from '@/components/common/TextArea';
+import { Slider } from '@/components/common/Slider';
+import { InfoIcon } from '@/components/common/InfoIcon';
+⋮----
+type AudioDeviceOption = {
+  label: string;
+  value: string;
+};
+⋮----
+type SupportedVoiceProviderName = 'openai' | 'gemini';
+⋮----
+type LanguageOption = {
+  label: string;
+  value: string;
+};
+⋮----
+type Props = {
+  providers?: ProviderProfile[];
+  setProviders?: (providers: ProviderProfile[]) => void;
+  initialProviderId?: string;
+};
+⋮----
+const handleSelectProvider = (providerId: string) =>
+⋮----
+const handleUpdateProfile = (profile: ProviderProfile) =>
+⋮----
+const handleIdleTimeoutChangeSeconds = (seconds: number) =>
+⋮----
+const loadDevices = async () =>
+⋮----
+const handleDeviceChange = () =>
+⋮----
+const handleInputDeviceChange = (value: string) =>
+⋮----
+const handleSystemInstructionsChange = (value: string) =>
+⋮----
+// eslint-disable-next-line react-hooks/set-state-in-effect
+⋮----
+const handleOpenAiModelChange = (value: string) =>
+⋮----
+const handleOpenAiLanguageChange = (value: string) =>
+⋮----
+const handleGeminiModelChange = (value: string) =>
+⋮----
+const handleGeminiTemperatureChange = (value: number) =>
+⋮----
+// eslint-disable-next-line react-hooks/set-state-in-effect
+⋮----
+const handleModelChange = (value: string) =>
+⋮----
+const handleIdleTimeoutChange = (value: string) =>
+⋮----
+const handleTemperatureChange = (value: number) =>
+⋮----
+<Select label=
+⋮----
+label=
+⋮----
+<span>
 
 ================
 File: src/renderer/src/components/terminal/Terminal.scss
@@ -18718,6 +18935,7 @@ const handleUpdateAiderModels = (data: ModelsData) =>
 File: src/renderer/src/hooks/useAudioRecorder.ts
 ================
 import { useCallback, useRef, useState } from 'react';
+import { isGeminiProvider, isOpenAiProvider } from '@common/agent';
 ⋮----
 import { useApi } from '@/contexts/ApiContext';
 import { useModelProviders } from '@/contexts/ModelProviderContext';
@@ -18740,7 +18958,10 @@ export const useAudioRecorder = (): UseAudioRecorderType =>
 ⋮----
 // Future providers can be added here
 ⋮----
-// Create voice session
+// Create voice session first.
+// On macOS this is also where we trigger the OS-level microphone permission prompt.
+⋮----
+// eslint-disable-next-line no-console
 ⋮----
 // Create and configure voice provider
 ⋮----
@@ -19609,11 +19830,11 @@ const handleFinish = async () =>
 ================
 File: src/renderer/src/pages/Settings.tsx
 ================
-import { Font, ProjectData, SettingsData, Theme, AgentProfile } from '@common/types';
+import { Font, ProjectData, SettingsData, Theme, AgentProfile, ProviderProfile } from '@common/types';
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
-import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer, FaBrain } from 'react-icons/fa';
+import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer, FaBrain, FaMicrophone } from 'react-icons/fa';
 import { MdTerminal } from 'react-icons/md';
 ⋮----
 import { useApi } from '@/contexts/ApiContext';
@@ -19623,6 +19844,7 @@ import { AgentSettings } from '@/components/settings/agent/AgentSettings';
 import { AboutSettings } from '@/components/settings/AboutSettings';
 import { ServerSettings } from '@/components/settings/ServerSettings';
 import { MemorySettings } from '@/components/settings/MemorySettings';
+import { VoiceSettings } from '@/components/settings/VoiceSettings';
 ⋮----
 type Props = {
   settings: SettingsData;
@@ -19637,9 +19859,11 @@ type Props = {
   agentProfiles?: AgentProfile[];
   setAgentProfiles?: (profiles: AgentProfile[]) => void;
   openProjects?: ProjectData[];
+  providers?: ProviderProfile[];
+  setProviders?: (providers: ProviderProfile[]) => void;
 };
 ⋮----
-type PageId = 'general' | 'aider' | 'agents' | 'memory' | 'server' | 'about';
+type PageId = 'general' | 'aider' | 'agents' | 'memory' | 'voice' | 'server' | 'about';
 ⋮----
 interface SidebarItem {
   id: string;
@@ -19662,6 +19886,8 @@ export const Settings = ({
   agentProfiles,
   setAgentProfiles,
   openProjects,
+  providers,
+  setProviders,
 }: Props) =>
 ⋮----
 const scrollToSection = (sectionId: string) =>
@@ -19677,8 +19903,6 @@ const handleChildClick = (pageId: PageId, sectionId: string) =>
 // Extract project baseDir from sectionId (format: agent-{baseDir})
 ⋮----
 const renderContent = () =>
-⋮----
-return <MemorySettings settings=
 ⋮----
 {/* Sidebar */}
 ⋮----
@@ -21725,7 +21949,7 @@ const audioThreshold = 0.01; // Threshold for detecting audio input
 ⋮----
 // Clear existing timeout
 ⋮----
-// Check for silence (no audio for 5 seconds)
+// Check for silence
 ⋮----
 private handleMessage(message: LiveServerMessage): void
 ⋮----
@@ -21796,6 +22020,7 @@ export interface VoiceSessionConfig {
   token: string;
   model: string;
   mediaStream: MediaStream;
+  idleTimeoutMs: number;
   onTranscription: (text: string) => void;
   onError: (error: Error) => void;
   onSessionStateChange?: (state: VoiceSessionState) => void;
