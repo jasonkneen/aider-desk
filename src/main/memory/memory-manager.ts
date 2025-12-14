@@ -1,17 +1,23 @@
 import * as fs from 'fs';
 
-import * as lancedb from '@lancedb/lancedb';
-import { FeatureExtractionPipeline, pipeline } from '@huggingface/transformers';
 import { MemoryConfig, MemoryEmbeddingProgress, MemoryEmbeddingProgressPhase, MemoryEntry, MemoryEntryType, SettingsData } from '@common/types';
 import { v4 as uuidv4 } from 'uuid';
+
+import type { FeatureExtractionPipeline } from '@huggingface/transformers';
 
 import { AIDER_DESK_CACHE_DIR, AIDER_DESK_MEMORY_FILE } from '@/constants';
 import logger from '@/logger';
 import { Store } from '@/store';
 
+type LanceDbModule = typeof import('@lancedb/lancedb');
+type TransformersModule = typeof import('@huggingface/transformers');
+
 export class MemoryManager {
-  private db: lancedb.Connection | null = null;
-  private table: lancedb.Table | null = null;
+  private lancedb: LanceDbModule | null = null;
+  private transformers: TransformersModule | null = null;
+
+  private db: import('@lancedb/lancedb').Connection | null = null;
+  private table: import('@lancedb/lancedb').Table | null = null;
   private embeddingPipelinePromise: Promise<FeatureExtractionPipeline | null> | null = null;
   private isInitialized = false;
   private readonly tableName = 'memories';
@@ -47,7 +53,16 @@ export class MemoryManager {
         fs.mkdirSync(AIDER_DESK_MEMORY_FILE, { recursive: true });
       }
 
-      this.db = await lancedb.connect(AIDER_DESK_MEMORY_FILE);
+      if (!this.lancedb) {
+        try {
+          this.lancedb = await import('@lancedb/lancedb');
+        } catch (error) {
+          logger.error('Failed to load LanceDB module. Memory features will be unavailable.', error);
+          return;
+        }
+      }
+
+      this.db = await this.lancedb.connect(AIDER_DESK_MEMORY_FILE);
 
       // Check if table exists, if not, we create it lazily on the first add
       const tableNames = await this.db.tableNames();
@@ -66,16 +81,34 @@ export class MemoryManager {
           finished: false,
         };
 
-        this.embeddingPipelinePromise = pipeline('feature-extraction', config.model, {
-          cache_dir: AIDER_DESK_CACHE_DIR,
-          progress_callback: (progress) => {
-            // @ts-expect-error progress is not typed properly
-            const status = `${Number(progress.progress).toFixed(2)}%`;
-            if (status) {
-              this.embeddingProgress.status = status;
-            }
-          },
-        })
+        if (!this.transformers) {
+          try {
+            this.transformers = await import('@huggingface/transformers');
+          } catch (error) {
+            this.embeddingProgress = {
+              phase: MemoryEmbeddingProgressPhase.Error,
+              status: this.embeddingProgress.status,
+              done: this.embeddingProgress.done,
+              total: this.embeddingProgress.total,
+              finished: true,
+              error: 'Failed to load @huggingface/transformers. This is usually a packaging issue with native dependencies (e.g. sharp/libvips).',
+            };
+            logger.error('Failed to load transformers module. Memory embedding will be unavailable.', error);
+            return;
+          }
+        }
+
+        this.embeddingPipelinePromise = this.transformers
+          .pipeline('feature-extraction', config.model, {
+            cache_dir: AIDER_DESK_CACHE_DIR,
+            progress_callback: (progress) => {
+              // @ts-expect-error progress is not typed properly
+              const status = `${Number(progress.progress).toFixed(2)}%`;
+              if (status) {
+                this.embeddingProgress.status = status;
+              }
+            },
+          })
           .then((p) => {
             this.isInitialized = true;
             this.embeddingProgress = {
@@ -97,7 +130,7 @@ export class MemoryManager {
               error: error instanceof Error ? error.message : String(error),
             };
             logger.error('Failed to load local embedding model:', error);
-            throw error;
+            return null;
           });
       }
 
@@ -172,7 +205,10 @@ export class MemoryManager {
           if (!fs.existsSync(AIDER_DESK_MEMORY_FILE)) {
             fs.mkdirSync(AIDER_DESK_MEMORY_FILE, { recursive: true });
           }
-          this.db = await lancedb.connect(AIDER_DESK_MEMORY_FILE);
+          if (!this.lancedb) {
+            this.lancedb = await import('@lancedb/lancedb');
+          }
+          this.db = await this.lancedb.connect(AIDER_DESK_MEMORY_FILE);
         } catch (error) {
           logger.error('Failed to connect memory DB during migration:', error);
           return;
@@ -243,16 +279,34 @@ export class MemoryManager {
     };
 
     logger.info('Loading local embedding model... (this may take a moment on first run)');
-    this.embeddingPipelinePromise = pipeline('feature-extraction', newModel, {
-      cache_dir: AIDER_DESK_CACHE_DIR,
-      progress_callback: (progress) => {
-        // @ts-expect-error progress is not typed properly
-        const status = `${Number(progress.progress).toFixed(2)}%`;
-        if (status) {
-          this.embeddingProgress.status = status;
-        }
-      },
-    })
+    if (!this.transformers) {
+      try {
+        this.transformers = await import('@huggingface/transformers');
+      } catch (error) {
+        this.embeddingProgress = {
+          phase: MemoryEmbeddingProgressPhase.Error,
+          status: this.embeddingProgress.status,
+          done: this.embeddingProgress.done,
+          total: this.embeddingProgress.total,
+          finished: true,
+          error: 'Failed to load @huggingface/transformers. This is usually a packaging issue with native dependencies (e.g. sharp/libvips).',
+        };
+        logger.error('Failed to load transformers module. Memory embedding will be unavailable.', error);
+        return;
+      }
+    }
+
+    this.embeddingPipelinePromise = this.transformers
+      .pipeline('feature-extraction', newModel, {
+        cache_dir: AIDER_DESK_CACHE_DIR,
+        progress_callback: (progress) => {
+          // @ts-expect-error progress is not typed properly
+          const status = `${Number(progress.progress).toFixed(2)}%`;
+          if (status) {
+            this.embeddingProgress.status = status;
+          }
+        },
+      })
       .then(async (p) => {
         this.isInitialized = true;
         this.embeddingProgress = {
@@ -262,7 +316,7 @@ export class MemoryManager {
           total: this.embeddingProgress.total,
           finished: true,
         };
-        return p;
+        return p as FeatureExtractionPipeline;
       })
       .catch((error) => {
         this.embeddingProgress = {
