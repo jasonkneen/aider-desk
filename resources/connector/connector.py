@@ -443,7 +443,7 @@ class ConnectorInputOutput(InputOutput):
           wait_for_async(self.connector, send_use_command_output())
     else:
       for message in messages:
-        if message.startswith("Commit "):
+        if message.startswith("Commit ") or message.startswith("Retrying in "):
           wait_for_async(self.connector, self.connector.send_log_message("info", message, True, self.prompt_context))
 
   def is_warning_ignored(self, message):
