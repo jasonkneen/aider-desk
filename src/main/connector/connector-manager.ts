@@ -104,7 +104,7 @@ export class ConnectorManager {
         if (!connector) {
           return;
         }
-        this.projectManager.getProject(connector.baseDir).getTask(connector.taskId)?.processResponseMessage(message);
+        void this.projectManager.getProject(connector.baseDir).getTask(connector.taskId)?.processResponseMessage(message);
       } else if (isAddFileMessage(message)) {
         const connector = this.findConnectorBySocket(socket);
         if (!connector) {

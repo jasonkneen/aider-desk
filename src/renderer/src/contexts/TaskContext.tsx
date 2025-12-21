@@ -125,7 +125,6 @@ export const TaskProvider: React.FC<{
               id: message.messageId,
               type: 'response',
               content: message.content,
-              processing: false,
               usageReport: message.usageReport,
               promptContext: message.promptContext,
             };
@@ -383,7 +382,6 @@ export const TaskProvider: React.FC<{
                 id: messageId,
                 type: 'response',
                 content: chunk,
-                processing: true,
                 promptContext,
               };
               processingResponseMessageMap.set(taskId, newResponseMessage);
@@ -444,7 +442,6 @@ export const TaskProvider: React.FC<{
                 id: messageId,
                 type: 'response',
                 content,
-                processing: false,
                 usageReport,
                 promptContext,
               };
@@ -454,7 +451,6 @@ export const TaskProvider: React.FC<{
             }
           });
         } else if (processingMessage && processingMessage.id === messageId) {
-          processingMessage.processing = false;
           processingMessage.usageReport = usageReport;
           processingMessage.promptContext = promptContext;
           processingMessage.content = content || processingMessage.content;

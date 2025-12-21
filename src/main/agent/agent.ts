@@ -765,7 +765,7 @@ export class Agent {
         let responseMessages: ContextMessage[] = [];
         let currentTextResponse = '';
 
-        const onStepFinish = (stepResult: StepResult<typeof toolSet>) => {
+        const onStepFinish = async (stepResult: StepResult<typeof toolSet>) => {
           finishReason = stepResult.finishReason;
 
           if (finishReason === 'error') {
@@ -778,7 +778,7 @@ export class Agent {
             return;
           }
 
-          responseMessages = this.processStep(currentResponseId, stepResult, task, profile, provider, promptContext, abortSignal);
+          responseMessages = await this.processStep(currentResponseId, stepResult, task, profile, provider, promptContext, abortSignal);
           void task.hookManager.trigger('onAgentStepFinished', { stepResult }, task, task.project);
           currentResponseId = uuidv4();
           hasReasoning = false;
@@ -867,10 +867,10 @@ export class Agent {
                 task.addLogMessage('error', JSON.stringify(error), false, promptContext);
               }
             },
-            onChunk: ({ chunk }) => {
+            onChunk: async ({ chunk }) => {
               if (chunk.type === 'text-delta') {
                 if (hasReasoning) {
-                  task.processResponseMessage({
+                  await task.processResponseMessage({
                     id: currentResponseId,
                     action: 'response',
                     content: ANSWER_RESPONSE_START_TAG,
@@ -881,7 +881,7 @@ export class Agent {
                 }
 
                 if (chunk.text.trim() || currentTextResponse.trim()) {
-                  task.processResponseMessage({
+                  await task.processResponseMessage({
                     id: currentResponseId,
                     action: 'response',
                     content: chunk.text,
@@ -892,7 +892,7 @@ export class Agent {
                 }
               } else if (chunk.type === 'reasoning-delta' && chunk.text.trim()) {
                 if (!hasReasoning) {
-                  task.processResponseMessage({
+                  await task.processResponseMessage({
                     id: currentResponseId,
                     action: 'response',
                     content: THINKING_RESPONSE_STAR_TAG,
@@ -902,7 +902,7 @@ export class Agent {
                   hasReasoning = true;
                 }
 
-                task.processResponseMessage({
+                await task.processResponseMessage({
                   id: currentResponseId,
                   action: 'response',
                   content: chunk.text,
@@ -996,7 +996,7 @@ export class Agent {
       }
 
       // Always send a final "finished" message, regardless of whether there was text or tools
-      task.processResponseMessage({
+      await task.processResponseMessage({
         id: currentResponseId,
         action: 'response',
         content: '',
@@ -1139,7 +1139,7 @@ export class Agent {
     return this.abortControllers.size > 0;
   }
 
-  private processStep<TOOLS extends ToolSet>(
+  private async processStep<TOOLS extends ToolSet>(
     currentResponseId: string,
     { reasoningText, text, toolCalls, toolResults, finishReason, usage, providerMetadata, response, reasoning, files }: StepResult<TOOLS>,
     task: Task,
@@ -1147,7 +1147,7 @@ export class Agent {
     provider: ProviderProfile,
     promptContext?: PromptContext,
     abortSignal?: AbortSignal,
-  ): ContextMessage[] {
+  ): Promise<ContextMessage[]> {
     logger.info(`Step finished. Reason: ${finishReason}`, {
       reasoningText: reasoningText?.substring(0, 100), // Log truncated reasoning
       text: text?.substring(0, 100), // Log truncated text
@@ -1178,7 +1178,7 @@ export class Agent {
         usageReport: toolResults?.length ? undefined : usageReport,
         promptContext,
       };
-      task.processResponseMessage(message);
+      await task.processResponseMessage(message);
     }
 
     if (toolResults) {
