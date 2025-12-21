@@ -234,6 +234,7 @@ src/
           McpServerSelectorItem.tsx
         common/
           DiffViewer/
+            CompactDiffViewer.tsx
             DiffViewer.scss
             DiffViewer.tsx
             index.tsx
@@ -245,6 +246,7 @@ src/
           Checkbox.tsx
           CodeBlock.tsx
           CodeInline.tsx
+          CompactSelect.tsx
           ConfirmDialog.tsx
           DatePicker.css
           DatePicker.tsx
@@ -526,6 +528,7 @@ src/
         message.ts
       utils/
         agents.ts
+        highlighter.tsx
         indexedDB.ts
         notifications.ts
         path-utils.ts
@@ -1879,6 +1882,7 @@ File: src/common/locales/en.json
       "title": "Message Display",
       "display": "Display Options",
       "markdownRendering": "Markdown rendering",
+      "diffViewMode": "Diff view mode",
       "virtualizedRendering": "Use virtualized rendering (experimental)",
       "virtualizedRenderingTooltip": "Experimental feature that can improve performance when you have many messages in your conversation history by only rendering visible messages."
     },
@@ -2256,6 +2260,9 @@ File: src/common/locales/en.json
     "revertChanges": "Revert changes"
   },
   "diffViewer": {
+    "sideBySide": "Side by Side",
+    "unified": "Unified",
+    "compact": "Compact",
     "noChanges": "No changes have been made. Content is identical."
   },
   "promptField": {
@@ -3131,6 +3138,7 @@ File: src/common/locales/zh.json
       "title": "消息显示",
       "display": "显示选项",
       "markdownRendering": "启用 Markdown 渲染",
+      "diffViewMode": "差异视图模式",
       "virtualizedRendering": "使用虚拟化渲染（实验性）",
       "virtualizedRenderingTooltip": "实验性功能，当您在对话历史中有大量消息时可以通过仅渲染可见消息来提高性能。"
     },
@@ -3523,6 +3531,9 @@ File: src/common/locales/zh.json
     "revertChanges": "撤销更改"
   },
   "diffViewer": {
+    "sideBySide": "并排",
+    "unified": "统一",
+    "compact": "紧凑",
     "noChanges": "没有进行任何更改。内容相同。"
   },
   "promptField": {
@@ -4452,6 +4463,12 @@ export interface AiderRunOptions {
 ⋮----
 export type EditFormat = 'diff' | 'diff-fenced' | 'whole' | 'udiff' | 'udiff-simple' | 'patch';
 ⋮----
+export enum DiffViewMode {
+  SideBySide = 'side-by-side',
+  Unified = 'unified',
+  Compact = 'compact',
+}
+⋮----
 export enum ReasoningEffort {
   High = 'high',
   Medium = 'medium',
@@ -4810,6 +4827,7 @@ export interface SettingsData {
   renderMarkdown: boolean;
   virtualizedRendering: boolean;
   aiderDeskAutoUpdate: boolean;
+  diffViewMode?: DiffViewMode;
   aider: {
     options: string;
     environmentVariables: string;
@@ -5167,11 +5185,43 @@ export const extractServerNameToolName = (toolCallName: string): [string, string
 ⋮----
 export const isMessageEmpty = (content: unknown): boolean =>
 ⋮----
+// JavaScript/TypeScript
+⋮----
+// Web
+⋮----
+// Python
+⋮----
+// Java/JVM
+⋮----
+// C/C++
+⋮----
+// C#/.NET
+⋮----
+// Rust
+⋮----
+// Go
+⋮----
+// Ruby
+⋮----
+// PHP
+⋮----
+// Shell
+⋮----
+// Data formats
+⋮----
+// Markdown/Docs
+⋮----
+// Swift/Objective-C
+⋮----
+// SQL
+⋮----
+// Other languages
+⋮----
+// Config files
+⋮----
+// Other
+⋮----
 export const getLanguageFromPath = (path: string | undefined): string =>
-⋮----
-// Add more mappings as needed
-⋮----
-return 'text'; // Default to plain text
 ⋮----
 export const isURL = (url: string): boolean =>
 
@@ -9379,6 +9429,7 @@ import {
   SuggestionMode,
   WindowState,
   MemoryEmbeddingProvider,
+  DiffViewMode,
 } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
 ⋮----
@@ -9805,7 +9856,7 @@ import { isEqual } from 'lodash';
 ⋮----
 import type { SimpleGit } from 'simple-git';
 ⋮----
-import { getAllFiles } from '@/utils/file-system';
+import { getAllFiles, isValidProjectFile } from '@/utils/file-system';
 import {
   getCompactConversationPrompt,
   getConflictResolutionPrompt,
@@ -9952,6 +10003,8 @@ public async savePromptOnly(prompt: string): Promise<void>
 ⋮----
 public async runPromptInAider(prompt: string, promptContext: PromptContext, mode?: Mode): Promise<ResponseCompletedData[]>
 ⋮----
+// Detect files in prompt and ask to add them to context (only for aider modes)
+⋮----
 // Persist user message to the task context before running Aider so it can be redone even if the first call fails.
 ⋮----
 // Create enhanced assistant message with full metadata
@@ -10086,6 +10139,8 @@ const extractModelInfo = (modelName: string | null | undefined) =>
 // Extract info for architect model
 ⋮----
 // Send to connectors that listen to 'update-models-info'
+⋮----
+private async detectAndAddFilesFromPrompt(prompt: string): Promise<void>
 ⋮----
 public async getAddableFiles(searchRegex?: string): Promise<string[]>
 ⋮----
@@ -10336,6 +10391,8 @@ public async resolveWorktreeConflictsWithAgent(): Promise<void>
 // Clean up temp files
 ⋮----
 public async continueWorktreeRebase(): Promise<void>
+⋮----
+// Clear any remaining merge state after successful rebase continuation
 ⋮----
 public async duplicateFrom(sourceTask: Task): Promise<void>
 ⋮----
@@ -10627,9 +10684,13 @@ export const filterIgnoredFiles = async (projectBaseDir: string, filePaths: stri
 ⋮----
 const isGitRepository = async (baseDir: string): Promise<boolean> =>
 ⋮----
-const getAllFilesFromFS = async (baseDir: string): Promise<string[]> =>
+const getAllFilesFromFS = async (baseDir: string, ignore: string[] = []): Promise<string[]> =>
 ⋮----
 // Convert to relative paths
+⋮----
+const getIgnoreGlobPatterns = async (gitignorePath: string): Promise<string[]> =>
+⋮----
+// ignore
 ⋮----
 export const getAllFiles = async (baseDir: string, useGit = true): Promise<string[]> =>
 ⋮----
@@ -10650,6 +10711,19 @@ trim: true, // trim leading and trailing whitespace
 ⋮----
 replacement: '-', // use hyphens as replacement for invalid characters
 maxLength: 100, // reasonable length limit
+⋮----
+/**
+ * Validate if a file path is potentially valid for the current project
+ *
+ * @param filePath - File path to validate
+ * @param taskDir - Task directory to check against
+ * @returns True if file path could be valid for project
+ */
+export const isValidProjectFile = (filePath: string, taskDir: string): boolean =>
+⋮----
+// Convert to absolute path for validation
+⋮----
+// Check if resolved path is still within task directory
 
 ================
 File: src/main/utils/index.ts
@@ -11108,7 +11182,7 @@ File: src/main/worktrees/worktree-manager.ts
 import path, { join } from 'path';
 import fs, { mkdir, rm } from 'fs/promises';
 ⋮----
-import { MergeState, Worktree, WorktreeUncommittedFiles, WorktreeAheadCommits, RebaseState, ConflictResolutionFileContext } from '@common/types';
+import { ConflictResolutionFileContext, MergeState, RebaseState, Worktree, WorktreeAheadCommits, WorktreeUncommittedFiles } from '@common/types';
 ⋮----
 import { execWithShellPath, withLock } from '@/utils';
 import { AIDER_DESK_TASKS_DIR } from '@/constants';
@@ -11256,9 +11330,20 @@ async checkForRebaseConflicts(
 ⋮----
 // On error, return unknown status
 ⋮----
-async rebaseMainIntoWorktree(worktreePath: string, mainBranch: string): Promise<void>
+async rebaseMainIntoWorktree(
+    worktreePath: string,
+    mainBranch: string,
+): Promise<
 ⋮----
-// Rebase the current worktree branch onto local main branch
+// 1. Check for uncommitted changes and create temporary commit if needed
+⋮----
+// Stage all changes
+⋮----
+// Create temporary commit with unique timestamp
+⋮----
+// 2. Rebase the current worktree branch onto local main branch
+⋮----
+// 3. If rebase succeeds AND we had uncommitted changes, reset to uncommitted state
 ⋮----
 // Create detailed error with git command output
 ⋮----
@@ -11268,7 +11353,11 @@ async abortRebase(worktreePath: string): Promise<void>
 ⋮----
 // Abort the rebase
 ⋮----
+// Always try to reset temporary commit if it exists
+⋮----
 async continueRebase(worktreePath: string): Promise<void>
+⋮----
+// Always try to reset temporary commit if it exists after successful continue
 ⋮----
 private async squashAndMergeWorktreeToMain(projectPath: string, worktreePath: string, mainBranch: string, commitMessage: string): Promise<void>
 ⋮----
@@ -11449,6 +11538,20 @@ async getUnmergedFiles(worktreePath: string): Promise<string[]>
 async getStageFileContent(worktreePath: string, stage: 1 | 2 | 3, filePath: string): Promise<string | null>
 ⋮----
 async collectConflictContext(worktreePath: string, filePath: string): Promise<ConflictResolutionFileContext>
+⋮----
+/**
+   * Reset a temporary commit back to uncommitted changes state
+   */
+private async resetTempCommit(worktreePath: string): Promise<void>
+⋮----
+/**
+   * Reset temporary commit if it exists by finding it by name pattern
+   */
+private async resetTempCommitIfExists(worktreePath: string): Promise<void>
+⋮----
+// Check if HEAD is a temporary commit
+⋮----
+// Don't throw - this is cleanup logic
 ⋮----
 async stageResolvedFile(worktreePath: string, filePath: string, content: string): Promise<void>
 ⋮----
@@ -12856,6 +12959,35 @@ const loadTools = async () =>
 // eslint-disable-next-line no-console
 
 ================
+File: src/renderer/src/components/common/DiffViewer/CompactDiffViewer.tsx
+================
+import React, { useMemo, FC } from 'react';
+import { diffLines, formatLines } from 'unidiff';
+import { getLanguageFromPath } from '@common/utils';
+import { clsx } from 'clsx';
+import { HiOutlineSelector } from 'react-icons/hi';
+⋮----
+import { parseDiff, File, Hunk as HunkType, SkipBlock, Line as LineType } from './utils';
+⋮----
+import { highlightWithRefractor } from '@/utils/highlighter';
+⋮----
+interface DiffContextValue {
+  language: string;
+  fileStatus: File['type'];
+}
+⋮----
+const useDiffContext = () =>
+⋮----
+export interface DiffProps extends React.TableHTMLAttributes<HTMLTableElement>, Pick<File, 'hunks' | 'type'> {
+  fileName?: string;
+  language?: string;
+}
+⋮----
+<tr className=
+⋮----
+className=
+
+================
 File: src/renderer/src/components/common/DiffViewer/DiffViewer.scss
 ================
 .diff-viewer {
@@ -12916,6 +13048,7 @@ import { useTranslation } from 'react-i18next';
 import { Diff, Hunk, parseDiff } from 'react-diff-view';
 import { diffLines, formatLines } from 'unidiff';
 import { useDebounce } from '@reactuses/core';
+import { DiffViewMode } from '@common/types';
 ⋮----
 import { createTokens } from './utils';
 ⋮----
@@ -12926,6 +13059,7 @@ type Props = {
   newValue: string;
   language: string;
   isComplete?: boolean;
+  viewMode?: DiffViewMode;
 };
 ⋮----
 export const DiffViewer = (
@@ -12946,12 +13080,16 @@ File: src/renderer/src/components/common/DiffViewer/UDiffViewer.tsx
 ================
 import { useMemo } from 'react';
 import { Diff, Hunk, parseDiff } from 'react-diff-view';
+import { DiffViewMode } from '@common/types';
 ⋮----
 import { createTokens } from './utils';
+⋮----
+import { useResponsive } from '@/hooks/useResponsive';
 ⋮----
 type Props = {
   udiff: string;
   language: string;
+  viewMode?: DiffViewMode;
 };
 ⋮----
 // eslint-disable-next-line no-console
@@ -12960,12 +13098,111 @@ type Props = {
 File: src/renderer/src/components/common/DiffViewer/utils.ts
 ================
 import { tokenize } from 'react-diff-view';
-import refractor from 'refractor';
+import { refractor } from 'refractor/all';
 import { HunkData } from 'react-diff-view/types/utils';
+import gitDiffParser, { Hunk as _Hunk, File as _File, Change as _Change, DeleteChange, InsertChange } from 'gitdiff-parser';
+import { diffChars, diffWords } from 'diff';
+⋮----
+/**
+ * Refractor v5 returns a Root node with a children array,
+ * but react-diff-view (v3) expects the highlight function to return the array directly.
+ */
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// eslint-disable-next-line no-console
 ⋮----
 export const createTokens = (hunks: HunkData[], language: string) =>
 ⋮----
 // eslint-disable-next-line no-console
+⋮----
+export interface LineSegment {
+  value: string;
+  type: 'insert' | 'delete' | 'normal';
+}
+⋮----
+type ReplaceKey<T, K extends PropertyKey, V> = T extends unknown ? Omit<T, K> & Record<K, V> : never;
+⋮----
+export type Line = ReplaceKey<_Change, 'content', LineSegment[]>;
+⋮----
+export interface Hunk extends Omit<_Hunk, 'changes'> {
+  type: 'hunk';
+  lines: Line[];
+}
+⋮----
+export interface SkipBlock {
+  count: number;
+  type: 'skip';
+  content: string;
+}
+⋮----
+export interface File extends Omit<_File, 'hunks'> {
+  hunks: (Hunk | SkipBlock)[];
+}
+⋮----
+export interface ParseOptions {
+  maxDiffDistance: number;
+  maxChangeRatio: number;
+  mergeModifiedLines: boolean;
+  inlineMaxCharEdits: number;
+  wordDiff: boolean;
+}
+⋮----
+const calculateChangeRatio = (a: string, b: string): number =>
+⋮----
+const isSimilarEnough = (a: string, b: string, maxChangeRatio: number): boolean =>
+⋮----
+const changeToLine = (change: _Change): Line => (
+⋮----
+const diffCharsIfWithinEditLimit = (
+  a: string,
+  b: string,
+  maxEdits = 4,
+):
+  | {
+      exceededLimit: true;
+    }
+  | {
+      exceededLimit: false;
+      diffs: LineSegment[];
+    } => {
+  const diffs = diffChars(a, b);
+⋮----
+const buildInlineDiffSegments = (current: _Change, next: _Change, options: ParseOptions): Line['content'] =>
+⋮----
+const mergeIntoResult = (segment: LineSegment) =>
+⋮----
+const mergeAdjacentLines = (changes: _Change[], options: ParseOptions): Line[] =>
+⋮----
+const buildChangeIndices = (changes: _Change[]) =>
+⋮----
+// TODO: slight penalty for distance?
+// TODO: improve performance w binary search?
+const findBestInsertForDelete = (changes: _Change[], delIdx: number, insertIdxs: number[], pairOfAdd: Int32Array, options: ParseOptions): number =>
+⋮----
+const buildInitialPairs = (changes: _Change[], insertIdxs: number[], deleteIdxs: number[], options: ParseOptions) =>
+⋮----
+const buildUnpairedDeletePrefix = (changes: _Change[], pairOfDel: Int32Array) =>
+⋮----
+const hasUnpairedDeleteBetween = (unpairedDelPrefix: Int32Array, deleteIdx: number, insertIdx: number) =>
+⋮----
+const emitNormal = (out: Line[], c: _Change) =>
+⋮----
+const emitModified = (out: Line[], del: DeleteChange, add: InsertChange, options: ParseOptions) =>
+⋮----
+const emitLines = (changes: _Change[], pairOfDel: Int32Array, pairOfAdd: Int32Array, unpairedDelPrefix: Int32Array, options: ParseOptions): Line[] =>
+⋮----
+// Defer emission to paired insert
+⋮----
+export const mergeModifiedLines = (changes: _Change[], options: ParseOptions): Line[] =>
+⋮----
+const parseHunk = (hunk: _Hunk, options: ParseOptions): Hunk =>
+⋮----
+const extractHunkContext = (header: string): string
+⋮----
+const insertSkipBlocks = (hunks: Hunk[]): (Hunk | SkipBlock)[] =>
+⋮----
+export const parseDiff = (diff: string, options?: Partial<ParseOptions>): File[] =>
 
 ================
 File: src/renderer/src/components/common/Accordion.tsx
@@ -13079,19 +13316,23 @@ className="sr-only" // Hide the actual input but keep it accessible
 ================
 File: src/renderer/src/components/common/CodeBlock.tsx
 ================
-import Prism from 'prismjs';
-import { useMemo, useState } from 'react';
+import { startTransition, useMemo, useOptimistic, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { MdKeyboardArrowDown, MdUndo } from 'react-icons/md';
 import { VscCode } from 'react-icons/vsc';
+import { DiffViewMode } from '@common/types';
 ⋮----
 import { CopyMessageButton } from '../message/CopyMessageButton';
 ⋮----
 import { IconButton } from './IconButton';
+import { CompactSelect } from './CompactSelect';
 ⋮----
-import { DiffViewer, UDiffViewer } from '@/components/common/DiffViewer';
+import { DiffViewer, UDiffViewer, CompactDiffViewer } from '@/components/common/DiffViewer';
 import { useApi } from '@/contexts/ApiContext';
+import { useSettings } from '@/contexts/SettingsContext';
+import { useResponsive } from '@/hooks/useResponsive';
+import { highlightWithLowlight } from '@/utils/highlighter';
 ⋮----
 const isCustomDiffContent = (content: string): boolean =>
 ⋮----
@@ -13114,6 +13355,8 @@ type Props = {
   newValue?: string;
 };
 ⋮----
+const handleDiffViewModeChange = (value: string) =>
+⋮----
 diffOldValue = oldValue!; // Known to be string
 diffNewValue = newValue!; // Known to be string
 ⋮----
@@ -13121,9 +13364,9 @@ const parsed = parseDiffContent(children!); // children is non-null and a diff
 ⋮----
 // Not a diff, display children as plain code (if it exists)
 ⋮----
-// eslint-disable-next-line no-console
-⋮----
 const handleRevertChanges = () =>
+⋮----
+<div onClick=
 
 ================
 File: src/renderer/src/components/common/CodeInline.tsx
@@ -13139,6 +13382,30 @@ type Props = {
 export const CodeInline = (
 ⋮----
 className=
+
+================
+File: src/renderer/src/components/common/CompactSelect.tsx
+================
+import { Listbox, ListboxButton, ListboxOption, ListboxOptions, Transition } from '@headlessui/react';
+import { Fragment, ReactNode } from 'react';
+import { HiCheck, HiChevronDown } from 'react-icons/hi2';
+import { clsx } from 'clsx';
+⋮----
+export type CompactOption = {
+  label: ReactNode;
+  value: string;
+};
+⋮----
+type Props = {
+  options: CompactOption[];
+  value: string;
+  onChange: (value: string) => void;
+  className?: string;
+};
+⋮----
+<div className=
+⋮----
+clsx(
 
 ================
 File: src/renderer/src/components/common/ConfirmDialog.tsx
@@ -18326,7 +18593,7 @@ https://aider.chat/docs/config/dotenv.html
 File: src/renderer/src/components/settings/GeneralSettings.tsx
 ================
 import { useTranslation } from 'react-i18next';
-import { Font, FONTS, SettingsData, ProjectStartMode, SuggestionMode, Theme, THEMES } from '@common/types';
+import { Font, FONTS, SettingsData, ProjectStartMode, SuggestionMode, Theme, THEMES, DiffViewMode } from '@common/types';
 ⋮----
 import { Checkbox } from '../common/Checkbox';
 import { RadioButton } from '../common/RadioButton';
@@ -18361,6 +18628,8 @@ const handleFontChange = (value: string) =>
 ⋮----
 const handleFontSizeChange = (value: string) =>
 ⋮----
+const handleDiffViewModeChange = (value: string) =>
+⋮----
 const handleSuggestionModeChange = (mode: SuggestionMode) =>
 ⋮----
 const handleSuggestionModeClick = (value: string) =>
@@ -18368,8 +18637,6 @@ const handleSuggestionModeClick = (value: string) =>
 const handleSuggestionDelayChange = (delay: number) =>
 ⋮----
 const handleCommandConfirmationChange = (command: keyof typeof settings.promptBehavior.requireCommandConfirmation, checked: boolean) =>
-⋮----
-<Select label=
 ⋮----
 label=
 ⋮----
@@ -18395,6 +18662,7 @@ type Props = {
   language: string;
   onChange: (language: string) => void;
   hideLabel?: boolean;
+  size?: 'sm' | 'md' | 'lg';
 };
 ⋮----
 export const LanguageSelector = (
@@ -22408,6 +22676,56 @@ export const resolveAgentProfile = (task: TaskData | undefined, projectAgentProf
 // Create a profile with task-level overrides
 
 ================
+File: src/renderer/src/utils/highlighter.tsx
+================
+import { common, createLowlight } from 'lowlight';
+import { refractor } from 'refractor/all';
+import { ReactNode, Fragment } from 'react';
+import { toJsxRuntime } from 'hast-util-to-jsx-runtime';
+import { jsx, jsxs } from 'react/jsx-runtime';
+import { Nodes, Root, Element, Text, Comment, Doctype } from 'hast';
+import { map } from 'unist-util-map';
+⋮----
+// Create lowlight instance with common languages
+⋮----
+/**
+ * Maps standard highlighting classes to Prism-compatible token classes.
+ * These mappings ensure that Highlight.js (lowlight) classes are translated
+ * to the classes expected by the Prism-based theme.css.
+ */
+const mapToPrismClass = (className: string): string =>
+⋮----
+/**
+ * Converts HAST nodes to React elements using hast-util-to-jsx-runtime
+ * This is more performant and robust than manual conversion.
+ */
+export const renderHast = (nodes: Nodes | Nodes[], usePrismClasses = false): ReactNode =>
+⋮----
+// If the class is already 'token', don't duplicate it
+⋮----
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+⋮----
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+⋮----
+/**
+ * Highlights code using lowlight (best for auto-detection)
+ */
+export const highlightWithLowlight = (code: string, language?: string): ReactNode =>
+⋮----
+// Fallback to auto-detection
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+/**
+ * Highlights code using refractor (best for diffs/Prism compatibility)
+ */
+export const highlightWithRefractor = (code: string, language: string): ReactNode =>
+⋮----
+// refractor.highlight returns a Root node
+⋮----
+// eslint-disable-next-line no-console
+
+================
 File: src/renderer/src/utils/indexedDB.ts
 ================
 interface DBEntry<T> {
@@ -22953,7 +23271,6 @@ import { resolve } from 'path';
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite';
 import react from '@vitejs/plugin-react';
 import tsconfigPaths from 'vite-tsconfig-paths';
-import prism from 'vite-plugin-prismjs';
 
 ================
 File: package.json
@@ -23035,6 +23352,7 @@ File: package.json
     "@tanstack/react-virtual": "^3.13.12",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
+    "@types/hast": "^3.0.4",
     "@uiw/codemirror-theme-github": "^4.23.12",
     "@uiw/react-codemirror": "4.25.1",
     "@uiw/react-color-sketch": "^2.8.0",
@@ -23052,6 +23370,7 @@ File: package.json
     "clsx": "^2.1.1",
     "conf": "^15.0.2",
     "cors": "^2.8.5",
+    "diff": "^8.0.2",
     "electron-updater": "^6.6.2",
     "env-paths": "^3.0.0",
     "express": "^4.21.2",
@@ -23060,9 +23379,11 @@ File: package.json
     "fix-path": "^4.0.0",
     "focus-trap-react": "^11.0.3",
     "framer-motion": "^11.18.2",
+    "gitdiff-parser": "^0.3.1",
     "glob": "^11.0.2",
     "google-auth-library": "^10.3.0",
     "gpt-tokenizer": "^2.9.0",
+    "hast-util-to-jsx-runtime": "^2.3.6",
     "html-to-image": "^1.11.13",
     "i18next": "^24.2.3",
     "i18next-browser-languagedetector": "^8.0.4",
@@ -23070,6 +23391,7 @@ File: package.json
     "js-tiktoken": "^1.0.20",
     "langfuse-vercel": "^3.38.4",
     "lodash": "^4.17.21",
+    "lowlight": "^3.3.0",
     "mark.js": "^8.11.1",
     "match-sorter": "^8.0.0",
     "object-hash": "^3.0.0",
@@ -23078,11 +23400,11 @@ File: package.json
     "os-name": "^6.0.0",
     "patch-package": "^8.0.0",
     "posthog-node": "^4.18.0",
-    "prismjs": "^1.29.0",
+    "prismjs": "^1.30.0",
     "react-complex-tree": "^2.4.5",
     "react-country-flag": "^3.1.0",
     "react-datepicker": "^8.4.0",
-    "react-diff-view": "^3.3.1",
+    "react-diff-view": "^3.3.2",
     "react-hotkeys-hook": "^4.6.2",
     "react-i18next": "^15.4.1",
     "react-icons": "^5.5.0",
@@ -23093,7 +23415,7 @@ File: package.json
     "react-toastify": "^10.0.6",
     "react-tooltip": "^5.28.0",
     "recharts": "^3.0.2",
-    "refractor": "^3.6.0",
+    "refractor": "^5.0.0",
     "rehype-autolink-headings": "^7.1.0",
     "rehype-slug": "^6.0.0",
     "remark-gfm": "^4.0.1",
@@ -23108,6 +23430,7 @@ File: package.json
     "tree-kill": "^1.2.2",
     "turndown": "^7.2.1",
     "unidiff": "^1.0.4",
+    "unist-util-map": "^4.0.0",
     "uuid": "^11.0.2",
     "vite-plugin-prismjs": "^0.0.11",
     "winston": "^3.17.0",
