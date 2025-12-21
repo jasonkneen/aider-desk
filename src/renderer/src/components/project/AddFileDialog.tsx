@@ -23,7 +23,7 @@ export const AddFileDialog = ({ onClose, onAddFiles, baseDir, taskId, initialRea
   const api = useApi();
 
   const handleAddExternalFiles = useCallback(
-    async (paths: string[]) => {
+    async (paths: string[]): Promise<boolean> => {
       const validPathsToAdd: string[] = [];
       let switchToReadOnly = false;
 
@@ -46,7 +46,9 @@ export const AddFileDialog = ({ onClose, onAddFiles, baseDir, taskId, initialRea
         if (switchToReadOnly) {
           setIsReadOnly(true);
         }
+        return true;
       }
+      return false;
     },
     [baseDir, selectedPaths, api],
   );
@@ -87,11 +89,12 @@ export const AddFileDialog = ({ onClose, onAddFiles, baseDir, taskId, initialRea
     return () => {};
   }, [baseDir, handleAddExternalFiles, selectedPaths, setIsReadOnly, api]);
 
-  const handleOnPaste = async (pastedText: string) => {
+  const handleOnPaste = async (pastedText: string): Promise<boolean> => {
     if (pastedText) {
       const paths = pastedText.split(/\s+/).map((path) => path.trim());
-      await handleAddExternalFiles(paths);
+      return await handleAddExternalFiles(paths);
     }
+    return false;
   };
 
   const handleRemovePath = (pathToRemove: string) => {

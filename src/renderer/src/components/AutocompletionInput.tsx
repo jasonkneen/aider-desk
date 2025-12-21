@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, ReactNode } from 'react';
+import { useState, useRef, useEffect, ReactNode, ClipboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
@@ -12,7 +12,7 @@ type Props = {
   inputClassName?: string;
   rightElement?: ReactNode;
   autoFocus?: boolean;
-  onPaste?: (pastedText: string) => void;
+  onPaste?: (pastedText: string) => Promise<boolean>;
   onSubmit?: () => void;
 };
 
@@ -95,6 +95,23 @@ export const AutocompletionInput = ({
     }
   };
 
+  const handleOnPaste = async (e: ClipboardEvent<HTMLInputElement>) => {
+    // Prevent default immediately to stop browser from processing the paste
+    e.preventDefault();
+
+    const pastedText = e.clipboardData.getData('text');
+    const pasted = onPaste ? await onPaste(pastedText) : false;
+
+    // If onPaste didn't handle the paste (returned false), manually insert the text
+    if (!pasted && pastedText) {
+      const input = e.target as HTMLInputElement;
+      const start = input.selectionStart || 0;
+      const end = input.selectionEnd || 0;
+      const newValue = value.substring(0, start) + pastedText + value.substring(end);
+      onChange(newValue, false);
+    }
+  };
+
   const renderSuggestions = () => {
     if (!showSuggestions || suggestions.length === 0) {
       return null;
@@ -151,16 +168,9 @@ export const AutocompletionInput = ({
         onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
         placeholder={placeholder ? t(placeholder) : undefined}
         autoFocus={autoFocus}
-        onPaste={(e) => {
-          const pastedText = e.clipboardData.getData('text');
-          if (onPaste) {
-            e.preventDefault();
-            onPaste(pastedText);
-          }
-        }}
+        onPaste={handleOnPaste}
       />
       {rightElement && <div className="absolute right-2 top-1/2 -translate-y-1/2">{rightElement}</div>}
-      {/* eslint-disable-next-line react-hooks/refs */}
       {renderSuggestions()}
     </div>
   );

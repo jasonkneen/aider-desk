@@ -16,7 +16,7 @@ type Props = {
   selectedPaths: string[];
   onPathAdded: (path: string) => void;
   onSubmit?: () => void;
-  onPaste?: (pastedText: string) => Promise<void>;
+  onPaste?: (pastedText: string) => Promise<boolean>;
   autoFocus?: boolean;
   className?: string;
   allowFiles?: boolean;
