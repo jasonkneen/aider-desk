@@ -16,6 +16,7 @@
 - improved project file listing to respect .gitignore patterns in non-git mode
 - propagating "Retrying" message from Aider
 - paste action also works for non files in Add File dialog
+- added auto-restart of Gemini voice session to somehow mitigate the issue of stopping after 30 seconds
 
 ## [0.44.0]
 

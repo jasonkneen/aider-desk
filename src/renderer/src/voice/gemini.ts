@@ -13,15 +13,31 @@ export class GeminiVoiceProvider implements VoiceProvider {
   private lastAudioTimeRef: number = 0;
 
   // Silence detection refs
-
   private silenceTimeoutRef: NodeJS.Timeout | null = null;
   private stopRecordingCallback: (() => void) | null = null;
+
+  // Session management refs
+  private sessionTimerRef: NodeJS.Timeout | null = null;
+  private audioQueue: string[] = [];
+  private sessionRestartInProgress: boolean = false;
+  private isSessionActive: boolean = false;
+  private audioProcessingActive: boolean = false;
 
   async startSession(config: VoiceSessionConfig): Promise<VoiceSession> {
     this.config = config;
     this.stopRecordingCallback = config.onStopRecording || null;
     this.setState(VoiceSessionState.CONNECTING);
 
+    // Setup audio processing once and keep it alive
+    if (!this.audioProcessingActive) {
+      await this.setupAudioProcessing(config.mediaStream);
+      this.audioProcessingActive = true;
+    }
+
+    return this.createGeminiSession(config);
+  }
+
+  private async createGeminiSession(config: VoiceSessionConfig): Promise<VoiceSession> {
     try {
       const client = new GoogleGenAI({
         apiKey: config.token,
@@ -35,12 +51,19 @@ export class GeminiVoiceProvider implements VoiceProvider {
         callbacks: {
           onopen: () => {
             this.setState(VoiceSessionState.ACTIVE);
+            this.startSessionTimer();
+            this.isSessionActive = true;
           },
           onmessage: (message: LiveServerMessage) => {
+            console.log(message);
             this.handleMessage(message);
           },
-          onclose: () => {
-            this.setState(VoiceSessionState.CLOSED);
+          onclose: (e) => {
+            // eslint-disable-next-line no-console
+            console.log('Session closed:', e);
+            if (!this.sessionRestartInProgress) {
+              this.setState(VoiceSessionState.CLOSED);
+            }
           },
           onerror: (e) => {
             this.setState(VoiceSessionState.ERROR);
@@ -54,9 +77,9 @@ export class GeminiVoiceProvider implements VoiceProvider {
       // Initialize silence detection
       this.lastAudioTimeRef = Date.now();
 
-      await this.setupAudioProcessing(config.mediaStream);
-
       session.sendRealtimeInput({ activityStart: {} });
+
+      this.flushAudioQueue();
 
       return { isActive: true, provider: this };
     } catch (error) {
@@ -67,13 +90,23 @@ export class GeminiVoiceProvider implements VoiceProvider {
   }
 
   async stopSession(): Promise<void> {
+    this.isSessionActive = false;
     this.setState(VoiceSessionState.CLOSED);
+
+    // Clear session timer
+    if (this.sessionTimerRef) {
+      clearTimeout(this.sessionTimerRef);
+      this.sessionTimerRef = null;
+    }
 
     // Clear silence detection timeout
     if (this.silenceTimeoutRef) {
       clearTimeout(this.silenceTimeoutRef);
       this.silenceTimeoutRef = null;
     }
+
+    // Close Gemini session
+    await this.closeGeminiSession();
 
     // Cleanup audio processing
     if (this.processor) {
@@ -88,8 +121,13 @@ export class GeminiVoiceProvider implements VoiceProvider {
       await this.audioContext.close();
       this.audioContext = null;
     }
+    this.audioProcessingActive = false;
 
-    // Close Gemini session
+    // Clear audio queue
+    this.audioQueue = [];
+  }
+
+  private async closeGeminiSession(): Promise<void> {
     if (this.session) {
       try {
         this.session.close();
@@ -147,13 +185,17 @@ export class GeminiVoiceProvider implements VoiceProvider {
       const pcmData = this.convertFloat32ToInt16(inputData);
       const base64Audio = this.arrayBufferToBase64(pcmData.buffer as ArrayBuffer);
 
-      if (this.session) {
+      if (this.session && this.isSessionActive) {
+        // Send directly to active session
         this.session.sendRealtimeInput({
           media: {
             data: base64Audio,
             mimeType: 'audio/pcm;rate=16000',
           },
         });
+      } else if (this.audioProcessingActive) {
+        // Queue audio when session is inactive but audio processing is active
+        this.queueAudioData(base64Audio);
       }
     });
 
@@ -185,6 +227,68 @@ export class GeminiVoiceProvider implements VoiceProvider {
 
   private setState(newState: VoiceSessionState): void {
     this.config?.onSessionStateChange?.(newState);
+  }
+
+  private startSessionTimer(): void {
+    if (this.sessionTimerRef) {
+      clearTimeout(this.sessionTimerRef);
+    }
+
+    // Restart session every 30 seconds
+    this.sessionTimerRef = setTimeout(() => {
+      this.restartSession();
+    }, 10000);
+  }
+
+  private async restartSession(): Promise<void> {
+    if (this.sessionRestartInProgress || !this.config || !this.audioProcessingActive) {
+      return;
+    }
+
+    this.sessionRestartInProgress = true;
+    this.isSessionActive = false;
+    // Don't set external state to INACTIVE - keep it as ACTIVE from user perspective
+
+    try {
+      // eslint-disable-next-line no-console
+      console.log('Restarting session...');
+      // Close current session but keep audio processing
+      await this.closeGeminiSession();
+
+      // Start new session without tearing down audio processing
+      await this.createGeminiSession(this.config);
+    } catch (error) {
+      this.setState(VoiceSessionState.ERROR);
+      this.config?.onError(error as Error);
+    } finally {
+      this.sessionRestartInProgress = false;
+    }
+  }
+
+  private queueAudioData(base64Audio: string): void {
+    this.audioQueue.push(base64Audio);
+
+    // Limit queue size to prevent memory issues
+    if (this.audioQueue.length > 100) {
+      this.audioQueue.shift(); // Remove oldest
+    }
+  }
+
+  private flushAudioQueue(): void {
+    if (!this.session || !this.isSessionActive || this.audioQueue.length === 0) {
+      return;
+    }
+
+    this.audioQueue.forEach((audioData) => {
+      this.session!.sendRealtimeInput({
+        media: {
+          data: audioData,
+          mimeType: 'audio/pcm;rate=16000',
+        },
+      });
+    });
+
+    this.audioQueue = [];
   }
 }
 

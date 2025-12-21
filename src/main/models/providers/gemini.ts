@@ -246,8 +246,9 @@ const createGeminiVoiceSession = async (profile: ProviderProfile, settings: Sett
     const expireTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
     const token = await client.authTokens.create({
       config: {
-        uses: 1,
+        uses: 0,
         expireTime,
+        newSessionExpireTime: expireTime,
         liveConnectConstraints: {
           model: modelId,
           config: {
