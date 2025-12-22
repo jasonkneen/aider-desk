@@ -1194,6 +1194,8 @@ langfuse_host = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
 File: scripts/before-pack.js
 ================
 // Copy all files from source directory to target directory
+⋮----
+// Copy all files from source directory to target directory
 
 ================
 File: scripts/download-probe.mjs
@@ -1224,7 +1226,7 @@ async function downloadAllProbes()
 ⋮----
 // Ensure the base resources directory exists
 ⋮----
-// After downloading all, copy the correct one for the current platform if it's macOS
+// After downloading all, copy the correct one for the current platform if it's macOS or Linux
 
 ================
 File: scripts/download-uv.mjs
@@ -1253,7 +1255,7 @@ async function downloadAllUVs()
 ⋮----
 // Ensure the base resources directory exists
 ⋮----
-// After downloading all, copy the correct one for the current platform if it's macOS
+// After downloading all, copy the correct one for the current platform if it's macOS or Linux
 
 ================
 File: src/common/locales/en.json
@@ -6039,7 +6041,7 @@ error: error.message, // Pass the validation error message
 ⋮----
 : null; // Return null if the LLM couldn't repair the call
 ⋮----
-const onStepFinish = (stepResult: StepResult<typeof toolSet>) =>
+const onStepFinish = async (stepResult: StepResult<typeof toolSet>) =>
 ⋮----
 // Get the model to use its temperature and max output tokens settings
 ⋮----
@@ -6080,7 +6082,7 @@ interrupt()
 ⋮----
 isRunning()
 ⋮----
-private processStep<TOOLS extends ToolSet>(
+private async processStep<TOOLS extends ToolSet>(
     currentResponseId: string,
     { reasoningText, text, toolCalls, toolResults, finishReason, usage, providerMetadata, response, reasoning, files }: StepResult<TOOLS>,
     task: Task,
@@ -6088,7 +6090,7 @@ private processStep<TOOLS extends ToolSet>(
     provider: ProviderProfile,
     promptContext?: PromptContext,
     abortSignal?: AbortSignal,
-): ContextMessage[]
+): Promise<ContextMessage[]>
 ⋮----
 reasoningText: reasoningText?.substring(0, 100), // Log truncated reasoning
 text: text?.substring(0, 100), // Log truncated text
@@ -16697,7 +16699,7 @@ const handleDragOver = (event: DragEvent) =>
 ⋮----
 const handleDrop = async (event: DragEvent) =>
 ⋮----
-const handleOnPaste = async (pastedText: string) =>
+const handleOnPaste = async (pastedText: string): Promise<boolean> =>
 ⋮----
 const handleRemovePath = (pathToRemove: string) =>
 ⋮----
@@ -16732,7 +16734,7 @@ type Props = {
   selectedPaths: string[];
   onPathAdded: (path: string) => void;
   onSubmit?: () => void;
-  onPaste?: (pastedText: string) => Promise<void>;
+  onPaste?: (pastedText: string) => Promise<boolean>;
   autoFocus?: boolean;
   className?: string;
   allowFiles?: boolean;
@@ -19302,7 +19304,7 @@ export const formatDateByGroup = (timestamp: string, groupBy: GroupBy): string =
 ================
 File: src/renderer/src/components/AutocompletionInput.tsx
 ================
-import { useState, useRef, useEffect, ReactNode } from 'react';
+import { useState, useRef, useEffect, ReactNode, ClipboardEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
@@ -19316,11 +19318,17 @@ type Props = {
   inputClassName?: string;
   rightElement?: ReactNode;
   autoFocus?: boolean;
-  onPaste?: (pastedText: string) => void;
+  onPaste?: (pastedText: string) => Promise<boolean>;
   onSubmit?: () => void;
 };
 ⋮----
 const handleKeyDown = (e: React.KeyboardEvent) =>
+⋮----
+const handleOnPaste = async (e: ClipboardEvent<HTMLInputElement>) =>
+⋮----
+// Prevent default immediately to stop browser from processing the paste
+⋮----
+// If onPaste didn't handle the paste (returned false), manually insert the text
 ⋮----
 zIndex: 1000, // Ensure it's above other elements
 ⋮----
@@ -19333,7 +19341,6 @@ className=
 ⋮----
 placeholder=
 ⋮----
-{/* eslint-disable-next-line react-hooks/refs */}
 
 ================
 File: src/renderer/src/components/CostInfo.tsx
@@ -22592,7 +22599,6 @@ export interface UserMessage extends Message {
 ⋮----
 export interface ResponseMessage extends Message {
   type: 'response';
-  processing: boolean;
   usageReport?: UsageReportData;
 }
 ⋮----
@@ -22820,17 +22826,31 @@ export class GeminiVoiceProvider implements VoiceProvider
 ⋮----
 // Silence detection refs
 ⋮----
+// Session management refs
+⋮----
 async startSession(config: VoiceSessionConfig): Promise<VoiceSession>
+⋮----
+// Setup audio processing once and keep it alive
+⋮----
+private async createGeminiSession(config: VoiceSessionConfig): Promise<VoiceSession>
+⋮----
+// eslint-disable-next-line no-console
 ⋮----
 // Initialize silence detection
 ⋮----
 async stopSession(): Promise<void>
 ⋮----
+// Clear session timer
+⋮----
 // Clear silence detection timeout
+⋮----
+// Close Gemini session
 ⋮----
 // Cleanup audio processing
 ⋮----
-// Close Gemini session
+// Clear audio queue
+⋮----
+private async closeGeminiSession(): Promise<void>
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
@@ -22847,6 +22867,10 @@ const audioThreshold = 0.01; // Threshold for detecting audio input
 ⋮----
 // Check for silence
 ⋮----
+// Send directly to active session
+⋮----
+// Queue audio when session is inactive but audio processing is active
+⋮----
 private handleMessage(message: LiveServerMessage): void
 ⋮----
 private convertFloat32ToInt16(float32Array: Float32Array): Int16Array
@@ -22854,6 +22878,28 @@ private convertFloat32ToInt16(float32Array: Float32Array): Int16Array
 private arrayBufferToBase64(buffer: ArrayBuffer): string
 ⋮----
 private setState(newState: VoiceSessionState): void
+⋮----
+private startSessionTimer(): void
+⋮----
+// Restart session every 30 seconds
+⋮----
+private async restartSession(): Promise<void>
+⋮----
+// Don't set external state to INACTIVE - keep it as ACTIVE from user perspective
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// Close current session but keep audio processing
+⋮----
+// Start new session without tearing down audio processing
+⋮----
+private queueAudioData(base64Audio: string): void
+⋮----
+// Limit queue size to prevent memory issues
+⋮----
+this.audioQueue.shift(); // Remove oldest
+⋮----
+private flushAudioQueue(): void
 ⋮----
 // Factory function
 export const createGeminiVoiceProvider = (): VoiceProvider =>
@@ -23190,10 +23236,14 @@ directories:
 files:
   - '!**/.vscode/*'
   - '!src/*'
+  - '!resources/*'
+  - '!docs-site/*'
   - '!electron.vite.config.{js,ts,mjs,cjs}'
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+  - '!.aider-desk/*'
+  - '!llms.txt'
 extraResources:
   - from: ./resources/connector
     to: connector
@@ -23242,9 +23292,9 @@ dmg:
   artifactName: ${name}-${version}-macos-${arch}.${ext}
 linux:
   target:
-    - AppImage
-    - deb
-    - rpm
+    - target: AppImage
+    - target: deb
+    - target: rpm
   maintainer: Hotovo
   category: Utility
   extraResources:
@@ -23253,7 +23303,7 @@ linux:
       filter:
         - '**/*'
 appImage:
-  artifactName: ${name}-${version}.${ext}
+  artifactName: ${name}-${version}-${arch}.${ext}
 deb:
   compression: 'gz'
 npmRebuild: true
