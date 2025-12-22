@@ -8,15 +8,27 @@ One of AiderDesk's most powerful features is the ability to clearly visualize an
 
 ## The Diff Viewer
 
-Whenever Aider modifies a file, the changes are presented in a **diff view** within a code block in the chat. This provides a clear, side-by-side comparison of the original code and the new, modified version.
+Whenever Aider modifies a file, the changes are presented in a **diff view** within a code block in the chat. This provides a clear comparison of the original code and the new, modified version.
+
+### Diff View Modes
+
+AiderDesk offers three different ways to visualize code changes, which you can switch between using the mode selector in the top-right corner of any diff code block:
+
+- **Side-by-Side**: The classic view showing the original code on the left and the modified code on the right.
+- **Unified**: Displays changes inline within a single column, showing deletions and additions sequentially.
+- **Compact**: A space-saving mode that merges modified lines and highlights character-level edits inline for maximum density.
+
+You can also set your preferred default view mode in **General Settings**.
+
+![Diff Viewer Modes](../images/diff-viewer-modes.gif)
+
+### Visual Indicators
+
+Regardless of the mode, the following indicators help you identify changes:
 
 - **Green highlighting** indicates lines that have been **added**.
 - **Red highlighting** indicates lines that have been **removed**.
 - **Darker shades** within a highlighted line pinpoint the exact characters that were changed.
-
-This visual format makes it easy to quickly assess the impact and correctness of the AI's modifications.
-
-![Diff Viewer](../images/diff-viewer.png)
 
 ## Understanding Aider's Diff Format
 
