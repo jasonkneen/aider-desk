@@ -15,7 +15,7 @@ Git worktrees enable you to:
 - **Preserve Main Branch**: Keep your main project directory clean and stable
 - **Switch Context Easily**: Move between different worktrees without losing progress
 - **Safe Experimentation**: Test changes without risking your main codebase
-- **Flexible Integration**: Choose how to integrate changes back to the main branch
+- **Flexible Integration**: Choose how to integrate changes back to target branches
 
 ## How It Works
 
@@ -62,27 +62,30 @@ Once in worktree mode:
 
 ### 3. Integration Options
 
-When you're ready to integrate your worktree changes, AiderDesk provides three integration options:
+When you're ready to integrate your worktree changes, AiderDesk provides enhanced integration options with flexible target branch selection:
 
 ![Merge Options](../images/worktree-merge-options.png)
 
 #### Option 1: Standard Merge
-- **Process**: Rebase worktree onto main, then fast-forward merge
+- **Process**: Rebase worktree onto target branch, then fast-forward merge
 - **Result**: Preserves all individual commits from the worktree
 - **Use Case**: When you want to maintain detailed commit history
 - **Command**: `git merge --ff-only`
+- **Customization**: Choose any target branch and optional custom commit message
 
 #### Option 2: Squash & Merge
-- **Process**: Rebase worktree onto main, then squash into single commit
+- **Process**: Rebase worktree onto target branch, then squash into single commit
 - **Result**: Creates one clean commit with AI-generated message
-- **Use Case**: When you want a clean, linear main branch history
+- **Use Case**: When you want a clean, linear target branch history
 - **Command**: `git merge --squash`
+- **Customization**: Choose any target branch and provide custom commit message
 
 #### Option 3: Only Uncommitted Changes
-- **Process**: Stash uncommitted changes and apply to main branch
+- **Process**: Stash uncommitted changes and apply to target branch
 - **Result**: Transfers work-in-progress without merging commits
-- **Use Case**: When you want to move ongoing work to main branch
+- **Use Case**: When you want to move ongoing work to target branch
 - **Command**: `git stash` + `git stash apply`
+- **Customization**: Select any target branch for applying changes
 
 ## Merge Operations in Detail
 
@@ -99,7 +102,7 @@ Before any merge operation, AiderDesk performs several safety checks:
 1. **Stash Management**:
    - Stashes uncommitted changes from worktree
    - Stashes any uncommitted changes from main branch
-2. **Rebase**: Rebases worktree onto main branch to incorporate latest changes
+2. **Rebase**: Rebases worktree onto target branch to incorporate latest changes
 3. **Merge**: Performs the selected merge operation (standard or squash)
 4. **Restore**: Applies stashed changes back to both branches
 5. **Cleanup**: Removes temporary stashes
@@ -113,6 +116,51 @@ If conflicts are detected:
 - **User Guidance**: Provides clear instructions for manual resolution
 - **Safe Abort**: Can abort the operation without losing work
 
+#### AI-Assisted Conflict Resolution
+
+When conflicts occur during merge or rebase operations, AiderDesk offers intelligent conflict resolution:
+
+- **Specialized Agent**: Uses a dedicated Conflict Resolution agent with focused tool permissions
+- **Automatic Resolution**: Automatically attempts to resolve conflicted files by analyzing the changes
+- **Context-Aware**: The agent considers base, ours, and theirs versions to find optimal solutions
+- **Safe Process**: Resolutions are staged for review before continuing the operation
+- **Manual Override**: Users can review and modify AI-resolved conflicts before finalizing
+
+![AI Conflict Resolution](../images/worktree-rebase.gif)
+
+## Rebase Operations
+
+AiderDesk provides comprehensive rebase functionality for worktrees, enabling you to synchronize your worktree with any branch before merging:
+
+### Rebase Workflow
+
+1. **Branch Selection**: Choose the source branch to rebase from (default: main branch)
+2. **Conflict Detection**: AiderDesk analyzes potential conflicts before rebasing
+3. **Rebase Execution**: Performs the rebase operation with detailed progress tracking
+4. **Conflict Resolution**: If conflicts arise, use AI-assisted resolution or manual intervention
+5. **Completion**: Continue or abort the rebase as needed
+
+### Rebase States
+
+- **In Progress**: Rebase is actively running
+- **Conflicts Detected**: Rebase paused due to merge conflicts
+- **Ready to Continue**: Conflicts resolved and staged, ready to continue
+- **Aborted**: Rebase cancelled, worktree restored to pre-rebase state
+
+### Rebase Controls
+
+- **Rebase from Branch**: Initiate rebase from any branch
+- **Continue Rebase**: Resume rebase after conflict resolution
+- **Abort Rebase**: Cancel the rebase and restore original state
+- **Resolve Conflicts with Agent**: Automatically resolve using AI assistance
+
+### Rebase Benefits
+
+- **Clean History**: Maintains linear commit history
+- **Up-to-Date**: Incorporates latest changes from target branch
+- **Conflict Isolation**: Handles conflicts in controlled environment
+- **Safe Operations**: Full revert capabilities to pre-rebase state
+
 ## Revert Operations
 
 AiderDesk provides a safety net with merge revert functionality:
@@ -123,7 +171,7 @@ AiderDesk provides a safety net with merge revert functionality:
 
 1. **State Tracking**: Each merge operation saves a `MergeState` with pre-merge commit hashes
 2. **Revert Process**:
-   - Resets main branch to pre-merge state
+   - Resets target branch to pre-merge state
    - Resets worktree to pre-merge state
    - Restores uncommitted changes in both locations
 3. **Selective Cleanup**: Removes merge-related stashes while preserving work
@@ -137,6 +185,31 @@ AiderDesk provides a safety net with merge revert functionality:
 
 ## Advanced Features
 
+### Visual Status Indicators
+
+AiderDesk provides real-time status indicators for worktrees, giving you immediate insight into worktree state:
+
+- **Ahead Commits**: Shows number of commits ahead of target branch (↑ N commits)
+- **Uncommitted Files**: Displays count of modified but uncommitted files (N files)
+- **Conflict Predictions**: Warns about potential merge conflicts before operations
+- **Current Conflicts**: Indicates active merge conflicts needing resolution
+- **Rebase Status**: Shows when rebase is in progress or needs attention
+
+These indicators help you:
+- Plan merges and rebases more effectively
+- Understand worktree state at a glance
+- Prevent potential integration issues
+- Track progress during complex operations
+
+### Enhanced Branch Management
+
+Worktrees integrate seamlessly with branch operations:
+
+- **Target Branch Selection**: Choose any branch for merge/rebase operations
+- **Branch Status Display**: See which branches have associated worktrees
+- **Smart Conflict Prediction**: Analyze potential conflicts before operations
+- **Branch-Specific Integration**: Tailor integration strategy per branch
+
 ### Git Operations
 
 All standard Git operations work within worktrees:
@@ -144,7 +217,8 @@ All standard Git operations work within worktrees:
 - **Pull/Push**: Sync with remote repositories
 - **Commit History**: View and navigate commit history
 - **Diff Generation**: Generate diffs for AI analysis
-- **Rebase Operations**: Rebase worktree branches as needed
+- **Rebase Operations**: Full rebase support with conflict resolution
+- **Branch Switching**: Seamlessly switch between branches within worktree
 
 ### AI Integration
 
@@ -183,6 +257,24 @@ The AI system works seamlessly with worktrees:
 - **Standard Merge**: Use when commit history provides value (feature development)
 - **Squash Merge**: Use for clean integration (bug fixes, simple features)
 - **Uncommitted Only**: Use for transferring work-in-progress between contexts
+
+### Rebase Strategy Guidelines
+
+- **Before Merge**: Always rebase before merging to incorporate latest changes
+- **Feature Branches**: Rebase regularly to minimize future conflicts
+- **Integration Preparation**: Use rebase to align with target branch before complex merges
+- **Conflict Resolution**: Leverage AI assistance for complex conflict scenarios
+
+### Conflict Resolution Workflow
+
+1. **Detection**: AiderDesk predicts and identifies conflicts early
+2. **Assessment**: Review conflicting files and understand the nature of conflicts
+3. **Resolution Options**:
+   - **AI-Assisted**: Let the Conflict Resolution agent handle automatic resolution
+   - **Manual**: Use traditional Git conflict resolution workflow
+   - **Hybrid**: Use AI for initial resolution, then manually refine
+4. **Validation**: Review resolved changes before continuing operations
+5. **Completion**: Proceed with merge or rebase after conflicts are resolved
 
 ## Troubleshooting
 
@@ -251,8 +343,31 @@ The IDE integration plugins work seamlessly with worktrees:
 - **Path Resolution**: Plugin paths automatically resolve to worktree directory
 - **Mode Awareness**: Plugins detect and adapt to current working mode
 
+## Best Practices for Enhanced Worktree Workflow
+
+### Integration Planning
+
+- **Status Monitoring**: Regularly check visual status indicators to anticipate issues
+- **Conflict Prevention**: Rebase frequently to minimize divergence and conflicts
+- **Branch Strategy**: Use target branch selection for complex multi-branch workflows
+- **Commit Hygiene**: Maintain clean, logical commits to simplify conflict resolution
+
+### Conflict Management
+
+- **Early Detection**: Pay attention to conflict predictions before operations
+- **AI Resolution**: Use the Conflict Resolution agent for complex or numerous conflicts
+- **Validation**: Always review AI-resolved conflicts before finalizing
+- **Backup Strategy**: Ensure important work is committed before risky operations
+
+### Advanced Usage Patterns
+
+- **Feature Development**: Use worktrees for long-running feature branches with regular rebases
+- **Bug Fix Testing**: Create isolated worktrees for testing fixes before merging
+- **Experimentation**: Safely experiment with AI-assisted development in isolated environments
+- **Parallel Work**: Maintain multiple worktrees for concurrent feature development
+
 ## Conclusion
 
 Git worktrees in AiderDesk provide a robust, professional-grade development environment that enables safe, isolated development while maintaining seamless integration with your main project. Whether you're working on complex features, experimenting with AI assistance, or managing parallel development streams, worktrees offer the flexibility and safety needed for modern software development.
 
-The combination of isolation, flexible integration options, and safety features like revert operations makes worktrees an essential tool for serious development workflows in AiderDesk.
+The combination of isolation, flexible integration options, AI-assisted conflict resolution, visual status indicators, and comprehensive safety features like revert operations makes worktrees an essential tool for serious development workflows in AiderDesk. The enhanced capabilities for rebase operations, target branch selection, and automated conflict resolution elevate the worktree experience to enterprise-grade development standards.
