@@ -4,6 +4,7 @@
 
 - added Vitest testing framework
 - added Writing Tests skill
+- implemented templating system for agent prompts with modular structure
 
 ## [0.45.0]
 

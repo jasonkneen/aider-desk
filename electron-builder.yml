@@ -22,6 +22,10 @@ extraResources:
     to: mcp-server
     filter:
       - '**/*'
+  - from: ./resources/prompts
+    to: prompts
+    filter:
+      - '**/*'
 asarUnpack:
   - '**/node_modules/sharp/**/*'
   - '**/node_modules/@img/**/*'

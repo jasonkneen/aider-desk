@@ -48,7 +48,7 @@ vi.mocked(window.api.getOpenProjects).mockResolvedValue([
 
 AiderDesk provides centralized mock factories for consistent testing across the codebase.
 
-### API Mock Factory (`createMockApi`)
+### Renderer API Mock Factory (`createMockApi`)
 
 Location: `src/renderer/src/__tests__/mocks/api.ts`
 
@@ -119,6 +119,90 @@ const mockResponsive = createMockResponsive({
   isMobile: true,
   isDesktop: false,
 });
+```
+
+### Main Process Mock Factories
+
+Location: `src/main/__tests__/mocks/`
+
+Main process mocks are split into separate files per type with a barrel export (`index.ts`) for clean imports.
+
+#### Task Mock Factory (`createMockTask`)
+
+File: `src/main/__tests__/mocks/task.ts`
+
+Provides a minimal mock for the Task class with only the properties needed for testing:
+
+```typescript
+import { createMockTask } from '@/__tests__/mocks';
+
+// Basic usage - minimal task mock
+const mockTask = createMockTask();
+
+// Override specific properties
+const mockTask = createMockTask({
+  getProjectDir: vi.fn(() => '/custom/project'),
+  task: { autoApprove: true } as TaskData,
+});
+```
+
+**Key pattern**: Minimalist approach - only include properties/methods actually used in tests. This reduces maintenance burden when types change.
+
+#### Settings Mock Factory (`createMockSettings`)
+
+File: `src/main/__tests__/mocks/settings.ts`
+
+Provides a minimal mock for SettingsData:
+
+```typescript
+import { createMockSettings } from '@/__tests__/mocks';
+
+const mockSettings = createMockSettings({
+  memory: { enabled: false },
+});
+```
+
+#### Agent Profile Mock Factory (`createMockAgentProfile`)
+
+File: `src/main/__tests__/mocks/agent-profile.ts`
+
+Provides a minimal mock for AgentProfile:
+
+```typescript
+import { createMockAgentProfile } from '@/__tests__/mocks';
+
+const mockProfile = createMockAgentProfile({
+  useMemoryTools: false,
+  useSkillsTools: false,
+});
+```
+
+### Creating New Mock Factories
+
+When creating a new mock factory for the main process:
+
+1. **Create a dedicated file** for each type (e.g., `task.ts`, `settings.ts`, `agent-profile.ts`)
+2. **Use minimalist approach** - only include properties/methods actually used in tests
+3. **Add to barrel export** (`index.ts`) for clean imports
+4. **Return type**: Use `Partial<ReturnType<typeof createMockFactory>>` for recursive type inference
+
+```typescript
+// Example: src/main/__tests__/mocks/my-type.ts
+import { vi } from 'vitest';
+import { MyType } from '@common/types';
+
+export const createMockMyType = (overrides: Partial<ReturnType<typeof createMockMyType>> = {}) => {
+  const defaultMock = {
+    // Only include properties needed in tests
+    property1: 'default',
+    method1: vi.fn(() => 'result'),
+  };
+
+  return { ...defaultMock, ...overrides };
+};
+
+// Add to src/main/__tests__/mocks/index.ts
+export { createMockMyType } from './my-type';
 ```
 
 ### Using Mock Factories in Tests

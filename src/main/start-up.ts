@@ -7,6 +7,7 @@ import { delay } from '@common/utils';
 
 import logger from '@/logger';
 import { getCurrentPythonLibVersion, getLatestPythonLibVersion, getPythonVenvBinPath } from '@/utils';
+import { initializeTemplates } from '@/agent/prompts';
 import {
   AIDER_DESK_DATA_DIR,
   SETUP_COMPLETE_FILENAME,
@@ -218,6 +219,13 @@ const performUpdateCheck = async (updateProgress: UpdateProgressFunction): Promi
   });
 
   await setupMcpServer();
+
+  updateProgress({
+    step: 'Update Check',
+    message: 'Initializing templates...',
+  });
+
+  await initializeTemplates();
 };
 
 export type UpdateProgressData = {
@@ -294,6 +302,14 @@ export const performStartUp = async (updateProgress: UpdateProgressFunction): Pr
 
     logger.info('Setting up MCP server');
     await setupMcpServer();
+
+    updateProgress({
+      step: 'Initializing Templates',
+      message: 'Initializing prompt templates...',
+      progress: 85,
+    });
+
+    await initializeTemplates();
 
     updateProgress({
       step: 'Finishing Setup',
