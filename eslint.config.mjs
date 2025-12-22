@@ -22,7 +22,7 @@ export default tseslint.config({ ignores: ['dist', 'node_modules', 'out'] }, {
   },
   settings: {
     react: {
-      version: '18.3.1'
+      version: 'detect'
     },
     "import/resolver": {
       node: {

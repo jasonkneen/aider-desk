@@ -3,7 +3,7 @@ import { AgentProfile } from '@common/types';
 
 import { useApi } from '@/contexts/ApiContext';
 
-interface AgentsContextType {
+export interface AgentsContextType {
   profiles: AgentProfile[];
   loading: boolean;
   error: string | null;

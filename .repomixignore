@@ -2,3 +2,4 @@ ai-docs/
 docs/
 patches/
 docs-site
+src/**/__tests__

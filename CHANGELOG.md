@@ -1,5 +1,10 @@
 # Changelog
 
+## [UNRELEASED]
+
+- added Vitest testing framework
+- added Writing Tests skill
+
 ## [0.45.0]
 
 - improved worktree merge functionality with support for custom target branches and commit messages

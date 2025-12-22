@@ -34,11 +34,10 @@ import {
 } from '@/types/message';
 import { useApi } from '@/contexts/ApiContext';
 
-interface TaskState {
+export interface TaskState {
   loading: boolean;
   loaded: boolean;
   processing: boolean;
-  finishAcknowledged: boolean;
   messages: Message[];
   tokensInfo: TokensInfoData | null;
   question: QuestionData | null;
@@ -54,7 +53,6 @@ const EMPTY_TASK_STATE: TaskState = {
   processing: false,
   loading: false,
   loaded: false,
-  finishAcknowledged: true,
   messages: [],
   tokensInfo: null,
   question: null,
@@ -68,7 +66,7 @@ const EMPTY_TASK_STATE: TaskState = {
 
 const processingResponseMessageMap = new Map<string, ResponseMessage>();
 
-interface TaskContextType {
+export interface TaskContextType {
   getTaskState: (taskId: string, loadIfNotLoaded?: boolean) => TaskState | null;
   clearSession: (taskId: string, messagesOnly: boolean) => void;
   restartTask: (taskId: string) => void;

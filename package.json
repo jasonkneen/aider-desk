@@ -15,7 +15,7 @@
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck:mcp": "tsc --noEmit -p tsconfig.mcp-server.json --composite false",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web && npm run typecheck:mcp",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "dev:no-hmr": "NO_HMR=true electron-vite dev",
@@ -28,7 +28,14 @@
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux",
     "prepare": "husky",
-    "start:server": "AIDER_DESK_HEADLESS=true node out/server/runner.js"
+    "start:server": "AIDER_DESK_HEADLESS=true node out/server/runner.js",
+    "test": "npm run test:node && npm run test:web",
+    "test:node": "NODE_ENV=test vitest run --config vitest.config.node.ts",
+    "test:web": "NODE_ENV=test vitest run --config vitest.config.web.ts",
+    "test:mcp": "NODE_ENV=test vitest run --config vitest.config.mcp.ts",
+    "test:watch": "concurrently \"npm run test:node -- --watch\" \"npm run test:web -- --watch\"",
+    "test:coverage": "npm run test:node -- --coverage && npm run test:web -- --coverage",
+    "test:ui": "vitest --config vitest.config.web.ts --ui"
   },
   "dependencies": {
     "@ai-sdk/amazon-bedrock": "^3.0.70",
@@ -169,6 +176,9 @@
     "@eslint/js": "^9.33.0",
     "@modelcontextprotocol/sdk": "^1.20.0",
     "@tailwindcss/typography": "^0.5.16",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@testing-library/user-event": "^14.6.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/lodash": "^4.17.17",
     "@types/node": "^20.14.8",
@@ -183,8 +193,11 @@
     "@types/tmp": "^0.2.6",
     "@types/yaml-front-matter": "^4.1.3",
     "@vitejs/plugin-react": "^5.0.4",
+    "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/ui": "^4.0.16",
     "adm-zip": "^0.5.16",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^9.2.1",
     "electron": "^37.6.0",
     "electron-builder": "^26.0.12",
     "electron-vite": "^4.0.1",
@@ -198,6 +211,7 @@
     "eslint-plugin-react-hooks": "^7.0.0",
     "globals": "^15.9.0",
     "husky": "^9.1.7",
+    "jsdom": "^27.3.0",
     "lint-staged": "^15.4.1",
     "node-fetch": "^3.3.2",
     "prettier": "^3.3.2",
@@ -210,7 +224,8 @@
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.1",
     "vite": "^7.1.10",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^4.0.16"
   },
   "lint-staged": {
     "*.{ts,tsx}": "eslint --fix"

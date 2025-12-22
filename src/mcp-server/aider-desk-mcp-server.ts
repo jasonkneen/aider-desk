@@ -14,7 +14,7 @@ const AIDER_DESK_API_BASE_URL = process.env.AIDER_DESK_API_BASE_URL || 'http://l
 console.error(`Using AiderDesk API at: ${AIDER_DESK_API_BASE_URL} for project directory: ${projectDir}`);
 
 // Create MCP server
-const server = new McpServer({
+export const server = new McpServer({
   name: 'aider-desk-mcp-server',
   version: '0.1.0',
 });
@@ -121,7 +121,9 @@ server.tool(
 );
 
 // Start the server
-async function main() {
+export async function main() {
+  // eslint-disable-next-line no-console
+  console.log('Starting AiderDesk MCP server...');
   try {
     const transport = new StdioServerTransport();
     await server.connect(transport);
@@ -134,8 +136,10 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  // eslint-disable-next-line no-console
-  console.error('Fatal error in main():', error);
-  process.exit(1);
-});
+if (process.env.AIDER_DESK_MCP_TESTING !== 'true') {
+  main().catch((error) => {
+    // eslint-disable-next-line no-console
+    console.error('Fatal error in main():', error);
+    process.exit(1);
+  });
+}

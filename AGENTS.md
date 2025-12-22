@@ -17,6 +17,17 @@ This file provides guidance to AiderDesk when working with code in this reposito
 ### Linting and Formatting
 - `eslint --fix` - Run ESLint with auto-fix and auto-format on specified file(s)
 
+### Testing
+- `npm run test` - Run all tests (main + renderer)
+- `npm run test:node` - Run main, preload, and common process tests
+- `npm run test:web` - Run renderer process tests (React components)
+- `npm run test:mcp` - Run MCP server tests
+- `npm run test:watch` - Run tests in watch mode for development
+- `npm run test:coverage` - Generate coverage reports
+- `npm run test:ui` - Open interactive test UI
+
+**Note for Agents**: When running tests via `power---bash`, always append `-- --no-color` to the command (e.g., `npm run test:node -- --no-color`) to ensure clean, parseable output without ANSI escape codes.
+
 ### Building
 - `npm run build` - Full build (includes type checking and MCP server build)
 - `npm run build:mcp` - Build MCP server only
@@ -86,5 +97,24 @@ AiderDesk is an Electron-based desktop application that provides a GUI wrapper f
 - **Backend**: Electron, Node.js, Python (Aider integration)
 - **AI Integration**: Vercel AI SDK, multiple LLM providers (OpenAI, Anthropic, Gemini, etc.)
 - **Build Tools**: electron-vite, esbuild, TypeScript project references
-- **Testing**: ESLint for linting, Prettier for formatting
+- **Testing**: Vitest with React Testing Library, ESLint for linting, Prettier for formatting
 - **Internationalization**: i18next with English and Chinese support
+
+## Testing Framework
+
+AiderDesk uses **Vitest** with a multi-configuration approach. For all testing guidance, including patterns, mocking, and organization, **always activate the `Writing Tests` skill**.
+
+### Key Commands
+- `npm run test` - Run all tests
+- `npm run test:node` - Main process tests
+- `npm run test:web` - Renderer process tests
+- `npm run test:coverage` - Generate reports
+- `npm run test:ui` - Open Vitest UI
+
+Refer to the **Writing Tests** skill for:
+- Detailed test patterns and examples
+- Component and unit testing strategies
+- Mocking best practices for Electron and ApplicationAPI
+- Test directory structure and naming conventions
+- Pre-flight test checklists
+

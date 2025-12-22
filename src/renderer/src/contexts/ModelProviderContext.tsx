@@ -3,7 +3,7 @@ import { Model, ProviderProfile } from '@common/types';
 
 import { useApi } from '@/contexts/ApiContext';
 
-type ModelProviderContextType = {
+export type ModelProviderContextType = {
   refresh: () => void;
   models: Model[];
   providers: ProviderProfile[];
