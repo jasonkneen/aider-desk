@@ -8,6 +8,7 @@
 - enhanced thinking block content handling
 - improved cursor styling for context file section headers
 - added icons to worktree merge related actions
+- using ollama_chat/ prefix for ollama models in Aider modes to fix 'parsing chunk' issue with gpt-oss models
 
 ## [0.45.0]
 
