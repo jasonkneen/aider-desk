@@ -13,7 +13,7 @@ import { useApi } from '@/contexts/ApiContext';
 import { TaskProvider } from '@/contexts/TaskContext';
 import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
 import { showInfoNotification } from '@/utils/notifications';
-import { getSortedVisibleTasks } from '@/utils/taskUtils';
+import { getSortedVisibleTasks } from '@/utils/task-utils';
 
 type Props = {
   project: ProjectData;
@@ -214,6 +214,41 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
     setShouldFocusNewTask(false);
   }, []);
 
+  const switchToTaskByIndex = useCallback(
+    (index: number) => {
+      const sortedTasks = getSortedVisibleTasks(optimisticTasks);
+      if (index < sortedTasks.length) {
+        const targetTask = sortedTasks[index];
+        if (targetTask && targetTask.id !== activeTaskId) {
+          handleTaskSelect(targetTask.id);
+        }
+      }
+    },
+    [activeTaskId, handleTaskSelect, optimisticTasks],
+  );
+
+  // Switch to specific task tabs (Ctrl + 1-9)
+  useHotkeys(
+    [
+      TASK_HOTKEYS.SWITCH_TASK_1,
+      TASK_HOTKEYS.SWITCH_TASK_2,
+      TASK_HOTKEYS.SWITCH_TASK_3,
+      TASK_HOTKEYS.SWITCH_TASK_4,
+      TASK_HOTKEYS.SWITCH_TASK_5,
+      TASK_HOTKEYS.SWITCH_TASK_6,
+      TASK_HOTKEYS.SWITCH_TASK_7,
+      TASK_HOTKEYS.SWITCH_TASK_8,
+      TASK_HOTKEYS.SWITCH_TASK_9,
+    ].join(','),
+    (e) => {
+      e.preventDefault();
+      const index = parseInt(e.key) - 1;
+      switchToTaskByIndex(index);
+    },
+    { enabled: isActive, scopes: 'task', enableOnFormTags: true, enableOnContentEditable: true },
+    [optimisticTasks, activeTaskId, handleTaskSelect, switchToTaskByIndex],
+  );
+
   const handleToggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
   };
@@ -246,44 +281,32 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
 
   const handleDeleteTask = useCallback(
     async (taskId: string) => {
-      try {
-        let nextTaskId: string | null = null;
-
-        if (activeTaskId === taskId) {
-          const sortedTasks = getSortedVisibleTasks(optimisticTasks, false, '');
-          const currentIndex = sortedTasks.findIndex((task) => task.id === taskId);
-
-          if (currentIndex !== -1) {
-            if (currentIndex + 1 < sortedTasks.length) {
-              nextTaskId = sortedTasks[currentIndex + 1].id;
-            } else if (currentIndex - 1 >= 0) {
-              nextTaskId = sortedTasks[currentIndex - 1].id;
-            }
-          }
-        }
-
-        setOptimisticTasks((prev) => prev.filter((task) => task.id !== taskId));
-        await api.deleteTask(project.baseDir, taskId);
-
-        if (activeTaskId === taskId) {
-          if (nextTaskId && nextTaskId !== taskId) {
-            handleTaskSelect(nextTaskId);
-            focusActiveTaskPrompt();
-          } else {
+      startTransition(async () => {
+        try {
+          setOptimisticTasks((prev) => prev.filter((task) => task.id !== taskId));
+          await api.deleteTask(project.baseDir, taskId);
+          if (activeTaskId === taskId) {
             await createNewTask();
-            focusActiveTaskPrompt();
           }
-        } else {
-          // If we deleted a non-active task, focus the current active task's prompt
-          focusActiveTaskPrompt();
+          // Task will be automatically removed via the existing handleTaskDeleted listener
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error('Failed to delete task:', error);
         }
-        // Task will be automatically removed via the existing handleTaskDeleted listener
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to delete task:', error);
-      }
+      });
     },
-    [activeTaskId, api, createNewTask, focusActiveTaskPrompt, handleTaskSelect, optimisticTasks, project.baseDir, setOptimisticTasks],
+    [activeTaskId, api, createNewTask, project.baseDir, setOptimisticTasks],
+  );
+
+  // Close current task
+  useHotkeys(
+    TASK_HOTKEYS.CLOSE_TASK,
+    (e) => {
+      e.preventDefault();
+      void handleDeleteTask(activeTaskId!);
+    },
+    { enabled: !!activeTaskId, scopes: 'task', enableOnFormTags: true, enableOnContentEditable: true },
+    [activeTaskId, handleDeleteTask],
   );
 
   const handleExportTaskToImage = useCallback(() => {
@@ -380,9 +403,6 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
               inputHistory={inputHistory}
               isActive={isActive}
               shouldFocusPrompt={shouldFocusNewTask}
-              allTasks={optimisticTasks}
-              onTaskSelect={handleTaskSelect}
-              onDeleteTask={handleDeleteTask}
             />
           )}
         </div>

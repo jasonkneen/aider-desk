@@ -9,33 +9,34 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 
 type Props = {
   provider: LlmProviderName;
-  editProfile?: ProviderProfile;
+  profile?: ProviderProfile;
   providers: ProviderProfile[];
   onSave: (profile: ProviderProfile) => void;
   onCancel: () => void;
 };
 
-export const ProviderProfileDialog = ({ provider, editProfile, providers, onSave, onCancel }: Props) => {
+export const ProviderProfileDialog = ({ provider, profile, providers, onSave, onCancel }: Props) => {
   const { t } = useTranslation();
   const formRef = useRef<ProviderProfileFormRef>(null);
 
   return (
     <ConfirmDialog
-      title={t('modelLibrary.editProvider', { defaultValue: 'Edit Provider' })}
+      title={t('modelLibrary.editProvider')}
       onCancel={onCancel}
       onConfirm={() => formRef.current?.submit()}
-      confirmButtonText={t('common.done', { defaultValue: 'Done' })}
+      confirmButtonText={t('common.save')}
       width={700}
     >
       <ProviderProfileForm
-        key={editProfile?.id || provider}
+        key={profile?.id || provider}
         ref={formRef}
         provider={provider}
-        editProfile={editProfile}
+        editProfile={profile}
         providers={providers}
         onSave={onSave}
         onCancel={onCancel}
         hideActions
+        hideTitle
       />
     </ConfirmDialog>
   );

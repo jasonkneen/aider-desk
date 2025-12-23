@@ -43,6 +43,10 @@ vi.mock('@/components/project/ProjectView', () => ({
   ProjectView: () => <div data-testid="project-view" />,
 }));
 
+vi.mock('@/components/settings/SettingsPage', () => ({
+  SettingsPage: () => <div data-testid="settings-page" />,
+}));
+
 vi.mock('@/components/project/NoProjectsOpen', () => ({
   NoProjectsOpen: () => <div data-testid="no-projects" />,
 }));

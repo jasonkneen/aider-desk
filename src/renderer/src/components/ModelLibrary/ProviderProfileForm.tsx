@@ -64,6 +64,7 @@ type Props = {
   onSave: (profile: ProviderProfile) => void;
   onCancel: () => void;
   hideActions?: boolean;
+  hideTitle?: boolean;
 };
 
 export type ProviderProfileFormRef = {
@@ -71,7 +72,7 @@ export type ProviderProfileFormRef = {
 };
 
 export const ProviderProfileForm = forwardRef<ProviderProfileFormRef, Props>(
-  ({ provider, editProfile, providers, onSave, onCancel, hideActions = false }, ref) => {
+  ({ provider, editProfile, providers, onSave, onCancel, hideActions = false, hideTitle = false }, ref) => {
     const { t } = useTranslation();
 
     const [id, setId] = useState(editProfile?.id || provider);
@@ -113,10 +114,6 @@ export const ProviderProfileForm = forwardRef<ProviderProfileFormRef, Props>(
       if (parameters) {
         setParameters({ ...parameters, disableStreaming });
       }
-    };
-
-    const handleResetParameters = () => {
-      setParameters(getDefaultProviderParams(provider));
     };
 
     const validateForm = (): boolean => {
@@ -170,16 +167,15 @@ export const ProviderProfileForm = forwardRef<ProviderProfileFormRef, Props>(
     return (
       <div className="p-4 py-10 overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-tertiary">
         <div className="max-w-2xl mx-auto">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-md font-bold capitalize">
-              {t('modelLibrary.profileForm.title', {
-                provider: t(`providers.${provider}`),
-              })}
-            </h2>
-            <Button onClick={handleResetParameters} variant="text" size="sm">
-              {t('modelLibrary.overrides.resetToDefaults')}
-            </Button>
-          </div>
+          {!hideTitle && (
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-md font-bold uppercase">
+                {t('modelLibrary.profileForm.title', {
+                  provider: t(`providers.${provider}`),
+                })}
+              </h2>
+            </div>
+          )}
           <div className="space-y-4">
             <div className="flex flex-col md:flex-row gap-4">
               <Input
@@ -203,7 +199,10 @@ export const ProviderProfileForm = forwardRef<ProviderProfileFormRef, Props>(
 
             {ParametersComponent && parameters && <ParametersComponent provider={parameters} onChange={setParameters} />}
 
-            <Accordion title={t('modelLibrary.profileForm.headers')} className="mb-2 border rounded-md border-border-default">
+            <Accordion
+              title={<span className="text-sm">{t('modelLibrary.profileForm.headers')}</span>}
+              className="mb-2 border rounded-md border-border-default"
+            >
               <div className="p-4 pt-2">
                 <div className="space-y-2">
                   {headers.map((header) => (

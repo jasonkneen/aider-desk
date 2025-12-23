@@ -15,11 +15,10 @@ import { ModalOverlayLayout } from '@/components/common/ModalOverlayLayout';
 import { useModelProviders } from '@/contexts/ModelProviderContext';
 
 type Props = {
-  isVisible: boolean;
   onClose: () => void;
 };
 
-export const ModelLibrary = ({ isVisible, onClose }: Props) => {
+export const ModelLibrary = ({ onClose }: Props) => {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const {
@@ -62,16 +61,13 @@ export const ModelLibrary = ({ isVisible, onClose }: Props) => {
   };
 
   useHotkeys('esc', handleClose, {
-    enabled: isVisible,
     enableOnFormTags: true,
     enableOnContentEditable: true,
   });
 
   useEffect(() => {
-    if (isVisible) {
-      containerRef.current?.focus();
-    }
-  }, [isVisible]);
+    containerRef.current?.focus();
+  }, []);
 
   const handleToggleProviderSelect = (profileId: string) => {
     setSelectedProviderIds((prev) => (prev.includes(profileId) ? prev.filter((id) => id !== profileId) : [...prev, profileId]));
@@ -189,7 +185,7 @@ export const ModelLibrary = ({ isVisible, onClose }: Props) => {
         {editingProfile && (
           <ProviderProfileDialog
             provider={editingProfile.provider.name}
-            editProfile={editingProfile}
+            profile={editingProfile}
             providers={providers}
             onSave={handleSaveProfile}
             onCancel={() => setEditingProfile(undefined)}

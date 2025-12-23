@@ -1,5 +1,5 @@
 import { ProjectData } from '@common/types';
-import { useCallback, useEffect, useState } from 'react';
+import { Activity, useCallback, useEffect, useState } from 'react';
 import { MdBarChart, MdSettings, MdUpload } from 'react-icons/md';
 import { PiNotebookFill } from 'react-icons/pi';
 import { useTranslation } from 'react-i18next';
@@ -429,19 +429,23 @@ export const Home = () => {
             />
           </div>
         </div>
-        {isOpenProjectDialogVisible && (
+        <Activity mode={isOpenProjectDialogVisible ? 'visible' : 'hidden'}>
           <OpenProjectDialog onClose={() => setIsOpenProjectDialogVisible(false)} onAddProject={handleAddProject} openProjects={openProjects} />
-        )}
-        {showSettingsInfo !== null && (
+        </Activity>
+        <Activity mode={showSettingsInfo !== null ? 'visible' : 'hidden'}>
           <SettingsPage
             onClose={() => setShowSettingsInfo(null)}
-            initialPageId={showSettingsInfo.pageId}
-            initialOptions={showSettingsInfo.options}
+            initialPageId={showSettingsInfo?.pageId || 'general'}
+            initialOptions={showSettingsInfo?.options}
             openProjects={openProjects}
           />
-        )}
-        {isUsageDashboardVisible && <UsageDashboard onClose={() => setIsUsageDashboardVisible(false)} />}
-        {isModelLibraryVisible && <ModelLibrary isVisible={isModelLibraryVisible} onClose={() => setIsModelLibraryVisible(false)} />}
+        </Activity>
+        <Activity mode={isUsageDashboardVisible ? 'visible' : 'hidden'}>
+          <UsageDashboard onClose={() => setIsUsageDashboardVisible(false)} />
+        </Activity>
+        <Activity mode={isModelLibraryVisible ? 'visible' : 'hidden'}>
+          <ModelLibrary onClose={() => setIsModelLibraryVisible(false)} />
+        </Activity>
         {releaseNotesContent && versions && (
           <HtmlInfoDialog
             title={`${t('settings.about.releaseNotes')} - ${versions.aiderDeskCurrentVersion}`}
@@ -449,7 +453,9 @@ export const Home = () => {
             onClose={handleCloseReleaseNotes}
           />
         )}
-        {!releaseNotesContent && <TelemetryInfoDialog />}
+        <Activity mode={releaseNotesContent ? 'hidden' : 'visible'}>
+          <TelemetryInfoDialog />
+        </Activity>
         <div className="flex-1 overflow-hidden relative">
           {openProjects.length > 0 ? renderProjectPanels() : <NoProjectsOpen onOpenProject={() => setIsOpenProjectDialogVisible(true)} />}
         </div>

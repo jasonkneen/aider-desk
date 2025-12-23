@@ -14,7 +14,7 @@ import { HiXMark } from 'react-icons/hi2';
 import { useDebounce, useLongPress } from '@reactuses/core';
 
 import { useTask } from '@/contexts/TaskContext';
-import { getSortedVisibleTasks } from '@/utils/taskUtils';
+import { getSortedVisibleTasks } from '@/utils/task-utils';
 import { Input } from '@/components/common/Input';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { Button } from '@/components/common/Button';

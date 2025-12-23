@@ -190,6 +190,7 @@
     "all": "All",
     "refresh": "Refresh",
     "selectProvider": "Select a Provider to Configure",
+    "editProvider": "Edit Provider",
     "profileForm": {
       "title": "Configure Profile for {{provider}} Provider",
       "name": "Profile Name",

@@ -35,7 +35,6 @@ import { useModelProviders } from '@/contexts/ModelProviderContext';
 import { useTask } from '@/contexts/TaskContext';
 import { useAgents } from '@/contexts/AgentsContext';
 import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
-import { getSortedVisibleTasks } from '@/utils/taskUtils';
 
 type AddFileDialogOptions = {
   readOnly: boolean;
@@ -56,16 +55,10 @@ type Props = {
   isActive?: boolean;
   showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
   shouldFocusPrompt?: boolean;
-  allTasks?: TaskData[];
-  onTaskSelect?: (taskId: string) => void;
-  onDeleteTask?: (taskId: string) => void;
 };
 
 export const TaskView = forwardRef<TaskViewRef, Props>(
-  (
-    { project, task, updateTask, inputHistory, isActive = false, showSettingsPage, shouldFocusPrompt = false, allTasks = [], onTaskSelect, onDeleteTask },
-    ref,
-  ) => {
+  ({ project, task, updateTask, inputHistory, isActive = false, showSettingsPage, shouldFocusPrompt = false }, ref) => {
     const { t } = useTranslation();
     const { settings } = useSettings();
     const { TASK_HOTKEYS } = useConfiguredHotkeys();
@@ -118,41 +111,6 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       }
     }, [shouldFocusPrompt, isActive]);
 
-    const switchToTaskByIndex = useCallback(
-      (index: number) => {
-        const sortedTasks = getSortedVisibleTasks(allTasks, false, '');
-        if (index < sortedTasks.length) {
-          const targetTask = sortedTasks[index];
-          if (targetTask && targetTask.id !== task.id && onTaskSelect) {
-            onTaskSelect(targetTask.id);
-          }
-        }
-      },
-      [allTasks, task.id, onTaskSelect],
-    );
-
-    // Switch to specific task tabs (Ctrl + 1-9)
-    useHotkeys(
-      [
-        TASK_HOTKEYS.SWITCH_TASK_1,
-        TASK_HOTKEYS.SWITCH_TASK_2,
-        TASK_HOTKEYS.SWITCH_TASK_3,
-        TASK_HOTKEYS.SWITCH_TASK_4,
-        TASK_HOTKEYS.SWITCH_TASK_5,
-        TASK_HOTKEYS.SWITCH_TASK_6,
-        TASK_HOTKEYS.SWITCH_TASK_7,
-        TASK_HOTKEYS.SWITCH_TASK_8,
-        TASK_HOTKEYS.SWITCH_TASK_9,
-      ].join(','),
-      (e) => {
-        e.preventDefault();
-        const index = parseInt(e.key) - 1;
-        switchToTaskByIndex(index);
-      },
-      { enabled: isActive, scopes: 'task', enableOnFormTags: true, enableOnContentEditable: true },
-      [allTasks, task.id, onTaskSelect, switchToTaskByIndex],
-    );
-
     // Focus prompt field
     useHotkeys(
       TASK_HOTKEYS.FOCUS_PROMPT,
@@ -161,19 +119,6 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
         promptFieldRef.current?.focus();
       },
       { enabled: isActive, scopes: 'task', enableOnFormTags: true, enableOnContentEditable: true },
-    );
-
-    // Close current task
-    useHotkeys(
-      TASK_HOTKEYS.CLOSE_TASK,
-      (e) => {
-        e.preventDefault();
-        if (onDeleteTask) {
-          onDeleteTask(task.id);
-        }
-      },
-      { enabled: isActive, scopes: 'task', enableOnFormTags: true, enableOnContentEditable: true },
-      [task.id, onDeleteTask],
     );
 
     const currentModel = useMemo(() => {
