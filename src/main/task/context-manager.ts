@@ -606,10 +606,10 @@ export class ContextManager {
           // Process combined reasoning and text content
           if (hasReasoning || hasText) {
             let finalContent = '';
-            if (hasReasoning && hasText) {
+            if (hasReasoning) {
               finalContent = `${THINKING_RESPONSE_STAR_TAG}${reasoningContent.trim()}${ANSWER_RESPONSE_START_TAG}${textContent.trim()}`;
             } else {
-              finalContent = reasoningContent || textContent;
+              finalContent = textContent;
             }
 
             const responseCompletedData: ResponseCompletedData = {

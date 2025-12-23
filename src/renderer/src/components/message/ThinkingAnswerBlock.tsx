@@ -1,7 +1,9 @@
 import { MouseEvent, useState } from 'react';
-import { FaBrain, FaChevronDown, FaChevronRight } from 'react-icons/fa';
+import { FaChevronDown, FaChevronRight } from 'react-icons/fa';
+import { TfiThought } from 'react-icons/tfi';
 import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
+import { AnimatePresence, motion } from 'framer-motion';
 
 import { CopyMessageButton } from './CopyMessageButton';
 
@@ -17,16 +19,25 @@ type Props = {
 
 export const ThinkingAnswerBlock = ({ thinking, answer, baseDir = '', allFiles = [], renderMarkdown }: Props) => {
   const { t } = useTranslation();
-  const [isThinkingExpanded, setIsThinkingExpanded] = useState(false);
   const parsedThinking = useParsedContent(baseDir, thinking, allFiles, renderMarkdown);
   const parsedAnswer = useParsedContent(baseDir, answer, allFiles, renderMarkdown);
+  const hasAnswer = Boolean(answer && parsedAnswer);
+
+  // Internal state for manual toggle control
+  const [manualToggleState, setManualToggleState] = useState<boolean | null>(null);
+
+  // Determine expansion state:
+  // - Start expanded (true) when there's no answer
+  // - When answer arrives, auto-collapse to false
+  // - Manual toggle overrides auto-collapse
+  const isThinkingExpanded = manualToggleState !== null ? manualToggleState : !hasAnswer;
 
   const handleToggleThinking = (e: MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
-    setIsThinkingExpanded(!isThinkingExpanded);
+    setManualToggleState(!isThinkingExpanded);
   };
 
-  if (!parsedThinking && !parsedAnswer) {
+  if (!parsedThinking) {
     return null;
   }
 
@@ -36,22 +47,34 @@ export const ThinkingAnswerBlock = ({ thinking, answer, baseDir = '', allFiles =
       {parsedThinking && (
         <div className="border border-border-default-dark rounded-md overflow-hidden ml-2">
           <div
-            className="flex items-center justify-between gap-2 px-3 py-2 bg-bg-secondary-light cursor-pointer hover:bg-bg-tertiary w-full"
+            className="flex items-center justify-between gap-2 px-3 py-1 bg-bg-secondary-light cursor-pointer hover:bg-bg-tertiary w-full"
             onClick={handleToggleThinking}
           >
             <div className="flex items-center gap-2 w-full">
-              <div className={`text-text-secondary ${!answer ? 'animate-pulse' : ''}`}>
-                <FaBrain className="w-4 h-4" />
+              <div className="text-text-secondary">
+                <TfiThought className="w-4 h-4" />
               </div>
-              <div className={`font-medium text-text-primary flex-1 ${!answer ? 'animate-pulse' : ''}`}>{t('thinkingAnswer.thinking')}</div>
+              <div className="font-medium text-text-secondary flex-1">{t('thinkingAnswer.thinking')}</div>
             </div>
             {thinking && <CopyMessageButton content={thinking} className="text-text-muted-dark hover:text-text-tertiary" />}
-            <div className="text-text-secondary">{isThinkingExpanded ? <FaChevronDown className="w-3 h-3" /> : <FaChevronRight className="w-3 h-3" />}</div>
+            <motion.div initial={false} animate={{ rotate: isThinkingExpanded ? 0 : -90 }} transition={{ duration: 0.2 }} className="text-text-secondary">
+              {isThinkingExpanded ? <FaChevronDown className="w-3 h-3" /> : <FaChevronRight className="w-3 h-3" />}
+            </motion.div>
           </div>
 
-          {isThinkingExpanded && (
-            <div className={clsx('p-3 text-xs text-text-tertiary bg-bg-secondary', !renderMarkdown && 'whitespace-pre-wrap break-words')}>{parsedThinking}</div>
-          )}
+          <AnimatePresence initial={false}>
+            {isThinkingExpanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+                className={clsx('p-3 text-xs text-text-primary bg-bg-secondary overflow-hidden', !renderMarkdown && 'whitespace-pre-wrap break-words')}
+              >
+                {parsedThinking}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
       {/* Answer section - only show if we have an answer or we're streaming */}

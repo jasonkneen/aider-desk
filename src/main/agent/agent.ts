@@ -1169,10 +1169,7 @@ export class Agent {
       const message: ResponseMessage = {
         id: currentResponseId,
         action: 'response',
-        content:
-          reasoningText?.trim() && text?.trim()
-            ? `${THINKING_RESPONSE_STAR_TAG}${reasoningText.trim()}${ANSWER_RESPONSE_START_TAG}${text.trim()}`
-            : reasoningText?.trim() || text,
+        content: reasoningText?.trim() ? `${THINKING_RESPONSE_STAR_TAG}${reasoningText.trim()}${ANSWER_RESPONSE_START_TAG}${text.trim()}` : text,
         finished: true,
         // only send usage report if there are no tool results
         usageReport: toolResults?.length ? undefined : usageReport,
