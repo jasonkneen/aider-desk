@@ -69,6 +69,14 @@ src/
     agent/
       middlewares/
         extract-reasoning-middleware.ts
+      templates/
+        compiler/
+          template-compiler.ts
+        helpers/
+          conditional.ts
+          formatting.ts
+          index.ts
+        types.ts
       tools/
         aider.ts
         approval-manager.ts
@@ -5264,6 +5272,128 @@ import logger from '@/logger';
 // a prefix of "searchedText". We go from the end of text inward.
 
 ================
+File: src/main/agent/templates/compiler/template-compiler.ts
+================
+import fs from 'fs/promises';
+import path from 'path';
+⋮----
+import Handlebars from 'handlebars';
+⋮----
+import { registerAllHelpers } from '../helpers';
+⋮----
+import { RESOURCES_DIR } from '@/constants';
+import logger from '@/logger';
+⋮----
+export class TemplateCompiler
+⋮----
+constructor(templatesDir: string = path.join(RESOURCES_DIR, 'prompts'))
+⋮----
+async compileAll(): Promise<void>
+⋮----
+render(name: string, data: unknown): string
+
+================
+File: src/main/agent/templates/helpers/conditional.ts
+================
+import Handlebars from 'handlebars';
+import { ToolApprovalState } from '@common/types';
+⋮----
+export const registerConditionalHelpers = (): void =>
+
+================
+File: src/main/agent/templates/helpers/formatting.ts
+================
+import Handlebars from 'handlebars';
+⋮----
+export const registerFormattingHelpers = (): void =>
+
+================
+File: src/main/agent/templates/helpers/index.ts
+================
+import { registerConditionalHelpers } from './conditional';
+import { registerFormattingHelpers } from './formatting';
+⋮----
+export const registerAllHelpers = (): void =>
+
+================
+File: src/main/agent/templates/types.ts
+================
+import { AgentProfile } from '@common/types';
+⋮----
+export interface ToolPermissions {
+  aiderTools: boolean;
+  powerTools: {
+    semanticSearch: boolean;
+    fileRead: boolean;
+    fileWrite: boolean;
+    fileEdit: boolean;
+    glob: boolean;
+    grep: boolean;
+    bash: boolean;
+    anyEnabled: boolean;
+  };
+  todoTools: boolean;
+  subagents: boolean;
+  memory: {
+    enabled: boolean;
+    retrieveAllowed: boolean;
+    storeAllowed: boolean;
+    listAllowed: boolean;
+    deleteAllowed: boolean;
+  };
+  skills: {
+    allowed: boolean;
+  };
+  autoApprove: boolean;
+}
+⋮----
+export interface SystemPromptData {
+  projectDir: string;
+  taskDir: string;
+  agentProfile: AgentProfile;
+  additionalInstructions?: string;
+  osName: string;
+  currentDate: string;
+  rulesFiles: string;
+  customInstructions: string;
+  toolPermissions: ToolPermissions;
+  toolConstants: Record<string, string>;
+  workflow: string;
+  projectGitRootDirectory?: string;
+}
+⋮----
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface InitProjectPromptData {
+  // Static for now
+}
+⋮----
+// Static for now
+⋮----
+export interface CompactConversationPromptData {
+  customInstructions?: string;
+}
+⋮----
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface CommitMessagePromptData {
+  // Static for now
+}
+⋮----
+// Static for now
+⋮----
+export interface ConflictResolutionSystemPromptData {
+  POWER_TOOL_GROUP_NAME: string;
+  TOOL_GROUP_NAME_SEPARATOR: string;
+  POWER_TOOL_FILE_EDIT: string;
+}
+⋮----
+export interface ConflictResolutionPromptData {
+  filePath: string;
+  basePath?: string;
+  oursPath?: string;
+  theirsPath?: string;
+}
+
+================
 File: src/main/agent/tools/aider.ts
 ================
 import fs from 'fs/promises';
@@ -6357,17 +6487,27 @@ import {
   SKILLS_TOOL_GROUP_NAME,
 } from '@common/tools';
 ⋮----
+import { TemplateCompiler } from './templates/compiler/template-compiler';
+import {
+  SystemPromptData,
+  InitProjectPromptData,
+  CompactConversationPromptData,
+  CommitMessagePromptData,
+  ConflictResolutionSystemPromptData,
+  ConflictResolutionPromptData,
+  ToolPermissions,
+} from './templates/types';
+⋮----
 import logger from '@/logger';
 import { Task } from '@/task';
 ⋮----
-const generateWorkflow = (
-  autoApprove: boolean,
-  useSubagents: boolean,
-  usePowerTools: boolean,
-  skillsAllowed: boolean,
-  retrieveMemoryAllowed: boolean,
-  storeMemoryAllowed: boolean,
-): string =>
+export const initializeTemplates = async (): Promise<void> =>
+⋮----
+const calculateToolPermissions = (settings: SettingsData, agentProfile: AgentProfile, autoApprove: boolean): ToolPermissions =>
+⋮----
+const isAllowed = (tool: string) => agentProfile.toolApprovals[`$
+⋮----
+anyEnabled: false, // Will be set below
 ⋮----
 export const getSystemPrompt = async (
   settings: SettingsData,
@@ -6377,13 +6517,9 @@ export const getSystemPrompt = async (
   additionalInstructions?: string,
 ) =>
 ⋮----
-// Check individual power tool permissions
-⋮----
-// Check if any power tools are allowed
+workflow: '', // Placeholder
 ⋮----
 const getRulesContent = async (task: Task, agentProfile?: AgentProfile) =>
-⋮----
-// Resolve path - handle ~/ prefix and relative paths
 ⋮----
 export const getInitProjectPrompt = () =>
 ⋮----
@@ -12395,6 +12531,7 @@ import { delay } from '@common/utils';
 ⋮----
 import logger from '@/logger';
 import { getCurrentPythonLibVersion, getLatestPythonLibVersion, getPythonVenvBinPath } from '@/utils';
+import { initializeTemplates } from '@/agent/prompts';
 import {
   AIDER_DESK_DATA_DIR,
   SETUP_COMPLETE_FILENAME,
@@ -12472,7 +12609,9 @@ import { z } from 'zod/v3';
 // Add tools to the server
 ⋮----
 // Start the server
-async function main()
+export async function main()
+⋮----
+// eslint-disable-next-line no-console
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
@@ -19467,7 +19606,7 @@ import { AgentProfile } from '@common/types';
 ⋮----
 import { useApi } from '@/contexts/ApiContext';
 ⋮----
-interface AgentsContextType {
+export interface AgentsContextType {
   profiles: AgentProfile[];
   loading: boolean;
   error: string | null;
@@ -19561,7 +19700,7 @@ import { Model, ProviderProfile } from '@common/types';
 ⋮----
 import { useApi } from '@/contexts/ApiContext';
 ⋮----
-type ModelProviderContextType = {
+export type ModelProviderContextType = {
   refresh: () => void;
   models: Model[];
   providers: ProviderProfile[];
@@ -19683,11 +19822,10 @@ import {
 } from '@/types/message';
 import { useApi } from '@/contexts/ApiContext';
 ⋮----
-interface TaskState {
+export interface TaskState {
   loading: boolean;
   loaded: boolean;
   processing: boolean;
-  finishAcknowledged: boolean;
   messages: Message[];
   tokensInfo: TokensInfoData | null;
   question: QuestionData | null;
@@ -19699,7 +19837,7 @@ interface TaskState {
   aiderModelsData: ModelsData | null;
 }
 ⋮----
-interface TaskContextType {
+export interface TaskContextType {
   getTaskState: (taskId: string, loadIfNotLoaded?: boolean) => TaskState | null;
   clearSession: (taskId: string, messagesOnly: boolean) => void;
   restartTask: (taskId: string) => void;
@@ -23016,6 +23154,12 @@ const App = () =>
 File: src/renderer/src/env.d.ts
 ================
 /// <reference types="vite/client" />
+⋮----
+import { ApplicationAPI } from '@common/api';
+⋮----
+interface Window {
+    api: ApplicationAPI;
+  }
 
 ================
 File: src/renderer/src/fonts.css
@@ -23253,6 +23397,10 @@ extraResources:
     to: mcp-server
     filter:
       - '**/*'
+  - from: ./resources/prompts
+    to: prompts
+    filter:
+      - '**/*'
 asarUnpack:
   - '**/node_modules/sharp/**/*'
   - '**/node_modules/@img/**/*'
@@ -23327,7 +23475,7 @@ File: package.json
 ================
 {
   "name": "aider-desk",
-  "version": "0.45.0-dev",
+  "version": "0.46.0-dev",
   "description": "Aider desktop application wrapper",
   "main": "./out/main/index.js",
   "author": "Hotovo",
@@ -23342,7 +23490,7 @@ File: package.json
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck:mcp": "tsc --noEmit -p tsconfig.mcp-server.json --composite false",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web && npm run typecheck:mcp",
     "start": "electron-vite preview",
     "dev": "electron-vite dev",
     "dev:no-hmr": "NO_HMR=true electron-vite dev",
@@ -23355,18 +23503,25 @@ File: package.json
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux",
     "prepare": "husky",
-    "start:server": "AIDER_DESK_HEADLESS=true node out/server/runner.js"
+    "start:server": "AIDER_DESK_HEADLESS=true node out/server/runner.js",
+    "test": "npm run test:node && npm run test:web",
+    "test:node": "NODE_ENV=test vitest run --config vitest.config.node.ts",
+    "test:web": "NODE_ENV=test vitest run --config vitest.config.web.ts",
+    "test:mcp": "NODE_ENV=test vitest run --config vitest.config.mcp.ts",
+    "test:watch": "concurrently \"npm run test:node -- --watch\" \"npm run test:web -- --watch\"",
+    "test:coverage": "npm run test:node -- --coverage && npm run test:web -- --coverage",
+    "test:ui": "vitest --config vitest.config.web.ts --ui"
   },
   "dependencies": {
-    "@ai-sdk/amazon-bedrock": "^3.0.70",
+    "@ai-sdk/amazon-bedrock": "^3.0.71",
     "@ai-sdk/anthropic": "^2.0.56",
-    "@ai-sdk/azure": "^2.0.88",
+    "@ai-sdk/azure": "^2.0.90",
     "@ai-sdk/cerebras": "^1.0.33",
     "@ai-sdk/deepseek": "^1.0.32",
-    "@ai-sdk/google": "^2.0.46",
-    "@ai-sdk/google-vertex": "^3.0.91",
+    "@ai-sdk/google": "^2.0.51",
+    "@ai-sdk/google-vertex": "^3.0.96",
     "@ai-sdk/groq": "^2.0.33",
-    "@ai-sdk/openai": "^2.0.86",
+    "@ai-sdk/openai": "^2.0.88",
     "@ai-sdk/provider": "^2.0.0",
     "@aws-crypto/sha256-js": "^5.0.0",
     "@aws-sdk/client-bedrock": "^3.887.0",
@@ -23386,7 +23541,7 @@ File: package.json
     "@homebridge/node-pty-prebuilt-multiarch": "^0.13.1",
     "@huggingface/transformers": "^3.8.1",
     "@lancedb/lancedb": "^0.22.3",
-    "@openrouter/ai-sdk-provider": "^1.5.3",
+    "@openrouter/ai-sdk-provider": "^1.5.4",
     "@opentelemetry/auto-instrumentations-node": "^0.62.0",
     "@opentelemetry/sdk-node": "^0.203.0",
     "@opentelemetry/sdk-trace-base": "^2.0.1",
@@ -23409,7 +23564,7 @@ File: package.json
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/addon-web-links": "^0.11.0",
     "@xterm/xterm": "^5.5.0",
-    "ai": "^5.0.113",
+    "ai": "^5.0.116",
     "apache-arrow": "18.1.0",
     "axios": "^1.8.3",
     "babel-plugin-react-compiler": "^19.1.0-rc.3",
@@ -23433,6 +23588,7 @@ File: package.json
     "glob": "^11.0.2",
     "google-auth-library": "^10.3.0",
     "gpt-tokenizer": "^2.9.0",
+    "handlebars": "^4.7.8",
     "hast-util-to-jsx-runtime": "^2.3.6",
     "html-to-image": "^1.11.13",
     "i18next": "^24.2.3",
@@ -23496,7 +23652,11 @@ File: package.json
     "@eslint/js": "^9.33.0",
     "@modelcontextprotocol/sdk": "^1.20.0",
     "@tailwindcss/typography": "^0.5.16",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.1",
+    "@testing-library/user-event": "^14.6.1",
     "@types/better-sqlite3": "^7.6.13",
+    "@types/handlebars": "^4.0.40",
     "@types/lodash": "^4.17.17",
     "@types/node": "^20.14.8",
     "@types/object-hash": "^3.0.6",
@@ -23510,8 +23670,11 @@ File: package.json
     "@types/tmp": "^0.2.6",
     "@types/yaml-front-matter": "^4.1.3",
     "@vitejs/plugin-react": "^5.0.4",
+    "@vitest/coverage-v8": "^4.0.16",
+    "@vitest/ui": "^4.0.16",
     "adm-zip": "^0.5.16",
     "autoprefixer": "^10.4.20",
+    "concurrently": "^9.2.1",
     "electron": "^37.6.0",
     "electron-builder": "^26.0.12",
     "electron-vite": "^4.0.1",
@@ -23525,6 +23688,7 @@ File: package.json
     "eslint-plugin-react-hooks": "^7.0.0",
     "globals": "^15.9.0",
     "husky": "^9.1.7",
+    "jsdom": "^27.3.0",
     "lint-staged": "^15.4.1",
     "node-fetch": "^3.3.2",
     "prettier": "^3.3.2",
@@ -23537,7 +23701,8 @@ File: package.json
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.46.1",
     "vite": "^7.1.10",
-    "vite-tsconfig-paths": "^5.1.4"
+    "vite-tsconfig-paths": "^5.1.4",
+    "vitest": "^4.0.16"
   },
   "lint-staged": {
     "*.{ts,tsx}": "eslint --fix"
