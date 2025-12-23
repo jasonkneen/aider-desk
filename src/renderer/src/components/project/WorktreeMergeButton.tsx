@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { FaDownload } from 'react-icons/fa6';
+import { FaArrowsRotate, FaBan, FaCodeMerge, FaCompress, FaDownload, FaFileLines, FaPlay, FaRobot } from 'react-icons/fa6';
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { WorktreeIntegrationStatus } from '@common/types';
@@ -123,36 +123,50 @@ export const WorktreeMergeButton = ({
         data-tooltip-id="merge-button-tooltip"
         data-tooltip-content={t('worktree.mergeTooltip')}
       >
-        <FaDownload className="w-4 h-4" />
+        <FaDownload className="w-3.5 h-3.5" />
         <MdKeyboardArrowDown className="w-3 h-3" />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full right-0 mt-1 bg-bg-primary-light border border-border-default-dark rounded shadow-lg z-50 min-w-[175px]">
-          <button onClick={handleMergeClick} className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-bg-tertiary transition-colors">
+        <div className="absolute top-full right-0 mt-1 bg-bg-primary-light border border-border-default-dark rounded shadow-lg z-50 min-w-[200px]">
+          <button
+            onClick={handleMergeClick}
+            className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-bg-tertiary transition-colors flex items-center gap-2"
+          >
+            <FaCodeMerge className="w-3.5 h-3.5" />
             {t('worktree.merge')}
           </button>
-          <button onClick={handleSquashClick} className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-bg-tertiary transition-colors">
+          <button
+            onClick={handleSquashClick}
+            className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-bg-tertiary transition-colors flex items-center gap-2"
+          >
+            <FaCompress className="w-3 h-3" />
             {t('worktree.squash')}
           </button>
           <button
             onClick={handleOnlyUncommittedClick}
-            className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-bg-tertiary transition-colors"
+            className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-bg-tertiary transition-colors flex items-center gap-2"
           >
+            <FaFileLines className="w-3.5 h-3.5 flex-shrink-0" />
             {t('worktree.onlyUncommitted')}
           </button>
 
           <div className="border-t border-border-default-dark my-1" />
 
-          <button onClick={handleRebaseClick} className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-bg-tertiary transition-colors">
+          <button
+            onClick={handleRebaseClick}
+            className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-bg-tertiary transition-colors flex items-center gap-2"
+          >
+            <FaArrowsRotate className="w-3.5 h-3.5 flex-shrink-0" />
             {t('worktree.rebaseFromBranch')}
           </button>
           {canAbortRebase && (
             <button
               onClick={handleAbortRebaseClick}
               disabled={!canAbortRebase}
-              className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-bg-tertiary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-bg-tertiary transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
+              <FaBan className="w-3.5 h-3.5 flex-shrink-0" />
               {t('worktree.abortRebase')}
             </button>
           )}
@@ -161,8 +175,9 @@ export const WorktreeMergeButton = ({
             <button
               onClick={handleContinueRebaseClick}
               disabled={!canContinueRebase}
-              className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-bg-tertiary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-bg-tertiary transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
+              <FaPlay className="w-3.5 h-3.5 flex-shrink-0" />
               {t('worktree.continueRebase')}
             </button>
           )}
@@ -170,8 +185,9 @@ export const WorktreeMergeButton = ({
             <button
               onClick={handleResolveWithAgentClick}
               disabled={!canResolveConflictsWithAgent}
-              className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-bg-tertiary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-3 py-1.5 text-left text-xs text-text-primary hover:bg-bg-tertiary transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
+              <FaRobot className="w-3.5 h-3.5 flex-shrink-0" />
               {t('worktree.resolveConflictsWithAgent')}
             </button>
           )}

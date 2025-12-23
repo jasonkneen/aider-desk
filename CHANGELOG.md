@@ -7,6 +7,7 @@
 - implemented templating system for agent prompts with modular structure
 - enhanced thinking block content handling
 - improved cursor styling for context file section headers
+- added icons to worktree merge related actions
 
 ## [0.45.0]
 
