@@ -363,9 +363,9 @@
       "about": "About"
     },
     "hotkeys": {
-      "projectHotkeys": "Project Hotkeys",
-      "taskHotkeys": "Task Hotkeys",
-      "dialogHotkeys": "Dialog Hotkeys",
+      "projectHotkeys": "Project",
+      "taskHotkeys": "Task",
+      "dialogHotkeys": "Dialogs",
       "closeProject": "Close Project",
       "newProject": "New Project",
       "usageDashboard": "Usage Dashboard",
@@ -384,7 +384,17 @@
       "hotkeyFormat": "Hotkey Format:",
       "modKey": "Use 'mod' for Cmd (Mac) or Ctrl (Windows/Linux)",
       "multipleKeys": "Separate multiple key combinations with commas",
-      "examples": "Examples: 'mod+w', 'ctrl+shift+t', 'alt+1,meta+1'"
+      "examples": "Examples: 'mod+w', 'ctrl+shift+t', 'alt+1,meta+1'",
+      "clickToRecord": "Click to record",
+      "recording": "Press keys...",
+      "addShortcut": "Add shortcut",
+      "editShortcut": "Edit shortcut",
+      "clearShortcut": "Clear shortcut",
+      "noShortcut": "No shortcut configured",
+      "recordShortcutDescription": "Press the record button below and then press the key combination you want to use as a shortcut.",
+      "pressKeysToRecord": "Press keys to record...",
+      "startRecording": "Start Recording",
+      "stopRecording": "Stop Recording"
     },
     "gui": "Appearance",
     "voice": {

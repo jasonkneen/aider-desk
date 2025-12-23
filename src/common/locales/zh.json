@@ -383,7 +383,17 @@
       "hotkeyFormat": "快捷键格式：",
       "modKey": "使用 'mod' 表示 Cmd (Mac) 或 Ctrl (Windows/Linux)",
       "multipleKeys": "用逗号分隔多个按键组合",
-      "examples": "示例：'mod+w'、'ctrl+shift+t'、'alt+1,meta+1'"
+      "examples": "示例：'mod+w'、'ctrl+shift+t'、'alt+1,meta+1'",
+      "clickToRecord": "点击录制",
+      "recording": "按下按键...",
+      "addShortcut": "添加快捷键",
+      "editShortcut": "编辑快捷键",
+      "clearShortcut": "清除快捷键",
+      "noShortcut": "未配置快捷键",
+      "recordShortcutDescription": "点击下方的录制按钮，然后按下您想要用作快捷键的组合键。",
+      "pressKeysToRecord": "按键录制中...",
+      "startRecording": "开始录制",
+      "stopRecording": "停止录制"
     },
     "gui": "GUI",
     "voice": {

@@ -15,7 +15,6 @@ import { ServerSettings } from '@/components/settings/ServerSettings';
 import { MemorySettings } from '@/components/settings/MemorySettings';
 import { VoiceSettings } from '@/components/settings/VoiceSettings';
 import { HotkeysSettings } from '@/components/settings/HotkeysSettings';
-import { DEFAULT_HOTKEY_CONFIG } from '@/utils/hotkeys';
 
 type Props = {
   settings: SettingsData;
@@ -242,12 +241,7 @@ export const Settings = ({
       case 'voice':
         return <VoiceSettings providers={providers} setProviders={setProviders} initialProviderId={initialOptions?.providerId as string | undefined} />;
       case 'hotkeys':
-        return (
-          <HotkeysSettings
-            hotkeyConfig={settings.hotkeyConfig || DEFAULT_HOTKEY_CONFIG}
-            onSave={(config) => updateSettings({ ...settings, hotkeyConfig: config })}
-          />
-        );
+        return <HotkeysSettings settings={settings} setSettings={updateSettings} />;
       case 'server':
         return <ServerSettings settings={settings} setSettings={updateSettings} />;
       case 'about':

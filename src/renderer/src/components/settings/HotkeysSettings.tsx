@@ -1,143 +1,122 @@
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { HotkeyConfig } from '@common/types';
+import { HotkeyConfig, SettingsData } from '@common/types';
+
+import { Section } from '../common/Section';
+
+import { HotkeyConfig as HotkeyConfigRow } from './HotkeyConfig';
 
 import { Button } from '@/components/common/Button';
-import { Input } from '@/components/common/Input';
 import { DEFAULT_HOTKEY_CONFIG } from '@/utils/hotkeys';
 
 type Props = {
-  hotkeyConfig: HotkeyConfig;
-  onSave: (config: HotkeyConfig) => void;
+  settings: SettingsData;
+  setSettings: (settings: SettingsData) => void;
 };
 
-export const HotkeysSettings = ({ hotkeyConfig, onSave }: Props) => {
+export const HotkeysSettings = ({ settings, setSettings }: Props) => {
   const { t } = useTranslation();
+
   const mergedHotkeyConfig: HotkeyConfig = {
     ...DEFAULT_HOTKEY_CONFIG,
-    ...hotkeyConfig,
+    ...settings.hotkeyConfig,
     projectHotkeys: {
       ...DEFAULT_HOTKEY_CONFIG.projectHotkeys,
-      ...(hotkeyConfig?.projectHotkeys ?? {}),
+      ...(settings.hotkeyConfig?.projectHotkeys ?? {}),
     },
     taskHotkeys: {
       ...DEFAULT_HOTKEY_CONFIG.taskHotkeys,
-      ...(hotkeyConfig?.taskHotkeys ?? {}),
+      ...(settings.hotkeyConfig?.taskHotkeys ?? {}),
     },
     dialogHotkeys: {
       ...DEFAULT_HOTKEY_CONFIG.dialogHotkeys,
-      ...(hotkeyConfig?.dialogHotkeys ?? {}),
+      ...(settings.hotkeyConfig?.dialogHotkeys ?? {}),
     },
   };
-  const [config, setConfig] = useState<HotkeyConfig>(mergedHotkeyConfig);
 
   const handleChange = (category: keyof HotkeyConfig, key: string, value: string) => {
-    setConfig((prev) => {
-      const updatedConfig = {
-        ...prev,
-        [category]: {
-          ...prev[category],
-          [key]: value,
-        },
-      };
-      onSave(updatedConfig);
-      return updatedConfig;
+    const updatedHotkeyConfig: HotkeyConfig = {
+      ...mergedHotkeyConfig,
+      [category]: {
+        ...(mergedHotkeyConfig[category] as Record<string, string>),
+        [key]: value,
+      },
+    };
+
+    setSettings({
+      ...settings,
+      hotkeyConfig: updatedHotkeyConfig,
     });
   };
 
   const handleReset = () => {
-    const resetConfig: HotkeyConfig = {
-      ...DEFAULT_HOTKEY_CONFIG,
-      projectHotkeys: { ...DEFAULT_HOTKEY_CONFIG.projectHotkeys },
-      taskHotkeys: { ...DEFAULT_HOTKEY_CONFIG.taskHotkeys },
-      dialogHotkeys: { ...DEFAULT_HOTKEY_CONFIG.dialogHotkeys },
-    };
-    setConfig(resetConfig);
-    onSave(resetConfig);
+    setSettings({
+      ...settings,
+      hotkeyConfig: {
+        ...DEFAULT_HOTKEY_CONFIG,
+        projectHotkeys: { ...DEFAULT_HOTKEY_CONFIG.projectHotkeys },
+        taskHotkeys: { ...DEFAULT_HOTKEY_CONFIG.taskHotkeys },
+        dialogHotkeys: { ...DEFAULT_HOTKEY_CONFIG.dialogHotkeys },
+      },
+    });
   };
 
-  const renderHotkeyInput = (category: keyof HotkeyConfig, key: string, label: string) => {
-    const categoryConfig = config[category] as Record<string, string>;
-    const defaultCategoryConfig = DEFAULT_HOTKEY_CONFIG[category] as Record<string, string>;
-    const value = categoryConfig?.[key] ?? defaultCategoryConfig?.[key] ?? '';
+  const renderHotkeyConfig = (category: keyof HotkeyConfig, key: string, label: string) => {
+    const categoryConfig = mergedHotkeyConfig[category] as Record<string, string>;
+    const value = categoryConfig?.[key] ?? '';
 
-    return (
-      <div key={key} className="flex items-center justify-between py-2 border-b border-border-default-dark last:border-b-0">
-        <label className="text-sm text-text-primary flex-1">{label}</label>
-        <Input
-          value={value}
-          onChange={(e) => handleChange(category, key, e.target.value)}
-          className="w-48"
-          size="sm"
-          placeholder={t('settings.hotkeys.enterHotkey')}
-        />
-      </div>
-    );
+    return <HotkeyConfigRow key={key} label={label} value={value} onChange={(newValue) => handleChange(category, key, newValue)} size="sm" />;
   };
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-bg-secondary scrollbar-thumb-bg-tertiary">
-        <div className="space-y-6">
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-md font-semibold text-text-primary uppercase">{t('settings.hotkeys.projectHotkeys')}</h3>
-              <Button variant="text" size="xs" onClick={handleReset}>
-                {t('settings.hotkeys.resetToDefaults')}
-              </Button>
-            </div>
-            <div className="bg-bg-secondary-light rounded-lg p-4">
-              {renderHotkeyInput('projectHotkeys', 'closeProject', t('settings.hotkeys.closeProject'))}
-              {renderHotkeyInput('projectHotkeys', 'newProject', t('settings.hotkeys.newProject'))}
-              {renderHotkeyInput('projectHotkeys', 'usageDashboard', t('settings.hotkeys.usageDashboard'))}
-              {renderHotkeyInput('projectHotkeys', 'modelLibrary', t('settings.hotkeys.modelLibrary'))}
-              {renderHotkeyInput('projectHotkeys', 'settings', t('settings.hotkeys.settings'))}
-              {renderHotkeyInput('projectHotkeys', 'cycleNextProject', t('settings.hotkeys.cycleNextProject'))}
-              {renderHotkeyInput('projectHotkeys', 'cyclePrevProject', t('settings.hotkeys.cyclePrevProject'))}
-              {renderHotkeyInput('projectHotkeys', 'switchProject1', t('settings.hotkeys.switchProject', { number: 1 }))}
-              {renderHotkeyInput('projectHotkeys', 'switchProject2', t('settings.hotkeys.switchProject', { number: 2 }))}
-              {renderHotkeyInput('projectHotkeys', 'switchProject3', t('settings.hotkeys.switchProject', { number: 3 }))}
-              {renderHotkeyInput('projectHotkeys', 'switchProject4', t('settings.hotkeys.switchProject', { number: 4 }))}
-              {renderHotkeyInput('projectHotkeys', 'switchProject5', t('settings.hotkeys.switchProject', { number: 5 }))}
-              {renderHotkeyInput('projectHotkeys', 'switchProject6', t('settings.hotkeys.switchProject', { number: 6 }))}
-              {renderHotkeyInput('projectHotkeys', 'switchProject7', t('settings.hotkeys.switchProject', { number: 7 }))}
-              {renderHotkeyInput('projectHotkeys', 'switchProject8', t('settings.hotkeys.switchProject', { number: 8 }))}
-              {renderHotkeyInput('projectHotkeys', 'switchProject9', t('settings.hotkeys.switchProject', { number: 9 }))}
-            </div>
+    <div className="space-y-6 h-full flex flex-col">
+      <div className="space-y-6 flex-1">
+        <Section id="hotkeys-project" title={t('settings.hotkeys.projectHotkeys')}>
+          <div className="px-5 py-3 space-y-1">
+            {renderHotkeyConfig('projectHotkeys', 'closeProject', t('settings.hotkeys.closeProject'))}
+            {renderHotkeyConfig('projectHotkeys', 'newProject', t('settings.hotkeys.newProject'))}
+            {renderHotkeyConfig('projectHotkeys', 'usageDashboard', t('settings.hotkeys.usageDashboard'))}
+            {renderHotkeyConfig('projectHotkeys', 'modelLibrary', t('settings.hotkeys.modelLibrary'))}
+            {renderHotkeyConfig('projectHotkeys', 'settings', t('settings.hotkeys.settings'))}
+            {renderHotkeyConfig('projectHotkeys', 'cycleNextProject', t('settings.hotkeys.cycleNextProject'))}
+            {renderHotkeyConfig('projectHotkeys', 'cyclePrevProject', t('settings.hotkeys.cyclePrevProject'))}
+            {renderHotkeyConfig('projectHotkeys', 'switchProject1', t('settings.hotkeys.switchProject', { number: 1 }))}
+            {renderHotkeyConfig('projectHotkeys', 'switchProject2', t('settings.hotkeys.switchProject', { number: 2 }))}
+            {renderHotkeyConfig('projectHotkeys', 'switchProject3', t('settings.hotkeys.switchProject', { number: 3 }))}
+            {renderHotkeyConfig('projectHotkeys', 'switchProject4', t('settings.hotkeys.switchProject', { number: 4 }))}
+            {renderHotkeyConfig('projectHotkeys', 'switchProject5', t('settings.hotkeys.switchProject', { number: 5 }))}
+            {renderHotkeyConfig('projectHotkeys', 'switchProject6', t('settings.hotkeys.switchProject', { number: 6 }))}
+            {renderHotkeyConfig('projectHotkeys', 'switchProject7', t('settings.hotkeys.switchProject', { number: 7 }))}
+            {renderHotkeyConfig('projectHotkeys', 'switchProject8', t('settings.hotkeys.switchProject', { number: 8 }))}
+            {renderHotkeyConfig('projectHotkeys', 'switchProject9', t('settings.hotkeys.switchProject', { number: 9 }))}
           </div>
+        </Section>
 
-          <div>
-            <h3 className="text-md font-semibold text-text-primary mb-3 uppercase">{t('settings.hotkeys.taskHotkeys')}</h3>
-            <div className="bg-bg-secondary-light rounded-lg p-4">
-              {renderHotkeyInput('taskHotkeys', 'focusPrompt', t('settings.hotkeys.focusPrompt'))}
-              {renderHotkeyInput('taskHotkeys', 'newTask', t('settings.hotkeys.newTask'))}
-              {renderHotkeyInput('taskHotkeys', 'closeTask', t('settings.hotkeys.closeTask'))}
-              {renderHotkeyInput('taskHotkeys', 'switchTask1', t('settings.hotkeys.switchTask', { number: 1 }))}
-              {renderHotkeyInput('taskHotkeys', 'switchTask2', t('settings.hotkeys.switchTask', { number: 2 }))}
-              {renderHotkeyInput('taskHotkeys', 'switchTask3', t('settings.hotkeys.switchTask', { number: 3 }))}
-              {renderHotkeyInput('taskHotkeys', 'switchTask4', t('settings.hotkeys.switchTask', { number: 4 }))}
-              {renderHotkeyInput('taskHotkeys', 'switchTask5', t('settings.hotkeys.switchTask', { number: 5 }))}
-              {renderHotkeyInput('taskHotkeys', 'switchTask6', t('settings.hotkeys.switchTask', { number: 6 }))}
-              {renderHotkeyInput('taskHotkeys', 'switchTask7', t('settings.hotkeys.switchTask', { number: 7 }))}
-              {renderHotkeyInput('taskHotkeys', 'switchTask8', t('settings.hotkeys.switchTask', { number: 8 }))}
-              {renderHotkeyInput('taskHotkeys', 'switchTask9', t('settings.hotkeys.switchTask', { number: 9 }))}
-            </div>
+        <Section id="hotkeys-task" title={t('settings.hotkeys.taskHotkeys')}>
+          <div className="px-5 py-3 space-y-1">
+            {renderHotkeyConfig('taskHotkeys', 'focusPrompt', t('settings.hotkeys.focusPrompt'))}
+            {renderHotkeyConfig('taskHotkeys', 'newTask', t('settings.hotkeys.newTask'))}
+            {renderHotkeyConfig('taskHotkeys', 'closeTask', t('settings.hotkeys.closeTask'))}
+            {renderHotkeyConfig('taskHotkeys', 'switchTask1', t('settings.hotkeys.switchTask', { number: 1 }))}
+            {renderHotkeyConfig('taskHotkeys', 'switchTask2', t('settings.hotkeys.switchTask', { number: 2 }))}
+            {renderHotkeyConfig('taskHotkeys', 'switchTask3', t('settings.hotkeys.switchTask', { number: 3 }))}
+            {renderHotkeyConfig('taskHotkeys', 'switchTask4', t('settings.hotkeys.switchTask', { number: 4 }))}
+            {renderHotkeyConfig('taskHotkeys', 'switchTask5', t('settings.hotkeys.switchTask', { number: 5 }))}
+            {renderHotkeyConfig('taskHotkeys', 'switchTask6', t('settings.hotkeys.switchTask', { number: 6 }))}
+            {renderHotkeyConfig('taskHotkeys', 'switchTask7', t('settings.hotkeys.switchTask', { number: 7 }))}
+            {renderHotkeyConfig('taskHotkeys', 'switchTask8', t('settings.hotkeys.switchTask', { number: 8 }))}
+            {renderHotkeyConfig('taskHotkeys', 'switchTask9', t('settings.hotkeys.switchTask', { number: 9 }))}
           </div>
+        </Section>
 
-          <div>
-            <h3 className="text-md font-semibold text-text-primary mb-3 uppercase">{t('settings.hotkeys.dialogHotkeys')}</h3>
-            <div className="bg-bg-secondary-light rounded-lg p-4">{renderHotkeyInput('dialogHotkeys', 'browseFolder', t('settings.hotkeys.browseFolder'))}</div>
-          </div>
+        <Section id="hotkeys-dialog" title={t('settings.hotkeys.dialogHotkeys')}>
+          <div className="px-5 py-3 space-y-1">{renderHotkeyConfig('dialogHotkeys', 'browseFolder', t('settings.hotkeys.browseFolder'))}</div>
+        </Section>
+      </div>
 
-          <div className="bg-bg-tertiary-strong rounded-lg p-4">
-            <p className="text-xs text-text-muted mb-2">{t('settings.hotkeys.hotkeyFormat')}</p>
-            <ul className="text-xs text-text-muted space-y-1 list-disc list-inside">
-              <li>{t('settings.hotkeys.modKey')}</li>
-              <li>{t('settings.hotkeys.multipleKeys')}</li>
-              <li>{t('settings.hotkeys.examples')}</li>
-            </ul>
-          </div>
-        </div>
+      <div className="pt-4 pb-6 flex justify-end">
+        <Button variant="outline" size="sm" onClick={handleReset} color="danger">
+          {t('settings.hotkeys.resetToDefaults')}
+        </Button>
       </div>
     </div>
   );

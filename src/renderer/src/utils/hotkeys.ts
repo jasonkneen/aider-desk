@@ -16,8 +16,8 @@ export const DEFAULT_HOTKEY_CONFIG: HotkeyConfig = {
     switchProject7: 'alt+7,meta+7',
     switchProject8: 'alt+8,meta+8',
     switchProject9: 'alt+9,meta+9',
-    cycleNextProject: 'ctrl+tab,control+tab',
-    cyclePrevProject: 'ctrl+shift+tab,control+shift+tab',
+    cycleNextProject: 'ctrl+tab',
+    cyclePrevProject: 'ctrl+shift+tab',
   },
   taskHotkeys: {
     switchTask1: 'ctrl+1',
