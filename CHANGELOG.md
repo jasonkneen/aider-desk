@@ -6,6 +6,7 @@
 - added Writing Tests skill
 - implemented templating system for agent prompts with modular structure
 - enhanced thinking block content handling
+- improved cursor styling for context file section headers
 
 ## [0.45.0]
 

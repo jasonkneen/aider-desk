@@ -471,7 +471,8 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
       >
         <div
           className={clsx(
-            'flex items-center px-2 cursor-pointer select-none h-[40px] shrink-0 bg-bg-primary-light',
+            'flex items-center px-2 select-none h-[40px] shrink-0 bg-bg-primary-light',
+            !isOpen && 'cursor-pointer',
             isOpen && !searchField && 'border-b border-border-dark-light',
           )}
           onClick={() => setActiveSection(section)}
