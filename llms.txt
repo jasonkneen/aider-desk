@@ -368,6 +368,7 @@ src/
           ProviderCard.tsx
           ProviderHeader.tsx
           ProviderProfileCard.tsx
+          ProviderProfileDialog.tsx
           ProviderProfileForm.tsx
           ProviderSelection.tsx
         onboarding/
@@ -419,9 +420,12 @@ src/
           AboutSettings.tsx
           AiderSettings.tsx
           GeneralSettings.tsx
+          HotkeyConfig.tsx
+          HotkeysSettings.tsx
           LanguageSelector.tsx
           MemorySettings.tsx
           ServerSettings.tsx
+          SettingsDialog.tsx
           SettingsPage.tsx
           VoiceSettings.tsx
         terminal/
@@ -473,6 +477,7 @@ src/
         useAudioRecorder.ts
         useBooleanState.ts
         useClickOutside.ts
+        useConfiguredHotkeys.ts
         useCustomCommands.ts
         useEffectiveEnvironmentVariable.ts
         useIndexedDB.ts
@@ -537,11 +542,13 @@ src/
       utils/
         agents.ts
         highlighter.tsx
+        hotkeys.ts
         indexedDB.ts
         notifications.ts
         path-utils.ts
         routes.ts
         string-utils.ts
+        task-utils.ts
       voice/
         gemini.ts
         index.ts
@@ -1460,6 +1467,7 @@ File: src/common/locales/en.json
     "all": "All",
     "refresh": "Refresh",
     "selectProvider": "Select a Provider to Configure",
+    "editProvider": "Edit Provider",
     "profileForm": {
       "title": "Configure Profile for {{provider}} Provider",
       "name": "Profile Name",
@@ -1627,8 +1635,43 @@ File: src/common/locales/en.json
       "agents": "Agents",
       "memory": "Memory",
       "voice": "Voice",
+      "hotkeys": "Hotkeys",
       "server": "Server",
       "about": "About"
+    },
+    "hotkeys": {
+      "projectHotkeys": "Project",
+      "taskHotkeys": "Task",
+      "dialogHotkeys": "Dialogs",
+      "closeProject": "Close Project",
+      "newProject": "New Project",
+      "usageDashboard": "Usage Dashboard",
+      "modelLibrary": "Model Library",
+      "settings": "Settings",
+      "cycleNextProject": "Cycle next project",
+      "cyclePrevProject": "Cycle previous project",
+      "switchProject": "Switch to Project {{number}}",
+      "switchTask": "Switch to Task {{number}}",
+      "focusPrompt": "Focus Prompt",
+      "newTask": "New Task",
+      "closeTask": "Close Task",
+      "browseFolder": "Browse Folder",
+      "enterHotkey": "Enter hotkey...",
+      "resetToDefaults": "Reset to Defaults",
+      "hotkeyFormat": "Hotkey Format:",
+      "modKey": "Use 'mod' for Cmd (Mac) or Ctrl (Windows/Linux)",
+      "multipleKeys": "Separate multiple key combinations with commas",
+      "examples": "Examples: 'mod+w', 'ctrl+shift+t', 'alt+1,meta+1'",
+      "clickToRecord": "Click to record",
+      "recording": "Press keys...",
+      "addShortcut": "Add shortcut",
+      "editShortcut": "Edit shortcut",
+      "clearShortcut": "Clear shortcut",
+      "noShortcut": "No shortcut configured",
+      "recordShortcutDescription": "Press the record button below and then press the key combination you want to use as a shortcut.",
+      "pressKeysToRecord": "Press keys to record...",
+      "startRecording": "Start Recording",
+      "stopRecording": "Stop Recording"
     },
     "gui": "Appearance",
     "voice": {
@@ -2758,6 +2801,7 @@ File: src/common/locales/zh.json
     "all": "全部",
     "refresh": "刷新",
     "selectProvider": "选择要配置的提供商",
+    "editProvider": "编辑提供商",
     "profileForm": {
       "title": "配置 {{provider}} 提供商的配置文件",
       "name": "配置文件名称",
@@ -2923,10 +2967,45 @@ File: src/common/locales/zh.json
       "providers": "模型提供者",
       "aider": "Aider",
       "agents": "代理",
+      "hotkeys": "快捷键",
       "server": "服务器",
       "memory": "记忆",
       "voice": "语音",
       "about": "关于"
+    },
+    "hotkeys": {
+      "projectHotkeys": "项目快捷键",
+      "taskHotkeys": "任务快捷键",
+      "dialogHotkeys": "对话框快捷键",
+      "closeProject": "关闭项目",
+      "newProject": "新建项目",
+      "usageDashboard": "使用情况面板",
+      "modelLibrary": "模型库",
+      "settings": "设置",
+      "cycleNextProject": "切换到下一个项目",
+      "cyclePrevProject": "切换到上一个项目",
+      "switchProject": "切换到项目 {{number}}",
+      "switchTask": "切换到任务 {{number}}",
+      "focusPrompt": "聚焦提示框",
+      "newTask": "新建任务",
+      "closeTask": "关闭任务",
+      "browseFolder": "浏览文件夹",
+      "enterHotkey": "输入快捷键...",
+      "resetToDefaults": "重置为默认值",
+      "hotkeyFormat": "快捷键格式：",
+      "modKey": "使用 'mod' 表示 Cmd (Mac) 或 Ctrl (Windows/Linux)",
+      "multipleKeys": "用逗号分隔多个按键组合",
+      "examples": "示例：'mod+w'、'ctrl+shift+t'、'alt+1,meta+1'",
+      "clickToRecord": "点击录制",
+      "recording": "按下按键...",
+      "addShortcut": "添加快捷键",
+      "editShortcut": "编辑快捷键",
+      "clearShortcut": "清除快捷键",
+      "noShortcut": "未配置快捷键",
+      "recordShortcutDescription": "点击下方的录制按钮，然后按下您想要用作快捷键的组合键。",
+      "pressKeysToRecord": "按键录制中...",
+      "startRecording": "开始录制",
+      "stopRecording": "停止录制"
     },
     "gui": "GUI",
     "voice": {
@@ -4797,6 +4876,44 @@ export type Theme = (typeof THEMES)[number];
 ⋮----
 export type Font = (typeof FONTS)[number];
 ⋮----
+export interface HotkeyConfig {
+  projectHotkeys: {
+    closeProject: string;
+    newProject: string;
+    usageDashboard: string;
+    modelLibrary: string;
+    settings: string;
+    cycleNextProject: string;
+    cyclePrevProject: string;
+    switchProject1: string;
+    switchProject2: string;
+    switchProject3: string;
+    switchProject4: string;
+    switchProject5: string;
+    switchProject6: string;
+    switchProject7: string;
+    switchProject8: string;
+    switchProject9: string;
+  };
+  taskHotkeys: {
+    switchTask1: string;
+    switchTask2: string;
+    switchTask3: string;
+    switchTask4: string;
+    switchTask5: string;
+    switchTask6: string;
+    switchTask7: string;
+    switchTask8: string;
+    switchTask9: string;
+    focusPrompt: string;
+    newTask: string;
+    closeTask: string;
+  };
+  dialogHotkeys: {
+    browseFolder: string;
+  };
+}
+⋮----
 export enum MemoryEmbeddingProvider {
   SentenceTransformers = 'sentence-transformers',
 }
@@ -4877,6 +4994,7 @@ export interface SettingsData {
     };
   };
   memory: MemoryConfig;
+  hotkeyConfig?: HotkeyConfig;
 }
 ⋮----
 export interface ProviderProfile {
@@ -12072,6 +12190,8 @@ import { getDefaultProjectSettings } from '@/utils';
 ⋮----
 const setupCustomMenu = (): void =>
 ⋮----
+// File menu
+⋮----
 // Edit menu (without Select All)
 ⋮----
 // View menu
@@ -13376,9 +13496,10 @@ className=
 File: src/renderer/src/components/common/BaseDialog.tsx
 ================
 import { FocusTrap } from 'focus-trap-react';
-import { ReactNode, useEffect, useRef } from 'react';
+import { ReactNode, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
+import { useHotkeys } from 'react-hotkeys-hook';
 ⋮----
 type Props = {
   title: string;
@@ -13390,8 +13511,6 @@ type Props = {
   closeOnEscape?: boolean;
   closeButtonText?: string;
 };
-⋮----
-const handleKeyDown = (event: KeyboardEvent) =>
 ⋮----
 className=
 
@@ -15139,9 +15258,11 @@ const renderHeader = () => (
 File: src/renderer/src/components/message/ThinkingAnswerBlock.tsx
 ================
 import { MouseEvent, useState } from 'react';
-import { FaBrain, FaChevronDown, FaChevronRight } from 'react-icons/fa';
+import { FaChevronDown, FaChevronRight } from 'react-icons/fa';
+import { TfiThought } from 'react-icons/tfi';
 import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
+import { AnimatePresence, motion } from 'framer-motion';
 ⋮----
 import { CopyMessageButton } from './CopyMessageButton';
 ⋮----
@@ -15155,15 +15276,20 @@ type Props = {
   renderMarkdown: boolean;
 };
 ⋮----
+// Internal state for manual toggle control
+⋮----
+// Determine expansion state:
+// - Start expanded (true) when there's no answer
+// - When answer arrives, auto-collapse to false
+// - Manual toggle overrides auto-collapse
+⋮----
 const handleToggleThinking = (e: MouseEvent<HTMLDivElement>) =>
 ⋮----
 {/* Thinking section */}
 ⋮----
-<div className=
+className=
 ⋮----
 {/* Answer section - only show if we have an answer or we're streaming */}
-⋮----
-className=
 
 ================
 File: src/renderer/src/components/message/ToolMessageBlock.tsx
@@ -16358,14 +16484,16 @@ disabled={!!model} // Don't allow changing ID for existing models
 ================
 File: src/renderer/src/components/ModelLibrary/ModelLibrary.tsx
 ================
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useHotkeys } from 'react-hotkeys-hook';
 import { Model, ProviderProfile } from '@common/types';
 import { LlmProviderName } from '@common/agent';
 ⋮----
 import { ModelDialog } from './ModelDialog';
 import { ProviderSelection } from './ProviderSelection';
 import { ProviderProfileForm } from './ProviderProfileForm';
+import { ProviderProfileDialog } from './ProviderProfileDialog';
 import { ProviderHeader } from './ProviderHeader';
 import { ModelTableSection } from './ModelTableSection';
 ⋮----
@@ -16376,6 +16504,12 @@ type Props = {
   onClose: () => void;
 };
 ⋮----
+export const ModelLibrary = (
+⋮----
+const handleCancelConfigure = () =>
+⋮----
+const handleClose = () =>
+⋮----
 const handleToggleProviderSelect = (profileId: string) =>
 ⋮----
 const handleAddProvider = () =>
@@ -16385,8 +16519,6 @@ const handleSelectProvider = (provider: LlmProviderName) =>
 const handleEditProfile = (profile: ProviderProfile) =>
 ⋮----
 const handleDeleteProfile = async (profile: ProviderProfile) =>
-⋮----
-const handleCancelConfigure = () =>
 ⋮----
 const handleSaveProfile = async (profile: ProviderProfile) =>
 ⋮----
@@ -16629,12 +16761,38 @@ setShowDeleteConfirm(false);
 onCancel=
 
 ================
+File: src/renderer/src/components/ModelLibrary/ProviderProfileDialog.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { useRef } from 'react';
+import { LlmProviderName } from '@common/agent';
+import { ProviderProfile } from '@common/types';
+⋮----
+import { ProviderProfileForm, ProviderProfileFormRef } from './ProviderProfileForm';
+⋮----
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+⋮----
+type Props = {
+  provider: LlmProviderName;
+  profile?: ProviderProfile;
+  providers: ProviderProfile[];
+  onSave: (profile: ProviderProfile) => void;
+  onCancel: () => void;
+};
+⋮----
+export const ProviderProfileDialog = (
+⋮----
+title=
+⋮----
+confirmButtonText=
+
+================
 File: src/renderer/src/components/ModelLibrary/ProviderProfileForm.tsx
 ================
 import { getDefaultProviderParams, LlmProvider, LlmProviderName } from '@common/agent';
 import { ProviderProfile } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { ComponentType, ReactNode, useEffect, useState } from 'react';
+import { ComponentType, forwardRef, useImperativeHandle, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { FaPlus, FaTrash } from 'react-icons/fa';
 ⋮----
@@ -16674,15 +16832,17 @@ type Header = { id: string; key: string; value: string };
 ⋮----
 type Props = {
   provider: LlmProviderName;
-  editProfile?: ProviderProfile; // for editing
+  editProfile?: ProviderProfile;
   providers: ProviderProfile[];
   onSave: (profile: ProviderProfile) => void;
   onCancel: () => void;
+  hideActions?: boolean;
+  hideTitle?: boolean;
 };
 ⋮----
-editProfile?: ProviderProfile; // for editing
-⋮----
-// Set defaults for new profile
+export type ProviderProfileFormRef = {
+  submit: () => void;
+};
 ⋮----
 const handleIdChange = (value: string) =>
 ⋮----
@@ -16701,18 +16861,6 @@ const validateForm = (): boolean =>
 // Check for duplicate IDs
 ⋮----
 const handleSave = () =>
-⋮----
-const renderSectionAccordion = (title: ReactNode, children: ReactNode, open?: boolean, setOpen?: (open: boolean) => void) => (
-    <Accordion
-      title={<div className="flex-1 text-left text-sm font-medium px-2">{title}</div>}
-      chevronPosition="right"
-      className="mb-2 border rounded-md border-border-default-dark"
-      isOpen={open}
-      onOpenChange={setOpen}
-    >
-      <div className="p-4 pt-2">{children}</div>
-    </Accordion>
-  );
 ⋮----
 placeholder=
 ⋮----
@@ -17033,11 +17181,13 @@ type Props = {
 ================
 File: src/renderer/src/components/project/OpenProjectDialog.tsx
 ================
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { FaFolder } from 'react-icons/fa';
 import { useTranslation } from 'react-i18next';
 import { ProjectData } from '@common/types';
+import { useHotkeys } from 'react-hotkeys-hook';
 ⋮----
+import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
 import { AutocompletionInput } from '@/components/AutocompletionInput';
 import { Accordion } from '@/components/common/Accordion';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
@@ -17051,13 +17201,13 @@ type Props = {
   openProjects: ProjectData[];
 };
 ⋮----
+// eslint-disable-next-line no-console
+⋮----
+// Browse for folder
+⋮----
 const loadRecentProjects = async () =>
 ⋮----
 const updateSuggestions = async () =>
-⋮----
-const handleSelectProject = async () =>
-⋮----
-// eslint-disable-next-line no-console
 ⋮----
 const handleAddProject = () =>
 ⋮----
@@ -17129,6 +17279,7 @@ import { InputHistoryData, ProjectData, ProjectStartMode, TaskData } from '@comm
 import { useTranslation } from 'react-i18next';
 import { startTransition, useCallback, useEffect, useOptimistic, useRef, useState } from 'react';
 import { useLocalStorage } from '@reactuses/core';
+import { useHotkeys } from 'react-hotkeys-hook';
 import { CgSpinner } from 'react-icons/cg';
 ⋮----
 import { useSettings } from '@/contexts/SettingsContext';
@@ -17137,12 +17288,13 @@ import { TaskView, TaskViewRef } from '@/components/project/TaskView';
 import { COLLAPSED_WIDTH, EXPANDED_WIDTH, TaskSidebar } from '@/components/project/TaskSidebar';
 import { useApi } from '@/contexts/ApiContext';
 import { TaskProvider } from '@/contexts/TaskContext';
+import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
 import { showInfoNotification } from '@/utils/notifications';
+import { getSortedVisibleTasks } from '@/utils/task-utils';
 ⋮----
 type Props = {
   project: ProjectData;
   isActive?: boolean;
-  showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
 };
 ⋮----
 // when there is active task and is new we don't need to create new one
@@ -17183,6 +17335,8 @@ const initProject = async () =>
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
+// Switch to specific task tabs (Ctrl + 1-9)
+⋮----
 const handleToggleCollapse = () =>
 ⋮----
 // eslint-disable-next-line no-console
@@ -17190,6 +17344,8 @@ const handleToggleCollapse = () =>
 // Task will be automatically removed via the existing handleTaskDeleted listener
 ⋮----
 // eslint-disable-next-line no-console
+⋮----
+// Close current task
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
@@ -17297,6 +17453,7 @@ import { HiXMark } from 'react-icons/hi2';
 import { useDebounce, useLongPress } from '@reactuses/core';
 ⋮----
 import { useTask } from '@/contexts/TaskContext';
+import { getSortedVisibleTasks } from '@/utils/task-utils';
 import { Input } from '@/components/common/Input';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { Button } from '@/components/common/Button';
@@ -17445,6 +17602,7 @@ import { clsx } from 'clsx';
 import { getProviderModelId } from '@common/agent';
 import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { useLocalStorage } from '@reactuses/core';
+import { useHotkeys } from 'react-hotkeys-hook';
 ⋮----
 import { useSidebarWidth } from './useSidebarWidth';
 ⋮----
@@ -17471,6 +17629,7 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useModelProviders } from '@/contexts/ModelProviderContext';
 import { useTask } from '@/contexts/TaskContext';
 import { useAgents } from '@/contexts/AgentsContext';
+import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
 ⋮----
 type AddFileDialogOptions = {
   readOnly: boolean;
@@ -17478,6 +17637,7 @@ type AddFileDialogOptions = {
 ⋮----
 export type TaskViewRef = {
   exportMessagesToImage: () => void;
+  focusPromptField: () => void;
 };
 ⋮----
 type Props = {
@@ -17487,14 +17647,17 @@ type Props = {
   inputHistory: string[];
   isActive?: boolean;
   showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
+  shouldFocusPrompt?: boolean;
 };
 ⋮----
+// Focus prompt field
+⋮----
 const renderLoading = (message: string) => (
-    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-bg-primary to-bg-primary-light z-10">
-      <CgSpinner className="animate-spin w-8 h-8" />
-      <div className="mt-2 text-xs text-center text-text-primary">{message}</div>
-    </div>
-  );
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-bg-primary to-bg-primary-light z-10">
+        <CgSpinner className="animate-spin w-8 h-8" />
+        <div className="mt-2 text-xs text-center text-text-primary">{message}</div>
+      </div>
+    );
 ⋮----
 const handleAddFiles = (filePaths: string[], readOnly = false) =>
 ⋮----
@@ -17741,7 +17904,7 @@ label=
 File: src/renderer/src/components/project/WorktreeMergeButton.tsx
 ================
 import { useState, useRef } from 'react';
-import { FaDownload } from 'react-icons/fa6';
+import { FaArrowsRotate, FaBan, FaCodeMerge, FaCompress, FaDownload, FaFileLines, FaPlay, FaRobot } from 'react-icons/fa6';
 import { MdKeyboardArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { WorktreeIntegrationStatus } from '@common/types';
@@ -18790,6 +18953,84 @@ onChange=
 <Checkbox label=
 
 ================
+File: src/renderer/src/components/settings/HotkeyConfig.tsx
+================
+import { useEffect, useRef, useState, KeyboardEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import { FaPlus, FaEdit, FaTimes } from 'react-icons/fa';
+import { clsx } from 'clsx';
+import { useRecordHotkeys } from 'react-hotkeys-hook';
+⋮----
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { Input } from '@/components/common/Input';
+import { IconButton } from '@/components/common/IconButton';
+⋮----
+type Props = {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  size?: 'md' | 'sm';
+};
+⋮----
+type RecordingDialogProps = {
+  onSave: (hotkey: string) => void;
+  onCancel: () => void;
+  existingHotkey?: string;
+};
+⋮----
+const handleConfirm = () =>
+⋮----
+title=
+⋮----
+// Parse the value into an array of shortcuts
+⋮----
+const handleAddShortcut = () =>
+⋮----
+const handleEditShortcut = (index: number) =>
+⋮----
+const handleClearShortcut = (index: number) =>
+⋮----
+// If only one shortcut exists, just clear it
+⋮----
+// Remove the shortcut at the specified index
+⋮----
+const handleSaveShortcut = (hotkey: string) =>
+⋮----
+// Edit existing shortcut
+⋮----
+// Add new shortcut
+⋮----
+const handleCancelRecording = () =>
+⋮----
+onClick=
+
+================
+File: src/renderer/src/components/settings/HotkeysSettings.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { HotkeyConfig, SettingsData } from '@common/types';
+⋮----
+import { Section } from '../common/Section';
+⋮----
+import { HotkeyConfig as HotkeyConfigRow } from './HotkeyConfig';
+⋮----
+import { Button } from '@/components/common/Button';
+import { DEFAULT_HOTKEY_CONFIG } from '@/utils/hotkeys';
+⋮----
+type Props = {
+  settings: SettingsData;
+  setSettings: (settings: SettingsData) => void;
+};
+⋮----
+const handleChange = (category: keyof HotkeyConfig, key: string, value: string) =>
+⋮----
+const handleReset = () =>
+⋮----
+const renderHotkeyConfig = (category: keyof HotkeyConfig, key: string, label: string) =>
+⋮----
+return <HotkeyConfigRow key=
+
+================
 File: src/renderer/src/components/settings/LanguageSelector.tsx
 ================
 import { ReactCountryFlag } from 'react-country-flag';
@@ -18924,12 +19165,18 @@ label=
 tooltip=
 
 ================
+File: src/renderer/src/components/settings/SettingsDialog.tsx
+================
+
+
+================
 File: src/renderer/src/components/settings/SettingsPage.tsx
 ================
 import { ProjectData, ProviderProfile, SettingsData } from '@common/types';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { isEqual } from 'lodash';
 import { useTranslation } from 'react-i18next';
+import { useHotkeys } from 'react-hotkeys-hook';
 ⋮----
 import { Settings } from '@/pages/Settings';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -18948,8 +19195,6 @@ type Props = {
 const loadProviders = async () =>
 ⋮----
 // eslint-disable-next-line no-console
-⋮----
-const handleCancel = () =>
 ⋮----
 // Updated to use settings.mcpServers directly
 ⋮----
@@ -19639,6 +19884,7 @@ File: src/renderer/src/contexts/ApiContext.tsx
 ================
 import { createContext, useMemo, ReactNode, useContext } from 'react';
 import { ApplicationAPI } from '@common/api';
+import { HotkeysProvider } from 'react-hotkeys-hook';
 ⋮----
 import { BrowserApi } from '@/api/browser-api';
 ⋮----
@@ -19979,6 +20225,16 @@ const listener = (event: MouseEvent) =>
 // Check if the click is outside all provided refs
 ⋮----
 // Ignore clicks on null refs or if the ref doesn't contain the target
+
+================
+File: src/renderer/src/hooks/useConfiguredHotkeys.ts
+================
+import { useMemo } from 'react';
+⋮----
+import { useSettings } from '@/contexts/SettingsContext';
+import { getHotkeys } from '@/utils/hotkeys';
+⋮----
+export const useConfiguredHotkeys = () =>
 
 ================
 File: src/renderer/src/hooks/useCustomCommands.ts
@@ -20682,11 +20938,13 @@ type Props = {
 File: src/renderer/src/pages/Home.tsx
 ================
 import { ProjectData } from '@common/types';
-import { useCallback, useEffect, useState } from 'react';
+import { Activity, useCallback, useEffect, useState } from 'react';
 import { MdBarChart, MdSettings, MdUpload } from 'react-icons/md';
 import { PiNotebookFill } from 'react-icons/pi';
 import { useTranslation } from 'react-i18next';
+import { useHotkeys } from 'react-hotkeys-hook';
 ⋮----
+import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
 import { UsageDashboard } from '@/components/usage/UsageDashboard';
 import { IconButton } from '@/components/common/IconButton';
 import { NoProjectsOpen } from '@/components/project/NoProjectsOpen';
@@ -20718,25 +20976,35 @@ const handleOpenSettings = (pageId: string) =>
 ⋮----
 const checkReleaseNotes = async () =>
 ⋮----
-// First TAB press - switch to previous tab
+// Close current project tab
 ⋮----
-// Subsequent TAB presses - cycle through tabs
+// Open new project dialog
+⋮----
+// Open usage dashboard
+⋮----
+// Open model library
+⋮----
+// Open settings
+⋮----
+// Close overlays on Escape
+⋮----
+// Switch to specific project tabs (Alt/Cmd + 1-9)
+⋮----
+// Ctrl+Tab cycling (forward)
+⋮----
+// Ctrl+Shift+Tab cycling (backward)
+⋮----
+// Reset Ctrl+Tab state on Control key up
+⋮----
+const handleKeyUp = (e: KeyboardEvent) =>
 ⋮----
 const handleAddProject = async (baseDir: string) =>
-⋮----
-const handleCloseProject = async (projectBaseDir: string) =>
 ⋮----
 const handleCloseOtherProjects = async (baseDir: string) =>
 ⋮----
 const handleCloseAllProjects = async () =>
 ⋮----
-const renderProjectPanels = ()
-⋮----
-const getUpdateTooltip = () =>
-⋮----
 return ''; // Should not happen if showUpdateIcon is true
-⋮----
-const handleCloseReleaseNotes = async () =>
 ⋮----
 setShowSettingsInfo({
                     pageId: 'about',
@@ -20748,9 +21016,7 @@ setShowSettingsInfo({
                   pageId: 'general',
                 });
 ⋮----
-<OpenProjectDialog onClose=
-⋮----
-onClose=
+<UsageDashboard onClose=
 ⋮----
 
 ================
@@ -20818,7 +21084,7 @@ import { Font, ProjectData, SettingsData, Theme, AgentProfile, ProviderProfile }
 import { ReactNode, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
-import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer, FaBrain, FaMicrophone } from 'react-icons/fa';
+import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer, FaBrain, FaMicrophone, FaKeyboard } from 'react-icons/fa';
 import { MdTerminal } from 'react-icons/md';
 ⋮----
 import { getPathBasename } from '@/utils/path-utils';
@@ -20830,6 +21096,7 @@ import { AboutSettings } from '@/components/settings/AboutSettings';
 import { ServerSettings } from '@/components/settings/ServerSettings';
 import { MemorySettings } from '@/components/settings/MemorySettings';
 import { VoiceSettings } from '@/components/settings/VoiceSettings';
+import { HotkeysSettings } from '@/components/settings/HotkeysSettings';
 ⋮----
 type Props = {
   settings: SettingsData;
@@ -20848,7 +21115,7 @@ type Props = {
   setProviders?: (providers: ProviderProfile[]) => void;
 };
 ⋮----
-type PageId = 'general' | 'aider' | 'agents' | 'memory' | 'voice' | 'server' | 'about';
+type PageId = 'general' | 'aider' | 'agents' | 'memory' | 'voice' | 'hotkeys' | 'server' | 'about';
 ⋮----
 interface SidebarItem {
   id: string;
@@ -22870,6 +23137,13 @@ export const highlightWithRefractor = (code: string, language: string): ReactNod
 // eslint-disable-next-line no-console
 
 ================
+File: src/renderer/src/utils/hotkeys.ts
+================
+import { HotkeyConfig } from '@common/types';
+⋮----
+export const getHotkeys = (config?: HotkeyConfig) =>
+
+================
 File: src/renderer/src/utils/indexedDB.ts
 ================
 interface DBEntry<T> {
@@ -22952,6 +23226,13 @@ File: src/renderer/src/utils/string-utils.ts
 import type { TFunction } from 'i18next';
 ⋮----
 export const formatHumanReadable = (t: TFunction, value: number): string =>
+
+================
+File: src/renderer/src/utils/task-utils.ts
+================
+import { TaskData } from '@common/types';
+⋮----
+export const getSortedVisibleTasks = (tasks: TaskData[], showArchived: boolean = false, searchQuery: string = ''): TaskData[] =>
 
 ================
 File: src/renderer/src/voice/gemini.ts
