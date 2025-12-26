@@ -651,12 +651,6 @@ export class ContextManager {
                 promptContext: message.promptContext,
               };
               messagesData.push(toolData);
-            } else if (part.type === 'tool-result') {
-              const toolResult = part;
-              const toolMessage = messagesData.find((message) => message.type === 'tool' && message.id === toolResult.toolCallId) as ToolData | undefined;
-              if (toolMessage) {
-                toolMessage.response = JSON.stringify(toolResult.output.value);
-              }
             }
           }
         } else if (isTextContent(message.content)) {
@@ -697,6 +691,7 @@ export class ContextManager {
 
             if (toolMessage) {
               toolMessage.response = JSON.stringify(part.output.value);
+              toolMessage.usageReport = message.usageReport || toolMessage.usageReport;
               toolMessage.promptContext = promptContext;
             }
 

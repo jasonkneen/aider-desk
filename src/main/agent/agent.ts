@@ -1178,15 +1178,22 @@ export class Agent {
       await task.processResponseMessage(message);
     }
 
-    if (toolResults) {
-      // Process successful tool results *after* sending text/reasoning and handling errors
-      for (const toolResult of toolResults) {
-        const [serverName, toolName] = extractServerNameToolName(toolResult.toolName);
-        const toolPromptContext = extractPromptContextFromToolResult(toolResult.output) ?? promptContext;
+    // Process successful tool results *after* sending text/reasoning and handling errors
+    for (let i = 0; i < toolResults.length; i++) {
+      const toolResult = toolResults[i];
+      const [serverName, toolName] = extractServerNameToolName(toolResult.toolName);
+      const toolPromptContext = extractPromptContextFromToolResult(toolResult.output) ?? promptContext;
 
-        // Update the existing tool message with the result
-        task.addToolMessage(toolResult.toolCallId, serverName, toolName, toolResult.input, JSON.stringify(toolResult.output), usageReport, toolPromptContext);
-      }
+      // Update the existing tool message with the result
+      task.addToolMessage(
+        toolResult.toolCallId,
+        serverName,
+        toolName,
+        toolResult.input,
+        JSON.stringify(toolResult.output),
+        i === toolResults.length - 1 ? usageReport : undefined, // Only add usage report to the last tool message
+        toolPromptContext,
+      );
     }
 
     if (!abortSignal?.aborted) {
