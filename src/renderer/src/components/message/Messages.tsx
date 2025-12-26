@@ -1,6 +1,6 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { toPng } from 'html-to-image';
-import { MdKeyboardArrowDown } from 'react-icons/md';
+import { MdKeyboardDoubleArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { IoPlay } from 'react-icons/io5';
 
@@ -13,6 +13,7 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
 import { Button } from '@/components/common/Button';
 import { useScrollingPaused } from '@/hooks/useScrollingPaused';
+import { useUserMessageNavigation } from '@/hooks/useUserMessageNavigation';
 
 export type MessagesRef = {
   exportToImage: () => void;
@@ -42,7 +43,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
     const processedMessages = groupMessagesByPromptContext(messages);
     const lastUserMessageIndex = processedMessages.findLastIndex(isUserMessage);
 
-    const { scrollingPaused, scrollToBottom, eventHandlers } = useScrollingPaused({
+    const { scrollingPaused, setScrollingPaused, scrollToBottom, eventHandlers } = useScrollingPaused({
       onAutoScroll: () => messagesEndRef.current?.scrollIntoView(),
     });
 
@@ -51,6 +52,21 @@ export const Messages = forwardRef<MessagesRef, Props>(
         messagesEndRef.current?.scrollIntoView();
       }
     }, [processedMessages, scrollingPaused]);
+
+    // Get all user message IDs
+    const userMessageIds = useMemo(() => {
+      return processedMessages.filter(isUserMessage).map((message) => message.id);
+    }, [processedMessages]);
+
+    const { renderGoToPrevious, renderGoToNext } = useUserMessageNavigation({
+      containerRef: messagesContainerRef,
+      userMessageIds,
+      scrollToMessageByElement: (element: HTMLElement) => {
+        setScrollingPaused(true);
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      },
+      buttonClassName: 'hidden group-hover:block',
+    });
 
     const exportToImage = async () => {
       const messagesContainer = messagesContainerRef.current;
@@ -83,26 +99,24 @@ export const Messages = forwardRef<MessagesRef, Props>(
     return (
       <div
         ref={messagesContainerRef}
-        className="flex flex-col overflow-y-auto max-h-full p-4
-      scrollbar-thin
-      scrollbar-track-bg-primary-light
-      scrollbar-thumb-bg-tertiary
-      hover:scrollbar-thumb-bg-fourth"
+        className="group flex flex-col overflow-y-auto max-h-full p-4 scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-tertiary hover:scrollbar-thumb-bg-fourth"
         {...eventHandlers}
       >
         <StyledTooltip id="usage-info-tooltip" />
-
-        {scrollingPaused && (
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10">
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex gap-1">
+          {renderGoToPrevious()}
+          {scrollingPaused && (
             <IconButton
-              icon={<MdKeyboardArrowDown className="h-6 w-6" />}
+              icon={<MdKeyboardDoubleArrowDown className="h-6 w-6" />}
               onClick={scrollToBottom}
               tooltip={t('messages.scrollToBottom')}
               className="bg-bg-primary-light border border-border-default shadow-lg hover:bg-bg-secondary transition-colors duration-200"
               aria-label={t('messages.scrollToBottom')}
             />
-          </div>
-        )}
+          )}
+          {renderGoToNext()}
+        </div>
+
         {processedMessages.map((message, index) => {
           if (isGroupMessage(message)) {
             return (

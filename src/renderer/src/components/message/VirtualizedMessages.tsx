@@ -1,5 +1,5 @@
 import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef } from 'react';
-import { MdKeyboardArrowDown } from 'react-icons/md';
+import { MdKeyboardDoubleArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { IoPlay } from 'react-icons/io5';
@@ -86,7 +86,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
     const items = virtualizer.getVirtualItems();
 
     return (
-      <div className="relative flex flex-col h-full">
+      <div className="group relative flex flex-col h-full">
         <StyledTooltip id="usage-info-tooltip" />
 
         <div
@@ -151,9 +151,9 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
         </div>
 
         {scrollingPaused && (
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10">
+          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex gap-1">
             <IconButton
-              icon={<MdKeyboardArrowDown className="h-6 w-6" />}
+              icon={<MdKeyboardDoubleArrowDown className="h-6 w-6" />}
               onClick={scrollToBottom}
               tooltip={t('messages.scrollToBottom')}
               className="bg-bg-primary-light border border-border-default shadow-lg hover:bg-bg-secondary transition-colors duration-200"

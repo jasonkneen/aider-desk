@@ -715,6 +715,8 @@
     "cancelEdit": "Cancel",
     "group": "Group",
     "scrollToBottom": "Scroll to bottom",
+    "previousUserMessage": "Previous user message",
+    "nextUserMessage": "Next user message",
     "messageBar": "Message Bar",
     "exportNotAvailableWithVirtualized": "Export to image is not available when using virtualized message rendering. Change to standard rendering in Settings -> General -> Message Display.",
     "execute": "Execute"

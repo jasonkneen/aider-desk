@@ -108,7 +108,7 @@ const TaskMenuButton = ({
   };
 
   return (
-    <div className={clsx('relative flex items-center pl-2', isMenuOpen ? 'flex' : 'display-none w-0 group-hover:w-auto group-hover:display-flex')}>
+    <div className={clsx('relative flex items-center pl-2', isMenuOpen ? 'flex' : 'w-0 group-hover:w-auto')}>
       <div ref={buttonRef}>
         <button
           className={clsx(

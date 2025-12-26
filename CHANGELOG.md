@@ -10,6 +10,7 @@
 - added icons to worktree merge related actions
 - added keyboard shortcuts
 - fixed task selection on touch devices
+- added navigation for jumping between user messages
 
 ## [0.45.1]
 

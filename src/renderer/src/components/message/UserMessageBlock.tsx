@@ -18,7 +18,8 @@ type Props = {
 };
 
 export const UserMessageBlock = ({ baseDir, message, allFiles, renderMarkdown, compact = false, onRemove, onRedo, onEdit }: Props) => {
-  const baseClasses = 'rounded-md p-3 mb-2 max-w-full text-xs bg-bg-secondary border border-border-dark-light text-text-primary';
+  const baseClasses =
+    'rounded-md p-3 mb-2 max-w-full text-xs bg-bg-secondary border border-border-dark-light text-text-primary border-l-4 border-l-border-accent';
   const parsedContent = useParsedContent(baseDir, message.content, allFiles, renderMarkdown);
 
   const handleEdit = () => {
@@ -28,10 +29,10 @@ export const UserMessageBlock = ({ baseDir, message, allFiles, renderMarkdown, c
   };
 
   return (
-    <div className={clsx(baseClasses, 'relative flex flex-col group', !renderMarkdown && 'break-words whitespace-pre-wrap')}>
+    <div id={`user-message-${message.id}`} className={clsx(baseClasses, 'relative flex flex-col group', !renderMarkdown && 'break-words whitespace-pre-wrap')}>
       <div className="flex items-start gap-2">
         <div className="mt-[3px]">
-          <FaRegUser className="text-text-muted w-4 h-3" />
+          <FaRegUser className="text-text-tertiary w-3.5 h-3.5" />
         </div>
         <div className="flex-grow-1 w-full overflow-hidden">{parsedContent}</div>
       </div>
