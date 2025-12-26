@@ -19,6 +19,7 @@ import { SERVER_PORT } from '@/constants';
 import logger from '@/logger';
 import { EventsHandler } from '@/events-handler';
 import { HookManager } from '@/hooks/hook-manager';
+import { PromptsManager } from '@/prompts';
 
 export interface ManagersResult {
   eventsHandler: EventsHandler;
@@ -54,6 +55,9 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
   const hookManager = new HookManager();
   await hookManager.init();
 
+  const promptsManager = new PromptsManager();
+  await promptsManager.init();
+
   const worktreeManager = new WorktreeManager();
 
   // Initialize agent profile manager
@@ -72,6 +76,7 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
     agentProfileManager,
     memoryManager,
     hookManager,
+    promptsManager,
   );
 
   // Initialize terminal manager
@@ -133,6 +138,7 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
         telemetryManager.destroy(),
         agentProfileManager.dispose(),
         hookManager.dispose(),
+        promptsManager.dispose(),
       ]);
     } catch (error) {
       logger.error('Error during cleanup:', {

@@ -1,5 +1,3 @@
-import { AgentProfile } from '@common/types';
-
 export interface ToolPermissions {
   aiderTools: boolean;
   powerTools: {
@@ -27,10 +25,9 @@ export interface ToolPermissions {
   autoApprove: boolean;
 }
 
-export interface SystemPromptData {
+export interface PromptTemplateData {
   projectDir: string;
   taskDir: string;
-  agentProfile: AgentProfile;
   additionalInstructions?: string;
   osName: string;
   currentDate: string;
@@ -68,3 +65,12 @@ export interface ConflictResolutionPromptData {
   oursPath?: string;
   theirsPath?: string;
 }
+
+export type PromptTemplateName =
+  | 'system-prompt'
+  | 'init-project'
+  | 'workflow'
+  | 'compact-conversation'
+  | 'commit-message'
+  | 'conflict-resolution'
+  | 'conflict-resolution-system';

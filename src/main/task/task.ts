@@ -43,14 +43,6 @@ import type { SimpleGit } from 'simple-git';
 
 import { getAllFiles, isValidProjectFile } from '@/utils/file-system';
 import {
-  getCompactConversationPrompt,
-  getConflictResolutionPrompt,
-  getConflictResolutionSystemPrompt,
-  getGenerateCommitMessagePrompt,
-  getInitProjectPrompt,
-  getSystemPrompt,
-} from '@/agent/prompts';
-import {
   AIDER_DESK_TASKS_DIR,
   AIDER_DESK_TODOS_FILE,
   WORKTREE_BRANCH_PREFIX,
@@ -76,6 +68,7 @@ import { WorktreeManager, GitError } from '@/worktrees';
 import { MemoryManager } from '@/memory/memory-manager';
 import { getElectronApp } from '@/app';
 import { HookManager } from '@/hooks/hook-manager';
+import { PromptsManager } from '@/prompts';
 
 export const INTERNAL_TASK_ID = 'internal';
 
@@ -114,6 +107,7 @@ export class Task {
     private readonly worktreeManager: WorktreeManager,
     private readonly memoryManager: MemoryManager,
     public readonly hookManager: HookManager,
+    private readonly promptsManager: PromptsManager,
     initialTaskData?: Partial<TaskData>,
   ) {
     this.task = {
@@ -131,7 +125,15 @@ export class Task {
     };
     this.taskDataPath = path.join(this.project.baseDir, AIDER_DESK_TASKS_DIR, this.taskId, 'settings.json');
     this.contextManager = new ContextManager(this, this.taskId);
-    this.agent = new Agent(this.store, this.agentProfileManager, this.mcpManager, this.modelManager, this.telemetryManager, this.memoryManager);
+    this.agent = new Agent(
+      this.store,
+      this.agentProfileManager,
+      this.mcpManager,
+      this.modelManager,
+      this.telemetryManager,
+      this.memoryManager,
+      this.promptsManager,
+    );
     this.git = simpleGit(this.project.baseDir);
     this.aiderManager = new AiderManager(this, this.store, this.modelManager, this.eventManager, () => this.connectors);
 
@@ -1786,7 +1788,7 @@ export class Task {
       const agentMessages = await this.agent.runAgent(
         this,
         compactConversationAgentProfile,
-        getCompactConversationPrompt(customInstructions),
+        this.promptsManager.getCompactConversationPrompt(this, customInstructions),
         promptContext,
         contextMessages,
         [],
@@ -1807,7 +1809,14 @@ export class Task {
         await this.contextManager.loadMessages(await this.contextManager.getContextMessages());
       }
     } else {
-      const responses = await this.sendPromptToAider(getCompactConversationPrompt(customInstructions), undefined, 'ask', undefined, [], undefined);
+      const responses = await this.sendPromptToAider(
+        this.promptsManager.getCompactConversationPrompt(this, customInstructions),
+        undefined,
+        'ask',
+        undefined,
+        [],
+        undefined,
+      );
 
       // add messages to session
       this.contextManager.setContextMessages([userMessage], false);
@@ -2075,7 +2084,7 @@ export class Task {
       };
 
       // Run the agent with the modified profile
-      await this.runPromptInAgent(initProjectRulesAgentProfile, getInitProjectPrompt());
+      await this.runPromptInAgent(initProjectRulesAgentProfile, this.promptsManager.getInitProjectPrompt(this));
 
       // Check if the AGENTS.md file was created
       const projectAgentsPath = path.join(this.project.baseDir, 'AGENTS.md');
@@ -2215,7 +2224,7 @@ ${error.stderr}`,
           return;
         }
 
-        const systemPrompt = await getSystemPrompt(this.store.getSettings(), this, profile, command.autoApprove ?? this.task.autoApprove);
+        const systemPrompt = await this.promptsManager.getSystemPrompt(this.store.getSettings(), this, profile, command.autoApprove ?? this.task.autoApprove);
 
         const messages = command.includeContext === false ? [] : undefined;
         const contextFiles = command.includeContext === false ? [] : undefined;
@@ -2343,7 +2352,7 @@ ${error.stderr}`,
             try {
               effectiveCommitMessage = await this.agent.generateText(
                 agentProfile,
-                getGenerateCommitMessagePrompt(),
+                this.promptsManager.getGenerateCommitMessagePrompt(this),
                 `Generate a concise conventional commit message for these changes:\n\n${changesDiff}\n\nOnly answer with the commit message, nothing else.`,
               );
               logger.info('Generated commit message:', { commitMessage: effectiveCommitMessage });
@@ -2646,13 +2655,13 @@ ${error.stderr}`,
         ]);
 
         try {
-          const prompt = getConflictResolutionPrompt(filePath, {
+          const prompt = this.promptsManager.getConflictResolutionPrompt(this, filePath, {
             ...ctx,
             basePath: ctx.base ? basePath : undefined,
             oursPath: ctx.ours ? oursPath : undefined,
             theirsPath: ctx.theirs ? theirsPath : undefined,
           });
-          const systemPrompt = getConflictResolutionSystemPrompt();
+          const systemPrompt = this.promptsManager.getConflictResolutionSystemPrompt(this);
 
           await this.agent.runAgent(this, conflictProfile, prompt, promptContext, [], [{ path: filePath }], systemPrompt);
 

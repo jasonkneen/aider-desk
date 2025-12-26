@@ -12,6 +12,7 @@
 - fixed task selection on touch devices
 - added navigation for jumping between user messages
 - correctly showing usage data on tool results when loading existing tasks
+- added support for custom system prompts for main agent, compact conversation and other prompts
 
 ## [0.45.1]
 

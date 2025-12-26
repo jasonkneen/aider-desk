@@ -12,6 +12,7 @@ import { ModelManager } from '@/models';
 import { WorktreeManager } from '@/worktrees';
 import { MemoryManager } from '@/memory/memory-manager';
 import { HookManager } from '@/hooks/hook-manager';
+import { PromptsManager } from '@/prompts';
 
 export class ProjectManager {
   public readonly worktreeManager: WorktreeManager;
@@ -28,6 +29,7 @@ export class ProjectManager {
     private readonly agentProfileManager: AgentProfileManager,
     private readonly memoryManager: MemoryManager,
     private readonly hookManager: HookManager,
+    private readonly promptsManager: PromptsManager,
   ) {
     this.worktreeManager = worktreeManager;
   }
@@ -50,6 +52,7 @@ export class ProjectManager {
       this.agentProfileManager,
       this.memoryManager,
       this.hookManager,
+      this.promptsManager,
     );
     this.projects.push(project);
     return project;

@@ -36,7 +36,7 @@ export const optimizeMessages = (
 
   let optimizedMessages = cloneDeep(messages);
 
-  optimizedMessages = addImportantReminders(profile, projectProfiles, userRequestMessageIndex, optimizedMessages, task);
+  optimizedMessages = addSystemReminders(profile, projectProfiles, userRequestMessageIndex, optimizedMessages, task);
   optimizedMessages = convertImageToolResults(optimizedMessages);
   optimizedMessages = removeDuplicateToolCalls(optimizedMessages);
   optimizedMessages = optimizeAiderMessages(optimizedMessages);
@@ -79,7 +79,7 @@ export const optimizeMessages = (
   return optimizedMessages;
 };
 
-const addImportantReminders = (
+const addSystemReminders = (
   profile: AgentProfile,
   projectProfiles: AgentProfile[],
   userRequestMessageIndex: number,
@@ -130,11 +130,11 @@ const addImportantReminders = (
     return messages;
   }
 
-  const importantReminders = `\n\nTHIS IS IMPORTANT:\n- ${reminders.join('\n- ')}`;
+  const systemReminders = `\n\n<system-reminders>\n${reminders.map((reminder) => `   <reminder>${reminder}</reminder>`).join('\n ')}</system-reminders>`;
 
   const updatedFirstUserMessage = {
     ...userRequestMessage,
-    content: `${userRequestMessage.content}${importantReminders}`,
+    content: `${userRequestMessage.content}${systemReminders}`,
   } satisfies UserModelMessage;
 
   const newMessages = [...messages];

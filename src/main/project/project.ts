@@ -19,6 +19,7 @@ import { migrateSessionsToTasks } from '@/project/migrations';
 import { WorktreeManager } from '@/worktrees';
 import { MemoryManager } from '@/memory/memory-manager';
 import { HookManager } from '@/hooks/hook-manager';
+import { PromptsManager } from '@/prompts';
 import { AIDER_DESK_WATCH_FILES_LOCK } from '@/constants';
 import { determineMainModel, determineWeakModel } from '@/utils';
 
@@ -42,6 +43,7 @@ export class Project {
     private readonly agentProfileManager: AgentProfileManager,
     private readonly memoryManager: MemoryManager,
     private readonly hookManager: HookManager,
+    private readonly promptsManager: PromptsManager,
   ) {
     this.customCommandManager = new CustomCommandManager(this);
     // initialize global task
@@ -51,6 +53,7 @@ export class Project {
 
   public async start() {
     await this.customCommandManager.start();
+    await this.promptsManager.watchProject(this.baseDir);
     await this.agentProfileManager.initializeForProject(this.baseDir);
     await this.sendInputHistoryUpdatedEvent();
 
@@ -115,6 +118,7 @@ export class Project {
       this.worktreeManager,
       this.memoryManager,
       this.hookManager,
+      this.promptsManager,
       initialTaskData,
     );
     this.tasks.set(taskId, task);
@@ -373,6 +377,7 @@ export class Project {
     this.customCommandManager.dispose();
     this.agentProfileManager.removeProject(this.baseDir);
     await this.hookManager.stopWatchingProject(this.baseDir);
+    await this.promptsManager.unwatchProject(this.baseDir);
     await Promise.all(Array.from(this.tasks.values()).map((task) => task.close()));
     await this.worktreeManager.close(this.baseDir);
 
