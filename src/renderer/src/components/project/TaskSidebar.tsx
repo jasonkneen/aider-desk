@@ -380,6 +380,7 @@ const TaskSidebarComponent = ({
     },
     {
       delay: 500,
+      isPreventDefault: false,
     },
   );
 

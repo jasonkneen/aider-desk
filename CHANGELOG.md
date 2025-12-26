@@ -9,6 +9,7 @@
 - improved cursor styling for context file section headers
 - added icons to worktree merge related actions
 - added keyboard shortcuts
+- fixed task selection on touch devices
 
 ## [0.45.1]
 
