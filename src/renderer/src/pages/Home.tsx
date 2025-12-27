@@ -340,6 +340,17 @@ export const Home = () => {
     onCloseAllProjects: handleCloseAllProjects,
   };
 
+  const handleShowSettingsPage = useCallback((pageId?: string, options?: Record<string, unknown>) => {
+    if (pageId) {
+      setShowSettingsInfo({
+        pageId,
+        options,
+      });
+    } else {
+      setShowSettingsInfo(null);
+    }
+  }, []);
+
   const renderProjectPanels = () =>
     openProjects.map((project) => (
       <ProjectSettingsProvider key={project.baseDir} baseDir={project.baseDir}>
@@ -349,7 +360,7 @@ export const Home = () => {
             display: activeProject?.baseDir === project.baseDir ? 'block' : 'none',
           }}
         >
-          <ProjectView project={project} isActive={activeProject?.baseDir === project.baseDir} />
+          <ProjectView project={project} isActive={activeProject?.baseDir === project.baseDir} showSettingsPage={handleShowSettingsPage} />
         </div>
       </ProjectSettingsProvider>
     ));
@@ -432,7 +443,7 @@ export const Home = () => {
         <Activity mode={isOpenProjectDialogVisible ? 'visible' : 'hidden'}>
           <OpenProjectDialog onClose={() => setIsOpenProjectDialogVisible(false)} onAddProject={handleAddProject} openProjects={openProjects} />
         </Activity>
-        <Activity mode={showSettingsInfo !== null ? 'visible' : 'hidden'}>
+        <Activity mode={showSettingsInfo !== null ? 'visible' : 'hidden'} key={showSettingsInfo?.pageId || 'general'}>
           <SettingsPage
             onClose={() => setShowSettingsInfo(null)}
             initialPageId={showSettingsInfo?.pageId || 'general'}

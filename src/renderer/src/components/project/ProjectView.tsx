@@ -18,9 +18,10 @@ import { getSortedVisibleTasks } from '@/utils/task-utils';
 type Props = {
   project: ProjectData;
   isActive?: boolean;
+  showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
 };
 
-export const ProjectView = ({ project, isActive = false }: Props) => {
+export const ProjectView = ({ project, isActive = false, showSettingsPage }: Props) => {
   const { t } = useTranslation();
   const { settings } = useSettings();
   const { projectSettings } = useProjectSettings();
@@ -403,6 +404,7 @@ export const ProjectView = ({ project, isActive = false }: Props) => {
               inputHistory={inputHistory}
               isActive={isActive}
               shouldFocusPrompt={shouldFocusNewTask}
+              showSettingsPage={showSettingsPage}
             />
           )}
         </div>

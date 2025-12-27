@@ -71,7 +71,8 @@ describe('ProjectView', () => {
   });
 
   it('initializes project and loads tasks', async () => {
-    render(<ProjectView project={mockProject} isActive={true} />);
+    const mockShowSettingsPage = vi.fn();
+    render(<ProjectView project={mockProject} isActive={true} showSettingsPage={mockShowSettingsPage} />);
 
     await waitFor(() => {
       expect(mockApi.startProject).toHaveBeenCalledWith(mockProject.baseDir);
@@ -80,7 +81,8 @@ describe('ProjectView', () => {
   });
 
   it('renders task sidebar and active task view', async () => {
-    render(<ProjectView project={mockProject} isActive={true} />);
+    const mockShowSettingsPage = vi.fn();
+    render(<ProjectView project={mockProject} isActive={true} showSettingsPage={mockShowSettingsPage} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('task-sidebar')).toBeInTheDocument();
@@ -108,7 +110,8 @@ describe('ProjectView', () => {
       return <div data-testid="task-sidebar" />;
     });
 
-    render(<ProjectView project={mockProject} isActive={true} />);
+    const mockShowSettingsPage = vi.fn();
+    render(<ProjectView project={mockProject} isActive={true} showSettingsPage={mockShowSettingsPage} />);
 
     await waitFor(() => {
       expect(capturedDeleteTask).toBeDefined();
