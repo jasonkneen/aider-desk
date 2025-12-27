@@ -58,7 +58,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
       return processedMessages.filter(isUserMessage).map((message) => message.id);
     }, [processedMessages]);
 
-    const { renderGoToPrevious, renderGoToNext } = useUserMessageNavigation({
+    const { hasPreviousUserMessage, hasNextUserMessage, renderGoToPrevious, renderGoToNext } = useUserMessageNavigation({
       containerRef: messagesContainerRef,
       userMessageIds,
       scrollToMessageByElement: (element: HTMLElement) => {
@@ -104,7 +104,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
       >
         <StyledTooltip id="usage-info-tooltip" />
         <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex gap-1">
-          {renderGoToPrevious()}
+          {(hasPreviousUserMessage || hasNextUserMessage) && renderGoToPrevious()}
           {scrollingPaused && (
             <IconButton
               icon={<MdKeyboardDoubleArrowDown className="h-6 w-6" />}
@@ -114,7 +114,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
               aria-label={t('messages.scrollToBottom')}
             />
           )}
-          {renderGoToNext()}
+          {(hasPreviousUserMessage || hasNextUserMessage) && renderGoToNext()}
         </div>
 
         {processedMessages.map((message, index) => {
