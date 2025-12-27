@@ -356,7 +356,7 @@ export class Task {
 
     await this.init();
 
-    const mode = this.store.getProjectSettings(this.project.baseDir).currentMode;
+    const mode = this.task.currentMode || this.store.getProjectSettings(this.project.baseDir).currentMode;
     return {
       messages: this.contextManager.getContextMessagesData(),
       files: await this.getContextFiles(mode === 'agent'),
@@ -1007,7 +1007,7 @@ export class Task {
   }
 
   private async sendContextFilesUpdated() {
-    const mode = this.store.getProjectSettings(this.project.baseDir).currentMode;
+    const mode = this.task.currentMode || this.store.getProjectSettings(this.project.baseDir).currentMode;
     const allFiles = await this.getContextFiles(mode === 'agent');
 
     this.eventManager.sendContextFilesUpdated(this.project.baseDir, this.taskId, allFiles);

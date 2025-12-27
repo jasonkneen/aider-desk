@@ -13,6 +13,7 @@
 - added navigation for jumping between user messages
 - correctly showing usage data on tool results when loading existing tasks
 - added support for custom system prompts for main agent, compact conversation and other prompts
+- correctly showing the rule files based on the current task mode
 
 ## [0.45.1]
 
