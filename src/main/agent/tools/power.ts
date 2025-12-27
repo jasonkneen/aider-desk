@@ -487,7 +487,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
     inputSchema: z.object({
       command: z.string().describe('The shell command to execute (e.g., ls -la, npm install).'),
       cwd: z.string().optional().describe('The working directory for the command (relative to <WorkingDirectory>). Default: <WorkingDirectory>.'),
-      timeout: z.number().int().min(0).optional().default(60000).describe('Timeout for the command execution in milliseconds. Default: 60000 ms.'),
+      timeout: z.number().int().min(0).optional().default(120000).describe('Timeout for the command execution in milliseconds. Default: 120000 ms.'),
     }),
     execute: async ({ command, cwd, timeout }, { toolCallId }) => {
       task.addToolMessage(
@@ -547,12 +547,22 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
           stdout?: string;
           stderr?: string;
           message?: string;
-          code?: number;
+          code?: number | string;
+          signal?: string;
+          killed?: boolean;
         };
+
+        // Check for timeout - exec throws with signal='SIGTERM' or code='ETIMEDOUT' when timeout is exceeded
+        const isTimeout = execError.killed || execError.signal === 'SIGTERM' || execError.code === 'ETIMEDOUT';
+
+        const stderr = isTimeout
+          ? `Error: Command timed out after ${timeout}ms. Consider increasing the timeout parameter.`
+          : execError.stderr || execError.message || String(error);
+
         return {
           stdout: execError.stdout || '',
-          stderr: execError.stderr || execError.message || String(error),
-          exitCode: typeof execError.code === 'number' ? execError.code : 1,
+          stderr,
+          exitCode: typeof execError.code === 'number' ? execError.code : isTimeout ? 124 : 1,
         };
       }
     },
