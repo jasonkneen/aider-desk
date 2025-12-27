@@ -69,14 +69,6 @@ src/
     agent/
       middlewares/
         extract-reasoning-middleware.ts
-      templates/
-        compiler/
-          template-compiler.ts
-        helpers/
-          conditional.ts
-          formatting.ts
-          index.ts
-        types.ts
       tools/
         aider.ts
         approval-manager.ts
@@ -92,7 +84,6 @@ src/
       index.ts
       mcp-manager.ts
       optimizer.ts
-      prompts.ts
       utils.ts
     connector/
       connector-manager.ts
@@ -140,6 +131,14 @@ src/
       migrations.ts
       project-manager.ts
       project.ts
+    prompts/
+      helpers/
+        conditional.ts
+        formatting.ts
+        index.ts
+      index.ts
+      prompts-manager.ts
+      types.ts
     server/
       rest-api/
         agent-api.ts
@@ -490,6 +489,7 @@ src/
         useResponsive.ts
         useScrollingPaused.ts
         useSearchText.tsx
+        useUserMessageNavigation.tsx
         useVersions.ts
       i18n/
         index.ts
@@ -1992,6 +1992,8 @@ File: src/common/locales/en.json
     "cancelEdit": "Cancel",
     "group": "Group",
     "scrollToBottom": "Scroll to bottom",
+    "previousUserMessage": "Previous user message",
+    "nextUserMessage": "Next user message",
     "messageBar": "Message Bar",
     "exportNotAvailableWithVirtualized": "Export to image is not available when using virtualized message rendering. Change to standard rendering in Settings -> General -> Message Display.",
     "execute": "Execute"
@@ -3284,6 +3286,8 @@ File: src/common/locales/zh.json
     "cancelEdit": "取消编辑",
     "group": "分组",
     "scrollToBottom": "滚动到底部",
+    "previousUserMessage": "上一条用户消息",
+    "nextUserMessage": "下一条用户消息",
     "messageBar": "消息栏",
     "exportNotAvailableWithVirtualized": "使用虚拟化消息渲染时无法导出为图片。请在 设置 -> 常规 -> 消息显示 中更改为标准渲染。",
     "execute": "执行"
@@ -5390,128 +5394,6 @@ import logger from '@/logger';
 // a prefix of "searchedText". We go from the end of text inward.
 
 ================
-File: src/main/agent/templates/compiler/template-compiler.ts
-================
-import fs from 'fs/promises';
-import path from 'path';
-⋮----
-import Handlebars from 'handlebars';
-⋮----
-import { registerAllHelpers } from '../helpers';
-⋮----
-import { RESOURCES_DIR } from '@/constants';
-import logger from '@/logger';
-⋮----
-export class TemplateCompiler
-⋮----
-constructor(templatesDir: string = path.join(RESOURCES_DIR, 'prompts'))
-⋮----
-async compileAll(): Promise<void>
-⋮----
-render(name: string, data: unknown): string
-
-================
-File: src/main/agent/templates/helpers/conditional.ts
-================
-import Handlebars from 'handlebars';
-import { ToolApprovalState } from '@common/types';
-⋮----
-export const registerConditionalHelpers = (): void =>
-
-================
-File: src/main/agent/templates/helpers/formatting.ts
-================
-import Handlebars from 'handlebars';
-⋮----
-export const registerFormattingHelpers = (): void =>
-
-================
-File: src/main/agent/templates/helpers/index.ts
-================
-import { registerConditionalHelpers } from './conditional';
-import { registerFormattingHelpers } from './formatting';
-⋮----
-export const registerAllHelpers = (): void =>
-
-================
-File: src/main/agent/templates/types.ts
-================
-import { AgentProfile } from '@common/types';
-⋮----
-export interface ToolPermissions {
-  aiderTools: boolean;
-  powerTools: {
-    semanticSearch: boolean;
-    fileRead: boolean;
-    fileWrite: boolean;
-    fileEdit: boolean;
-    glob: boolean;
-    grep: boolean;
-    bash: boolean;
-    anyEnabled: boolean;
-  };
-  todoTools: boolean;
-  subagents: boolean;
-  memory: {
-    enabled: boolean;
-    retrieveAllowed: boolean;
-    storeAllowed: boolean;
-    listAllowed: boolean;
-    deleteAllowed: boolean;
-  };
-  skills: {
-    allowed: boolean;
-  };
-  autoApprove: boolean;
-}
-⋮----
-export interface SystemPromptData {
-  projectDir: string;
-  taskDir: string;
-  agentProfile: AgentProfile;
-  additionalInstructions?: string;
-  osName: string;
-  currentDate: string;
-  rulesFiles: string;
-  customInstructions: string;
-  toolPermissions: ToolPermissions;
-  toolConstants: Record<string, string>;
-  workflow: string;
-  projectGitRootDirectory?: string;
-}
-⋮----
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface InitProjectPromptData {
-  // Static for now
-}
-⋮----
-// Static for now
-⋮----
-export interface CompactConversationPromptData {
-  customInstructions?: string;
-}
-⋮----
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
-export interface CommitMessagePromptData {
-  // Static for now
-}
-⋮----
-// Static for now
-⋮----
-export interface ConflictResolutionSystemPromptData {
-  POWER_TOOL_GROUP_NAME: string;
-  TOOL_GROUP_NAME_SEPARATOR: string;
-  POWER_TOOL_FILE_EDIT: string;
-}
-⋮----
-export interface ConflictResolutionPromptData {
-  filePath: string;
-  basePath?: string;
-  oursPath?: string;
-  theirsPath?: string;
-}
-
-================
 File: src/main/agent/tools/aider.ts
 ================
 import fs from 'fs/promises';
@@ -6134,7 +6016,6 @@ import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 import { createPowerToolset } from './tools/power';
 import { createTodoToolset } from './tools/todo';
 import { createTasksToolset } from './tools/tasks';
-import { getSystemPrompt } from './prompts';
 import { createAiderToolset } from './tools/aider';
 import { createHelpersToolset } from './tools/helpers';
 import { createMemoryToolset } from './tools/memory';
@@ -6145,6 +6026,7 @@ import { ANSWER_RESPONSE_START_TAG, extractPromptContextFromToolResult, THINKING
 import { extractReasoningMiddleware } from './middlewares/extract-reasoning-middleware';
 ⋮----
 import { MemoryManager } from '@/memory/memory-manager';
+import { PromptsManager } from '@/prompts';
 import { AIDER_DESK_PROJECT_RULES_DIR } from '@/constants';
 import { Task } from '@/task';
 import { Store } from '@/store';
@@ -6351,6 +6233,8 @@ text: text?.substring(0, 100), // Log truncated text
 ⋮----
 // Update the existing tool message with the result
 ⋮----
+i === toolResults.length - 1 ? usageReport : undefined, // Only add usage report to the last tool message
+⋮----
 // @ts-expect-error the id is there
 ⋮----
 // @ts-expect-error the id is there
@@ -6494,7 +6378,7 @@ export const optimizeMessages = (
   task?: TaskData,
 ) =>
 ⋮----
-const addImportantReminders = (
+const addSystemReminders = (
   profile: AgentProfile,
   projectProfiles: AgentProfile[],
   userRequestMessageIndex: number,
@@ -6565,96 +6449,6 @@ const newMessages = [...messages]; // Create a mutable copy
 ⋮----
 // To prevent overlapping checks and unnecessary work, we can advance the index.
 // Since we've processed a block of 4, we can safely jump ahead.
-
-================
-File: src/main/agent/prompts.ts
-================
-import path from 'path';
-import fs from 'fs';
-import fsPromises from 'fs/promises';
-⋮----
-import { AgentProfile, SettingsData, ToolApprovalState, ConflictResolutionFileContext } from '@common/types';
-import {
-  AIDER_TOOL_ADD_CONTEXT_FILES,
-  AIDER_TOOL_DROP_CONTEXT_FILES,
-  AIDER_TOOL_GET_CONTEXT_FILES,
-  AIDER_TOOL_GROUP_NAME,
-  AIDER_TOOL_RUN_PROMPT,
-  POWER_TOOL_BASH,
-  POWER_TOOL_FILE_EDIT,
-  POWER_TOOL_FILE_READ,
-  POWER_TOOL_FILE_WRITE,
-  POWER_TOOL_GLOB,
-  POWER_TOOL_GREP,
-  POWER_TOOL_GROUP_NAME,
-  POWER_TOOL_SEMANTIC_SEARCH,
-  SUBAGENTS_TOOL_GROUP_NAME,
-  SUBAGENTS_TOOL_RUN_TASK,
-  TODO_TOOL_CLEAR_ITEMS,
-  TODO_TOOL_GET_ITEMS,
-  TODO_TOOL_GROUP_NAME,
-  TODO_TOOL_SET_ITEMS,
-  TODO_TOOL_UPDATE_ITEM_COMPLETION,
-  TOOL_GROUP_NAME_SEPARATOR,
-  MEMORY_TOOL_DELETE,
-  MEMORY_TOOL_GROUP_NAME,
-  MEMORY_TOOL_LIST,
-  MEMORY_TOOL_RETRIEVE,
-  MEMORY_TOOL_STORE,
-  SKILLS_TOOL_ACTIVATE_SKILL,
-  SKILLS_TOOL_GROUP_NAME,
-} from '@common/tools';
-⋮----
-import { TemplateCompiler } from './templates/compiler/template-compiler';
-import {
-  SystemPromptData,
-  InitProjectPromptData,
-  CompactConversationPromptData,
-  CommitMessagePromptData,
-  ConflictResolutionSystemPromptData,
-  ConflictResolutionPromptData,
-  ToolPermissions,
-} from './templates/types';
-⋮----
-import logger from '@/logger';
-import { Task } from '@/task';
-⋮----
-export const initializeTemplates = async (): Promise<void> =>
-⋮----
-const calculateToolPermissions = (settings: SettingsData, agentProfile: AgentProfile, autoApprove: boolean): ToolPermissions =>
-⋮----
-const isAllowed = (tool: string) => agentProfile.toolApprovals[`$
-⋮----
-anyEnabled: false, // Will be set below
-⋮----
-export const getSystemPrompt = async (
-  settings: SettingsData,
-  task: Task,
-  agentProfile: AgentProfile,
-  autoApprove = task.task.autoApprove ?? false,
-  additionalInstructions?: string,
-) =>
-⋮----
-workflow: '', // Placeholder
-⋮----
-const getRulesContent = async (task: Task, agentProfile?: AgentProfile) =>
-⋮----
-export const getInitProjectPrompt = () =>
-⋮----
-export const getCompactConversationPrompt = (customInstructions?: string) =>
-⋮----
-export const getGenerateCommitMessagePrompt = () =>
-⋮----
-export const getConflictResolutionSystemPrompt = () =>
-⋮----
-export const getConflictResolutionPrompt = (
-  filePath: string,
-  ctx: ConflictResolutionFileContext & {
-    basePath?: string;
-    oursPath?: string;
-    theirsPath?: string;
-  },
-) =>
 
 ================
 File: src/main/agent/utils.ts
@@ -8767,6 +8561,7 @@ import { ModelManager } from '@/models';
 import { WorktreeManager } from '@/worktrees';
 import { MemoryManager } from '@/memory/memory-manager';
 import { HookManager } from '@/hooks/hook-manager';
+import { PromptsManager } from '@/prompts';
 ⋮----
 export class ProjectManager
 ⋮----
@@ -8781,6 +8576,7 @@ constructor(
     private readonly agentProfileManager: AgentProfileManager,
     private readonly memoryManager: MemoryManager,
     private readonly hookManager: HookManager,
+    private readonly promptsManager: PromptsManager,
 )
 ⋮----
 private findProject(baseDir: string): Project | undefined
@@ -8831,6 +8627,7 @@ import { migrateSessionsToTasks } from '@/project/migrations';
 import { WorktreeManager } from '@/worktrees';
 import { MemoryManager } from '@/memory/memory-manager';
 import { HookManager } from '@/hooks/hook-manager';
+import { PromptsManager } from '@/prompts';
 import { AIDER_DESK_WATCH_FILES_LOCK } from '@/constants';
 import { determineMainModel, determineWeakModel } from '@/utils';
 ⋮----
@@ -8848,6 +8645,7 @@ constructor(
     private readonly agentProfileManager: AgentProfileManager,
     private readonly memoryManager: MemoryManager,
     private readonly hookManager: HookManager,
+    private readonly promptsManager: PromptsManager,
 )
 ⋮----
 // initialize global task
@@ -8907,6 +8705,216 @@ async close()
 // Remove watch-files lock file if it exists
 ⋮----
 // Ignore error if file doesn't exist
+
+================
+File: src/main/prompts/helpers/conditional.ts
+================
+import Handlebars from 'handlebars';
+import { ToolApprovalState } from '@common/types';
+⋮----
+export const registerConditionalHelpers = (): void =>
+
+================
+File: src/main/prompts/helpers/formatting.ts
+================
+import Handlebars from 'handlebars';
+⋮----
+export const registerFormattingHelpers = (): void =>
+
+================
+File: src/main/prompts/helpers/index.ts
+================
+import { registerConditionalHelpers } from './conditional';
+import { registerFormattingHelpers } from './formatting';
+⋮----
+export const registerAllHelpers = (): void =>
+
+================
+File: src/main/prompts/index.ts
+================
+
+
+================
+File: src/main/prompts/prompts-manager.ts
+================
+import fs from 'fs/promises';
+import path from 'path';
+⋮----
+import Handlebars from 'handlebars';
+import { FSWatcher, watch } from 'chokidar';
+import debounce from 'lodash/debounce';
+import { AgentProfile, ConflictResolutionFileContext, SettingsData, ToolApprovalState } from '@common/types';
+import {
+  AIDER_TOOL_ADD_CONTEXT_FILES,
+  AIDER_TOOL_DROP_CONTEXT_FILES,
+  AIDER_TOOL_GET_CONTEXT_FILES,
+  AIDER_TOOL_GROUP_NAME,
+  AIDER_TOOL_RUN_PROMPT,
+  MEMORY_TOOL_DELETE,
+  MEMORY_TOOL_GROUP_NAME,
+  MEMORY_TOOL_LIST,
+  MEMORY_TOOL_RETRIEVE,
+  MEMORY_TOOL_STORE,
+  POWER_TOOL_BASH,
+  POWER_TOOL_FILE_EDIT,
+  POWER_TOOL_FILE_READ,
+  POWER_TOOL_FILE_WRITE,
+  POWER_TOOL_GLOB,
+  POWER_TOOL_GREP,
+  POWER_TOOL_GROUP_NAME,
+  POWER_TOOL_SEMANTIC_SEARCH,
+  SKILLS_TOOL_ACTIVATE_SKILL,
+  SKILLS_TOOL_GROUP_NAME,
+  SUBAGENTS_TOOL_GROUP_NAME,
+  SUBAGENTS_TOOL_RUN_TASK,
+  TODO_TOOL_CLEAR_ITEMS,
+  TODO_TOOL_GET_ITEMS,
+  TODO_TOOL_GROUP_NAME,
+  TODO_TOOL_SET_ITEMS,
+  TODO_TOOL_UPDATE_ITEM_COMPLETION,
+  TOOL_GROUP_NAME_SEPARATOR,
+} from '@common/tools';
+⋮----
+import { registerAllHelpers } from './helpers';
+import {
+  CommitMessagePromptData,
+  CompactConversationPromptData,
+  ConflictResolutionPromptData,
+  ConflictResolutionSystemPromptData,
+  InitProjectPromptData,
+  PromptTemplateData,
+  PromptTemplateName,
+  ToolPermissions,
+} from './types';
+⋮----
+import { AIDER_DESK_DEFAULT_PROMPTS_DIR, AIDER_DESK_GLOBAL_PROMPTS_DIR, AIDER_DESK_PROMPTS_DIR } from '@/constants';
+import logger from '@/logger';
+import { Task } from '@/task';
+⋮----
+export class PromptsManager
+⋮----
+constructor(
+    private readonly defaultTemplatesDir = AIDER_DESK_DEFAULT_PROMPTS_DIR,
+    private readonly globalPromptsDir = AIDER_DESK_GLOBAL_PROMPTS_DIR,
+)
+⋮----
+public async init(): Promise<void>
+⋮----
+private async compileGlobalTemplates(): Promise<void>
+⋮----
+private async compileProjectTemplates(projectDir: string): Promise<void>
+⋮----
+private getTemplateNames(): PromptTemplateName[]
+⋮----
+private async loadGlobalTemplateSource(name: PromptTemplateName): Promise<string | null>
+⋮----
+// Check global prompts
+⋮----
+// Fall back to default templates from resources
+⋮----
+private async loadProjectTemplateSource(projectPromptsDir: string, name: PromptTemplateName): Promise<string | null>
+⋮----
+// It's fine if project template doesn't exist
+⋮----
+private async setupGlobalWatcher(): Promise<void>
+⋮----
+public async watchProject(projectDir: string): Promise<void>
+⋮----
+public async unwatchProject(projectDir: string): Promise<void>
+⋮----
+public async dispose(): Promise<void>
+⋮----
+private render(name: PromptTemplateName, data: unknown, projectDir?: string): string
+⋮----
+const isAllowed = (tool: string) => agentProfile.toolApprovals[`$
+⋮----
+anyEnabled: false, // Will be set below
+⋮----
+workflow: '', // Placeholder
+
+================
+File: src/main/prompts/types.ts
+================
+export interface ToolPermissions {
+  aiderTools: boolean;
+  powerTools: {
+    semanticSearch: boolean;
+    fileRead: boolean;
+    fileWrite: boolean;
+    fileEdit: boolean;
+    glob: boolean;
+    grep: boolean;
+    bash: boolean;
+    anyEnabled: boolean;
+  };
+  todoTools: boolean;
+  subagents: boolean;
+  memory: {
+    enabled: boolean;
+    retrieveAllowed: boolean;
+    storeAllowed: boolean;
+    listAllowed: boolean;
+    deleteAllowed: boolean;
+  };
+  skills: {
+    allowed: boolean;
+  };
+  autoApprove: boolean;
+}
+⋮----
+export interface PromptTemplateData {
+  projectDir: string;
+  taskDir: string;
+  additionalInstructions?: string;
+  osName: string;
+  currentDate: string;
+  rulesFiles: string;
+  customInstructions: string;
+  toolPermissions: ToolPermissions;
+  toolConstants: Record<string, string>;
+  workflow: string;
+  projectGitRootDirectory?: string;
+}
+⋮----
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface InitProjectPromptData {
+  // Static for now
+}
+⋮----
+// Static for now
+⋮----
+export interface CompactConversationPromptData {
+  customInstructions?: string;
+}
+⋮----
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface CommitMessagePromptData {
+  // Static for now
+}
+⋮----
+// Static for now
+⋮----
+export interface ConflictResolutionSystemPromptData {
+  POWER_TOOL_GROUP_NAME: string;
+  TOOL_GROUP_NAME_SEPARATOR: string;
+  POWER_TOOL_FILE_EDIT: string;
+}
+⋮----
+export interface ConflictResolutionPromptData {
+  filePath: string;
+  basePath?: string;
+  oursPath?: string;
+  theirsPath?: string;
+}
+⋮----
+export type PromptTemplateName =
+  | 'system-prompt'
+  | 'init-project'
+  | 'workflow'
+  | 'compact-conversation'
+  | 'commit-message'
+  | 'conflict-resolution'
+  | 'conflict-resolution-system';
 
 ================
 File: src/main/server/rest-api/agent-api.ts
@@ -10114,14 +10122,6 @@ import type { SimpleGit } from 'simple-git';
 ⋮----
 import { getAllFiles, isValidProjectFile } from '@/utils/file-system';
 import {
-  getCompactConversationPrompt,
-  getConflictResolutionPrompt,
-  getConflictResolutionSystemPrompt,
-  getGenerateCommitMessagePrompt,
-  getInitProjectPrompt,
-  getSystemPrompt,
-} from '@/agent/prompts';
-import {
   AIDER_DESK_TASKS_DIR,
   AIDER_DESK_TODOS_FILE,
   WORKTREE_BRANCH_PREFIX,
@@ -10147,6 +10147,7 @@ import { WorktreeManager, GitError } from '@/worktrees';
 import { MemoryManager } from '@/memory/memory-manager';
 import { getElectronApp } from '@/app';
 import { HookManager } from '@/hooks/hook-manager';
+import { PromptsManager } from '@/prompts';
 ⋮----
 export class Task
 ⋮----
@@ -10164,6 +10165,7 @@ constructor(
     private readonly worktreeManager: WorktreeManager,
     private readonly memoryManager: MemoryManager,
     public readonly hookManager: HookManager,
+    private readonly promptsManager: PromptsManager,
     initialTaskData?: Partial<TaskData>,
 )
 ⋮----
@@ -12299,6 +12301,7 @@ import { SERVER_PORT } from '@/constants';
 import logger from '@/logger';
 import { EventsHandler } from '@/events-handler';
 import { HookManager } from '@/hooks/hook-manager';
+import { PromptsManager } from '@/prompts';
 ⋮----
 export interface ManagersResult {
   eventsHandler: EventsHandler;
@@ -12651,7 +12654,6 @@ import { delay } from '@common/utils';
 ⋮----
 import logger from '@/logger';
 import { getCurrentPythonLibVersion, getLatestPythonLibVersion, getPythonVenvBinPath } from '@/utils';
-import { initializeTemplates } from '@/agent/prompts';
 import {
   AIDER_DESK_DATA_DIR,
   SETUP_COMPLETE_FILENAME,
@@ -15068,9 +15070,9 @@ const arePropsEqual = (prevProps: Props, nextProps: Props): boolean =>
 ================
 File: src/renderer/src/components/message/Messages.tsx
 ================
-import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
 import { toPng } from 'html-to-image';
-import { MdKeyboardArrowDown } from 'react-icons/md';
+import { MdKeyboardDoubleArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { IoPlay } from 'react-icons/io5';
 ⋮----
@@ -15083,6 +15085,7 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
 import { Button } from '@/components/common/Button';
 import { useScrollingPaused } from '@/hooks/useScrollingPaused';
+import { useUserMessageNavigation } from '@/hooks/useUserMessageNavigation';
 ⋮----
 export type MessagesRef = {
   exportToImage: () => void;
@@ -15103,6 +15106,8 @@ type Props = {
 };
 ⋮----
 // Group messages by promptContext.group.id
+⋮----
+// Get all user message IDs
 ⋮----
 const exportToImage = async () =>
 ⋮----
@@ -15388,7 +15393,7 @@ export const UserMessageBlock = (
 ⋮----
 const handleEdit = () =>
 ⋮----
-<div className=
+<div id=
 
 ================
 File: src/renderer/src/components/message/utils.tsx
@@ -15531,7 +15536,7 @@ return result; // Return default if rawContent is empty
 File: src/renderer/src/components/message/VirtualizedMessages.tsx
 ================
 import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef } from 'react';
-import { MdKeyboardArrowDown } from 'react-icons/md';
+import { MdKeyboardDoubleArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { IoPlay } from 'react-icons/io5';
@@ -20477,6 +20482,36 @@ navigateToElement(0); // Navigate to the first result
 // eslint-disable-next-line
 ⋮----
 <div className=
+
+================
+File: src/renderer/src/hooks/useUserMessageNavigation.tsx
+================
+import { ReactNode, useCallback, useEffect, useState } from 'react';
+import { MdKeyboardArrowDown, MdKeyboardArrowUp } from 'react-icons/md';
+import { useTranslation } from 'react-i18next';
+import { clsx } from 'clsx';
+⋮----
+import { IconButton } from '@/components/common/IconButton';
+⋮----
+interface UseUserMessageNavigationProps {
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  userMessageIds: string[];
+  scrollToMessageByElement?: (element: HTMLElement) => void;
+  alwaysVisible?: boolean;
+  buttonClassName?: string;
+}
+⋮----
+interface NavigationButton {
+  key: string;
+  icon: ReactNode;
+  onClick: () => void;
+  tooltip: string;
+  ariaLabel: string;
+  disabled: boolean;
+  className: string;
+}
+⋮----
+const handleScroll = () =>
 
 ================
 File: src/renderer/src/hooks/useVersions.ts
