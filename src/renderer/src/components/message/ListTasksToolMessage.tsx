@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { RiCheckboxCircleFill, RiCloseCircleFill, RiErrorWarningFill } from 'react-icons/ri';
 import { CgSpinner } from 'react-icons/cg';
-import { GrTasks } from 'react-icons/gr';
+import { LuClipboardList } from 'react-icons/lu';
 
 import { ToolMessage } from '@/types/message';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
@@ -34,7 +34,7 @@ export const ListTasksToolMessage = ({ message, onRemove, compact = false }: Pro
   const title = (
     <div className="flex items-center gap-2 w-full">
       <div className="text-text-muted">
-        <GrTasks className="w-4 h-4" />
+        <LuClipboardList className="w-4 h-4" />
       </div>
       <div className="text-xs text-text-primary flex flex-wrap gap-1">
         <span>{t('toolMessage.tasks.listTasks')}</span>

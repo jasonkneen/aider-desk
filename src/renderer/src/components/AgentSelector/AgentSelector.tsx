@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdSave, MdPsychology } from 'react-icons/md';
+import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdPsychology, MdSave } from 'react-icons/md';
 import { RiToolsFill } from 'react-icons/ri';
 import { clsx } from 'clsx';
 import { AgentProfile, TaskData, ToolApprovalState } from '@common/types';
 import { BiCog } from 'react-icons/bi';
 import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { LuBrain } from 'react-icons/lu';
-import { GrTasks } from 'react-icons/gr';
+import { LuBrain, LuClipboardList } from 'react-icons/lu';
 
 import { McpServerSelectorItem } from './McpServerSelectorItem';
 
@@ -234,7 +233,7 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
             {activeTaskProfile.useAiderTools && <MdOutlineHdrAuto className="w-3.5 h-3.5 text-agent-aider-tools opacity-90" />}
             {activeTaskProfile.usePowerTools && <MdFlashOn className="w-3.5 h-3.5 text-agent-power-tools opacity-70" />}
             {activeTaskProfile.useTodoTools && <MdOutlineChecklist className="w-3.5 h-3.5 text-agent-todo-tools opacity-70" />}
-            {activeTaskProfile.useTaskTools && <GrTasks className="w-3.5 h-3.5 text-agent-tasks-tools opacity-70" />}
+            {activeTaskProfile.useTaskTools && <LuClipboardList className="w-3.5 h-3.5 text-agent-tasks-tools opacity-70" />}
             {activeTaskProfile.useMemoryTools && <LuBrain className="w-3 h-3 text-agent-memory-tools opacity-70" />}
             {activeTaskProfile.useSkillsTools && <MdPsychology className="w-3.5 h-3.5 text-agent-skills-tools opacity-70" />}
             {activeTaskProfile.includeContextFiles && <MdOutlineFileCopy className="w-3 h-3 text-agent-context-files opacity-70" />}
@@ -358,7 +357,11 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
                   tooltipId="agent-selector-tooltip"
                 />
                 <IconButton
-                  icon={<GrTasks className={clsx('w-3.5 h-3.5', activeTaskProfile.useTaskTools ? 'text-agent-tasks-tools' : 'text-text-muted opacity-50')} />}
+                  icon={
+                    <LuClipboardList
+                      className={clsx('w-3.5 h-3.5', activeTaskProfile.useTaskTools ? 'text-agent-tasks-tools' : 'text-text-muted opacity-50')}
+                    />
+                  }
                   onClick={() => handleToggleProfileSetting('useTaskTools', !activeTaskProfile.useTaskTools)}
                   className="p-1.5 hover:bg-bg-secondary rounded-md"
                   tooltip={t('settings.agent.useTaskTools')}
