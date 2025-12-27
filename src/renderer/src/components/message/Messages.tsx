@@ -99,11 +99,11 @@ export const Messages = forwardRef<MessagesRef, Props>(
     return (
       <div
         ref={messagesContainerRef}
-        className="group flex flex-col overflow-y-auto max-h-full p-4 scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-tertiary hover:scrollbar-thumb-bg-fourth"
+        className="flex flex-col overflow-y-auto max-h-full p-4 scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-tertiary hover:scrollbar-thumb-bg-fourth"
         {...eventHandlers}
       >
         <StyledTooltip id="usage-info-tooltip" />
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex gap-1">
+        <div className="absolute left-0 right-0 bottom-0 z-10 flex justify-center gap-1 pt-20 pb-2 group">
           {(hasPreviousUserMessage || hasNextUserMessage) && renderGoToPrevious()}
           {scrollingPaused && (
             <IconButton
