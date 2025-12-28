@@ -103,7 +103,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
         {...eventHandlers}
       >
         <StyledTooltip id="usage-info-tooltip" />
-        <div className="absolute left-0 right-0 bottom-0 z-10 flex justify-center gap-1 pt-20 pb-2 group">
+        <div className="absolute left-1/2 -translate-x-1/2 w-[50%] bottom-0 z-10 flex justify-center gap-1 pt-20 pb-2 group">
           {(hasPreviousUserMessage || hasNextUserMessage) && renderGoToPrevious()}
           {scrollingPaused && (
             <IconButton
