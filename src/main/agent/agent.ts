@@ -891,7 +891,7 @@ export class Agent {
                   });
                   currentTextResponse += chunk.text;
                 }
-              } else if (chunk.type === 'reasoning-delta' && chunk.text.trim()) {
+              } else if (chunk.type === 'reasoning-delta') {
                 if (!hasReasoning) {
                   await task.processResponseMessage({
                     id: currentResponseId,
