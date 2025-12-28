@@ -124,22 +124,26 @@ export const FileFinder = ({
     void updateSuggestions();
   }, [inputValue, showSuggestions, baseDir, isReadOnly, selectedPaths, allowFiles, allowDirectories, api, taskId]);
 
-  const handleInputSubmit = () => {
+  const handleInputSubmit = (isMultiSelect = false) => {
     if (inputValue && isValidInputValue && !selectedPaths.includes(inputValue)) {
       onPathAdded(inputValue);
-      setInputValue('');
-      setShowSuggestions(false);
+      if (!isMultiSelect) {
+        setInputValue('');
+        setShowSuggestions(false);
+      }
     } else if (!inputValue) {
       onSubmit?.();
     }
   };
 
-  const handleAutocompleteInputChange = (value: string, isFromSuggestion?: boolean) => {
-    setShowSuggestions(!isFromSuggestion);
+  const handleAutocompleteInputChange = (value: string, isFromSuggestion?: boolean, isMultiSelect?: boolean) => {
+    setShowSuggestions(isMultiSelect || !isFromSuggestion);
     if (isFromSuggestion && !isReadOnly) {
       onPathAdded(value);
-      setInputValue(''); // Clear input after adding from suggestion
-      setShowSuggestions(false); // Hide suggestions after selection
+      if (!isMultiSelect) {
+        setInputValue(''); // Clear input after adding from suggestion
+        setShowSuggestions(false); // Hide suggestions after selection
+      }
     } else {
       setInputValue(value);
     }

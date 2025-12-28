@@ -6,14 +6,14 @@ import { clsx } from 'clsx';
 type Props = {
   value: string;
   suggestions: string[];
-  onChange: (value: string, isFromSuggestion: boolean) => void;
+  onChange: (value: string, isFromSuggestion: boolean, isMultiSelect?: boolean) => void;
   placeholder?: string;
   className?: string;
   inputClassName?: string;
   rightElement?: ReactNode;
   autoFocus?: boolean;
   onPaste?: (pastedText: string) => Promise<boolean>;
-  onSubmit?: () => void;
+  onSubmit?: (isMultiSelect?: boolean) => void;
 };
 
 export const AutocompletionInput = ({
@@ -73,11 +73,17 @@ export const AutocompletionInput = ({
       case 'Enter':
         if (selectedIndex >= 0) {
           e.preventDefault();
-          onChange(suggestions[selectedIndex], true);
-          setShowSuggestions(false);
+          const isMultiSelect = e.ctrlKey || e.metaKey;
+          onChange(suggestions[selectedIndex], true, isMultiSelect);
+          if (!isMultiSelect) {
+            setShowSuggestions(false);
+          }
+          if (onSubmit) {
+            onSubmit(isMultiSelect);
+          }
         } else if (onSubmit) {
           e.preventDefault();
-          onSubmit();
+          onSubmit(e.ctrlKey || e.metaKey);
         }
         break;
       case 'Tab':
@@ -140,9 +146,18 @@ export const AutocompletionInput = ({
             id={`suggestion-${index}`}
             key={suggestion}
             className={clsx('px-3 py-1 text-sm cursor-pointer hover:bg-bg-tertiary', index === selectedIndex && 'bg-bg-secondary hover:bg-bg-secondary')}
-            onMouseDown={() => {
-              onChange(suggestion, true);
-              setShowSuggestions(false);
+            onMouseDown={(e) => {
+              const isMultiSelect = e.ctrlKey || e.metaKey;
+              if (isMultiSelect) {
+                e.preventDefault();
+              }
+              onChange(suggestion, true, isMultiSelect);
+              if (!isMultiSelect) {
+                setShowSuggestions(false);
+              }
+              if (onSubmit) {
+                onSubmit(isMultiSelect);
+              }
             }}
           >
             {suggestion}

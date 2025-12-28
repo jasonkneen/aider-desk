@@ -20,6 +20,7 @@
 - added ability to disable provider profiles to hide their models
 - added missing endpoint for updating model
 - correctly allowing to run multiple tasks simultaneously in the browser
+- added multi-select support for file suggestions using Ctrl/Cmd key
 
 ## [0.45.1]
 
