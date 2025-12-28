@@ -7,6 +7,7 @@ import {
   MEMORY_TOOL_LIST as TOOL_LIST,
   MEMORY_TOOL_RETRIEVE as TOOL_RETRIEVE,
   MEMORY_TOOL_STORE as TOOL_STORE,
+  MEMORY_TOOL_UPDATE as TOOL_UPDATE,
   MEMORY_TOOL_GROUP_NAME as TOOL_GROUP_NAME,
   TOOL_GROUP_NAME_SEPARATOR,
 } from '@common/tools';
@@ -186,11 +187,54 @@ export const createMemoryToolset = (task: Task, profile: AgentProfile, memoryMan
     },
   });
 
+  const updateMemoryTool = tool({
+    description: MEMORY_TOOL_DESCRIPTIONS[TOOL_UPDATE],
+    inputSchema: z.object({
+      id: z.string().describe('The ID of the memory to update'),
+      content: z.string().describe('The new content for the memory'),
+    }),
+    execute: async ({ id, content }, { toolCallId }) => {
+      task.addToolMessage(toolCallId, TOOL_GROUP_NAME, TOOL_UPDATE, { id, content }, undefined, undefined, promptContext);
+
+      // Get the memory to show its content in the approval question
+      const memory = await memoryManager.getMemory(id);
+
+      if (!memory) {
+        return `Memory with ID ${id} not found.`;
+      }
+
+      const questionKey = `${TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TOOL_UPDATE}`;
+      const questionText = `Update memory with ID: ${id}?`;
+      const questionSubject = `Old content: "${memory.content}"\nNew content: "${content}"`;
+
+      const [isApproved, userInput] = await approvalManager.handleApproval(questionKey, questionText, questionSubject);
+
+      if (!isApproved) {
+        return userInput || 'Memory update cancelled by user.';
+      }
+
+      try {
+        const success = await memoryManager.updateMemory(id, content);
+
+        if (success) {
+          logger.info('Memory updated successfully', { id });
+          return `Memory with ID ${id} updated successfully.`;
+        } else {
+          return `Failed to update memory with ID ${id}. Memory may not exist.`;
+        }
+      } catch (error) {
+        logger.error('Failed to update memory:', error);
+        return `Failed to update memory: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      }
+    },
+  });
+
   const allTools = {
     [`${TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TOOL_STORE}`]: storeMemoryTool,
     [`${TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TOOL_RETRIEVE}`]: retrieveMemoryTool,
     [`${TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TOOL_DELETE}`]: deleteMemoryTool,
     [`${TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TOOL_LIST}`]: listMemoriesTool,
+    [`${TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TOOL_UPDATE}`]: updateMemoryTool,
   };
 
   // Filter out tools that are set to Never in toolApprovals

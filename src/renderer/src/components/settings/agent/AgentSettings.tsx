@@ -53,6 +53,7 @@ import {
   MEMORY_TOOL_DESCRIPTIONS,
   MEMORY_TOOL_GROUP_NAME,
   MEMORY_TOOL_LIST,
+  MEMORY_TOOL_UPDATE,
   MEMORY_TOOL_RETRIEVE,
   MEMORY_TOOL_STORE,
   SKILLS_TOOL_GROUP_NAME,
@@ -208,13 +209,18 @@ const tools: Record<string, GenericTool[]> = {
     },
     {
       groupName: MEMORY_TOOL_GROUP_NAME,
-      name: MEMORY_TOOL_DELETE,
-      description: MEMORY_TOOL_DESCRIPTIONS[MEMORY_TOOL_DELETE],
+      name: MEMORY_TOOL_LIST,
+      description: MEMORY_TOOL_DESCRIPTIONS[MEMORY_TOOL_LIST],
     },
     {
       groupName: MEMORY_TOOL_GROUP_NAME,
-      name: MEMORY_TOOL_LIST,
-      description: MEMORY_TOOL_DESCRIPTIONS[MEMORY_TOOL_LIST],
+      name: MEMORY_TOOL_UPDATE,
+      description: MEMORY_TOOL_DESCRIPTIONS[MEMORY_TOOL_UPDATE],
+    },
+    {
+      groupName: MEMORY_TOOL_GROUP_NAME,
+      name: MEMORY_TOOL_DELETE,
+      description: MEMORY_TOOL_DESCRIPTIONS[MEMORY_TOOL_DELETE],
     },
   ],
   [SKILLS_TOOL_GROUP_NAME]: [

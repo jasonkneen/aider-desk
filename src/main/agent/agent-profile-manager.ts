@@ -396,6 +396,12 @@ export class AgentProfileManager {
         return null;
       }
 
+      // use default tool approvals if not specified
+      profile.toolApprovals = {
+        ...DEFAULT_AGENT_PROFILE.toolApprovals,
+        ...profile.toolApprovals,
+      };
+
       // Discover and load rule files for this profile
       profile.ruleFiles = await getAllRuleFilesForProfile(profile, dirName);
 

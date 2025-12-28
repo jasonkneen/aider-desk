@@ -15,6 +15,7 @@
 - added support for custom system prompts for main agent, compact conversation and other prompts
 - correctly showing the rule files based on the current task mode
 - added optional execute argument to create task tool to allow executing it after creation
+- added update memory tool to complement other memory tools
 
 ## [0.45.1]
 

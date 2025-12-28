@@ -30,6 +30,7 @@ import {
   MEMORY_TOOL_LIST,
   MEMORY_TOOL_RETRIEVE,
   MEMORY_TOOL_STORE,
+  MEMORY_TOOL_UPDATE,
 } from '@common/tools';
 
 export type LlmProviderName =
@@ -315,6 +316,7 @@ export const DEFAULT_AGENT_PROFILE: AgentProfile = {
     [`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_RETRIEVE}`]: ToolApprovalState.Always,
     [`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_DELETE}`]: ToolApprovalState.Never,
     [`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_LIST}`]: ToolApprovalState.Never,
+    [`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_UPDATE}`]: ToolApprovalState.Never,
   },
   toolSettings: {
     [`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_BASH}`]: {

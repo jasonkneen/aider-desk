@@ -59,12 +59,14 @@ export const MEMORY_TOOL_STORE = 'store_memory';
 export const MEMORY_TOOL_RETRIEVE = 'retrieve_memory';
 export const MEMORY_TOOL_DELETE = 'delete_memory';
 export const MEMORY_TOOL_LIST = 'list_memories';
+export const MEMORY_TOOL_UPDATE = 'update_memory';
 
 export const MEMORY_TOOL_DESCRIPTIONS = {
   [MEMORY_TOOL_STORE]: 'Stores important information, patterns, or preferences into memory for future tasks',
   [MEMORY_TOOL_RETRIEVE]: 'Searches and retrieves relevant memories based on a query',
   [MEMORY_TOOL_DELETE]: 'Deletes a specific memory',
   [MEMORY_TOOL_LIST]: 'Lists all stored memories with optional filtering',
+  [MEMORY_TOOL_UPDATE]: 'Updates an existing memory with new content',
 } as const;
 
 export const POWER_TOOL_DESCRIPTIONS = {
