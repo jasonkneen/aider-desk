@@ -68,5 +68,37 @@ export class ProvidersApi extends BaseApi {
         res.status(200).json(models);
       }),
     );
+
+    // Upsert a single model
+    router.put(
+      '/providers/:providerId/models',
+      this.handleRequest(async (req, res) => {
+        const { providerId } = req.params;
+        const { modelId } = req.query;
+        if (!modelId || typeof modelId !== 'string') {
+          res.status(400).json({ error: 'modelId is required' });
+          return;
+        }
+        await this.eventsHandler.upsertModel(providerId, modelId, req.body);
+        const models = await this.eventsHandler.getProviderModels(false);
+        res.status(200).json(models);
+      }),
+    );
+
+    // Delete a model
+    router.delete(
+      '/providers/:providerId/models',
+      this.handleRequest(async (req, res) => {
+        const { providerId } = req.params;
+        const { modelId } = req.query;
+        if (!modelId || typeof modelId !== 'string') {
+          res.status(400).json({ error: 'modelId is required' });
+          return;
+        }
+        await this.eventsHandler.deleteModel(providerId, modelId);
+        const models = await this.eventsHandler.getProviderModels(false);
+        res.status(200).json(models);
+      }),
+    );
   }
 }

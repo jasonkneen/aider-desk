@@ -236,13 +236,13 @@ export class BrowserApi implements ApplicationAPI {
     return response.data;
   }
 
-  private async delete<T>(endpoint: string): Promise<T> {
-    const response = await this.apiClient.delete<T>(endpoint);
+  private async delete<T>(endpoint: string, params?: Record<string, unknown>): Promise<T> {
+    const response = await this.apiClient.delete<T>(endpoint, { params });
     return response.data;
   }
 
-  private async put<B, R>(endpoint: string, body: B): Promise<R> {
-    const response = await this.apiClient.put<R>(endpoint, body);
+  private async put<B, R>(endpoint: string, body: B, params?: Record<string, unknown>): Promise<R> {
+    const response = await this.apiClient.put<R>(endpoint, body, { params });
     return response.data;
   }
 
@@ -527,10 +527,10 @@ export class BrowserApi implements ApplicationAPI {
     return this.post('/providers', providers);
   }
   upsertModel(providerId: string, modelId: string, model: Model): Promise<ProviderModelsData> {
-    return this.put(`/providers/${providerId}/models/${modelId}`, model);
+    return this.put(`/providers/${providerId}/models`, model, { modelId });
   }
   deleteModel(providerId: string, modelId: string): Promise<ProviderModelsData> {
-    return this.delete(`/providers/${providerId}/models/${modelId}`);
+    return this.delete(`/providers/${providerId}/models`, { modelId });
   }
   updateModels(modelUpdates: Array<{ providerId: string; modelId: string; model: Model }>): Promise<ProviderModelsData> {
     return this.put('/models', modelUpdates);

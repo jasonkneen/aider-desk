@@ -18,6 +18,7 @@
 - added update memory tool to complement other memory tools
 - added copy button to the bash tool command
 - added ability to disable provider profiles to hide their models
+- added missing endpoint for updating model
 
 ## [0.45.1]
 
