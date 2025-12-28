@@ -6,6 +6,7 @@ import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { CopyMessageButton } from '@/components/message/CopyMessageButton';
 
 type Props = {
   message: ToolMessage;
@@ -31,6 +32,7 @@ export const BashToolMessage = ({ message, onRemove, compact = false }: Props) =
         <span>
           <CodeInline className="bg-bg-primary-light">{command}</CodeInline>
         </span>
+        <CopyMessageButton content={command} alwaysShow={true} className="w-3.5 h-3.5" />
       </div>
       {!content && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light flex-shrink-0" />}
       {content &&

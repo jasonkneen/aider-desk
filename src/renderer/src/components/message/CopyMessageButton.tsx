@@ -1,5 +1,6 @@
 import { BiCopy } from 'react-icons/bi';
 import { useTranslation } from 'react-i18next';
+import { twMerge } from 'tailwind-merge';
 
 import { IconButton } from '../common/IconButton';
 
@@ -20,7 +21,7 @@ export const CopyMessageButton = ({ content, className, alwaysShow = false }: Pr
 
   return (
     <IconButton
-      icon={<BiCopy className={`h-4 w-4 ${className}`} />}
+      icon={<BiCopy className={twMerge('h-4 w-4', className)} />}
       onClick={copyToClipboard}
       tooltip={t('messages.copy')}
       className={alwaysShow ? '' : 'opacity-0 group-hover:opacity-100'}
