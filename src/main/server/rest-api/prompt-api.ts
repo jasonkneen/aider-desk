@@ -19,8 +19,6 @@ const SavePromptSchema = z.object({
 });
 
 export class PromptApi extends BaseApi {
-  private isPromptRunning = false;
-
   constructor(private readonly eventsHandler: EventsHandler) {
     super();
   }
@@ -36,25 +34,9 @@ export class PromptApi extends BaseApi {
 
         const { projectDir, taskId, prompt, mode } = parsed;
 
-        // Check if another prompt is already running
-        if (this.isPromptRunning) {
-          res.status(429).json({
-            error: 'Too many requests',
-            message: 'Another prompt is already being processed',
-          });
-          return;
-        }
+        const responses = await this.eventsHandler.runPrompt(projectDir, taskId, prompt, mode);
 
-        try {
-          this.isPromptRunning = true;
-
-          const responses = await this.eventsHandler.runPrompt(projectDir, taskId, prompt, mode);
-
-          res.status(200).json(responses);
-        } finally {
-          // Clear the running flag even if there's an error
-          this.isPromptRunning = false;
-        }
+        res.status(200).json(responses);
       }),
     );
 

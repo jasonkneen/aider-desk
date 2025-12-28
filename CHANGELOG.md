@@ -19,6 +19,7 @@
 - added copy button to the bash tool command
 - added ability to disable provider profiles to hide their models
 - added missing endpoint for updating model
+- correctly allowing to run multiple tasks simultaneously in the browser
 
 ## [0.45.1]
 
