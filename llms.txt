@@ -5578,6 +5578,8 @@ const searchRegex = new RegExp(searchTerm, caseSensitive ? undefined : 'i'); // 
 ⋮----
 // Check allowed patterns - if matches, skip approval and execute directly
 ⋮----
+// Check for timeout - exec throws with signal='SIGTERM' or code='ETIMEDOUT' when timeout is exceeded
+⋮----
 // Use parameter maxTokens if provided, otherwise use the default
 ⋮----
 // Check if it's a dependency path (format: language:rest)
@@ -13134,15 +13136,14 @@ File: src/renderer/src/components/AgentSelector/AgentSelector.tsx
 ================
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdSave, MdPsychology } from 'react-icons/md';
+import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdPsychology, MdSave } from 'react-icons/md';
 import { RiToolsFill } from 'react-icons/ri';
 import { clsx } from 'clsx';
 import { AgentProfile, TaskData, ToolApprovalState } from '@common/types';
 import { BiCog } from 'react-icons/bi';
 import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { LuBrain } from 'react-icons/lu';
-import { GrTasks } from 'react-icons/gr';
+import { LuBrain, LuClipboardList } from 'react-icons/lu';
 ⋮----
 import { McpServerSelectorItem } from './McpServerSelectorItem';
 ⋮----
@@ -14843,7 +14844,7 @@ File: src/renderer/src/components/message/ListTasksToolMessage.tsx
 import { useTranslation } from 'react-i18next';
 import { RiCheckboxCircleFill, RiCloseCircleFill, RiErrorWarningFill } from 'react-icons/ri';
 import { CgSpinner } from 'react-icons/cg';
-import { GrTasks } from 'react-icons/gr';
+import { LuClipboardList } from 'react-icons/lu';
 ⋮----
 import { ToolMessage } from '@/types/message';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
@@ -17300,6 +17301,7 @@ import { getSortedVisibleTasks } from '@/utils/task-utils';
 type Props = {
   project: ProjectData;
   isActive?: boolean;
+  showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
 };
 ⋮----
 // when there is active task and is new we don't need to create new one
@@ -21039,7 +21041,13 @@ const handleCloseOtherProjects = async (baseDir: string) =>
 ⋮----
 const handleCloseAllProjects = async () =>
 ⋮----
+const renderProjectPanels = ()
+⋮----
+const getUpdateTooltip = () =>
+⋮----
 return ''; // Should not happen if showUpdateIcon is true
+⋮----
+const handleCloseReleaseNotes = async () =>
 ⋮----
 setShowSettingsInfo({
                     pageId: 'about',
@@ -23802,7 +23810,7 @@ File: package.json
   },
   "scripts": {
     "format": "prettier --write .",
-    "lint": "eslint src --fix",
+    "lint": "eslint src --fix --cache",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck:mcp": "tsc --noEmit -p tsconfig.mcp-server.json --composite false",
