@@ -17,7 +17,6 @@ export const GetTaskMessageToolMessage = ({ message, onRemove, compact = false }
   const { t } = useTranslation();
 
   const taskId = message.args.taskId as string;
-  const messageIndex = message.args.messageIndex as number;
   const content = message.content && JSON.parse(message.content);
   const isError =
     content &&
@@ -36,10 +35,6 @@ export const GetTaskMessageToolMessage = ({ message, onRemove, compact = false }
         <span>{t('toolMessage.tasks.getTaskMessage')}</span>
         <span>
           <CodeInline className="bg-bg-primary-light">{taskId}</CodeInline>
-        </span>
-        <span>{t('toolMessage.tasks.messageIndex')}</span>
-        <span>
-          <CodeInline className="bg-bg-primary-light">{messageIndex}</CodeInline>
         </span>
       </div>
       {!content && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light flex-shrink-0" />}
@@ -134,7 +129,6 @@ export const GetTaskMessageToolMessage = ({ message, onRemove, compact = false }
 
           {/* Message Content */}
           <div className="space-y-2">
-            <h4 className="font-medium text-text-secondary">{t('promptField.prompt')}</h4>
             <div className="border border-border-dark-light rounded bg-bg-primary-light px-3 py-2">
               <pre className="whitespace-pre-wrap text-3xs text-text-primary font-mono max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth">
                 {content.content}

@@ -20,6 +20,8 @@ export const CreateTaskToolMessage = ({ message, onRemove, compact = false }: Pr
   const prompt = message.args.prompt as string;
   const agentProfileId = message.args.agentProfileId as string;
   const modelId = message.args.modelId as string;
+  const execute = message.args.execute as boolean;
+  const executeInBackground = message.args.executeInBackground as boolean;
   const content = message.content && JSON.parse(message.content);
   const isError = content && typeof content === 'string' && content.startsWith('Error creating task:');
   const isDenied = content && typeof content === 'string' && content.startsWith('Creating task denied by user.');
@@ -91,41 +93,16 @@ export const CreateTaskToolMessage = ({ message, onRemove, compact = false }: Pr
     }
 
     if (!content || typeof content !== 'object') {
-      return (
-        <div className="p-3 text-2xs text-text-tertiary bg-bg-secondary">
-          <div className="space-y-2">
-            <div className="border border-border-dark-light rounded bg-bg-primary-light px-3 py-2 space-y-1">
-              <div className="text-3xs">
-                <span className="text-text-muted">{t('toolMessage.tasks.prompt')}:</span>
-              </div>
-              <pre className="whitespace-pre-wrap text-3xs text-text-primary bg-bg-secondary p-2 rounded font-mono max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth">
-                {prompt}
-              </pre>
-              {agentProfileId && (
-                <div className="text-3xs mt-2">
-                  <span className="text-text-muted">{t('toolMessage.tasks.agentProfile')}:</span> {agentProfileId}
-                </div>
-              )}
-              {modelId && (
-                <div className="text-3xs">
-                  <span className="text-text-muted">{t('toolMessage.tasks.model')}:</span> {modelId}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      );
+      return <div className="p-3 text-2xs text-text-tertiary bg-bg-secondary">{content}</div>;
     }
 
     return (
       <div className="px-4 py-1 text-2xs text-text-tertiary bg-bg-secondary">
         <div className="space-y-3">
-          {/* Success Message */}
-          <div className="border border-border-dark-light rounded bg-bg-primary-light px-3 py-2">
-            <div className="flex items-center gap-2">
-              <RiCheckboxCircleFill className="w-4 h-4 text-success" />
-              <span className="font-medium text-text-secondary">{t('toolMessage.tasks.taskCreatedSuccessfully')}</span>
-            </div>
+          <div className="border border-border-dark-light rounded bg-bg-primary-light px-3 py-2 space-y-1">
+            <pre className="whitespace-pre-wrap text-3xs text-text-primary max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth">
+              {prompt}
+            </pre>
           </div>
 
           {/* Task Details */}
@@ -137,6 +114,27 @@ export const CreateTaskToolMessage = ({ message, onRemove, compact = false }: Pr
               <div className="text-3xs">
                 <span className="text-text-muted">{t('agentProfiles.profileName')}:</span> {content.name}
               </div>
+              {agentProfileId && (
+                <div className="text-3xs mt-2">
+                  <span className="text-text-muted">{t('toolMessage.tasks.agentProfile')}:</span> {agentProfileId}
+                </div>
+              )}
+              {modelId && (
+                <div className="text-3xs">
+                  <span className="text-text-muted">{t('toolMessage.tasks.model')}:</span> {modelId}
+                </div>
+              )}
+              {execute !== undefined && (
+                <div className="text-3xs">
+                  <span className="text-text-muted">{t('toolMessage.tasks.execute')}:</span> {execute ? t('toolMessage.tasks.yes') : t('toolMessage.tasks.no')}
+                </div>
+              )}
+              {executeInBackground !== undefined && (
+                <div className="text-3xs">
+                  <span className="text-text-muted">{t('toolMessage.tasks.executeInBackground')}:</span>{' '}
+                  {executeInBackground ? t('toolMessage.tasks.yes') : t('toolMessage.tasks.no')}
+                </div>
+              )}
             </div>
           </div>
         </div>

@@ -516,7 +516,7 @@ export class Task {
     }
   }
 
-  public async runPrompt(prompt: string, mode: Mode = 'code'): Promise<ResponseCompletedData[]> {
+  public async runPrompt(prompt: string, mode: Mode = 'code', addToInputHistory = true): Promise<ResponseCompletedData[]> {
     if (this.currentQuestion) {
       if (this.answerQuestion('n', prompt)) {
         logger.debug('Processed by the answerQuestion function.');
@@ -540,7 +540,9 @@ export class Task {
       mode,
     });
 
-    await this.project.addToInputHistory(prompt);
+    if (addToInputHistory) {
+      await this.project.addToInputHistory(prompt);
+    }
 
     const promptContext: PromptContext = {
       id: uuidv4(),
@@ -566,13 +568,15 @@ export class Task {
     }
   }
 
-  public async savePromptOnly(prompt: string): Promise<void> {
+  public async savePromptOnly(prompt: string, addInputHistory = true): Promise<void> {
     logger.info('Saving prompt without execution:', {
       baseDir: this.project.baseDir,
       prompt,
     });
 
-    await this.project.addToInputHistory(prompt);
+    if (addInputHistory) {
+      await this.project.addToInputHistory(prompt);
+    }
 
     const promptContext: PromptContext = {
       id: uuidv4(),

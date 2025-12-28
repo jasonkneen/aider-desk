@@ -10,7 +10,7 @@ import {
   TASKS_TOOL_LIST_TASKS,
   TOOL_GROUP_NAME_SEPARATOR,
 } from '@common/tools';
-import { AgentProfile, MessageRole, PromptContext, TaskData, ToolApprovalState } from '@common/types';
+import { AgentProfile, PromptContext, TaskData, ToolApprovalState } from '@common/types';
 
 import { ApprovalManager } from './approval-manager';
 
@@ -90,7 +90,6 @@ export const createTasksToolset = (task: Task, profile: AgentProfile, promptCont
         return {
           id: targetTask.task.id,
           name: targetTask.task.name,
-          state: targetTask.task.archived ? 'archived' : targetTask.task.completedAt ? 'completed' : 'active',
           createdAt: targetTask.task.createdAt,
           updatedAt: targetTask.task.updatedAt,
           contextFiles: contextFiles.map((f) => ({ path: f.path, readOnly: f.readOnly })),
@@ -171,13 +170,24 @@ export const createTasksToolset = (task: Task, profile: AgentProfile, promptCont
       prompt: z.string().describe('The initial prompt for the new task'),
       agentProfileId: z.string().optional().describe('Optional agent profile ID to use for the task'),
       modelId: z.string().optional().describe('Optional model ID to use for the task'),
+      execute: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe('If true, the task will be created and executed with the initial prompt. If false, only the task is created without executing.'),
+      executeInBackground: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe('If true, the task will be created and executed in the background. Only applicable if execute is true.'),
     }),
-    execute: async ({ prompt, agentProfileId, modelId }, { toolCallId }) => {
-      task.addToolMessage(toolCallId, TASKS_TOOL_GROUP_NAME, TASKS_TOOL_CREATE_TASK, { prompt, agentProfileId, modelId }, undefined, undefined, promptContext);
+    execute: async (args, { toolCallId }) => {
+      const { prompt, agentProfileId, modelId, execute: shouldExecute, executeInBackground } = args;
+      task.addToolMessage(toolCallId, TASKS_TOOL_GROUP_NAME, TASKS_TOOL_CREATE_TASK, args, undefined, undefined, promptContext);
 
       const questionKey = `${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_CREATE_TASK}`;
       const questionText = 'Approve creating a new task?';
-      const questionSubject = `Prompt: ${prompt}\nAgent Profile: ${agentProfileId || 'default'}\nModel: ${modelId || 'default'}`;
+      const questionSubject = `Prompt: ${prompt}\nAgent Profile: ${agentProfileId || 'default'}\nModel: ${modelId || 'default'}\nExecute: ${shouldExecute}`;
 
       const [isApproved, userInput] = await approvalManager.handleApproval(questionKey, questionText, questionSubject);
 
@@ -187,11 +197,7 @@ export const createTasksToolset = (task: Task, profile: AgentProfile, promptCont
 
       try {
         const newTask = await task.getProject().createNewTask();
-
-        // Set initial task data
-        const updates: Partial<TaskData> = {
-          name: prompt.length > 50 ? prompt.substring(0, 47) + '...' : prompt,
-        };
+        const updates: Partial<TaskData> = {};
 
         if (agentProfileId) {
           updates.agentProfileId = agentProfileId;
@@ -212,15 +218,22 @@ export const createTasksToolset = (task: Task, profile: AgentProfile, promptCont
           throw new Error(`Failed to get task instance for newly created task ${newTask.id}`);
         }
 
-        await taskInstance.updateTask(updates);
+        await taskInstance.init();
+        await taskInstance.saveTask(updates);
 
-        // Add the initial prompt as a user message
-        await taskInstance.addContextMessage(MessageRole.User, prompt);
+        if (shouldExecute) {
+          const run = taskInstance.runPrompt(prompt, 'agent', false);
+          if (!executeInBackground) {
+            await run;
+          }
+        } else {
+          await taskInstance.savePromptOnly(prompt, false);
+        }
 
         return {
           id: newTask.id,
           name: newTask.name,
-          message: 'Task created successfully',
+          message: shouldExecute ? 'Task created and executed successfully' : 'Task created successfully',
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);

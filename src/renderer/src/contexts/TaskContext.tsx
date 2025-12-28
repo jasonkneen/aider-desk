@@ -158,12 +158,13 @@ export const TaskProvider: React.FC<{
 
         setTaskStateMap((prev) => {
           const newMap = new Map(prev);
+          const prevTask = newMap.get(taskId);
           newMap.set(taskId, {
             ...EMPTY_TASK_STATE,
-            ...newMap.get(taskId),
+            ...prevTask,
             loading: false,
             loaded: true,
-            messages,
+            messages: [...messages, ...(prevTask?.messages || [])],
             contextFiles: files,
             todoItems: todoItems || [],
             question,
