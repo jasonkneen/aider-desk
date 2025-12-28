@@ -258,6 +258,12 @@ export class ModelManager {
         const loadModels = async () => {
           // Load models from each profile for this provider type
           for (const profile of profilesForProvider) {
+            // Skip disabled providers
+            if (profile.disabled) {
+              logger.debug(`Skipping disabled provider profile ${profile.id}`);
+              continue;
+            }
+
             let providerModels: Model[] = [];
             const response = await strategy.loadModels(profile, this.store.getSettings());
 

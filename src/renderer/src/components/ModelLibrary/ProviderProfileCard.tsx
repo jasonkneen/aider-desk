@@ -99,6 +99,7 @@ export const ProviderProfileCard = ({ provider, error, isSelected, onToggleSelec
           'relative flex items-center p-3 pr-6 border-2 rounded-lg cursor-pointer transition-all duration-200 group',
           'hover:bg-bg-secondary',
           isSelected ? 'border-accent bg-bg-secondary shadow-sm' : 'border-border-dark-light hover:border-border-light',
+          provider.disabled ? 'opacity-50' : '',
         )}
         onClick={handleCardClick}
         onMouseEnter={() => setShowActions(true)}

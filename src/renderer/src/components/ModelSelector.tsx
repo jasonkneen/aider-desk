@@ -47,7 +47,9 @@ export const ModelSelector = forwardRef<ModelSelectorRef, Props>(
 
     const filteredModels = models.filter((model) => {
       const modelId = getProviderModelId(model);
-      return modelId.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) && !model.isHidden;
+      const provider = providers.find((p) => p.id === model.providerId);
+      const isProviderDisabled = provider && provider.disabled;
+      return modelId.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) && !model.isHidden && !isProviderDisabled;
     });
 
     // Group filtered models by providerId

@@ -17,6 +17,7 @@ type Props = {
   confirmButtonColor?: ButtonColor;
   width?: number;
   closeOnEscape?: boolean;
+  footerAdditionalComponents?: ReactNode;
 };
 
 export const ConfirmDialog = ({
@@ -32,6 +33,7 @@ export const ConfirmDialog = ({
   confirmButtonColor,
   width,
   closeOnEscape = false,
+  footerAdditionalComponents,
 }: Props) => {
   const { t } = useTranslation();
   const resolvedConfirmText = confirmButtonText ?? t('common.confirm');
@@ -44,6 +46,7 @@ export const ConfirmDialog = ({
       contentClass={contentClass}
       footer={
         <>
+          {footerAdditionalComponents}
           <Button onClick={onCancel} variant="text">
             {resolvedCancelText}
           </Button>

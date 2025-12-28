@@ -593,6 +593,7 @@ export interface ProviderProfile {
   name?: string;
   provider: LlmProvider;
   headers?: Record<string, string>;
+  disabled?: boolean;
 }
 
 export interface ProvidersUpdatedData {

@@ -248,7 +248,10 @@
       "overridesProviderParameters": "覆盖一些提供商参数"
     },
     "disableStreaming": "禁用流式传输",
-    "disableStreamingInfo": "禁用响应流式传输。当提供商或模型不支持流式传输时使用此选项。"
+    "disableStreamingInfo": "禁用响应流式传输。当提供商或模型不支持流式传输时使用此选项。",
+    "disable": "禁用",
+    "enable": "启用",
+    "providerDisabled": "此提供商已被禁用。其模型将不可用。"
   },
   "openai": {
     "apiKey": "API 密钥",

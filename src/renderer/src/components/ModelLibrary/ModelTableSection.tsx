@@ -71,7 +71,9 @@ export const ModelTableSection = ({
     const matchesSearch = model.id.toLowerCase().includes(debouncedSearch.toLowerCase());
     const matchesProvider = selectedProviderIds.length === 0 || selectedProviderIds.includes(model.providerId);
     const matchesHidden = showHidden || !model.isHidden;
-    return matchesSearch && matchesProvider && matchesHidden;
+    const provider = providers.find((p) => p.id === model.providerId);
+    const matchesDisabled = provider && provider.disabled;
+    return matchesSearch && matchesProvider && matchesHidden && !matchesDisabled;
   });
 
   const visibleModelIds = filteredModels.map((model) => model.id);
@@ -79,16 +81,6 @@ export const ModelTableSection = ({
   const allVisibleSelected = visibleModelIds.length > 0 && visibleModelIds.every((id) => selectedModelIds.includes(id));
 
   const handleToggleSelectAll = () => {
-    console.log(
-      'handleToggleSelectAll',
-      models.filter((model) => {
-        const matchesSearch = model.id.toLowerCase().includes(debouncedSearch.toLowerCase());
-        const matchesProvider = selectedProviderIds.length === 0 || selectedProviderIds.includes(model.providerId);
-        const matchesHidden = showHidden || !model.isHidden;
-        return matchesSearch && matchesProvider && matchesHidden;
-      }),
-    );
-
     setTableKey(tableKey + 1);
 
     if (allVisibleSelected) {

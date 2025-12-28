@@ -17,6 +17,7 @@
 - added optional execute argument to create task tool to allow executing it after creation
 - added update memory tool to complement other memory tools
 - added copy button to the bash tool command
+- added ability to disable provider profiles to hide their models
 
 ## [0.45.1]
 

@@ -249,7 +249,10 @@
       "overridesProviderParameters": "Overrides some provider parameters"
     },
     "disableStreaming": "Disable streaming",
-    "disableStreamingInfo": "Disables response streaming. Use this when the provider or model does not support streaming responses."
+    "disableStreamingInfo": "Disables response streaming. Use this when the provider or model does not support streaming responses.",
+    "disable": "Disable",
+    "enable": "Enable",
+    "providerDisabled": "This provider is disabled. Its models will not be available."
   },
   "openai": {
     "apiKey": "API Key",

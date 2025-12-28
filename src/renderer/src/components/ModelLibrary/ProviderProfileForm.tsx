@@ -78,6 +78,7 @@ export const ProviderProfileForm = forwardRef<ProviderProfileFormRef, Props>(
     const [id, setId] = useState(editProfile?.id || provider);
     const [name, setName] = useState(editProfile?.name || '');
     const [parameters, setParameters] = useState<LlmProvider | null>(editProfile ? editProfile.provider : getDefaultProviderParams(provider));
+    const disabled = editProfile?.disabled || false;
     const [headers, setHeaders] = useState<Header[]>(
       editProfile?.headers
         ? Object.entries(editProfile.headers).map(([key, value]) => ({
@@ -153,6 +154,7 @@ export const ProviderProfileForm = forwardRef<ProviderProfileFormRef, Props>(
         name,
         provider: parameters,
         headers: headersObject,
+        disabled,
       });
     };
 
