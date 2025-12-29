@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { startTransition, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Model, ProviderProfile } from '@common/types';
 import { DEFAULT_MODEL_TEMPERATURE } from '@common/agent';
@@ -30,6 +30,14 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [providerOverrides, setProviderOverrides] = useState<Record<string, unknown>>(model?.providerOverrides || {});
   const [temperatureEnabled, setTemperatureEnabled] = useState(model?.temperature !== undefined);
+  const [costDisplayValues, setCostDisplayValues] = useState<Record<string, string>>({
+    inputCostPerToken: model?.inputCostPerToken !== undefined && model.inputCostPerToken !== null ? (model.inputCostPerToken * 1000000).toFixed(4) : '',
+    outputCostPerToken: model?.outputCostPerToken !== undefined && model.outputCostPerToken !== null ? (model.outputCostPerToken * 1000000).toFixed(4) : '',
+    cacheReadInputTokenCost:
+      model?.cacheReadInputTokenCost !== undefined && model.cacheReadInputTokenCost !== null ? (model.cacheReadInputTokenCost * 1000000).toFixed(4) : '',
+    cacheWriteInputTokenCost:
+      model?.cacheWriteInputTokenCost !== undefined && model.cacheWriteInputTokenCost !== null ? (model.cacheWriteInputTokenCost * 1000000).toFixed(4) : '',
+  });
   const selectedProvider = providers.find((p) => p.id === formData.providerId);
 
   useEffect(() => {
@@ -47,19 +55,46 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
         supportsTools: model.supportsTools,
         isHidden: model.isHidden,
       };
-      setFormData(newFormData);
-      setProviderOverrides(model.providerOverrides || {});
-      setTemperatureEnabled(model.temperature !== undefined);
+      const newCostDisplayValues = {
+        inputCostPerToken: model.inputCostPerToken !== undefined && model.inputCostPerToken !== null ? (model.inputCostPerToken * 1000000).toFixed(4) : '',
+        outputCostPerToken: model.outputCostPerToken !== undefined && model.outputCostPerToken !== null ? (model.outputCostPerToken * 1000000).toFixed(4) : '',
+        cacheReadInputTokenCost:
+          model.cacheReadInputTokenCost !== undefined && model.cacheReadInputTokenCost !== null ? (model.cacheReadInputTokenCost * 1000000).toFixed(4) : '',
+        cacheWriteInputTokenCost:
+          model.cacheWriteInputTokenCost !== undefined && model.cacheWriteInputTokenCost !== null ? (model.cacheWriteInputTokenCost * 1000000).toFixed(4) : '',
+      };
+
+      // Batch state updates to avoid cascading renders
+      startTransition(() => {
+        setFormData(newFormData);
+        setProviderOverrides(model.providerOverrides || {});
+        setTemperatureEnabled(model.temperature !== undefined);
+        setCostDisplayValues(newCostDisplayValues);
+      });
     } else {
       const newFormData = {
         id: '',
         providerId: providers[0]?.id || '',
       };
-      setFormData(newFormData);
-      setProviderOverrides({});
-      setTemperatureEnabled(false);
+      const newCostDisplayValues = {
+        inputCostPerToken: '',
+        outputCostPerToken: '',
+        cacheReadInputTokenCost: '',
+        cacheWriteInputTokenCost: '',
+      };
+
+      // Batch state updates to avoid cascading renders
+      startTransition(() => {
+        setFormData(newFormData);
+        setProviderOverrides({});
+        setTemperatureEnabled(false);
+        setCostDisplayValues(newCostDisplayValues);
+      });
     }
-    setErrors({});
+
+    startTransition(() => {
+      setErrors({});
+    });
   }, [model, providers]);
 
   const validateForm = (): boolean => {
@@ -85,11 +120,14 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
       newErrors.temperature = t('modelLibrary.errors.invalidTemperature');
     }
 
-    if (formData.inputCostPerToken && formData.inputCostPerToken < 0) {
+    const inputCostValue = costDisplayValues.inputCostPerToken !== '' ? parseFloat(costDisplayValues.inputCostPerToken) / 1000000 : undefined;
+    const outputCostValue = costDisplayValues.outputCostPerToken !== '' ? parseFloat(costDisplayValues.outputCostPerToken) / 1000000 : undefined;
+
+    if (inputCostValue && inputCostValue < 0) {
       newErrors.inputCostPerToken = t('modelLibrary.errors.invalidCost');
     }
 
-    if (formData.outputCostPerToken && formData.outputCostPerToken < 0) {
+    if (outputCostValue && outputCostValue < 0) {
       newErrors.outputCostPerToken = t('modelLibrary.errors.invalidCost');
     }
 
@@ -108,10 +146,11 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
       maxInputTokens: formData.maxInputTokens,
       maxOutputTokens: formData.maxOutputTokens,
       temperature: temperatureEnabled ? formData.temperature : undefined,
-      inputCostPerToken: formData.inputCostPerToken,
-      outputCostPerToken: formData.outputCostPerToken,
-      cacheReadInputTokenCost: formData.cacheReadInputTokenCost,
-      cacheWriteInputTokenCost: formData.cacheWriteInputTokenCost,
+      inputCostPerToken: costDisplayValues.inputCostPerToken !== '' ? parseFloat(costDisplayValues.inputCostPerToken) / 1000000 : undefined,
+      outputCostPerToken: costDisplayValues.outputCostPerToken !== '' ? parseFloat(costDisplayValues.outputCostPerToken) / 1000000 : undefined,
+      cacheReadInputTokenCost: costDisplayValues.cacheReadInputTokenCost !== '' ? parseFloat(costDisplayValues.cacheReadInputTokenCost) / 1000000 : undefined,
+      cacheWriteInputTokenCost:
+        costDisplayValues.cacheWriteInputTokenCost !== '' ? parseFloat(costDisplayValues.cacheWriteInputTokenCost) / 1000000 : undefined,
       supportsTools: formData.supportsTools,
       isHidden: formData.isHidden,
       isCustom: model?.isCustom || !model,
@@ -127,6 +166,16 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: '' }));
     }
+  };
+
+  const handleCostBlur = (field: keyof Model, displayField: keyof typeof costDisplayValues, inputValue: string) => {
+    const perMillionValue = inputValue !== '' ? parseFloat(inputValue) : undefined;
+    const perTokenValue = perMillionValue !== undefined ? perMillionValue / 1000000 : undefined;
+    handleInputChange(field, perTokenValue);
+    setCostDisplayValues((prev) => ({
+      ...prev,
+      [displayField]: perTokenValue !== undefined ? (perTokenValue * 1000000).toFixed(4) : '',
+    }));
   };
 
   const handleTemperatureToggle = (enabled: boolean) => {
@@ -202,12 +251,9 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
               label={t('modelLibrary.inputTokenCost')}
               type="number"
               step="0.01"
-              value={formData.inputCostPerToken !== undefined && formData.inputCostPerToken !== null ? (formData.inputCostPerToken * 1000000).toFixed(4) : ''}
-              onChange={(e) => {
-                const perMillionValue = e.target.value !== '' ? parseFloat(e.target.value) : undefined;
-                const perTokenValue = perMillionValue !== undefined ? perMillionValue / 1000000 : undefined;
-                handleInputChange('inputCostPerToken', perTokenValue);
-              }}
+              value={costDisplayValues.inputCostPerToken}
+              onChange={(e) => setCostDisplayValues((prev) => ({ ...prev, inputCostPerToken: e.target.value }))}
+              onBlur={(e) => handleCostBlur('inputCostPerToken', 'inputCostPerToken', e.target.value)}
             />
             {errors.inputCostPerToken && <p className="text-error text-2xs mt-1">{errors.inputCostPerToken}</p>}
           </div>
@@ -217,14 +263,9 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
               label={t('modelLibrary.outputTokenCost')}
               type="number"
               step="0.01"
-              value={
-                formData.outputCostPerToken !== undefined && formData.outputCostPerToken !== null ? (formData.outputCostPerToken * 1000000).toFixed(4) : ''
-              }
-              onChange={(e) => {
-                const perMillionValue = e.target.value !== '' ? parseFloat(e.target.value) : undefined;
-                const perTokenValue = perMillionValue !== undefined ? perMillionValue / 1000000 : undefined;
-                handleInputChange('outputCostPerToken', perTokenValue);
-              }}
+              value={costDisplayValues.outputCostPerToken}
+              onChange={(e) => setCostDisplayValues((prev) => ({ ...prev, outputCostPerToken: e.target.value }))}
+              onBlur={(e) => handleCostBlur('outputCostPerToken', 'outputCostPerToken', e.target.value)}
             />
             {errors.outputCostPerToken && <p className="text-error text-2xs mt-1">{errors.outputCostPerToken}</p>}
           </div>
@@ -236,16 +277,9 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
               label={t('modelLibrary.cacheReadInputTokenCost')}
               type="number"
               step="0.01"
-              value={
-                formData.cacheReadInputTokenCost !== undefined && formData.cacheReadInputTokenCost !== null
-                  ? (formData.cacheReadInputTokenCost * 1000000).toFixed(4)
-                  : ''
-              }
-              onChange={(e) => {
-                const perMillionValue = e.target.value !== '' ? parseFloat(e.target.value) : undefined;
-                const perTokenValue = perMillionValue !== undefined ? perMillionValue / 1000000 : undefined;
-                handleInputChange('cacheReadInputTokenCost', perTokenValue);
-              }}
+              value={costDisplayValues.cacheReadInputTokenCost}
+              onChange={(e) => setCostDisplayValues((prev) => ({ ...prev, cacheReadInputTokenCost: e.target.value }))}
+              onBlur={(e) => handleCostBlur('cacheReadInputTokenCost', 'cacheReadInputTokenCost', e.target.value)}
             />
           </div>
 
@@ -254,16 +288,9 @@ export const ModelDialog = ({ model, providers, onSave, onCancel }: Props) => {
               label={t('modelLibrary.cacheWriteInputTokenCost')}
               type="number"
               step="0.01"
-              value={
-                formData.cacheWriteInputTokenCost !== undefined && formData.cacheWriteInputTokenCost !== null
-                  ? (formData.cacheWriteInputTokenCost * 1000000).toFixed(4)
-                  : ''
-              }
-              onChange={(e) => {
-                const perMillionValue = e.target.value !== '' ? parseFloat(e.target.value) : undefined;
-                const perTokenValue = perMillionValue !== undefined ? perMillionValue / 1000000 : undefined;
-                handleInputChange('cacheWriteInputTokenCost', perTokenValue);
-              }}
+              value={costDisplayValues.cacheWriteInputTokenCost}
+              onChange={(e) => setCostDisplayValues((prev) => ({ ...prev, cacheWriteInputTokenCost: e.target.value }))}
+              onBlur={(e) => handleCostBlur('cacheWriteInputTokenCost', 'cacheWriteInputTokenCost', e.target.value)}
             />
           </div>
         </div>
