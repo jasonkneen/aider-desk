@@ -317,6 +317,7 @@ src/
           SubagentToolMessage.tsx
           ThinkingAnswerBlock.tsx
           ToolMessageBlock.tsx
+          UpdateMemoryToolMessage.tsx
           UsageInfo.tsx
           UserMessageBlock.tsx
           utils.tsx
@@ -512,7 +513,6 @@ src/
         OpenRouterIcon.tsx
         requesty.png
         RequestyIcon.tsx
-        santa-hat.png
         VertexAiIcon.tsx
         ZaiPlanIcon.tsx
       pages/
@@ -1526,7 +1526,10 @@ File: src/common/locales/en.json
       "overridesProviderParameters": "Overrides some provider parameters"
     },
     "disableStreaming": "Disable streaming",
-    "disableStreamingInfo": "Disables response streaming. Use this when the provider or model does not support streaming responses."
+    "disableStreamingInfo": "Disables response streaming. Use this when the provider or model does not support streaming responses.",
+    "disable": "Disable",
+    "enable": "Enable",
+    "providerDisabled": "This provider is disabled. Its models will not be available."
   },
   "openai": {
     "apiKey": "API Key",
@@ -2181,6 +2184,9 @@ File: src/common/locales/en.json
       "getTaskMessage": "Get task message",
       "createTask": "Create task",
       "deleteTask": "Delete task",
+      "execute": "Execute",
+      "yes": "Yes",
+      "no": "No",
       "taskId": "Task ID",
       "messageIndex": "Message Index",
       "prompt": "Prompt",
@@ -2279,18 +2285,22 @@ File: src/common/locales/en.json
       "storingMemory": "Storing memory...",
       "retrievingMemories": "Retrieving memories...",
       "deletingMemory": "Deleting memory...",
+      "updatingMemory": "Updating memory...",
       "listingMemories": "Listing memories...",
       "memoryStored": "Memory stored.",
+      "memoryUpdated": "Memory updated.",
       "memoryDeleted": "Memory deleted.",
       "memoryId": "Memory ID",
       "type": "Type",
       "content": "Content",
+      "newContent": "New Content",
       "query": "Query",
       "limit": "Limit",
       "foundMemories": "Found {{count}} memories.",
       "noMemoriesFound": "No relevant memories have been found.",
       "noRelevantMemories": "No relevant memories have been found",
       "storedMemoryDetails": "Stored Memory Details",
+      "updatedMemoryDetails": "Updated Memory Details",
       "deletedMemoryDetails": "Deleted Memory Details",
       "retrievedMemories": "Retrieved Memories",
       "memoryList": "Memory List",
@@ -2862,7 +2872,10 @@ File: src/common/locales/zh.json
       "overridesProviderParameters": "覆盖一些提供商参数"
     },
     "disableStreaming": "禁用流式传输",
-    "disableStreamingInfo": "禁用响应流式传输。当提供商或模型不支持流式传输时使用此选项。"
+    "disableStreamingInfo": "禁用响应流式传输。当提供商或模型不支持流式传输时使用此选项。",
+    "disable": "禁用",
+    "enable": "启用",
+    "providerDisabled": "此提供商已被禁用。其模型将不可用。"
   },
   "openai": {
     "apiKey": "API 密钥",
@@ -3494,6 +3507,9 @@ File: src/common/locales/zh.json
       "getTaskMessage": "获取任务消息",
       "createTask": "创建任务",
       "deleteTask": "删除任务",
+      "execute": "执行",
+      "yes": "是",
+      "no": "否",
       "taskId": "任务ID",
       "messageIndex": "消息索引",
       "prompt": "提示",
@@ -3588,18 +3604,22 @@ File: src/common/locales/zh.json
       "storingMemory": "正在存储记忆...",
       "retrievingMemories": "正在检索记忆...",
       "deletingMemory": "正在删除记忆...",
+      "updatingMemory": "正在更新记忆...",
       "listingMemories": "正在列出记忆...",
       "memoryStored": "记忆已存储。",
+      "memoryUpdated": "记忆已更新。",
       "memoryDeleted": "记忆已删除。",
       "memoryId": "记忆ID",
       "type": "类型",
       "content": "内容",
+      "newContent": "新内容",
       "query": "查询",
       "limit": "限制",
       "foundMemories": "找到 {{count}} 条记忆。",
       "noMemoriesFound": "未找到相关记忆。",
       "noRelevantMemories": "未找到相关记忆",
       "storedMemoryDetails": "存储的记忆详情",
+      "updatedMemoryDetails": "更新的记忆详情",
       "deletedMemoryDetails": "删除的记忆详情",
       "retrievedMemories": "检索到的记忆",
       "memoryList": "记忆列表",
@@ -3988,6 +4008,7 @@ import {
   MEMORY_TOOL_LIST,
   MEMORY_TOOL_RETRIEVE,
   MEMORY_TOOL_STORE,
+  MEMORY_TOOL_UPDATE,
 } from '@common/tools';
 ⋮----
 export type LlmProviderName =
@@ -5006,6 +5027,7 @@ export interface ProviderProfile {
   name?: string;
   provider: LlmProvider;
   headers?: Record<string, string>;
+  disabled?: boolean;
 }
 ⋮----
 export interface ProvidersUpdatedData {
@@ -5487,6 +5509,7 @@ import {
   MEMORY_TOOL_LIST as TOOL_LIST,
   MEMORY_TOOL_RETRIEVE as TOOL_RETRIEVE,
   MEMORY_TOOL_STORE as TOOL_STORE,
+  MEMORY_TOOL_UPDATE as TOOL_UPDATE,
   MEMORY_TOOL_GROUP_NAME as TOOL_GROUP_NAME,
   TOOL_GROUP_NAME_SEPARATOR,
 } from '@common/tools';
@@ -5502,6 +5525,8 @@ export const createMemoryToolset = (task: Task, profile: AgentProfile, memoryMan
 // Get the memory to show its content in the approval question
 ⋮----
 // Filter by project and type if specified
+⋮----
+// Get the memory to show its content in the approval question
 ⋮----
 // Filter out tools that are set to Never in toolApprovals
 
@@ -5699,7 +5724,7 @@ import {
   TASKS_TOOL_LIST_TASKS,
   TOOL_GROUP_NAME_SEPARATOR,
 } from '@common/tools';
-import { AgentProfile, MessageRole, PromptContext, TaskData, ToolApprovalState } from '@common/types';
+import { AgentProfile, PromptContext, TaskData, ToolApprovalState } from '@common/types';
 ⋮----
 import { ApprovalManager } from './approval-manager';
 ⋮----
@@ -5713,14 +5738,10 @@ export const createTasksToolset = (task: Task, profile: AgentProfile, promptCont
 ⋮----
 actualIndex = contextMessages.length + messageIndex; // e.g., -1 becomes length-1
 ⋮----
-// Set initial task data
-⋮----
 // Parse modelId to extract provider and model
 ⋮----
 // createNewTask returns TaskData, not Task instance
 // We need to get the actual Task instance to call methods on it
-⋮----
-// Add the initial prompt as a user message
 ⋮----
 // Prevent deleting the current task
 
@@ -5882,6 +5903,8 @@ order: 0, // Will be set by order file
 // Add profiles to the main profiles map
 ⋮----
 private async loadProfileFile(filePath: string, dirName: string): Promise<AgentProfile | null>
+⋮----
+// use default tool approvals if not specified
 ⋮----
 // Discover and load rule files for this profile
 ⋮----
@@ -7108,6 +7131,10 @@ async getMemory(id: string): Promise<MemoryEntry | null>
 ⋮----
 async deleteMemory(id: string): Promise<boolean>
 ⋮----
+async updateMemory(id: string, content: string): Promise<boolean>
+⋮----
+// Check if memory exists
+⋮----
 async getAllMemories(): Promise<MemoryEntry[]>
 ⋮----
 // Map results back to MemoryEntry interface
@@ -8236,6 +8263,8 @@ const loadModels = async () =>
 ⋮----
 // Load models from each profile for this provider type
 ⋮----
+// Skip disabled providers
+⋮----
 // Emit the updated provider models event
 ⋮----
 // Update agent profiles with the new models
@@ -9200,10 +9229,6 @@ export class PromptApi extends BaseApi
 constructor(private readonly eventsHandler: EventsHandler)
 ⋮----
 registerRoutes(router: Router): void
-⋮----
-// Check if another prompt is already running
-⋮----
-// Clear the running flag even if there's an error
 
 ================
 File: src/main/server/rest-api/providers-api.ts
@@ -9232,6 +9257,10 @@ registerRoutes(router: Router): void
 // Get provider models
 ⋮----
 // Bulk update models
+⋮----
+// Upsert a single model
+⋮----
+// Delete a model
 
 ================
 File: src/main/server/rest-api/settings-api.ts
@@ -10251,11 +10280,11 @@ private async waitForCurrentAgentToFinish()
 ⋮----
 private resolveAgentRunPromises()
 ⋮----
-public async runPrompt(prompt: string, mode: Mode = 'code'): Promise<ResponseCompletedData[]>
+public async runPrompt(prompt: string, mode: Mode = 'code', addToInputHistory = true): Promise<ResponseCompletedData[]>
 ⋮----
 // Generate promptContext for this run
 ⋮----
-public async savePromptOnly(prompt: string): Promise<void>
+public async savePromptOnly(prompt: string, addInputHistory = true): Promise<void>
 ⋮----
 // Add user message to context
 ⋮----
@@ -12932,9 +12961,9 @@ private async get<T>(endpoint: string, params?: Record<string, unknown>): Promis
 ⋮----
 private async patch<B, R>(endpoint: string, body: B): Promise<R>
 ⋮----
-private async delete<T>(endpoint: string): Promise<T>
+private async delete<T>(endpoint: string, params?: Record<string, unknown>): Promise<T>
 ⋮----
-private async put<B, R>(endpoint: string, body: B): Promise<R>
+private async put<B, R>(endpoint: string, body: B, params?: Record<string, unknown>): Promise<R>
 ⋮----
 isOpenLogsDirectorySupported(): boolean
 openLogsDirectory(): Promise<boolean>
@@ -13692,22 +13721,8 @@ type Props = {
   confirmButtonColor?: ButtonColor;
   width?: number;
   closeOnEscape?: boolean;
+  footerAdditionalComponents?: ReactNode;
 };
-⋮----
-export const ConfirmDialog = ({
-  title,
-  onConfirm,
-  onCancel,
-  confirmButtonText,
-  cancelButtonText,
-  contentClass,
-  children,
-  disabled = false,
-  confirmButtonClass,
-  confirmButtonColor,
-  width,
-  closeOnEscape = false,
-}: Props) =>
 
 ================
 File: src/renderer/src/components/common/DatePicker.css
@@ -14401,6 +14416,7 @@ import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { CopyMessageButton } from '@/components/message/CopyMessageButton';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -14430,6 +14446,7 @@ File: src/renderer/src/components/message/CopyMessageButton.tsx
 ================
 import { BiCopy } from 'react-icons/bi';
 import { useTranslation } from 'react-i18next';
+import { twMerge } from 'tailwind-merge';
 ⋮----
 import { IconButton } from '../common/IconButton';
 ⋮----
@@ -14442,6 +14459,8 @@ type Props = {
 };
 ⋮----
 const copyToClipboard = () =>
+⋮----
+icon=
 
 ================
 File: src/renderer/src/components/message/CreateTaskToolMessage.tsx
@@ -14461,8 +14480,6 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
 };
-⋮----
-{/* Success Message */}
 ⋮----
 {/* Task Details */}
 ⋮----
@@ -14990,6 +15007,7 @@ import {
   MEMORY_TOOL_RETRIEVE,
   MEMORY_TOOL_DELETE,
   MEMORY_TOOL_LIST,
+  MEMORY_TOOL_UPDATE,
   POWER_TOOL_BASH,
   POWER_TOOL_FETCH,
   POWER_TOOL_FILE_EDIT,
@@ -15036,6 +15054,7 @@ import { StoreMemoryToolMessage } from './StoreMemoryToolMessage';
 import { RetrieveMemoryToolMessage } from './RetrieveMemoryToolMessage';
 import { DeleteMemoryToolMessage } from './DeleteMemoryToolMessage';
 import { ListMemoriesToolMessage } from './ListMemoriesToolMessage';
+import { UpdateMemoryToolMessage } from './UpdateMemoryToolMessage';
 import { ActivateSkillToolMessage } from './ActivateSkillToolMessage';
 import { areMessagesEqual } from './utils';
 ⋮----
@@ -15143,7 +15162,6 @@ import { RiRobot2Line } from 'react-icons/ri';
 ⋮----
 import { MessageBar } from './MessageBar';
 ⋮----
-import santaHat from '@/icons/santa-hat.png';
 import { useParsedContent } from '@/hooks/useParsedContent';
 import { ResponseMessage } from '@/types/message';
 ⋮----
@@ -15353,6 +15371,29 @@ rawContentToCopy = JSON.stringify(parsedResult.json); // Copy raw JSON
 
 ⋮----
 {/* Tool Specific Content */}
+
+================
+File: src/renderer/src/components/message/UpdateMemoryToolMessage.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { FaBrain, FaCheckCircle, FaExclamationTriangle, FaTimesCircle } from 'react-icons/fa';
+import { CgSpinner } from 'react-icons/cg';
+⋮----
+import { ToolMessage } from '@/types/message';
+import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+⋮----
+type Props = {
+  message: ToolMessage;
+  onRemove?: () => void;
+  compact?: boolean;
+};
+⋮----
+{/* Memory ID */}
+⋮----
+{/* New Content */}
+⋮----
+return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/UsageInfo.tsx
@@ -16770,13 +16811,14 @@ onCancel=
 File: src/renderer/src/components/ModelLibrary/ProviderProfileDialog.tsx
 ================
 import { useTranslation } from 'react-i18next';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { LlmProviderName } from '@common/agent';
 import { ProviderProfile } from '@common/types';
 ⋮----
 import { ProviderProfileForm, ProviderProfileFormRef } from './ProviderProfileForm';
 ⋮----
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { Button } from '@/components/common/Button';
 ⋮----
 type Props = {
   provider: LlmProviderName;
@@ -16787,6 +16829,10 @@ type Props = {
 };
 ⋮----
 export const ProviderProfileDialog = (
+⋮----
+const handleSave = (savedProfile: ProviderProfile) =>
+⋮----
+const handleToggleDisabled = () =>
 ⋮----
 title=
 ⋮----
@@ -17050,9 +17096,9 @@ continue; // No parent directories if it's a root file or empty/invalid path
 ⋮----
 // Deduplicate in case a path could be sourced from both lists or if suggestionFiles had duplicates
 ⋮----
-const handleInputSubmit = () =>
+const handleInputSubmit = (isMultiSelect = false) =>
 ⋮----
-const handleAutocompleteInputChange = (value: string, isFromSuggestion?: boolean) =>
+const handleAutocompleteInputChange = (value: string, isFromSuggestion?: boolean, isMultiSelect?: boolean) =>
 ⋮----
 setInputValue(''); // Clear input after adding from suggestion
 setShowSuggestions(false); // Hide suggestions after selection
@@ -18464,6 +18510,7 @@ import {
   MEMORY_TOOL_DESCRIPTIONS,
   MEMORY_TOOL_GROUP_NAME,
   MEMORY_TOOL_LIST,
+  MEMORY_TOOL_UPDATE,
   MEMORY_TOOL_RETRIEVE,
   MEMORY_TOOL_STORE,
   SKILLS_TOOL_GROUP_NAME,
@@ -19703,14 +19750,14 @@ import { clsx } from 'clsx';
 type Props = {
   value: string;
   suggestions: string[];
-  onChange: (value: string, isFromSuggestion: boolean) => void;
+  onChange: (value: string, isFromSuggestion: boolean, isMultiSelect?: boolean) => void;
   placeholder?: string;
   className?: string;
   inputClassName?: string;
   rightElement?: ReactNode;
   autoFocus?: boolean;
   onPaste?: (pastedText: string) => Promise<boolean>;
-  onSubmit?: () => void;
+  onSubmit?: (isMultiSelect?: boolean) => void;
 };
 ⋮----
 const handleKeyDown = (e: React.KeyboardEvent) =>
@@ -19722,11 +19769,6 @@ const handleOnPaste = async (e: ClipboardEvent<HTMLInputElement>) =>
 // If onPaste didn't handle the paste (returned false), manually insert the text
 ⋮----
 zIndex: 1000, // Ensure it's above other elements
-⋮----
-onChange(suggestion, true);
-setShowSuggestions(false);
-⋮----
-<div className=
 ⋮----
 className=
 ⋮----
