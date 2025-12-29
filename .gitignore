@@ -29,4 +29,4 @@ start-docker.sh
 ./session-*.md
 .claude-trace
 repomix-output.txt
-
+.eslintcache
