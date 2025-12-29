@@ -488,6 +488,7 @@ export class ContextManager {
         logger.debug('No existing task context found:', {
           taskId: this.taskId,
         });
+        this.loaded = true;
         return;
       }
 
@@ -498,6 +499,7 @@ export class ContextManager {
 
       if (!contextData) {
         logger.debug('Empty task context found:', { taskId: this.taskId });
+        this.loaded = true;
         return;
       }
 

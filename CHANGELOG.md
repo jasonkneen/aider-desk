@@ -4,6 +4,7 @@
 
 - added ability to pin tasks to the top of the task sidebar
 - added AI-powered task name generation
+- fixed context manager not marking as loaded in some cases
 
 ## [0.46.0]
 
