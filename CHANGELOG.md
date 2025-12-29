@@ -1,5 +1,9 @@
 # Changelog
 
+## [UNRELEASED]
+
+- added ability to pin tasks to the top of the task sidebar
+
 ## [0.46.0]
 
 - added Vitest testing framework

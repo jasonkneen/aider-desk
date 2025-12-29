@@ -11,6 +11,14 @@ export const getSortedVisibleTasks = (tasks: TaskData[], showArchived: boolean =
       return task.name.toLowerCase().includes(searchText);
     })
     .sort((a, b) => {
+      // Pinned tasks come first
+      if (a.pinned && !b.pinned) {
+        return -1;
+      }
+      if (!a.pinned && b.pinned) {
+        return 1;
+      }
+      // Then sort by updatedAt
       if (a.updatedAt && !b.updatedAt) {
         return 1;
       } else if (!a.updatedAt && b.updatedAt) {

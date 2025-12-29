@@ -6,7 +6,7 @@ import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { FaEllipsisVertical } from 'react-icons/fa6';
 import { IoLogoMarkdown } from 'react-icons/io';
 import { CgSpinner } from 'react-icons/cg';
-import { MdImage, MdOutlineSearch } from 'react-icons/md';
+import { MdImage, MdOutlineSearch, MdPushPin } from 'react-icons/md';
 import { clsx } from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BiCopy, BiDuplicate, BiArchive, BiArchiveIn } from 'react-icons/bi';
@@ -34,6 +34,8 @@ type TaskMenuButtonProps = {
   onDuplicateTask?: () => void;
   onArchiveTask?: () => void;
   onUnarchiveTask?: () => void;
+  onTogglePin?: () => void;
+  isPinned?: boolean;
 };
 
 const TaskMenuButton = ({
@@ -45,6 +47,8 @@ const TaskMenuButton = ({
   onDuplicateTask,
   onArchiveTask,
   onUnarchiveTask,
+  onTogglePin,
+  isPinned,
 }: TaskMenuButtonProps) => {
   const { t } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -107,8 +111,27 @@ const TaskMenuButton = ({
     setIsMenuOpen(false);
   };
 
+  const handlePinClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    onTogglePin?.();
+  };
+
   return (
     <div className={clsx('relative flex items-center pl-2', isMenuOpen ? 'flex' : 'w-0 group-hover:w-auto')}>
+      {onTogglePin && (
+        <button
+          data-tooltip-id="task-sidebar-tooltip"
+          data-tooltip-content={isPinned ? t('taskSidebar.unpinTask') : t('taskSidebar.pinTask')}
+          className={clsx(
+            'transition-opacity p-1.5 rounded-md hover:bg-bg-tertiary mr-1',
+            isPinned ? 'text-text-primary' : 'text-text-muted hover:text-text-primary',
+            !isMenuOpen && 'opacity-0 group-hover:opacity-100',
+          )}
+          onClick={handlePinClick}
+        >
+          <MdPushPin className={clsx('w-4 h-4', isPinned && 'rotate-45')} />
+        </button>
+      )}
       <div ref={buttonRef}>
         <button
           className={clsx(
@@ -480,6 +503,20 @@ const TaskSidebarComponent = ({
     }
   };
 
+  const handleTogglePin = async (taskId: string) => {
+    try {
+      if (updateTask) {
+        const task = tasks.find((t) => t.id === taskId);
+        if (task) {
+          await updateTask(taskId, { pinned: !task.pinned });
+        }
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to toggle pin:', error);
+    }
+  };
+
   // Multiselect handlers
   const handleTaskCtrlClick = (e: MouseEvent, taskId: string) => {
     e.preventDefault();
@@ -583,13 +620,16 @@ const TaskSidebarComponent = ({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <div
-              className={clsx(
-                'text-xs font-medium truncate transition-colors',
-                task.archived && activeTaskId !== task.id ? 'text-text-muted group-hover:text-text-primary' : 'text-text-primary',
-              )}
-            >
-              {task.name || t('taskSidebar.untitled')}
+            <div className="flex items-center justify-between">
+              <div
+                className={clsx(
+                  'text-xs font-medium truncate transition-colors',
+                  task.archived && activeTaskId !== task.id ? 'text-text-muted group-hover:text-text-primary' : 'text-text-primary',
+                )}
+              >
+                {task.name || t('taskSidebar.untitled')}
+              </div>
+              {task.pinned && <MdPushPin className="w-3 h-3 text-text-muted shrink-0 ml-1 rotate-45 group-hover:hidden" />}
             </div>
             <div className="text-3xs text-text-muted truncate">
               {formatDate(task.updatedAt || new Date().toISOString())}
@@ -609,6 +649,8 @@ const TaskSidebarComponent = ({
               onDuplicateTask={onDuplicateTask && task.createdAt ? () => onDuplicateTask(task.id) : undefined}
               onArchiveTask={task.archived || !task.createdAt ? undefined : () => handleArchiveTask(task.id)}
               onUnarchiveTask={task.archived ? () => handleUnarchiveTask(task.id) : undefined}
+              onTogglePin={() => handleTogglePin(task.id)}
+              isPinned={task.pinned || false}
             />
           )}
         </div>
@@ -902,7 +944,12 @@ const arePropsEqual = (prevProps: Props, nextProps: Props): boolean => {
     }
 
     // Only check properties that affect rendering
-    if (prevTask.name !== nextTask.name || prevTask.updatedAt !== nextTask.updatedAt || prevTask.createdAt !== nextTask.createdAt) {
+    if (
+      prevTask.name !== nextTask.name ||
+      prevTask.updatedAt !== nextTask.updatedAt ||
+      prevTask.createdAt !== nextTask.createdAt ||
+      prevTask.pinned !== nextTask.pinned
+    ) {
       return false;
     }
   }

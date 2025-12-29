@@ -757,6 +757,7 @@ export const TaskDataSchema = z.object({
   baseDir: z.string(),
   name: z.string(),
   archived: z.boolean().optional(),
+  pinned: z.boolean().optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
   startedAt: z.string().optional(),
