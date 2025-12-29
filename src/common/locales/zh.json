@@ -1282,7 +1282,8 @@
     "unarchiveSelected": "取消归档选中项",
     "deleteSelectedConfirm": "您确定要删除 {{count}} 个选中的任务吗？",
     "archiveSelectedConfirm": "您确定要归档 {{count}} 个选中的任务吗？",
-    "unarchiveSelectedConfirm": "您确定要取消归档 {{count}} 个选中的任务吗？"
+    "unarchiveSelectedConfirm": "您确定要取消归档 {{count}} 个选中的任务吗？",
+    "generatingName": "正在生成名称..."
   },
   "worktree": {
     "aheadCommits": "↑ {{count}} 次提交",

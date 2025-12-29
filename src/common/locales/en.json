@@ -1275,7 +1275,8 @@
     "unarchiveSelected": "Unarchive selected",
     "deleteSelectedConfirm": "Are you sure you want to delete {{count}} selected tasks?",
     "archiveSelectedConfirm": "Are you sure you want to archive {{count}} selected tasks?",
-    "unarchiveSelectedConfirm": "Are you sure you want to unarchive {{count}} selected tasks?"
+    "unarchiveSelectedConfirm": "Are you sure you want to unarchive {{count}} selected tasks?",
+    "generatingName": "Generating name..."
   },
   "worktree": {
     "aheadCommits": "↑ {{count}} commits",

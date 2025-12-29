@@ -92,6 +92,15 @@ describe('Prompts with Handlebars', () => {
     });
   });
 
+  describe('getGenerateTaskNamePrompt', () => {
+    it('should render task-name generation prompt', () => {
+      const prompt = promptsManager.getGenerateTaskNamePrompt(mockTask);
+
+      expect(prompt).toContain('You are a helpful assistant that generates concise, descriptive task names');
+      expect(prompt).toContain('Guidelines:');
+    });
+  });
+
   describe('getConflictResolutionSystemPrompt', () => {
     it('should render conflict-resolution system prompt with correct tool names', () => {
       const prompt = promptsManager.getConflictResolutionSystemPrompt(mockTask);
@@ -180,6 +189,7 @@ describe('Prompts with Handlebars', () => {
         path.join(tmpGlobalDir, 'conflict-resolution-system.hbs'),
         '<GlobalConflictResolutionSystem>\n  Global conflict resolution system prompt - should override default.\n</GlobalConflictResolutionSystem>\n',
       );
+      await fs.writeFile(path.join(tmpGlobalDir, 'task-name.hbs'), '# Global Task Name\nGlobal task name prompt - should override default.\n');
 
       // Create a new PromptsManager with the temporary global directory
       promptsManagerWithGlobal = new PromptsManager(path.join(__dirname, 'templates', 'default'), tmpGlobalDir);
@@ -248,6 +258,14 @@ describe('Prompts with Handlebars', () => {
       expect(prompt).not.toContain('<DefaultConflictResolutionSystem>');
       expect(prompt).not.toContain('Default conflict resolution system prompt');
     });
+
+    it('should use global task-name template', () => {
+      const prompt = promptsManagerWithGlobal.getGenerateTaskNamePrompt(mockTask);
+
+      expect(prompt).toContain('Global task name prompt');
+      expect(prompt).toContain('should override default');
+      expect(prompt).not.toContain('concise, descriptive task names');
+    });
   });
 
   describe('Default templates (without global override)', () => {
@@ -304,6 +322,14 @@ describe('Prompts with Handlebars', () => {
       expect(prompt).toContain('<DefaultConflictResolutionSystem>');
       expect(prompt).toContain('Default conflict resolution system prompt');
       expect(prompt).not.toContain('<GlobalConflictResolutionSystem>');
+    });
+
+    it('should use default task-name template when global is not present', () => {
+      const prompt = promptsManagerNoGlobal.getGenerateTaskNamePrompt(mockTask);
+
+      expect(prompt).toContain('You are a helpful assistant that generates concise, descriptive task names');
+      expect(prompt).toContain('Guidelines:');
+      expect(prompt).not.toContain('Global task name prompt');
     });
   });
 });

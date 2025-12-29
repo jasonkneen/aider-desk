@@ -705,8 +705,42 @@ export class Task {
     return [];
   }
 
-  private getTaskNameFromPrompt(prompt: string) {
-    return prompt.trim().split(' ').slice(0, 5).join(' ');
+  private getTaskNameFromPrompt(prompt: string): string {
+    const saveFallbackName = () => {
+      const fallbackName = prompt.trim().split(' ').slice(0, 5).join(' ');
+      void this.saveTask({ name: fallbackName });
+    };
+
+    this.generateTaskNameInBackground(prompt)
+      .then((taskName) => {
+        if (taskName) {
+          void this.saveTask({ name: taskName });
+        } else {
+          saveFallbackName();
+        }
+      })
+      .catch((error) => {
+        logger.warn('Failed to generate task name:', error);
+        saveFallbackName();
+      });
+
+    return '<<generating>>';
+  }
+
+  private async generateTaskNameInBackground(prompt: string): Promise<string | null> {
+    const agentProfile = await this.getTaskAgentProfile();
+    if (agentProfile) {
+      const maxPromptLength = 1000;
+      const taskName = await this.agent.generateText(
+        agentProfile,
+        this.promptsManager.getGenerateTaskNamePrompt(this),
+        `Generate a concise task name for this request:\n\n${prompt.length > maxPromptLength ? prompt.substring(0, maxPromptLength) + '...' : prompt}\n\nOnly answer with the task name, nothing else.`,
+      );
+      logger.info('Generated task name:', { taskName });
+      return taskName.trim();
+    }
+
+    return null;
   }
 
   public async runSubagent(
@@ -1719,7 +1753,9 @@ export class Task {
     const promptToRun = updatedPrompt ?? originalLastUserMessageContent;
 
     if (promptToRun) {
-      logger.info('Found message content to run, reloading and re-running prompt.');
+      logger.info('Found message content to run, reloading and re-running prompt.', {
+        remainingMessagesCount: (await this.contextManager.getContextMessages()).length,
+      });
       await this.reloadConnectorMessages(); // This sends 'clear-task' which truncates UI messages
       await this.updateContextInfo();
 

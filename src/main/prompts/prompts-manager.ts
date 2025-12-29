@@ -45,6 +45,7 @@ import {
   InitProjectPromptData,
   PromptTemplateData,
   PromptTemplateName,
+  TaskNamePromptData,
   ToolPermissions,
 } from './types';
 
@@ -61,9 +62,6 @@ export class PromptsManager {
     private readonly defaultTemplatesDir = AIDER_DESK_DEFAULT_PROMPTS_DIR,
     private readonly globalPromptsDir = AIDER_DESK_GLOBAL_PROMPTS_DIR,
   ) {
-    console.log('Registering helpers');
-    console.log(defaultTemplatesDir);
-    console.log(globalPromptsDir);
     registerAllHelpers();
   }
 
@@ -106,7 +104,16 @@ export class PromptsManager {
   }
 
   private getTemplateNames(): PromptTemplateName[] {
-    return ['system-prompt', 'init-project', 'workflow', 'compact-conversation', 'commit-message', 'conflict-resolution', 'conflict-resolution-system'];
+    return [
+      'system-prompt',
+      'init-project',
+      'workflow',
+      'compact-conversation',
+      'commit-message',
+      'task-name',
+      'conflict-resolution',
+      'conflict-resolution-system',
+    ];
   }
 
   private async loadGlobalTemplateSource(name: PromptTemplateName): Promise<string | null> {
@@ -397,6 +404,11 @@ export class PromptsManager {
   public getGenerateCommitMessagePrompt = (task: Task) => {
     const data: CommitMessagePromptData = {};
     return this.render('commit-message', data, task.getProjectDir());
+  };
+
+  public getGenerateTaskNamePrompt = (task: Task) => {
+    const data: TaskNamePromptData = {};
+    return this.render('task-name', data, task.getProjectDir());
   };
 
   public getConflictResolutionSystemPrompt = (task: Task) => {

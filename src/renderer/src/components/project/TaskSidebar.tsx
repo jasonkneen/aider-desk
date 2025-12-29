@@ -1,7 +1,7 @@
 import { TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
 import { KeyboardEvent, MouseEvent, useState, memo, useRef, useEffect } from 'react';
-import { HiOutlinePencil, HiOutlineTrash, HiPlus, HiCheck } from 'react-icons/hi';
+import { HiOutlinePencil, HiOutlineTrash, HiPlus, HiCheck, HiSparkles } from 'react-icons/hi';
 import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { FaEllipsisVertical } from 'react-icons/fa6';
 import { IoLogoMarkdown } from 'react-icons/io';
@@ -21,6 +21,7 @@ import { Button } from '@/components/common/Button';
 import { IconButton } from '@/components/common/IconButton';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { LoadingText } from '@/components/common/LoadingText';
 
 export const COLLAPSED_WIDTH = 44;
 export const EXPANDED_WIDTH = 256;
@@ -592,6 +593,8 @@ const TaskSidebarComponent = ({
   };
 
   const renderExpandedTaskItem = (task: TaskData) => {
+    const isGeneratingName = task.name === '<<generating>>';
+
     return (
       <div>
         <div
@@ -620,17 +623,25 @@ const TaskSidebarComponent = ({
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between">
-              <div
-                className={clsx(
-                  'text-xs font-medium truncate transition-colors',
-                  task.archived && activeTaskId !== task.id ? 'text-text-muted group-hover:text-text-primary' : 'text-text-primary',
-                )}
-              >
-                {task.name || t('taskSidebar.untitled')}
+            {isGeneratingName ? (
+              <LoadingText
+                label={t('taskSidebar.generatingName')}
+                className="text-xs font-medium truncate"
+                icon={<HiSparkles className="w-3 h-3 text-accent-primary flex-shrink-0" />}
+              />
+            ) : (
+              <div className="flex items-center justify-between">
+                <div
+                  className={clsx(
+                    'text-xs font-medium truncate transition-colors',
+                    task.archived && activeTaskId !== task.id ? 'text-text-muted group-hover:text-text-primary' : 'text-text-primary',
+                  )}
+                >
+                  {task.name || t('taskSidebar.untitled')}
+                </div>
+                {task.pinned && <MdPushPin className="w-3 h-3 text-text-muted shrink-0 ml-1 rotate-45 group-hover:hidden" />}
               </div>
-              {task.pinned && <MdPushPin className="w-3 h-3 text-text-muted shrink-0 ml-1 rotate-45 group-hover:hidden" />}
-            </div>
+            )}
             <div className="text-3xs text-text-muted truncate">
               {formatDate(task.updatedAt || new Date().toISOString())}
               {task.archived && ` • ${t('taskSidebar.archived')}`}

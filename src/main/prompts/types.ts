@@ -53,6 +53,11 @@ export interface CommitMessagePromptData {
   // Static for now
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface TaskNamePromptData {
+  // Static for now
+}
+
 export interface ConflictResolutionSystemPromptData {
   POWER_TOOL_GROUP_NAME: string;
   TOOL_GROUP_NAME_SEPARATOR: string;
@@ -72,5 +77,6 @@ export type PromptTemplateName =
   | 'workflow'
   | 'compact-conversation'
   | 'commit-message'
+  | 'task-name'
   | 'conflict-resolution'
   | 'conflict-resolution-system';
