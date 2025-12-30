@@ -1343,8 +1343,6 @@ export class WorktreeManager {
     const files = stdout
       .split('\n')
       .map((l) => l.trim())
-      .filter((l) => l.length > 0)
-      .map((l) => l.slice(3).trim())
       .filter((l) => l.length > 0);
 
     return {
