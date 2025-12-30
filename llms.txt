@@ -263,6 +263,7 @@ src/
           InfoIcon.tsx
           Input.tsx
           ItemSelector.tsx
+          LoadingText.tsx
           MarkdownInfoDialog.tsx
           ModalOverlayLayout.tsx
           MultiSelect.tsx
@@ -490,6 +491,7 @@ src/
         useResponsive.ts
         useScrollingPaused.ts
         useSearchText.tsx
+        useTypingAnimation.ts
         useUserMessageNavigation.tsx
         useVersions.ts
       i18n/
@@ -2528,6 +2530,8 @@ File: src/common/locales/en.json
     "deleteConfirm": "Are you sure you want to delete this task?",
     "createTask": "Create new task",
     "rename": "Rename",
+    "pinTask": "Pin task",
+    "unpinTask": "Unpin task",
     "taskNamePlaceholder": "Enter task name...",
     "untitled": "[Untitled]",
     "exportAsMarkdown": "Export as markdown",
@@ -2550,7 +2554,8 @@ File: src/common/locales/en.json
     "unarchiveSelected": "Unarchive selected",
     "deleteSelectedConfirm": "Are you sure you want to delete {{count}} selected tasks?",
     "archiveSelectedConfirm": "Are you sure you want to archive {{count}} selected tasks?",
-    "unarchiveSelectedConfirm": "Are you sure you want to unarchive {{count}} selected tasks?"
+    "unarchiveSelectedConfirm": "Are you sure you want to unarchive {{count}} selected tasks?",
+    "generatingName": "Generating name..."
   },
   "worktree": {
     "aheadCommits": "↑ {{count}} commits",
@@ -3882,6 +3887,8 @@ File: src/common/locales/zh.json
     "deleteConfirm": "您确定要删除这个任务吗？",
     "createTask": "创建新任务",
     "rename": "重命名",
+    "pinTask": "固定任务",
+    "unpinTask": "取消固定任务",
     "taskNamePlaceholder": "输入任务名称...",
     "untitled": "[未命名]",
     "exportAsMarkdown": "导出为 Markdown",
@@ -3904,7 +3911,8 @@ File: src/common/locales/zh.json
     "unarchiveSelected": "取消归档选中项",
     "deleteSelectedConfirm": "您确定要删除 {{count}} 个选中的任务吗？",
     "archiveSelectedConfirm": "您确定要归档 {{count}} 个选中的任务吗？",
-    "unarchiveSelectedConfirm": "您确定要取消归档 {{count}} 个选中的任务吗？"
+    "unarchiveSelectedConfirm": "您确定要取消归档 {{count}} 个选中的任务吗？",
+    "generatingName": "正在生成名称..."
   },
   "worktree": {
     "aheadCommits": "↑ {{count}} 次提交",
@@ -8815,6 +8823,7 @@ import {
   InitProjectPromptData,
   PromptTemplateData,
   PromptTemplateName,
+  TaskNamePromptData,
   ToolPermissions,
 } from './types';
 ⋮----
@@ -8925,6 +8934,13 @@ export interface CommitMessagePromptData {
 ⋮----
 // Static for now
 ⋮----
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface TaskNamePromptData {
+  // Static for now
+}
+⋮----
+// Static for now
+⋮----
 export interface ConflictResolutionSystemPromptData {
   POWER_TOOL_GROUP_NAME: string;
   TOOL_GROUP_NAME_SEPARATOR: string;
@@ -8944,6 +8960,7 @@ export type PromptTemplateName =
   | 'workflow'
   | 'compact-conversation'
   | 'commit-message'
+  | 'task-name'
   | 'conflict-resolution'
   | 'conflict-resolution-system';
 
@@ -10310,7 +10327,11 @@ public async runPromptInAgent(
 ⋮----
 // send messages to connectors
 ⋮----
-private getTaskNameFromPrompt(prompt: string)
+private getTaskNameFromPrompt(prompt: string): string
+⋮----
+const saveFallbackName = () =>
+⋮----
+private async generateTaskNameInBackground(prompt: string): Promise<string | null>
 ⋮----
 public async runSubagent(
     profile: AgentProfile,
@@ -13892,6 +13913,23 @@ const toggleOpen = () =>
 const handleItemSelect = (value: T) =>
 
 ================
+File: src/renderer/src/components/common/LoadingText.tsx
+================
+import { ReactNode } from 'react';
+⋮----
+import { useTypingAnimation } from '@/hooks/useTypingAnimation';
+⋮----
+type Props = {
+  label: string;
+  typingSpeed?: number;
+  pauseDuration?: number;
+  icon?: ReactNode;
+  className?: string;
+};
+⋮----
+export const LoadingText = (
+
+================
 File: src/renderer/src/components/common/MarkdownInfoDialog.tsx
 ================
 import ReactMarkdown from 'react-markdown';
@@ -14887,23 +14925,14 @@ return <ExpandableMessageBlock title=
 ================
 File: src/renderer/src/components/message/LoadingMessageBlock.tsx
 ================
-import { useEffect, useState } from 'react';
-⋮----
 import { Message } from '@/types/message';
+import { useTypingAnimation } from '@/hooks/useTypingAnimation';
 ⋮----
 type Props = {
   message: Message;
 };
 ⋮----
 export const LoadingMessageBlock = (
-⋮----
-// When we reach the end, wait a bit longer before restarting
-⋮----
-}, 3000); // 1 second pause before restarting
-⋮----
-// Letter-by-letter typing animation
-⋮----
-}, 60); // Adjust speed as needed
 
 ================
 File: src/renderer/src/components/message/LogMessageBlock.tsx
@@ -16483,7 +16512,7 @@ File: src/renderer/src/components/ModelLibrary/index.ts
 ================
 File: src/renderer/src/components/ModelLibrary/ModelDialog.tsx
 ================
-import { useEffect, useState } from 'react';
+import { startTransition, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Model, ProviderProfile } from '@common/types';
 import { DEFAULT_MODEL_TEMPERATURE } from '@common/agent';
@@ -16504,6 +16533,10 @@ type Props = {
   onCancel: () => void;
 };
 ⋮----
+// Batch state updates to avoid cascading renders
+⋮----
+// Batch state updates to avoid cascading renders
+⋮----
 const validateForm = (): boolean =>
 ⋮----
 const handleSubmit = () =>
@@ -16511,6 +16544,8 @@ const handleSubmit = () =>
 const handleInputChange = (field: keyof Model, value: unknown) =>
 ⋮----
 // Clear error when user starts typing
+⋮----
+const handleCostBlur = (field: keyof Model, displayField: keyof typeof costDisplayValues, inputValue: string) =>
 ⋮----
 const handleTemperatureToggle = (enabled: boolean) =>
 ⋮----
@@ -16521,6 +16556,8 @@ onChange=
 disabled={!!model} // Don't allow changing provider for existing models
 ⋮----
 disabled={!!model} // Don't allow changing ID for existing models
+⋮----
+onBlur=
 ⋮----
 <span>
 ⋮----
@@ -17493,12 +17530,12 @@ File: src/renderer/src/components/project/TaskSidebar.tsx
 import { TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
 import { KeyboardEvent, MouseEvent, useState, memo, useRef, useEffect } from 'react';
-import { HiOutlinePencil, HiOutlineTrash, HiPlus, HiCheck } from 'react-icons/hi';
+import { HiOutlinePencil, HiOutlineTrash, HiPlus, HiCheck, HiSparkles } from 'react-icons/hi';
 import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { FaEllipsisVertical } from 'react-icons/fa6';
 import { IoLogoMarkdown } from 'react-icons/io';
 import { CgSpinner } from 'react-icons/cg';
-import { MdImage, MdOutlineSearch } from 'react-icons/md';
+import { MdImage, MdOutlineSearch, MdPushPin } from 'react-icons/md';
 import { clsx } from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BiCopy, BiDuplicate, BiArchive, BiArchiveIn } from 'react-icons/bi';
@@ -17513,6 +17550,7 @@ import { Button } from '@/components/common/Button';
 import { IconButton } from '@/components/common/IconButton';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { LoadingText } from '@/components/common/LoadingText';
 ⋮----
 type TaskMenuButtonProps = {
   onEdit: () => void;
@@ -17523,6 +17561,8 @@ type TaskMenuButtonProps = {
   onDuplicateTask?: () => void;
   onArchiveTask?: () => void;
   onUnarchiveTask?: () => void;
+  onTogglePin?: () => void;
+  isPinned?: boolean;
 };
 ⋮----
 const handleMenuClick = () =>
@@ -17543,7 +17583,11 @@ const handleArchiveTaskClick = (e: MouseEvent) =>
 ⋮----
 const handleUnarchiveTaskClick = (e: MouseEvent) =>
 ⋮----
+const handlePinClick = (e: MouseEvent) =>
+⋮----
 <div className=
+⋮----
+data-tooltip-content=
 ⋮----
 className={clsx(
             'transition-opacity p-1.5 rounded-md hover:bg-bg-tertiary text-text-muted hover:text-text-primary',
@@ -17600,6 +17644,10 @@ const handleUnarchiveTask = async (taskId: string) =>
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
+const handleTogglePin = async (taskId: string) =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
 // Multiselect handlers
 const handleTaskCtrlClick = (e: MouseEvent, taskId: string) =>
 ⋮----
@@ -17615,7 +17663,11 @@ const handleBulkArchive = async () =>
 ⋮----
 return <span className=
 ⋮----
+label=
+⋮----
 onEdit=
+⋮----
+onTogglePin=
 ⋮----
 <h3 className="text-sm font-semibold uppercase h-5">
 ⋮----
@@ -20528,6 +20580,17 @@ navigateToElement(0); // Navigate to the first result
 <div className=
 
 ================
+File: src/renderer/src/hooks/useTypingAnimation.ts
+================
+import { useEffect, useState } from 'react';
+⋮----
+export const useTypingAnimation = (text: string, typingSpeed: number = 60, pauseDuration: number = 3000) =>
+⋮----
+// When we reach end, wait before restarting
+⋮----
+// Letter-by-letter typing animation
+
+================
 File: src/renderer/src/hooks/useUserMessageNavigation.tsx
 ================
 import { ReactNode, useCallback, useEffect, useState } from 'react';
@@ -23318,6 +23381,10 @@ File: src/renderer/src/utils/task-utils.ts
 import { TaskData } from '@common/types';
 ⋮----
 export const getSortedVisibleTasks = (tasks: TaskData[], showArchived: boolean = false, searchQuery: string = ''): TaskData[] =>
+⋮----
+// Pinned tasks come first
+⋮----
+// Then sort by updatedAt
 
 ================
 File: src/renderer/src/voice/gemini.ts
@@ -23841,7 +23908,7 @@ File: package.json
 ================
 {
   "name": "aider-desk",
-  "version": "0.46.0-dev",
+  "version": "0.47.0-dev",
   "description": "Aider desktop application wrapper",
   "main": "./out/main/index.js",
   "author": "Hotovo",
