@@ -359,6 +359,7 @@ const TaskSidebarComponent = ({
   const [bulkArchiveConfirm, setBulkArchiveConfirm] = useState<boolean>(false);
   const multiselectMenuRef = useRef<HTMLDivElement>(null);
   const multiselectButtonRef = useRef<HTMLDivElement>(null);
+  const lastClickedTaskIdRef = useRef<string | null>(null);
   const selectedArchived = Array.from(selectedTasks).filter((taskId) => tasks.find((task) => task.id === taskId)?.archived);
 
   const handleMultiselectClose = () => {
@@ -367,6 +368,7 @@ const TaskSidebarComponent = ({
     setIsMultiselectMenuOpen(false);
     setBulkDeleteConfirm(false);
     setBulkArchiveConfirm(false);
+    lastClickedTaskIdRef.current = null;
   };
 
   // Handle ESC key to exit multiselect mode
@@ -391,6 +393,8 @@ const TaskSidebarComponent = ({
   const handleTaskClick = (e: MouseEvent, taskId: string) => {
     if (e.ctrlKey || e.metaKey) {
       handleTaskCtrlClick(e, taskId);
+    } else if (e.shiftKey && isMultiselectMode) {
+      handleTaskShiftClick(taskId);
     } else if (isMultiselectMode) {
       handleTaskClickInMultiselect(e, taskId);
     } else {
@@ -526,6 +530,7 @@ const TaskSidebarComponent = ({
     if (!isMultiselectMode) {
       setIsMultiselectMode(true);
       setSelectedTasks(new Set([taskId]));
+      lastClickedTaskIdRef.current = taskId;
     } else {
       setSelectedTasks((prev) => {
         const newSet = new Set(prev);
@@ -536,6 +541,7 @@ const TaskSidebarComponent = ({
         }
         return newSet;
       });
+      lastClickedTaskIdRef.current = taskId;
     }
   };
 
@@ -552,6 +558,45 @@ const TaskSidebarComponent = ({
       }
       return newSet;
     });
+    lastClickedTaskIdRef.current = taskId;
+  };
+
+  const handleTaskShiftClick = (taskId: string) => {
+    const lastClickedTaskId = lastClickedTaskIdRef.current;
+
+    if (!lastClickedTaskId) {
+      setSelectedTasks((prev) => {
+        const newSet = new Set(prev);
+        if (newSet.has(taskId)) {
+          newSet.delete(taskId);
+        } else {
+          newSet.add(taskId);
+        }
+        return newSet;
+      });
+      lastClickedTaskIdRef.current = taskId;
+      return;
+    }
+
+    const taskIds = sortedTasks.map((task) => task.id);
+    const lastIndex = taskIds.indexOf(lastClickedTaskId);
+    const currentIndex = taskIds.indexOf(taskId);
+
+    if (lastIndex === -1 || currentIndex === -1) {
+      return;
+    }
+
+    const start = Math.min(lastIndex, currentIndex);
+    const end = Math.max(lastIndex, currentIndex);
+    const rangeIds = taskIds.slice(start, end + 1);
+
+    setSelectedTasks((prev) => {
+      const newSet = new Set(prev);
+      rangeIds.forEach((id) => newSet.add(id));
+      return newSet;
+    });
+
+    lastClickedTaskIdRef.current = taskId;
   };
 
   const handleBulkDelete = async () => {
@@ -600,7 +645,7 @@ const TaskSidebarComponent = ({
         <div
           {...longPressProps}
           className={clsx(
-            'group relative flex items-center justify-between py-1 pl-2.5 cursor-pointer transition-colors border',
+            'group relative flex items-center justify-between py-1 pl-2.5 cursor-pointer transition-colors border select-none',
             activeTaskId === task.id && !isMultiselectMode
               ? 'bg-bg-secondary border-border-dark-light'
               : selectedTasks.has(task.id) && isMultiselectMode

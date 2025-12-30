@@ -8,6 +8,7 @@
 - improved cost input field editing in Model Library to avoid reformatting during typing
 - sanitizing agent profile when reading the config file to ensure all required fields are present
 - added worktree directory important reminder when working in the worktree
+- added shift-click support for selecting task ranges in multiselect mode
 
 ## [0.46.0]
 
