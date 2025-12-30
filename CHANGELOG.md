@@ -6,6 +6,7 @@
 - added AI-powered task name generation
 - fixed context manager not marking as loaded in some cases
 - improved cost input field editing in Model Library to avoid reformatting during typing
+- sanitizing agent profile when reading the config file to ensure all required fields are present
 
 ## [0.46.0]
 

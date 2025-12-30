@@ -6,6 +6,7 @@ import { FSWatcher, watch } from 'chokidar';
 import debounce from 'lodash/debounce';
 import { DEFAULT_AGENT_PROFILE, DEFAULT_AGENT_PROFILES } from '@common/agent';
 import { fileExists } from '@common/utils';
+import { v4 as uuidv4 } from 'uuid';
 
 import type { AgentProfile } from '@common/types';
 
@@ -380,6 +381,30 @@ export class AgentProfileManager {
     }
   }
 
+  private sanitizeAgentProfile(loadedProfile: AgentProfile, agentDirName: string): AgentProfile {
+    return {
+      ...loadedProfile,
+      id: loadedProfile.id || uuidv4(),
+      name: loadedProfile.name || agentDirName,
+      provider: loadedProfile.provider || DEFAULT_AGENT_PROFILE.provider,
+      model: loadedProfile.model || DEFAULT_AGENT_PROFILE.model,
+      maxIterations: loadedProfile.maxIterations ?? DEFAULT_AGENT_PROFILE.maxIterations,
+      minTimeBetweenToolCalls: loadedProfile.minTimeBetweenToolCalls ?? DEFAULT_AGENT_PROFILE.minTimeBetweenToolCalls,
+      enabledServers: loadedProfile.enabledServers ?? [],
+      customInstructions: loadedProfile.customInstructions ?? '',
+      toolApprovals: {
+        ...loadedProfile.toolApprovals,
+      },
+      toolSettings: {
+        ...loadedProfile.toolSettings,
+      },
+      subagent: {
+        ...DEFAULT_AGENT_PROFILE.subagent,
+        ...loadedProfile.subagent,
+      },
+    };
+  }
+
   private async loadProfileFile(filePath: string, dirName: string): Promise<AgentProfile | null> {
     try {
       if (!(await fileExists(filePath))) {
@@ -389,18 +414,11 @@ export class AgentProfileManager {
       logger.debug(`Loading agent profile from ${filePath}`);
 
       const content = await fs.readFile(filePath, 'utf-8');
-      const profile: AgentProfile = JSON.parse(content);
+      const loadedProfile: AgentProfile = JSON.parse(content);
 
-      if (!profile.id) {
-        logger.warn(`Agent profile file ${filePath} has no ID`);
-        return null;
-      }
-
-      // use default tool approvals if not specified
-      profile.toolApprovals = {
-        ...DEFAULT_AGENT_PROFILE.toolApprovals,
-        ...profile.toolApprovals,
-      };
+      // Sanitize profile with defaults
+      const profile = this.sanitizeAgentProfile(loadedProfile, dirName);
+      await this.saveProfileToFile(profile, filePath);
 
       // Discover and load rule files for this profile
       profile.ruleFiles = await getAllRuleFilesForProfile(profile, dirName);
