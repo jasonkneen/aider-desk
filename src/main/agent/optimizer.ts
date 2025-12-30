@@ -1,4 +1,4 @@
-import { type AgentProfile, InvocationMode, type TaskData, ToolApprovalState } from '@common/types';
+import { type AgentProfile, InvocationMode, ToolApprovalState } from '@common/types';
 import { isSubagentEnabled } from '@common/agent';
 import { cloneDeep } from 'lodash';
 import { type ModelMessage, type ToolContent, type ToolResultPart, type UserModelMessage } from 'ai';
@@ -18,17 +18,18 @@ import { extractTextContent } from '@common/utils';
 
 import logger from '@/logger';
 import { type CacheControl } from '@/models';
+import { Task } from '@/task';
 
 /**
  * Optimizes the messages before sending them to the LLM. This should reduce the token count and improve the performance.
  */
 export const optimizeMessages = (
+  task: Task,
   profile: AgentProfile,
   projectProfiles: AgentProfile[],
   userRequestMessageIndex: number,
   messages: ModelMessage[],
   cacheControl: CacheControl | undefined,
-  task?: TaskData,
 ) => {
   if (messages.length === 0) {
     return [];
@@ -36,7 +37,7 @@ export const optimizeMessages = (
 
   let optimizedMessages = cloneDeep(messages);
 
-  optimizedMessages = addSystemReminders(profile, projectProfiles, userRequestMessageIndex, optimizedMessages, task);
+  optimizedMessages = addImportantReminders(task, profile, projectProfiles, userRequestMessageIndex, optimizedMessages);
   optimizedMessages = convertImageToolResults(optimizedMessages);
   optimizedMessages = removeDuplicateToolCalls(optimizedMessages);
   optimizedMessages = optimizeAiderMessages(optimizedMessages);
@@ -79,12 +80,12 @@ export const optimizeMessages = (
   return optimizedMessages;
 };
 
-const addSystemReminders = (
+const addImportantReminders = (
+  task: Task,
   profile: AgentProfile,
   projectProfiles: AgentProfile[],
   userRequestMessageIndex: number,
   messages: ModelMessage[],
-  task?: TaskData,
 ): ModelMessage[] => {
   const userRequestMessage = messages[userRequestMessageIndex] as UserModelMessage;
   const reminders: string[] = [];
@@ -108,8 +109,13 @@ const addSystemReminders = (
     }
   }
 
-  if (!task?.autoApprove && !profile.isSubagent) {
+  if (!task.task.autoApprove && !profile.isSubagent) {
     reminders.push('Before making any complex changes, present the plan and wait for my approval.');
+  }
+
+  // Add reminder about worktree mode
+  if (task.getTaskDir() !== task.getProjectDir()) {
+    reminders.push(`You are working in worktree mode inside ${task.getTaskDir()}. Modify files inside that directory when making changes.`);
   }
 
   if (profile.useMemoryTools) {
@@ -130,11 +136,11 @@ const addSystemReminders = (
     return messages;
   }
 
-  const systemReminders = `\n\n<system-reminders>\n${reminders.map((reminder) => `   <reminder>${reminder}</reminder>`).join('\n ')}</system-reminders>`;
+  const importantReminders = `\n\n<ImportantReminders>\n${reminders.map((reminder) => `   <ImportantReminder>\n${reminder}\n   </ImportantReminder>`).join('\n ')}</ImportantReminders>`;
 
   const updatedFirstUserMessage = {
     ...userRequestMessage,
-    content: `${userRequestMessage.content}${systemReminders}`,
+    content: `${userRequestMessage.content}${importantReminders}`,
   } satisfies UserModelMessage;
 
   const newMessages = [...messages];

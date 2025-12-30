@@ -7,6 +7,7 @@
 - fixed context manager not marking as loaded in some cases
 - improved cost input field editing in Model Library to avoid reformatting during typing
 - sanitizing agent profile when reading the config file to ensure all required fields are present
+- added worktree directory important reminder when working in the worktree
 
 ## [0.46.0]
 

@@ -816,7 +816,7 @@ export class Agent {
             providerOptions,
             model,
             system: systemPrompt,
-            messages: optimizeMessages(profile, projectProfiles, initialUserRequestMessageIndex, messages, cacheControl),
+            messages: optimizeMessages(task, profile, projectProfiles, initialUserRequestMessageIndex, messages, cacheControl),
             tools: toolSet,
             abortSignal: effectiveAbortSignal,
             maxOutputTokens: effectiveMaxOutputTokens,
@@ -840,7 +840,7 @@ export class Agent {
               }),
             }),
             system: systemPrompt,
-            messages: optimizeMessages(profile, projectProfiles, initialUserRequestMessageIndex, messages, cacheControl, task.task),
+            messages: optimizeMessages(task, profile, projectProfiles, initialUserRequestMessageIndex, messages, cacheControl),
             tools: toolSet,
             abortSignal: effectiveAbortSignal,
             maxOutputTokens: effectiveMaxOutputTokens,
@@ -1092,6 +1092,7 @@ export class Agent {
       const userRequestMessageIndex = lastUserIndex >= 0 ? lastUserIndex : 0;
 
       const optimizedMessages = optimizeMessages(
+        task,
         profile,
         this.agentProfileManager.getProjectProfiles(task.getProjectDir()),
         userRequestMessageIndex,
