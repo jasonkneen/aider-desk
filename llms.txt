@@ -5786,6 +5786,7 @@ import { FSWatcher, watch } from 'chokidar';
 import debounce from 'lodash/debounce';
 import { DEFAULT_AGENT_PROFILE, DEFAULT_AGENT_PROFILES } from '@common/agent';
 import { fileExists } from '@common/utils';
+import { v4 as uuidv4 } from 'uuid';
 ⋮----
 import type { AgentProfile } from '@common/types';
 ⋮----
@@ -5910,9 +5911,11 @@ order: 0, // Will be set by order file
 ⋮----
 // Add profiles to the main profiles map
 ⋮----
+private sanitizeAgentProfile(loadedProfile: AgentProfile, agentDirName: string): AgentProfile
+⋮----
 private async loadProfileFile(filePath: string, dirName: string): Promise<AgentProfile | null>
 ⋮----
-// use default tool approvals if not specified
+// Sanitize profile with defaults
 ⋮----
 // Discover and load rule files for this profile
 ⋮----
@@ -6378,7 +6381,7 @@ private compareServerConfig(config: McpServerConfig, otherConfig: McpServerConfi
 ================
 File: src/main/agent/optimizer.ts
 ================
-import { type AgentProfile, InvocationMode, type TaskData, ToolApprovalState } from '@common/types';
+import { type AgentProfile, InvocationMode, ToolApprovalState } from '@common/types';
 import { isSubagentEnabled } from '@common/agent';
 import { cloneDeep } from 'lodash';
 import { type ModelMessage, type ToolContent, type ToolResultPart, type UserModelMessage } from 'ai';
@@ -6398,28 +6401,31 @@ import { extractTextContent } from '@common/utils';
 ⋮----
 import logger from '@/logger';
 import { type CacheControl } from '@/models';
+import { Task } from '@/task';
 ⋮----
 /**
  * Optimizes the messages before sending them to the LLM. This should reduce the token count and improve the performance.
  */
 export const optimizeMessages = (
+  task: Task,
   profile: AgentProfile,
   projectProfiles: AgentProfile[],
   userRequestMessageIndex: number,
   messages: ModelMessage[],
   cacheControl: CacheControl | undefined,
-  task?: TaskData,
 ) =>
 ⋮----
-const addSystemReminders = (
+const addImportantReminders = (
+  task: Task,
   profile: AgentProfile,
   projectProfiles: AgentProfile[],
   userRequestMessageIndex: number,
   messages: ModelMessage[],
-  task?: TaskData,
 ): ModelMessage[] =>
 ⋮----
 // Add reminder about automatic subagents
+⋮----
+// Add reminder about worktree mode
 ⋮----
 /**
  * For run_prompt tool, which returns `responses` array, we should replace this array with empty array.
@@ -17652,6 +17658,8 @@ const handleTogglePin = async (taskId: string) =>
 const handleTaskCtrlClick = (e: MouseEvent, taskId: string) =>
 ⋮----
 const handleTaskClickInMultiselect = (e: MouseEvent, taskId: string) =>
+⋮----
+const handleTaskShiftClick = (taskId: string) =>
 ⋮----
 const handleBulkDelete = async () =>
 ⋮----
