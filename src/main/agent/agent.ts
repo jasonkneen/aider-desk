@@ -7,6 +7,7 @@ import {
   ContextFile,
   ContextMessage,
   ContextUserMessage,
+  DefaultTaskState,
   McpTool,
   McpToolInputSchema,
   PromptContext,
@@ -37,7 +38,7 @@ import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.j
 // @ts-expect-error istextorbinary is not typed properly
 import { isBinary } from 'istextorbinary';
 import { fileTypeFromBuffer } from 'file-type';
-import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
+import { HELPERS_TOOL_GROUP_NAME, TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 
 import { createPowerToolset } from './tools/power';
 import { createTodoToolset } from './tools/todo';
@@ -742,6 +743,83 @@ export class Agent {
         }
       };
 
+      // Get the model to use its temperature and max output tokens settings
+      const modelSettings = this.modelManager.getModel(profile.provider, profile.model);
+      const effectiveTemperature = profile.temperature ?? modelSettings?.temperature;
+      const effectiveMaxOutputTokens = profile.maxTokens ?? modelSettings?.maxOutputTokens;
+
+      logger.info('Parameters:', {
+        model: model.modelId,
+        temperature: effectiveTemperature,
+        maxOutputTokens: effectiveMaxOutputTokens,
+        minTimeBetweenToolCalls: profile.minTimeBetweenToolCalls,
+        ...providerParameters,
+      });
+
+      const getBaseModelCallParams = () => {
+        return {
+          providerOptions,
+          model: wrapLanguageModel({
+            model,
+            middleware: extractReasoningMiddleware({
+              tagName: 'think',
+            }),
+          }),
+          system: systemPrompt,
+          messages: optimizeMessages(task, profile, projectProfiles, initialUserRequestMessageIndex, messages, cacheControl),
+          tools: toolSet,
+          abortSignal: effectiveAbortSignal,
+          maxOutputTokens: effectiveMaxOutputTokens,
+          maxRetries: 5,
+          temperature: effectiveTemperature,
+          experimental_telemetry: {
+            isEnabled: true,
+          },
+          ...providerParameters,
+        };
+      };
+
+      const determineAndUpdateTaskState = async () => {
+        if (profile.isSubagent || effectiveAbortSignal?.aborted) {
+          return;
+        }
+
+        try {
+          const taskStateInstruction = `Based on the conversation, determine if the task state should be updated.
+
+Available task states:
+- ${DefaultTaskState.MoreInfoNeeded}: Use this when you need to ask clarifying questions before proceeding with the task.
+- ${DefaultTaskState.ReadyForImplementation}: Use this after presenting a detailed implementation plan and before beginning coding work.
+- ${DefaultTaskState.ReadyForReview}: Use this after all implementation and verification work is complete.
+- NONE: Use this when no task state update is needed.
+
+IMPORTANT: Answer with ONLY the task state name (e.g., "${DefaultTaskState.MoreInfoNeeded}", "${DefaultTaskState.ReadyForImplementation}", "${DefaultTaskState.ReadyForReview}") or "NONE". Do not include any other text or explanation.`;
+
+          task.addLogMessage('loading', 'Updating task state...');
+
+          const stateDeterminationMessages = [...messages, { role: 'user' as const, content: taskStateInstruction }];
+          const result = await generateText({
+            ...getBaseModelCallParams(),
+            messages: stateDeterminationMessages,
+          });
+
+          const answer = result.text.trim();
+          const validStates = [DefaultTaskState.MoreInfoNeeded, DefaultTaskState.ReadyForImplementation, DefaultTaskState.ReadyForReview];
+
+          if (validStates.includes(answer as DefaultTaskState)) {
+            logger.info(`Updating task state to ${answer}`);
+            await task.saveTask({ state: answer });
+          } else if (answer !== 'NONE') {
+            logger.warn(`Invalid task state returned: ${answer}. Expected one of: ${validStates.join(', ')}, or NONE`, {
+              answer,
+              result,
+            });
+          }
+        } catch (error) {
+          logger.error('Error determining task state:', error);
+        }
+      };
+
       let iterationCount = 0;
       let retryCount = 0;
 
@@ -797,59 +875,17 @@ export class Agent {
           effectiveAbortSignal,
         );
 
-        // Get the model to use its temperature and max output tokens settings
-        const modelSettings = this.modelManager.getModel(profile.provider, profile.model);
-        const effectiveTemperature = profile.temperature ?? modelSettings?.temperature;
-        const effectiveMaxOutputTokens = profile.maxTokens ?? modelSettings?.maxOutputTokens;
-
-        logger.info('Parameters:', {
-          model: model.modelId,
-          temperature: effectiveTemperature,
-          maxOutputTokens: effectiveMaxOutputTokens,
-          minTimeBetweenToolCalls: profile.minTimeBetweenToolCalls,
-          ...providerParameters,
-        });
-
         if (this.modelManager.isStreamingDisabled(provider, profile.model)) {
           logger.debug('Streaming disabled, using generateText');
           await generateText({
-            providerOptions,
-            model,
-            system: systemPrompt,
-            messages: optimizeMessages(task, profile, projectProfiles, initialUserRequestMessageIndex, messages, cacheControl),
-            tools: toolSet,
-            abortSignal: effectiveAbortSignal,
-            maxOutputTokens: effectiveMaxOutputTokens,
-            maxRetries: 5,
-            temperature: effectiveTemperature,
-            experimental_telemetry: {
-              isEnabled: true,
-            },
-            ...providerParameters,
+            ...getBaseModelCallParams(),
             onStepFinish,
             experimental_repairToolCall: repairToolCall,
           });
         } else {
           logger.debug('Streaming enabled, using streamText');
           const result = streamText({
-            providerOptions,
-            model: wrapLanguageModel({
-              model,
-              middleware: extractReasoningMiddleware({
-                tagName: 'think',
-              }),
-            }),
-            system: systemPrompt,
-            messages: optimizeMessages(task, profile, projectProfiles, initialUserRequestMessageIndex, messages, cacheControl),
-            tools: toolSet,
-            abortSignal: effectiveAbortSignal,
-            maxOutputTokens: effectiveMaxOutputTokens,
-            maxRetries: 5,
-            temperature: effectiveTemperature,
-            experimental_telemetry: {
-              isEnabled: true,
-            },
-            ...providerParameters,
+            ...getBaseModelCallParams(),
             onError: ({ error }) => {
               if (effectiveAbortSignal?.aborted) {
                 return;
@@ -937,7 +973,7 @@ export class Agent {
         }
 
         messages.push(...responseMessages);
-        resultMessages.push(...responseMessages);
+        resultMessages.push(...this.filterResultMessages(responseMessages));
 
         if (effectiveAbortSignal?.aborted) {
           logger.info('Prompt aborted by user (inside loop)');
@@ -974,6 +1010,8 @@ export class Agent {
           break;
         }
       }
+
+      await determineAndUpdateTaskState();
     } catch (error) {
       if (effectiveAbortSignal?.aborted) {
         logger.info('Prompt aborted by user');
@@ -1008,6 +1046,26 @@ export class Agent {
     }
 
     return resultMessages;
+  }
+
+  private filterResultMessages(resultMessages: ContextMessage[]) {
+    return resultMessages.filter((message) => {
+      if (message.role === 'tool' && message.id.startsWith(`${HELPERS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}`)) {
+        return false;
+      }
+      if (message.role === 'assistant') {
+        if (
+          Array.isArray(message.content) &&
+          message.content.some(
+            (content) => content.type === 'tool-call' && content.toolName.startsWith(`${HELPERS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}`),
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+      return true;
+    });
   }
 
   private async prepareMessages(task: Task, profile: AgentProfile, contextMessages: ModelMessage[], contextFiles: ContextFile[]): Promise<ModelMessage[]> {

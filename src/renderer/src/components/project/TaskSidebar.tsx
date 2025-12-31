@@ -1,4 +1,4 @@
-import { TaskData } from '@common/types';
+import { DefaultTaskState, TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
 import { KeyboardEvent, MouseEvent, useState, memo, useRef, useEffect } from 'react';
 import { HiOutlinePencil, HiOutlineTrash, HiPlus, HiCheck, HiSparkles } from 'react-icons/hi';
@@ -22,6 +22,7 @@ import { IconButton } from '@/components/common/IconButton';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { LoadingText } from '@/components/common/LoadingText';
+import { TaskStateChip } from '@/components/common/TaskStateChip';
 
 export const COLLAPSED_WIDTH = 44;
 export const EXPANDED_WIDTH = 256;
@@ -627,14 +628,14 @@ const TaskSidebarComponent = ({
     }
   };
 
-  const renderTaskStateIcon = (taskId: string, isCollapsed: boolean = false) => {
-    const taskState = getTaskState(taskId, false);
+  const renderTaskStateIcon = (task: TaskData, isCollapsed: boolean = false) => {
+    const taskState = getTaskState(task.id, false);
     const iconSize = isCollapsed ? 'w-3.5 h-3.5' : 'w-4 h-4';
 
     if (taskState?.question) {
       return <span className={clsx('text-text-primary', isCollapsed ? 'text-xs' : 'text-sm')}>?</span>;
     }
-    return taskState?.processing ? <CgSpinner className={clsx('animate-spin', iconSize, 'text-text-primary')} /> : null;
+    return task?.state === DefaultTaskState.InProgress ? <CgSpinner className={clsx('animate-spin', iconSize, 'text-text-primary')} /> : null;
   };
 
   const renderExpandedTaskItem = (task: TaskData) => {
@@ -667,7 +668,7 @@ const TaskSidebarComponent = ({
               </div>
             </div>
           )}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 flex flex-col gap-1">
             {isGeneratingName ? (
               <LoadingText
                 label={t('taskSidebar.generatingName')}
@@ -687,13 +688,13 @@ const TaskSidebarComponent = ({
                 {task.pinned && <MdPushPin className="w-3 h-3 text-text-muted shrink-0 ml-1 rotate-45 group-hover:hidden" />}
               </div>
             )}
-            <div className="text-3xs text-text-muted truncate">
-              {formatDate(task.updatedAt || new Date().toISOString())}
-              {task.archived && ` • ${t('taskSidebar.archived')}`}
+            <div className="flex items-center gap-1 text-3xs text-text-muted">
+              <TaskStateChip state={task.state || DefaultTaskState.Todo} className="-ml-0.5" />
+              {task.archived && <span>• {t('taskSidebar.archived')}</span>}
             </div>
           </div>
 
-          <div className="flex items-center pl-2">{renderTaskStateIcon(task.id, false)}</div>
+          <div className="flex items-center pl-2">{renderTaskStateIcon(task, false)}</div>
 
           {!isMultiselectMode && (
             <TaskMenuButton
@@ -749,10 +750,6 @@ const TaskSidebarComponent = ({
         )}
       </div>
     );
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
   };
 
   return (

@@ -668,6 +668,8 @@
     "copy": "复制",
     "copied": "已复制!",
     "interrupted": "被用户中断。",
+    "taskInterrupted": "任务中断",
+    "taskInterruptedDescription": "任务在进行过程中被用户中断。",
     "delete": "删除",
     "redo": "重做",
     "edit": "编辑",
@@ -679,7 +681,9 @@
     "nextUserMessage": "下一条用户消息",
     "messageBar": "消息栏",
     "exportNotAvailableWithVirtualized": "使用虚拟化消息渲染时无法导出为图片。请在 设置 -> 常规 -> 消息显示 中更改为标准渲染。",
-    "execute": "执行"
+    "execute": "执行",
+    "taskReadyForReview": "任务准备就绪，待审查",
+    "markAsDone": "标记为完成"
   },
   "errors": {
     "frozenTitle": "AIDER冻结了?",
@@ -1284,6 +1288,15 @@
     "archiveSelectedConfirm": "您确定要归档 {{count}} 个选中的任务吗？",
     "unarchiveSelectedConfirm": "您确定要取消归档 {{count}} 个选中的任务吗？",
     "generatingName": "正在生成名称..."
+  },
+  "taskState": {
+    "TODO": "待办",
+    "IN_PROGRESS": "进行中",
+    "INTERRUPTED": "已中断",
+    "MORE_INFO_NEEDED": "需要更多信息",
+    "READY_FOR_REVIEW": "待审核",
+    "READY_FOR_IMPLEMENTATION": "待实现",
+    "DONE": "已完成"
   },
   "worktree": {
     "aheadCommits": "↑ {{count}} 次提交",

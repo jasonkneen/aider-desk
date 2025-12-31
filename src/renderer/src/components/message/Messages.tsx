@@ -2,16 +2,16 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'rea
 import { toPng } from 'html-to-image';
 import { MdKeyboardDoubleArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
-import { IoPlay } from 'react-icons/io5';
+import { TaskData } from '@common/types';
 
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
+import { MessagesActions } from './MessagesActions';
 
 import { isGroupMessage, isUserMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
-import { Button } from '@/components/common/Button';
 import { useScrollingPaused } from '@/hooks/useScrollingPaused';
 import { useUserMessageNavigation } from '@/hooks/useUserMessageNavigation';
 
@@ -24,17 +24,18 @@ export type MessagesRef = {
 type Props = {
   baseDir: string;
   taskId: string;
+  task: TaskData;
   messages: Message[];
   allFiles?: string[];
   renderMarkdown: boolean;
   removeMessage: (message: Message) => void;
   redoLastUserPrompt: () => void;
   editLastUserMessage: (content: string) => void;
-  processing: boolean;
+  onMarkAsDone: () => void;
 };
 
 export const Messages = forwardRef<MessagesRef, Props>(
-  ({ baseDir, taskId, messages, allFiles = [], renderMarkdown, removeMessage, redoLastUserPrompt, editLastUserMessage, processing }, ref) => {
+  ({ baseDir, taskId, task, messages, allFiles = [], renderMarkdown, removeMessage, redoLastUserPrompt, editLastUserMessage, onMarkAsDone }, ref) => {
     const { t } = useTranslation();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -148,14 +149,13 @@ export const Messages = forwardRef<MessagesRef, Props>(
           );
         })}
         <div ref={messagesEndRef} />
-        {!processing && lastUserMessageIndex === processedMessages.length - 1 && (
-          <div className="flex justify-center align-center py-4 px-6">
-            <Button variant="outline" color="primary" size="xs" onClick={redoLastUserPrompt}>
-              <IoPlay className="mr-1 w-3 h-3" />
-              {t('messages.execute')}
-            </Button>
-          </div>
-        )}
+        <MessagesActions
+          task={task}
+          processedMessagesLength={processedMessages.length}
+          lastUserMessageIndex={lastUserMessageIndex}
+          redoLastUserPrompt={redoLastUserPrompt}
+          onMarkAsDone={onMarkAsDone}
+        />
       </div>
     );
   },

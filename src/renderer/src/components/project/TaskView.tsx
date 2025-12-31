@@ -1,4 +1,4 @@
-import { Mode, Model, ModelsData, ProjectData, TaskData, TodoItem } from '@common/types';
+import { DefaultTaskState, Mode, Model, ModelsData, ProjectData, TaskData, TodoItem } from '@common/types';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CgSpinner } from 'react-icons/cg';
@@ -168,9 +168,9 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       return renderLoading(t('common.loadingTask'));
     }
 
-    const { loading, loaded, processing, allFiles, contextFiles, autocompletionWords, aiderTotalCost, tokensInfo, question, todoItems, messages } = taskState;
+    const { loading, loaded, allFiles, contextFiles, autocompletionWords, aiderTotalCost, tokensInfo, question, todoItems, messages } = taskState;
 
-    const displayedMessages = processing ? messages : transitionMessages;
+    const displayedMessages = messages;
 
     const handleAddFiles = (filePaths: string[], readOnly = false) => {
       for (const filePath of filePaths) {
@@ -223,6 +223,10 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       updateTask({ currentMode: mode });
     };
 
+    const handleMarkAsDone = () => {
+      updateTask({ state: DefaultTaskState.Done });
+    };
+
     const runPrompt = (prompt: string) => {
       if (editingMessageIndex !== null) {
         // This submission is an edit of a previous message
@@ -273,15 +277,6 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     };
 
     const handleRedoLastUserPrompt = () => {
-      setMessages(task.id, (prevMessages) => {
-        const lastUserMessageIndex = prevMessages.findLastIndex(isUserMessage);
-        if (lastUserMessageIndex === -1) {
-          return prevMessages;
-        }
-
-        // Keep messages up to and excluding the one being redone
-        return prevMessages.slice(0, lastUserMessageIndex);
-      });
       api.redoLastUserPrompt(project.baseDir, task.id, currentMode);
     };
 
@@ -401,7 +396,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
               />
             )}
             <div className="overflow-hidden flex-grow relative">
-              {displayedMessages.length === 0 && !loading && !messagesPending && !processing ? (
+              {displayedMessages.length === 0 && !loading && !messagesPending && task.state !== DefaultTaskState.InProgress ? (
                 <WelcomeMessage />
               ) : (
                 <>
@@ -415,13 +410,14 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                       }}
                       baseDir={project.baseDir}
                       taskId={task.id}
+                      task={task}
                       messages={displayedMessages}
                       allFiles={allFiles}
                       renderMarkdown={settings.renderMarkdown}
                       removeMessage={handleRemoveMessage}
                       redoLastUserPrompt={handleRedoLastUserPrompt}
                       editLastUserMessage={handleEditLastUserMessage}
-                      processing={processing}
+                      onMarkAsDone={handleMarkAsDone}
                     />
                   ) : (
                     <Messages
@@ -433,13 +429,14 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                       }}
                       baseDir={project.baseDir}
                       taskId={task.id}
+                      task={task}
                       messages={displayedMessages}
                       allFiles={allFiles}
                       renderMarkdown={settings.renderMarkdown}
                       removeMessage={handleRemoveMessage}
                       redoLastUserPrompt={handleRedoLastUserPrompt}
                       editLastUserMessage={handleEditLastUserMessage}
-                      processing={processing}
+                      onMarkAsDone={handleMarkAsDone}
                     />
                   )}
                   {messagesPending && transitionMessages.length === 0 && renderLoading(t('common.loadingMessages'))}
@@ -490,7 +487,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                 taskId={task.id}
                 task={task}
                 inputHistory={inputHistory}
-                processing={processing}
+                processing={task.state === DefaultTaskState.InProgress}
                 mode={currentMode}
                 onModeChanged={handleModeChange}
                 runPrompt={runPrompt}

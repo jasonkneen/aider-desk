@@ -34,7 +34,7 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
   const [tasksLoading, setTasksLoading] = useState(true);
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [optimisticTasks, setOptimisticTasks] = useOptimistic(tasks);
-  const [isCollapsed, setIsCollapsed] = useLocalStorage(`task-sidebar-collapsed-${project.baseDir}`, false);
+  const [isTaskBarCollapsed, setIsTaskBarCollapsed] = useLocalStorage(`task-sidebar-collapsed-${project.baseDir}`, false);
   const [shouldFocusNewTask, setShouldFocusNewTask] = useState(false);
   const taskViewRef = useRef<TaskViewRef>(null);
   const creatingTaskRef = useRef(false);
@@ -251,7 +251,7 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
   );
 
   const handleToggleCollapse = () => {
-    setIsCollapsed(!isCollapsed);
+    setIsTaskBarCollapsed(!isTaskBarCollapsed);
   };
 
   const handleUpdateTask = useCallback(
@@ -378,7 +378,7 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
           onTaskSelect={handleTaskSelect}
           createNewTask={createNewTask}
           className="h-full"
-          isCollapsed={!!isCollapsed}
+          isCollapsed={!!isTaskBarCollapsed}
           onToggleCollapse={handleToggleCollapse}
           updateTask={handleUpdateTask}
           deleteTask={handleDeleteTask}
@@ -389,9 +389,9 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
         />
 
         <div
-          className={`absolute top-0 ${isCollapsed ? `left-${COLLAPSED_WIDTH}` : `left-${EXPANDED_WIDTH}`} right-0 h-full transition-left duration-300 ease-in-out`}
+          className={`absolute top-0 ${isTaskBarCollapsed ? `left-${COLLAPSED_WIDTH}` : `left-${EXPANDED_WIDTH}`} right-0 h-full transition-left duration-300 ease-in-out`}
           style={{
-            left: isCollapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH,
+            left: isTaskBarCollapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH,
           }}
         >
           {activeTask && (

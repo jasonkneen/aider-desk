@@ -10,6 +10,7 @@ import {
   ContextAssistantMessage,
   ContextFile,
   ContextMessage,
+  DefaultTaskState,
   EditFormat,
   FileEdit,
   LogData,
@@ -440,6 +441,10 @@ export class Task {
   }
 
   public async close(clearContext = false, cleanupEmptyTask = true) {
+    if (!this.initialized) {
+      return;
+    }
+
     logger.info('Closing task...', {
       baseDir: this.project.baseDir,
       taskId: this.taskId,
@@ -551,6 +556,8 @@ export class Task {
     this.addUserMessage(promptContext.id, prompt);
     this.addLogMessage('loading');
 
+    await this.saveTask({ state: DefaultTaskState.InProgress });
+
     this.telemetryManager.captureRunPrompt(mode);
     // Generate promptContext for this run
 
@@ -656,9 +663,12 @@ export class Task {
     await this.hookManager.trigger('onAiderPromptFinished', { responses }, this, this.project);
     await this.hookManager.trigger('onPromptFinished', { responses }, this, this.project);
 
-    await this.saveTask({
-      completedAt: new Date().toISOString(),
-    });
+    if (this.task.state === DefaultTaskState.InProgress) {
+      await this.saveTask({
+        completedAt: new Date().toISOString(),
+        state: DefaultTaskState.ReadyForReview,
+      });
+    }
 
     return responses;
   }
@@ -698,9 +708,12 @@ export class Task {
 
     await this.hookManager.trigger('onPromptFinished', { responses: [] }, this, this.project);
 
-    await this.saveTask({
-      completedAt: new Date().toISOString(),
-    });
+    if (this.task.state === DefaultTaskState.InProgress) {
+      await this.saveTask({
+        completedAt: new Date().toISOString(),
+        state: DefaultTaskState.ReadyForReview,
+      });
+    }
 
     return [];
   }
@@ -1628,7 +1641,7 @@ export class Task {
     }
   }
 
-  public interruptResponse(addMessage = true) {
+  public interruptResponse(updateState = true) {
     logger.info('Interrupting response:', {
       baseDir: this.project.baseDir,
       taskId: this.taskId,
@@ -1640,11 +1653,15 @@ export class Task {
     }
 
     this.findMessageConnectors('interrupt-response').forEach((connector) => connector.sendInterruptResponseMessage());
-    if (addMessage) {
-      this.addLogMessage('warning', 'messages.interrupted');
-    }
     this.agent.interrupt();
     this.promptFinished();
+
+    if (this.initialized && updateState) {
+      void this.saveTask({
+        state: DefaultTaskState.Interrupted,
+        interruptedAt: new Date().toISOString(),
+      });
+    }
   }
 
   public applyEdits(edits: FileEdit[]) {
@@ -1733,6 +1750,7 @@ export class Task {
     };
 
     this.eventManager.sendUserMessage(data);
+    void this.saveTask({ state: DefaultTaskState.Todo });
   }
 
   public async removeLastMessage() {
@@ -1748,15 +1766,15 @@ export class Task {
       mode,
       hasUpdatedPrompt: !!updatedPrompt,
     });
-    const originalLastUserMessageContent = this.contextManager.removeLastUserMessage();
 
+    const originalLastUserMessageContent = this.contextManager.removeLastUserMessage();
     const promptToRun = updatedPrompt ?? originalLastUserMessageContent;
 
     if (promptToRun) {
       logger.info('Found message content to run, reloading and re-running prompt.', {
         remainingMessagesCount: (await this.contextManager.getContextMessages()).length,
       });
-      await this.reloadConnectorMessages(); // This sends 'clear-task' which truncates UI messages
+      await this.contextManager.loadMessages(await this.contextManager.getContextMessages());
       await this.updateContextInfo();
 
       // No need to await runPrompt here, let it run in the background
@@ -1884,7 +1902,7 @@ export class Task {
   }
 
   async updateContextInfo(checkContextFilesIncluded = false, checkRepoMapIncluded = false) {
-    this.sendRequestContextInfo();
+    void this.sendRequestContextInfo();
     await this.updateAgentEstimatedTokens(checkContextFilesIncluded, checkRepoMapIncluded);
   }
 

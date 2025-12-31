@@ -711,6 +711,8 @@
     "copy": "Copy",
     "copied": "Copied!",
     "interrupted": "Interrupted by user.",
+    "taskInterrupted": "Task Interrupted",
+    "taskInterruptedDescription": "The task was interrupted by the user while in progress.",
     "delete": "Delete",
     "redo": "Redo",
     "edit": "Edit",
@@ -722,7 +724,9 @@
     "nextUserMessage": "Next user message",
     "messageBar": "Message Bar",
     "exportNotAvailableWithVirtualized": "Export to image is not available when using virtualized message rendering. Change to standard rendering in Settings -> General -> Message Display.",
-    "execute": "Execute"
+    "execute": "Execute",
+    "taskReadyForReview": "Task Ready for Review",
+    "markAsDone": "Mark as done"
   },
   "errors": {
     "frozenTitle": "AIDER FROZEN?",
@@ -1277,6 +1281,15 @@
     "archiveSelectedConfirm": "Are you sure you want to archive {{count}} selected tasks?",
     "unarchiveSelectedConfirm": "Are you sure you want to unarchive {{count}} selected tasks?",
     "generatingName": "Generating name..."
+  },
+  "taskState": {
+    "TODO": "Todo",
+    "IN_PROGRESS": "In Progress",
+    "INTERRUPTED": "Interrupted",
+    "MORE_INFO_NEEDED": "More Info Needed",
+    "READY_FOR_REVIEW": "Ready for Review",
+    "READY_FOR_IMPLEMENTATION": "Ready for Implementation",
+    "DONE": "Done"
   },
   "worktree": {
     "aheadCommits": "↑ {{count}} commits",

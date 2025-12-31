@@ -140,6 +140,7 @@ module.exports = {
       },
     },
     fontSize: {
+      '4xs': '0.6rem',
       '3xs': '0.65rem',
       '2xs': '0.7rem',
       xs: '0.75rem',

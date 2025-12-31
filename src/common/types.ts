@@ -756,11 +756,13 @@ export const TaskDataSchema = z.object({
   id: z.string(),
   baseDir: z.string(),
   name: z.string(),
+  state: z.string().optional(),
   archived: z.boolean().optional(),
   pinned: z.boolean().optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
   startedAt: z.string().optional(),
+  interruptedAt: z.string().optional(),
   completedAt: z.string().optional(),
   worktree: WorktreeSchema.optional(),
   workingMode: WorkingModeSchema.optional(),
@@ -782,6 +784,16 @@ export const TaskDataSchema = z.object({
 });
 
 export type TaskData = z.infer<typeof TaskDataSchema>;
+
+export enum DefaultTaskState {
+  Todo = 'TODO',
+  InProgress = 'IN_PROGRESS',
+  Interrupted = 'INTERRUPTED',
+  MoreInfoNeeded = 'MORE_INFO_NEEDED',
+  ReadyForReview = 'READY_FOR_REVIEW',
+  ReadyForImplementation = 'READY_FOR_IMPLEMENTATION',
+  Done = 'DONE',
+}
 
 export interface TodoItem {
   name: string;
