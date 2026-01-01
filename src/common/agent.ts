@@ -268,10 +268,10 @@ export const DEFAULT_PROVIDER_MODELS: Partial<Record<LlmProviderName, string>> =
   deepseek: 'deepseek-chat',
   gemini: 'gemini-3-pro',
   groq: 'moonshotai/kimi-k2-instruct-0905',
-  openai: 'gpt-5.1-codex',
+  openai: 'gpt-5.2',
   openrouter: 'anthropic/claude-sonnet-4.5',
   requesty: 'anthropic/claude-sonnet-4-5',
-  'zai-plan': 'glm-4.6',
+  'zai-plan': 'glm-4.7',
   minimax: 'MiniMax-M2',
 };
 
