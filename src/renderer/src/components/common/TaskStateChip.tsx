@@ -16,7 +16,7 @@ const getStateTextClass = (state: string): string => {
     case DefaultTaskState.Done:
       return 'text-success';
     case DefaultTaskState.MoreInfoNeeded:
-      return 'text-button-warning';
+      return 'text-error';
     case DefaultTaskState.ReadyForReview:
     case DefaultTaskState.ReadyForImplementation:
       return 'text-info-light';
