@@ -1,8 +1,7 @@
-import { IoPlay } from 'react-icons/io5';
+import { IoPlayOutline } from 'react-icons/io5';
 import { RiAlertLine, RiCheckLine, RiPlayLine } from 'react-icons/ri';
 import { useTranslation } from 'react-i18next';
-import { clsx } from 'clsx';
-import { useState } from 'react';
+import { useState, ReactNode } from 'react';
 import { DefaultTaskState, TaskData } from '@common/types';
 
 import { Button } from '@/components/common/Button';
@@ -16,8 +15,6 @@ type Props = {
   onUnarchiveTask?: () => void;
   onDeleteTask?: () => void;
 };
-
-const baseClasses = 'rounded-md p-3 mb-2 max-w-full break-words text-xs border border-border-dark-light relative group';
 
 export const TaskStateActions = ({ task, onResumeTask, onMarkAsDone, onProceed, onArchiveTask, onUnarchiveTask, onDeleteTask }: Props) => {
   const { t } = useTranslation();
@@ -48,102 +45,96 @@ export const TaskStateActions = ({ task, onResumeTask, onMarkAsDone, onProceed, 
     onUnarchiveTask?.();
   };
 
-  if (task.state === DefaultTaskState.Todo) {
+  const renderSection = (icon: ReactNode, text: string, actions: ReactNode) => {
     return (
-      <div className={clsx(baseClasses, 'bg-bg-primary-light-strong border-border-dark')}>
+      <div className="rounded-md p-2.5 max-w-full break-words text-xs border border-border-dark-light relative group bg-bg-primary-light-strong">
         <div className="flex items-center gap-3">
-          <RiPlayLine className="h-4 w-4 flex-shrink-0 text-info-light" />
-          <div className="flex-1 text-text-secondary">{t('messages.taskTodoDescription')}</div>
-          <Button variant="outline" color="primary" size="xs" onClick={onResumeTask}>
-            <IoPlay className="mr-1 w-3 h-3" />
-            {t('messages.execute')}
-          </Button>
+          {icon}
+          <div className="flex-1 text-text-secondary">{text}</div>
+          {actions}
         </div>
       </div>
+    );
+  };
+
+  if (task.state === DefaultTaskState.Todo) {
+    return renderSection(
+      <RiPlayLine className="h-4 w-4 flex-shrink-0 text-info-light" />,
+      t('messages.taskTodoDescription'),
+      <>
+        <Button key="execute" variant="outline" color="primary" size="xs" onClick={onResumeTask}>
+          <IoPlayOutline className="mr-1 w-3 h-3" />
+          {t('messages.execute')}
+        </Button>
+      </>,
     );
   }
 
   if (task.state === DefaultTaskState.Interrupted) {
-    return (
+    return renderSection(
+      <RiAlertLine className="h-4 w-4 flex-shrink-0 text-warning" />,
+      t('messages.taskInterrupted'),
       <>
-        <div className={clsx(baseClasses, 'bg-bg-primary-light-strong border-border-dark')}>
-          <div className="flex items-center gap-3">
-            <RiAlertLine className="h-4 w-4 flex-shrink-0 text-warning" />
-            <div className="flex-1 text-text-secondary">{t('messages.taskInterrupted')}</div>
-            <Button variant="outline" color="primary" size="xs" onClick={onResumeTask}>
-              <IoPlay className="mr-1 w-3 h-3" />
-              {t('messages.resume')}
-            </Button>
-          </div>
-        </div>
-      </>
+        <Button key="resume" variant="outline" color="primary" size="xs" onClick={onResumeTask}>
+          <IoPlayOutline className="mr-1 w-3 h-3" />
+          {t('messages.resume')}
+        </Button>
+      </>,
     );
   }
 
   if (task.state === DefaultTaskState.ReadyForReview) {
-    return (
-      <div className={clsx(baseClasses, 'bg-bg-primary-light-strong border-border-dark')}>
-        <div className="flex items-center gap-3">
-          <RiCheckLine className="h-4 w-4 flex-shrink-0 text-info-light" />
-          <div className="flex-1 text-text-secondary">{t('messages.taskReadyForReview')}</div>
-          <Button variant="outline" color="primary" size="xs" onClick={onMarkAsDone}>
-            {t('messages.markAsDone')}
-          </Button>
-        </div>
-      </div>
+    return renderSection(
+      <RiCheckLine className="h-4 w-4 flex-shrink-0 text-info-light" />,
+      t('messages.taskReadyForReview'),
+      <>
+        <Button key="markAsDone" variant="outline" color="primary" size="xs" onClick={onMarkAsDone}>
+          {t('messages.markAsDone')}
+        </Button>
+      </>,
     );
   }
 
   if (task.state === DefaultTaskState.ReadyForImplementation) {
-    return (
-      <div className={clsx(baseClasses, 'bg-bg-primary-light-strong border-border-dark')}>
-        <div className="flex items-center gap-3">
-          <RiCheckLine className="h-4 w-4 flex-shrink-0 text-info-light" />
-          <div className="flex-1 text-text-secondary">{t('messages.taskReadyForImplementation')}</div>
-          <Button variant="outline" color="primary" size="xs" onClick={handleProceedClick}>
-            <IoPlay className="mr-1 w-3 h-3" />
-            {t('messages.proceed')}
-          </Button>
-        </div>
-      </div>
+    return renderSection(
+      <RiCheckLine className="h-4 w-4 flex-shrink-0 text-info-light" />,
+      t('messages.taskReadyForImplementation'),
+      <>
+        <Button key="proceed" variant="outline" color="primary" size="xs" onClick={handleProceedClick}>
+          <IoPlayOutline className="mr-1 w-3 h-3" />
+          {t('messages.proceed')}
+        </Button>
+      </>,
     );
   }
 
   if (task.state === DefaultTaskState.Done) {
     const isArchived = task.archived === true;
 
-    return (
-      <div className={clsx(baseClasses, 'bg-bg-primary-light-strong border-border-dark')}>
-        <div className="flex items-center gap-3">
-          <RiCheckLine className="h-4 w-4 flex-shrink-0 text-success" />
-          <div className="flex-1 text-text-secondary">{isArchived ? t('messages.taskDoneArchived') : t('messages.taskDone')}</div>
-          {isDeleting ? (
-            <>
-              <Button variant="text" size="xs" onClick={handleCancelDelete}>
-                {t('common.cancel')}
-              </Button>
-              <Button variant="contained" color="danger" size="xs" onClick={handleConfirmDelete}>
-                {t('messages.confirmDelete')}
-              </Button>
-            </>
-          ) : (
-            <>
-              {isArchived ? (
-                <Button variant="outline" color="primary" size="xs" onClick={handleUnarchiveClick}>
-                  {t('messages.unarchive')}
-                </Button>
-              ) : (
-                <Button variant="outline" color="primary" size="xs" onClick={handleArchiveClick}>
-                  {t('messages.archive')}
-                </Button>
-              )}
-              <Button variant="outline" color="danger" size="xs" onClick={handleDeleteClick}>
-                {t('common.delete')}
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
+    const actions = isDeleting ? (
+      <>
+        <Button key="cancel" variant="text" size="xs" onClick={handleCancelDelete}>
+          {t('common.cancel')}
+        </Button>
+        <Button key="confirm" variant="contained" color="danger" size="xs" onClick={handleConfirmDelete}>
+          {t('messages.confirmDelete')}
+        </Button>
+      </>
+    ) : (
+      <>
+        <Button key="archive" variant="outline" color="primary" size="xs" onClick={isArchived ? handleUnarchiveClick : handleArchiveClick}>
+          {isArchived ? t('messages.unarchive') : t('messages.archive')}
+        </Button>
+        <Button key="delete" variant="outline" color="danger" size="xs" onClick={handleDeleteClick}>
+          {t('common.delete')}
+        </Button>
+      </>
+    );
+
+    return renderSection(
+      <RiCheckLine className="h-4 w-4 flex-shrink-0 text-success" />,
+      isArchived ? t('messages.taskDoneArchived') : t('messages.taskDone'),
+      actions,
     );
   }
 
