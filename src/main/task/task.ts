@@ -85,7 +85,7 @@ export class Task {
   private runPromptResolves: ((value: ResponseCompletedData[]) => void)[] = [];
   private autocompletionAllFiles: string[] | null = null;
   private agentRunResolves: (() => void)[] = [];
-  private git: SimpleGit;
+  private git: SimpleGit | null = null;
 
   private readonly taskDataPath: string;
   private readonly contextManager: ContextManager;
@@ -135,7 +135,6 @@ export class Task {
       this.memoryManager,
       this.promptsManager,
     );
-    this.git = simpleGit(this.project.baseDir);
     this.aiderManager = new AiderManager(this, this.store, this.modelManager, this.eventManager, () => this.connectors);
 
     void this.loadTaskData();
@@ -196,10 +195,6 @@ export class Task {
 
     // Migrate missing task-level settings from project settings
     await this.migrateFromProjectSettings();
-
-    if (await fileExists(this.getTaskDir())) {
-      this.git = simpleGit(this.getTaskDir());
-    }
   }
 
   /**
@@ -337,7 +332,9 @@ export class Task {
         this.task.workingMode = 'local';
       }
     }
-    this.git = simpleGit(this.getTaskDir());
+    if (await fileExists(this.getTaskDir())) {
+      this.git = simpleGit(this.getTaskDir());
+    }
 
     await this.loadContext();
     await Promise.all([this.aiderManager.start(), this.updateContextInfo()]);
@@ -1113,7 +1110,7 @@ export class Task {
   public async addToGit(absolutePath: string, promptContext?: PromptContext): Promise<void> {
     try {
       // Add the new file to git staging
-      await this.git.add(absolutePath);
+      await this.git?.add(absolutePath);
       await this.updateAutocompletionData(undefined, true);
     } catch (gitError) {
       const gitErrorMessage = gitError instanceof Error ? gitError.message : String(gitError);
@@ -1163,7 +1160,7 @@ export class Task {
       sendToConnectors = false;
       try {
         // Get the Git root directory to handle monorepo scenarios
-        const gitRoot = await this.git.revparse(['--show-toplevel']);
+        const gitRoot = (await this.git?.revparse(['--show-toplevel'])) || this.project.baseDir;
         const gitRootDir = simpleGit(gitRoot);
 
         // Get the current HEAD commit hash before undoing
