@@ -18,6 +18,7 @@ const getStateTextClass = (state: string): string => {
     case DefaultTaskState.MoreInfoNeeded:
       return 'text-error';
     case DefaultTaskState.ReadyForReview:
+      return 'text-success-light';
     case DefaultTaskState.ReadyForImplementation:
       return 'text-info-light';
     case DefaultTaskState.InProgress:

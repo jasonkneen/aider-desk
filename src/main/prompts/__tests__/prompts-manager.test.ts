@@ -137,6 +137,19 @@ describe('Prompts with Handlebars', () => {
     });
   });
 
+  describe('getUpdateTaskStatePrompt', () => {
+    it('should render update-task-state prompt', () => {
+      const prompt = promptsManager.getUpdateTaskStatePrompt(mockTask);
+
+      expect(prompt).toContain('You are a helpful assistant that determines the appropriate task state');
+      expect(prompt).toContain('Available task states:');
+      expect(prompt).toContain('MORE_INFO_NEEDED');
+      expect(prompt).toContain('READY_FOR_IMPLEMENTATION');
+      expect(prompt).toContain('READY_FOR_REVIEW');
+      expect(prompt).toContain('NONE');
+    });
+  });
+
   describe('System prompt advanced features', () => {
     it('should include custom instructions in system prompt', async () => {
       const additionalInstructions = 'Always use TypeScript strict mode';

@@ -19,6 +19,7 @@ AiderDesk includes the following built-in prompt templates that you can override
 | `compact-conversation.hbs` | Instructions for summarizing conversation history | [View on GitHub](https://github.com/hotovo/aider-desk/blob/main/resources/prompts/compact-conversation.hbs) |
 | `commit-message.hbs` | Template for generating Git commit messages | [View on GitHub](https://github.com/hotovo/aider-desk/blob/main/resources/prompts/commit-message.hbs) |
 | `task-name.hbs` | Template for generating task names from user prompts | [View on GitHub](https://github.com/hotovo/aider-desk/blob/main/resources/prompts/task-name.hbs) |
+| `update-task-state.hbs` | Instructions for determining the appropriate task state based on the agent's last response | [View on GitHub](https://github.com/hotovo/aider-desk/blob/main/resources/prompts/update-task-state.hbs) |
 | `conflict-resolution-system.hbs` | System prompt for resolving Git merge conflicts | [View on GitHub](https://github.com/hotovo/aider-desk/blob/main/resources/prompts/conflict-resolution-system.hbs) |
 | `conflict-resolution.hbs` | Instructions for handling conflict resolution tasks | [View on GitHub](https://github.com/hotovo/aider-desk/blob/main/resources/prompts/conflict-resolution.hbs) |
 

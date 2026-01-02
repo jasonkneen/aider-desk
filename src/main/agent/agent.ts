@@ -7,7 +7,6 @@ import {
   ContextFile,
   ContextMessage,
   ContextUserMessage,
-  DefaultTaskState,
   McpTool,
   McpToolInputSchema,
   PromptContext,
@@ -779,47 +778,6 @@ export class Agent {
         };
       };
 
-      const determineAndUpdateTaskState = async () => {
-        if (profile.isSubagent || effectiveAbortSignal?.aborted) {
-          return;
-        }
-
-        try {
-          const taskStateInstruction = `Based on the conversation, determine if the task state should be updated.
-
-Available task states:
-- ${DefaultTaskState.MoreInfoNeeded}: Use this when you need to ask clarifying questions before proceeding with the task.
-- ${DefaultTaskState.ReadyForImplementation}: Use this after presenting a detailed implementation plan and before beginning coding work.
-- ${DefaultTaskState.ReadyForReview}: Use this after all implementation and verification work is complete.
-- NONE: Use this when no task state update is needed.
-
-IMPORTANT: Answer with ONLY the task state name (e.g., "${DefaultTaskState.MoreInfoNeeded}", "${DefaultTaskState.ReadyForImplementation}", "${DefaultTaskState.ReadyForReview}") or "NONE". Do not include any other text or explanation.`;
-
-          task.addLogMessage('loading', 'Updating task state...');
-
-          const stateDeterminationMessages = [...messages, { role: 'user' as const, content: taskStateInstruction }];
-          const result = await generateText({
-            ...getBaseModelCallParams(),
-            messages: stateDeterminationMessages,
-          });
-
-          const answer = result.text.trim();
-          const validStates = [DefaultTaskState.MoreInfoNeeded, DefaultTaskState.ReadyForImplementation, DefaultTaskState.ReadyForReview];
-
-          if (validStates.includes(answer as DefaultTaskState)) {
-            logger.info(`Updating task state to ${answer}`);
-            await task.saveTask({ state: answer });
-          } else if (answer !== 'NONE') {
-            logger.warn(`Invalid task state returned: ${answer}. Expected one of: ${validStates.join(', ')}, or NONE`, {
-              answer,
-              result,
-            });
-          }
-        } catch (error) {
-          logger.error('Error determining task state:', error);
-        }
-      };
-
       let iterationCount = 0;
       let retryCount = 0;
 
@@ -1010,8 +968,6 @@ IMPORTANT: Answer with ONLY the task state name (e.g., "${DefaultTaskState.MoreI
           break;
         }
       }
-
-      await determineAndUpdateTaskState();
     } catch (error) {
       if (effectiveAbortSignal?.aborted) {
         logger.info('Prompt aborted by user');

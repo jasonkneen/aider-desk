@@ -48,6 +48,7 @@ import {
   PromptTemplateName,
   TaskNamePromptData,
   ToolPermissions,
+  UpdateTaskStateData,
 } from './types';
 
 import { AIDER_DESK_DEFAULT_PROMPTS_DIR, AIDER_DESK_GLOBAL_PROMPTS_DIR, AIDER_DESK_PROMPTS_DIR } from '@/constants';
@@ -114,6 +115,7 @@ export class PromptsManager {
       'task-name',
       'conflict-resolution',
       'conflict-resolution-system',
+      'update-task-state',
     ];
   }
 
@@ -438,5 +440,10 @@ export class PromptsManager {
       theirsPath: ctx.theirsPath,
     };
     return this.render('conflict-resolution', data, task.getProjectDir());
+  };
+
+  public getUpdateTaskStatePrompt = (task: Task) => {
+    const data: UpdateTaskStateData = {};
+    return this.render('update-task-state', data, task.getProjectDir());
   };
 }

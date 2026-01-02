@@ -709,9 +709,12 @@ export class Task {
     await this.hookManager.trigger('onPromptFinished', { responses: [] }, this, this.project);
 
     if (this.task.state === DefaultTaskState.InProgress) {
+      // Determine task state based on the last assistant message
+      const state = await this.determineTaskState(agentMessages);
+
       await this.saveTask({
         completedAt: new Date().toISOString(),
-        state: DefaultTaskState.ReadyForReview,
+        state: state || DefaultTaskState.ReadyForReview,
       });
     }
 
@@ -751,6 +754,68 @@ export class Task {
       );
       logger.info('Generated task name:', { taskName });
       return taskName.trim();
+    }
+
+    return null;
+  }
+
+  private async determineTaskState(resultMessages: ContextMessage[]): Promise<string | null> {
+    // Find the last assistant message from result messages
+    const lastAssistantMessage = [...resultMessages].reverse().find((msg) => msg.role === MessageRole.Assistant) as ContextAssistantMessage | undefined;
+
+    if (!lastAssistantMessage) {
+      logger.debug('No assistant message found for task state determination');
+      return null;
+    }
+
+    // Extract reasoning and text from the last assistant message
+    const reasoningText = Array.isArray(lastAssistantMessage.content) && lastAssistantMessage.content.find((part) => part.type === 'reasoning')?.text;
+    const contentText = extractTextContent(lastAssistantMessage.content);
+
+    if (!contentText && !reasoningText) {
+      logger.debug('No content found in last assistant message for task state determination');
+      return null;
+    }
+
+    // Create a user message wrapping the last assistant message information
+    let wrappedMessage = "Based on the agent's last response, determine the appropriate task state.\n\n";
+    if (reasoningText) {
+      wrappedMessage += `<agent-reasoning>\n${reasoningText}</agent-reasoning>\n\n`;
+    }
+    wrappedMessage += `<agent-response>\n${contentText}</agent-response>`;
+
+    try {
+      const agentProfile = await this.getTaskAgentProfile();
+      if (!agentProfile) {
+        logger.debug('No agent profile found for task state determination');
+        return null;
+      }
+
+      this.addLogMessage('loading', 'Updating task state...');
+
+      const answer = await this.agent.generateText(agentProfile, this.promptsManager.getUpdateTaskStatePrompt(this), wrappedMessage);
+
+      logger.info('Determining task state:', {
+        baseDir: this.project.baseDir,
+        taskId: this.taskId,
+        wrappedMessage,
+        answer,
+      });
+
+      const trimmedAnswer = answer.trim();
+      const validStates = [DefaultTaskState.MoreInfoNeeded, DefaultTaskState.ReadyForImplementation, DefaultTaskState.ReadyForReview];
+
+      if (validStates.includes(trimmedAnswer as DefaultTaskState)) {
+        logger.info(`Determined task state: ${trimmedAnswer}`);
+
+        return trimmedAnswer;
+      } else if (trimmedAnswer !== 'NONE') {
+        logger.warn(`Invalid task state returned: ${trimmedAnswer}. Expected one of: ${validStates.join(', ')}, or NONE`, {
+          answer: trimmedAnswer,
+        });
+      }
+    } catch (error) {
+      logger.error('Error determining task state:', error);
     }
 
     return null;

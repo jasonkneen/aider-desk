@@ -71,6 +71,11 @@ export interface ConflictResolutionPromptData {
   theirsPath?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface UpdateTaskStateData {
+  // Static for now
+}
+
 export type PromptTemplateName =
   | 'system-prompt'
   | 'init-project'
@@ -79,4 +84,5 @@ export type PromptTemplateName =
   | 'commit-message'
   | 'task-name'
   | 'conflict-resolution'
-  | 'conflict-resolution-system';
+  | 'conflict-resolution-system'
+  | 'update-task-state';
