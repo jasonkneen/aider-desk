@@ -18,9 +18,9 @@ export interface HookEventMap {
   onTaskInitialized: { task: TaskData };
   onTaskClosed: { task: TaskData };
   onPromptSubmitted: { prompt: string; mode: Mode };
-  onPromptStarted: { prompt: string; mode: Mode };
+  onPromptStarted: { prompt: string | null; mode: Mode };
   onPromptFinished: { responses: ResponseCompletedData[] };
-  onAgentStarted: { prompt: string };
+  onAgentStarted: { prompt: string | null };
   onAgentFinished: { resultMessages: unknown[] };
   onAgentStepFinished: { stepResult: unknown };
   onToolCalled: { toolName: string; args: Record<string, unknown> | undefined };

@@ -354,7 +354,7 @@ export class Task {
 
     await this.init();
 
-    const mode = this.task.currentMode || this.store.getProjectSettings(this.project.baseDir).currentMode;
+    const mode = this.getCurrentMode();
     return {
       messages: this.contextManager.getContextMessagesData(),
       files: await this.getContextFiles(mode === 'agent'),
@@ -553,8 +553,6 @@ export class Task {
     this.addUserMessage(promptContext.id, prompt);
     this.addLogMessage('loading');
 
-    await this.saveTask({ state: DefaultTaskState.InProgress });
-
     this.telemetryManager.captureRunPrompt(mode);
     // Generate promptContext for this run
 
@@ -609,14 +607,17 @@ export class Task {
       logger.info('Aider prompt blocked by hook');
       return [];
     }
-    prompt = aiderHookResult.event.prompt;
-    mode = aiderHookResult.event.mode;
-    await this.aiderManager.waitForStart();
 
     await this.saveTask({
       name: this.task.name || this.getTaskNameFromPrompt(prompt),
       startedAt: new Date().toISOString(),
+      state: DefaultTaskState.InProgress,
     });
+
+    prompt = aiderHookResult.event.prompt;
+    mode = aiderHookResult.event.mode;
+
+    await this.aiderManager.waitForStart();
 
     // Detect files in prompt and ask to add them to context (only for aider modes)
     await this.detectAndAddFilesFromPrompt(prompt);
@@ -672,7 +673,7 @@ export class Task {
 
   public async runPromptInAgent(
     profile: AgentProfile,
-    prompt: string,
+    prompt: string | null,
     promptContext: PromptContext = { id: uuidv4() },
     contextMessages?: ContextMessage[],
     contextFiles?: ContextFile[],
@@ -680,14 +681,17 @@ export class Task {
     waitForCurrentAgentToFinish = true,
   ): Promise<ResponseCompletedData[]> {
     await this.hookManager.trigger('onPromptStarted', { prompt, mode: 'agent' }, this, this.project);
-    await this.saveTask({
-      name: this.task.name || this.getTaskNameFromPrompt(prompt),
-      startedAt: new Date().toISOString(),
-    });
 
     if (waitForCurrentAgentToFinish) {
       await this.waitForCurrentAgentToFinish();
     }
+
+    await this.saveTask({
+      name: this.task.name || this.getTaskNameFromPrompt(prompt || ''),
+      startedAt: new Date().toISOString(),
+      state: DefaultTaskState.InProgress,
+    });
+
     const agentMessages = await this.agent.runAgent(this, profile, prompt, promptContext, contextMessages, contextFiles, systemPrompt);
     this.resolveAgentRunPromises();
     if (agentMessages.length > 0) {
@@ -1126,7 +1130,7 @@ export class Task {
   }
 
   private async sendContextFilesUpdated() {
-    const mode = this.task.currentMode || this.store.getProjectSettings(this.project.baseDir).currentMode;
+    const mode = this.getCurrentMode();
     const allFiles = await this.getContextFiles(mode === 'agent');
 
     this.eventManager.sendContextFilesUpdated(this.project.baseDir, this.taskId, allFiles);
@@ -1855,10 +1859,9 @@ export class Task {
   public async resumeTask() {
     logger.info('Resuming task:', { baseDir: this.project.baseDir, taskId: this.taskId });
 
-    const mode = this.task.currentMode || this.store.getProjectSettings(this.project.baseDir).currentMode;
+    const mode = this.getCurrentMode();
 
     if (mode === 'agent') {
-      // In agent mode, run the agent with current context messages
       const profile = await this.getTaskAgentProfile();
       if (!profile) {
         logger.error('No active Agent profile found for resume');
@@ -1866,16 +1869,10 @@ export class Task {
         return;
       }
 
-      const contextMessages = await this.contextManager.getContextMessages();
-      logger.info('Resuming agent task', { messageCount: contextMessages.length });
+      logger.info('Resuming agent task...');
+      this.addLogMessage('loading', 'Resuming task...');
 
-      const promptContext: PromptContext = {
-        id: uuidv4(),
-      };
-
-      await this.saveTask({ state: DefaultTaskState.InProgress });
-
-      void this.runPromptInAgent(profile, '', promptContext, contextMessages, undefined, undefined, false);
+      void this.runPromptInAgent(profile, null);
     } else {
       // In other modes, check if last message is user
       const contextMessages = await this.contextManager.getContextMessages();
@@ -1884,6 +1881,7 @@ export class Task {
       if (lastMessage && lastMessage.role === MessageRole.User) {
         // Last message is from user, redo it
         logger.info('Last message is from user, redoing prompt');
+        this.addLogMessage('loading', 'Resuming task...');
         void this.redoLastUserPrompt(mode);
       } else {
         // Last message is not from user, send "Continue" to aider
@@ -1891,6 +1889,10 @@ export class Task {
         void this.runPrompt('Continue', mode, false);
       }
     }
+  }
+
+  private getCurrentMode() {
+    return this.task.currentMode || this.store.getProjectSettings(this.project.baseDir).currentMode || 'agent';
   }
 
   private async reloadConnectorMessages() {
@@ -2380,7 +2382,7 @@ ${error.stderr}`,
     };
 
     this.addUserMessage(promptContext.id, prompt);
-    this.addLogMessage('loading');
+    this.addLogMessage('loading', 'Executing custom command...');
 
     try {
       if (mode === 'agent') {

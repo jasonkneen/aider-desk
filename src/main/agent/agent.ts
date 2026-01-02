@@ -48,7 +48,7 @@ import { createMemoryToolset } from './tools/memory';
 import { createSkillsToolset } from './tools/skills';
 import { MCP_CLIENT_TIMEOUT, McpManager } from './mcp-manager';
 import { ApprovalManager } from './tools/approval-manager';
-import { ANSWER_RESPONSE_START_TAG, extractPromptContextFromToolResult, THINKING_RESPONSE_STAR_TAG } from './utils';
+import { ANSWER_RESPONSE_START_TAG, extractPromptContextFromToolResult, findLastUserMessage, THINKING_RESPONSE_STAR_TAG } from './utils';
 import { extractReasoningMiddleware } from './middlewares/extract-reasoning-middleware';
 
 import { MemoryManager } from '@/memory/memory-manager';
@@ -538,7 +538,7 @@ export class Agent {
   async runAgent(
     task: Task,
     profile: AgentProfile,
-    prompt: string,
+    prompt: string | null,
     promptContext?: PromptContext,
     initialContextMessages?: ContextMessage[],
     initialContextFiles?: ContextFile[],
@@ -555,22 +555,25 @@ export class Agent {
     const contextMessages = initialContextMessages ?? (await task.getContextMessages());
     const contextFiles = initialContextFiles ?? (await task.getContextFiles());
 
-    const userRequestMessage: ContextUserMessage = {
-      id: promptContext?.id || uuidv4(),
-      role: 'user',
-      content: prompt,
-      promptContext,
-    };
+    const userRequestMessage: ContextUserMessage | null = prompt
+      ? {
+          id: promptContext?.id || uuidv4(),
+          role: 'user',
+          content: prompt,
+          promptContext,
+        }
+      : null;
 
     const settings = this.store.getSettings();
     const projectProfiles = this.agentProfileManager.getProjectProfiles(task.getProjectDir());
+    const resultMessages: ContextMessage[] = userRequestMessage ? [userRequestMessage] : [];
 
     const providers = this.store.getProviders();
     const provider = providers.find((p) => p.id === profile.provider);
     if (!provider) {
       logger.error(`Provider ${profile.provider} not found`);
       task.addLogMessage('error', 'Selected model is not configured. Select another model and try again.', true, promptContext);
-      return [userRequestMessage];
+      return resultMessages;
     }
 
     this.telemetryManager.captureAgentRun(profile, task.task);
@@ -605,7 +608,6 @@ export class Agent {
     const providerParameters = this.modelManager.getProviderParameters(provider, profile.model);
 
     const messages = await this.prepareMessages(task, profile, contextMessages, contextFiles);
-    const resultMessages: ContextMessage[] = [userRequestMessage];
     const initialUserRequestMessageIndex = messages.length - contextMessages.length;
 
     // add user message
@@ -824,7 +826,7 @@ export class Agent {
         await this.compactMessagesIfNeeded(
           task,
           profile,
-          userRequestMessage,
+          userRequestMessage || findLastUserMessage(contextMessages)!,
           contextMessages,
           contextFiles,
           messages,
