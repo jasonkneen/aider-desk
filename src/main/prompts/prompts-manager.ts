@@ -267,7 +267,7 @@ export class PromptsManager {
     const { usePowerTools = false, useMemoryTools = false, useSkillsTools = false } = agentProfile;
     const memoryEnabled = settings.memory.enabled && useMemoryTools;
 
-    const isAllowed = (tool: string) => agentProfile.toolApprovals[`${tool}`] !== ToolApprovalState.Never;
+    const isAllowed = (tool: string) => agentProfile.toolApprovals[tool] !== ToolApprovalState.Never;
 
     return {
       aiderTools: agentProfile.useAiderTools,

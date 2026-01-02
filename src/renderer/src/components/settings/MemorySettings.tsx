@@ -235,7 +235,7 @@ export const MemorySettings = ({ settings, setSettings }: Props) => {
                   }
                   min={0}
                   max={2}
-                  step={0.1}
+                  step={0.05}
                   value={settings.memory.maxDistance}
                   onChange={handleMaxDistanceChange}
                 />

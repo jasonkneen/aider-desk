@@ -12,6 +12,7 @@
 - correctly showing uncut list of uncommited files in the worktree status
 - added task actions based on the task state for easier workflow
 - added task settings page with smart task state and auto-generate task name configuration
+- improved instructions for using memory tools for better utilization
 
 ## [0.46.0]
 

@@ -11,7 +11,9 @@
   {{/if}}
   {{#if toolPermissions.memory.retrieveAllowed}}
   <Step number="{{stepNumber}}" title="Retrieve Memory">
-    <Instruction>Use memory tools to retrieve only information that may affect current decisions and is intended to be reusable across tasks (e.g., user preferences, architectural decisions, reusable patterns). Ignore task-specific execution details.</Instruction>
+    <Instruction>Retrieve memory when the request may benefit from stored information. Use judgment: retrieve for implementation tasks, project information questions (e.g., "What providers are supported?"), configuration changes, or feature work. Skip for trivial requests (e.g., "list files", "run tests") or simple clarifications.</Instruction>
+    <Instruction>Formulate queries based on key terms in the user's request (e.g., if asked about LLM providers, query "LLM providers" or "supported providers"; if asked about voice features, query "voice control" or "voice support").</Instruction>
+    <Instruction>Retrieve: user preferences, architectural decisions, reusable patterns, and stable project reference information (e.g., supported providers, available features, project capabilities). Ignore only task-specific execution details, one-off bugs, or temporary implementation notes.</Instruction>
   </Step>{{#increment "stepNumber"}}{{/increment}}
   {{/if}}
   <Step number="{{stepNumber}}" title="Gather Initial Context">
@@ -44,9 +46,10 @@
   </Step>{{#increment "stepNumber"}}{{/increment}}
   {{#if toolPermissions.memory.storeAllowed}}
   <Step number="{{stepNumber}}" title="Store Memory">
-    <Instruction>Consider whether anything should be stored in memory. Default to storing nothing.</Instruction>
-    <Instruction>Store a memory ONLY if ALL are true: (1) reusable across future tasks, (2) stable (unlikely to change soon), (3) actionable (changes future behavior), and (4) it is a user preference, an architectural decision, or a repeated codebase pattern.</Instruction>
-    <Instruction>NEVER store: task progress/status, one-off bug details, transient implementation notes, file lists from a single task, logs/stack traces, secrets/tokens/credentials/PII, or anything directly derivable from repository content.</Instruction>
+    <Instruction>Proactively store information that meets the eligibility criteria. Default to storing nothing only when eligibility is borderline or unclear.</Instruction>
+    <Instruction>Store a memory ONLY if ALL are true: (1) reusable across future tasks, (2) stable (unlikely to change soon), (3) actionable (changes future behavior), and (4) it is a user preference, an architectural decision, a repeated codebase pattern, or stable project reference information.</Instruction>
+    <Instruction>NEVER store: task progress/status, one-off bug details, implementation details (how something was coded, specific file contents), transient implementation notes, file lists from a single task, logs/stack traces, secrets/tokens/credentials/PII, or frequently-changing/version-specific information.</Instruction>
+    <Instruction>Derivatives to avoid: only store information that requires synthesis from multiple files or represents high-level project facts. Do NOT store information instantly readable from a single location (e.g., "line 42 of file X says Y").</Instruction>
     <Instruction>If the user explicitly asks to "remember" something, store it only if it is not disallowed above.</Instruction>
   </Step>{{#increment "stepNumber"}}{{/increment}}
   {{/if}}

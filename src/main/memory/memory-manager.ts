@@ -441,6 +441,7 @@ export class MemoryManager {
       limit,
       maxDistance,
       count: results.length,
+      distances: results.map((result) => result._distance),
     });
 
     const filteredResults = results.filter((result) => (result._distance as number) <= maxDistance);
