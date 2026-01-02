@@ -699,21 +699,20 @@ export class Task {
       });
     }
 
-    void this.sendRequestContextInfo();
-    void this.sendWorktreeIntegrationStatusUpdated();
-    this.notifyIfEnabled('Prompt finished', 'Your Agent has finished the task.');
-
     await this.hookManager.trigger('onPromptFinished', { responses: [] }, this, this.project);
 
     if (this.task.state === DefaultTaskState.InProgress) {
       // Determine task state based on the last assistant message
       const state = await this.determineTaskState(agentMessages);
-
       await this.saveTask({
         completedAt: new Date().toISOString(),
         state: state || DefaultTaskState.ReadyForReview,
       });
     }
+
+    void this.sendRequestContextInfo();
+    void this.sendWorktreeIntegrationStatusUpdated();
+    this.notifyIfEnabled('Prompt finished', 'Your Agent has finished the task.');
 
     return [];
   }
