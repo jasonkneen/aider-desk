@@ -285,6 +285,12 @@ export class BrowserApi implements ApplicationAPI {
       updatedPrompt,
     });
   }
+  resumeTask(baseDir: string, taskId: string): void {
+    this.post('/project/resume-task', {
+      projectDir: baseDir,
+      taskId,
+    });
+  }
   answerQuestion(baseDir: string, taskId: string, answer: string): void {
     this.post('/project/answer-question', {
       projectDir: baseDir,

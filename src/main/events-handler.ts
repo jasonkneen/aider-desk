@@ -222,6 +222,10 @@ export class EventsHandler {
     void this.projectManager.getProject(baseDir).getTask(taskId)?.redoLastUserPrompt(mode, updatedPrompt);
   }
 
+  async resumeTask(baseDir: string, taskId: string): Promise<void> {
+    void this.projectManager.getProject(baseDir).getTask(taskId)?.resumeTask();
+  }
+
   async compactConversation(baseDir: string, taskId: string, mode: Mode, customInstructions?: string): Promise<void> {
     const task = this.projectManager.getProject(baseDir).getTask(taskId);
     if (task) {

@@ -3,12 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { TaskData } from '@common/types';
 import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef } from 'react';
+import { TaskStateActions } from 'src/renderer/src/components/message/TaskStateActions';
 
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
-import { MessagesActions } from './MessagesActions';
 
-import { isGroupMessage, isUserMessage, Message } from '@/types/message';
+import { isGroupMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
@@ -29,19 +29,40 @@ type Props = {
   allFiles?: string[];
   renderMarkdown: boolean;
   removeMessage: (message: Message) => void;
-  redoLastUserPrompt: () => void;
+  resumeTask: () => void;
   editLastUserMessage: (content: string) => void;
   onMarkAsDone: () => void;
+  onProceed?: () => void;
+  onArchiveTask?: () => void;
+  onUnarchiveTask?: () => void;
+  onDeleteTask?: () => void;
 };
 
 export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
-  ({ baseDir, taskId, task, messages, allFiles = [], renderMarkdown, removeMessage, redoLastUserPrompt, editLastUserMessage, onMarkAsDone }, ref) => {
+  (
+    {
+      baseDir,
+      taskId,
+      task,
+      messages,
+      allFiles = [],
+      renderMarkdown,
+      removeMessage,
+      resumeTask,
+      editLastUserMessage,
+      onMarkAsDone,
+      onProceed,
+      onArchiveTask,
+      onUnarchiveTask,
+      onDeleteTask,
+    },
+    ref,
+  ) => {
     const { t } = useTranslation();
     const messagesContainerRef = useRef<HTMLDivElement>(null);
 
     // Group messages by promptContext.group.id
     const processedMessages = useMemo(() => groupMessagesByPromptContext(messages), [messages]);
-    const lastUserMessageIndex = processedMessages.findLastIndex(isUserMessage);
 
     // Create virtualizer for dynamic sized items
     const virtualizer = useVirtualizer({
@@ -70,7 +91,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
         // Scroll to last item when new messages arrive
         virtualizer.scrollToOffset(virtualizer.getTotalSize() + 100);
       }
-    }, [processedMessages, scrollingPaused]);
+    }, [processedMessages, scrollingPaused, virtualizer]);
 
     const exportToImage = async () => {
       // Show notification that export is not available with virtualized rendering
@@ -123,7 +144,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
                       allFiles={allFiles}
                       renderMarkdown={renderMarkdown}
                       remove={(msg: Message) => removeMessage(msg)}
-                      redo={redoLastUserPrompt}
+                      redo={resumeTask}
                       edit={editLastUserMessage}
                     />
                   ) : (
@@ -134,8 +155,8 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
                       allFiles={allFiles}
                       renderMarkdown={renderMarkdown}
                       remove={virtualRow.index === messages.length - 1 ? () => removeMessage(message) : undefined}
-                      redo={virtualRow.index === lastUserMessageIndex ? redoLastUserPrompt : undefined}
-                      edit={virtualRow.index === lastUserMessageIndex ? editLastUserMessage : undefined}
+                      redo={undefined}
+                      edit={undefined}
                     />
                   )}
                 </div>
@@ -155,12 +176,14 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
             />
           </div>
         )}
-        <MessagesActions
+        <TaskStateActions
           task={task}
-          processedMessagesLength={processedMessages.length}
-          lastUserMessageIndex={lastUserMessageIndex}
-          redoLastUserPrompt={redoLastUserPrompt}
+          onResumeTask={resumeTask}
           onMarkAsDone={onMarkAsDone}
+          onProceed={onProceed}
+          onArchiveTask={onArchiveTask}
+          onUnarchiveTask={onUnarchiveTask}
+          onDeleteTask={onDeleteTask}
         />
       </div>
     );

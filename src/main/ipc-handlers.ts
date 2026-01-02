@@ -179,6 +179,10 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     void eventsHandler.redoLastUserPrompt(baseDir, taskId, mode, updatedPrompt);
   });
 
+  ipcMain.on('resume-task', (_, baseDir: string, taskId: string) => {
+    void eventsHandler.resumeTask(baseDir, taskId);
+  });
+
   ipcMain.handle('compact-conversation', async (_event, baseDir: string, taskId: string, mode: Mode, customInstructions?: string) => {
     return await eventsHandler.compactConversation(baseDir, taskId, mode, customInstructions);
   });

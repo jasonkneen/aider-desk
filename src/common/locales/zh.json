@@ -168,7 +168,9 @@
     "placeholder": "输入模型名称",
     "chooseModelsToAdd": "选择要添加的模型...",
     "library": {
-      "all": "全部"
+      "all": "全部",
+      "deleteMemoryTitle": "删除记忆",
+      "deleteMemoryDialogText": "您确定要删除此记忆吗？"
     }
   },
   "modelLibrary": {
@@ -682,8 +684,18 @@
     "messageBar": "消息栏",
     "exportNotAvailableWithVirtualized": "使用虚拟化消息渲染时无法导出为图片。请在 设置 -> 常规 -> 消息显示 中更改为标准渲染。",
     "execute": "执行",
+    "resume": "继续",
     "taskReadyForReview": "任务准备就绪，待审查",
-    "markAsDone": "标记为完成"
+    "taskTodo": "任务未开始",
+    "taskTodoDescription": "任务尚未开始。点击执行开始。",
+    "markAsDone": "标记为完成",
+    "taskReadyForImplementation": "任务准备就绪，待实施",
+    "taskDone": "任务已完成",
+    "taskDoneArchived": "任务已完成并已归档",
+    "proceed": "继续",
+    "archive": "归档",
+    "unarchive": "取消归档",
+    "confirmDelete": "确认删除"
   },
   "errors": {
     "frozenTitle": "AIDER冻结了?",

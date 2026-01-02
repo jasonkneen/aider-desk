@@ -99,6 +99,11 @@ const RedoLastUserPromptSchema = z.object({
   updatedPrompt: z.string().optional(),
 });
 
+const ResumeTaskSchema = z.object({
+  projectDir: z.string().min(1, 'Project directory is required'),
+  taskId: z.string().min(1, 'Task id is required'),
+});
+
 const IsValidPathSchema = z.object({
   projectDir: z.string().min(1, 'Project directory is required'),
   path: z.string().min(1, 'Path is required'),
@@ -291,6 +296,21 @@ export class ProjectApi extends BaseApi {
         const { projectDir, taskId, mode, updatedPrompt } = parsed;
         await this.eventsHandler.redoLastUserPrompt(projectDir, taskId, mode, updatedPrompt);
         res.status(200).json({ message: 'Redo last user prompt initiated' });
+      }),
+    );
+
+    // Resume task
+    router.post(
+      '/project/resume-task',
+      this.handleRequest(async (req, res) => {
+        const parsed = this.validateRequest(ResumeTaskSchema, req.body, res);
+        if (!parsed) {
+          return;
+        }
+
+        const { projectDir, taskId } = parsed;
+        await this.eventsHandler.resumeTask(projectDir, taskId);
+        res.status(200).json({ message: 'Task resumed' });
       }),
     );
 

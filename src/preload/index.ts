@@ -53,6 +53,7 @@ const api: ApplicationAPI = {
   runPrompt: (baseDir, taskId, prompt, mode) => ipcRenderer.send('run-prompt', baseDir, taskId, prompt, mode),
   savePrompt: (baseDir, taskId, prompt) => ipcRenderer.invoke('save-prompt', baseDir, taskId, prompt),
   redoLastUserPrompt: (baseDir, taskId, mode, updatedPrompt?) => ipcRenderer.send('redo-last-user-prompt', baseDir, taskId, mode, updatedPrompt),
+  resumeTask: (baseDir, taskId) => ipcRenderer.send('resume-task', baseDir, taskId),
   answerQuestion: (baseDir, taskId, answer) => ipcRenderer.send('answer-question', baseDir, taskId, answer),
   loadInputHistory: (baseDir) => ipcRenderer.invoke('load-input-history', baseDir),
   isOpenDialogSupported: () => true,

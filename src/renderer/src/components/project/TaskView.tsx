@@ -55,10 +55,29 @@ type Props = {
   isActive?: boolean;
   showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
   shouldFocusPrompt?: boolean;
+  onProceed?: () => void;
+  onArchiveTask?: () => void;
+  onUnarchiveTask?: () => void;
+  onDeleteTask?: () => void;
 };
 
 export const TaskView = forwardRef<TaskViewRef, Props>(
-  ({ project, task, updateTask, inputHistory, isActive = false, showSettingsPage, shouldFocusPrompt = false }, ref) => {
+  (
+    {
+      project,
+      task,
+      updateTask,
+      inputHistory,
+      isActive = false,
+      showSettingsPage,
+      shouldFocusPrompt = false,
+      onProceed,
+      onArchiveTask,
+      onUnarchiveTask,
+      onDeleteTask,
+    },
+    ref,
+  ) => {
     const { t } = useTranslation();
     const { settings } = useSettings();
     const { TASK_HOTKEYS } = useConfiguredHotkeys();
@@ -280,6 +299,26 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       api.redoLastUserPrompt(project.baseDir, task.id, currentMode);
     };
 
+    const handleResumeTask = () => {
+      api.resumeTask(project.baseDir, task.id);
+    };
+
+    const handleProceed = () => {
+      onProceed?.();
+    };
+
+    const handleArchiveTask = () => {
+      onArchiveTask?.();
+    };
+
+    const handleUnarchiveTask = () => {
+      onUnarchiveTask?.();
+    };
+
+    const handleDeleteTask = () => {
+      onDeleteTask?.();
+    };
+
     const handleRemoveMessage = (messageToRemove: Message) => {
       const isLastMessage = displayedMessages[displayedMessages.length - 1] === messageToRemove;
 
@@ -415,9 +454,13 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                       allFiles={allFiles}
                       renderMarkdown={settings.renderMarkdown}
                       removeMessage={handleRemoveMessage}
-                      redoLastUserPrompt={handleRedoLastUserPrompt}
+                      resumeTask={handleResumeTask}
                       editLastUserMessage={handleEditLastUserMessage}
                       onMarkAsDone={handleMarkAsDone}
+                      onProceed={handleProceed}
+                      onArchiveTask={handleArchiveTask}
+                      onUnarchiveTask={handleUnarchiveTask}
+                      onDeleteTask={handleDeleteTask}
                     />
                   ) : (
                     <Messages
@@ -434,9 +477,13 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                       allFiles={allFiles}
                       renderMarkdown={settings.renderMarkdown}
                       removeMessage={handleRemoveMessage}
-                      redoLastUserPrompt={handleRedoLastUserPrompt}
+                      resumeTask={handleResumeTask}
                       editLastUserMessage={handleEditLastUserMessage}
                       onMarkAsDone={handleMarkAsDone}
+                      onProceed={handleProceed}
+                      onArchiveTask={handleArchiveTask}
+                      onUnarchiveTask={handleUnarchiveTask}
+                      onDeleteTask={handleDeleteTask}
                     />
                   )}
                   {messagesPending && transitionMessages.length === 0 && renderLoading(t('common.loadingMessages'))}

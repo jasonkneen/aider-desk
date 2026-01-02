@@ -3,10 +3,10 @@ import { toPng } from 'html-to-image';
 import { MdKeyboardDoubleArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { TaskData } from '@common/types';
+import { TaskStateActions } from 'src/renderer/src/components/message/TaskStateActions';
 
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
-import { MessagesActions } from './MessagesActions';
 
 import { isGroupMessage, isUserMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
@@ -29,20 +29,41 @@ type Props = {
   allFiles?: string[];
   renderMarkdown: boolean;
   removeMessage: (message: Message) => void;
-  redoLastUserPrompt: () => void;
+  resumeTask: () => void;
   editLastUserMessage: (content: string) => void;
   onMarkAsDone: () => void;
+  onProceed?: () => void;
+  onArchiveTask?: () => void;
+  onUnarchiveTask?: () => void;
+  onDeleteTask?: () => void;
 };
 
 export const Messages = forwardRef<MessagesRef, Props>(
-  ({ baseDir, taskId, task, messages, allFiles = [], renderMarkdown, removeMessage, redoLastUserPrompt, editLastUserMessage, onMarkAsDone }, ref) => {
+  (
+    {
+      baseDir,
+      taskId,
+      task,
+      messages,
+      allFiles = [],
+      renderMarkdown,
+      removeMessage,
+      resumeTask,
+      editLastUserMessage,
+      onMarkAsDone,
+      onProceed,
+      onArchiveTask,
+      onUnarchiveTask,
+      onDeleteTask,
+    },
+    ref,
+  ) => {
     const { t } = useTranslation();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
 
     // Group messages by promptContext.group.id
     const processedMessages = groupMessagesByPromptContext(messages);
-    const lastUserMessageIndex = processedMessages.findLastIndex(isUserMessage);
 
     const { scrollingPaused, setScrollingPaused, scrollToBottom, eventHandlers } = useScrollingPaused({
       onAutoScroll: () => messagesEndRef.current?.scrollIntoView(),
@@ -129,7 +150,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
                 allFiles={allFiles}
                 renderMarkdown={renderMarkdown}
                 remove={(msg: Message) => removeMessage(msg)}
-                redo={redoLastUserPrompt}
+                redo={resumeTask}
                 edit={editLastUserMessage}
               />
             );
@@ -143,18 +164,20 @@ export const Messages = forwardRef<MessagesRef, Props>(
               allFiles={allFiles}
               renderMarkdown={renderMarkdown}
               remove={index === messages.length - 1 ? () => removeMessage(message) : undefined}
-              redo={index === lastUserMessageIndex ? redoLastUserPrompt : undefined}
-              edit={index === lastUserMessageIndex ? editLastUserMessage : undefined}
+              redo={undefined}
+              edit={undefined}
             />
           );
         })}
         <div ref={messagesEndRef} />
-        <MessagesActions
+        <TaskStateActions
           task={task}
-          processedMessagesLength={processedMessages.length}
-          lastUserMessageIndex={lastUserMessageIndex}
-          redoLastUserPrompt={redoLastUserPrompt}
+          onResumeTask={resumeTask}
           onMarkAsDone={onMarkAsDone}
+          onProceed={onProceed}
+          onArchiveTask={onArchiveTask}
+          onUnarchiveTask={onUnarchiveTask}
+          onDeleteTask={onDeleteTask}
         />
       </div>
     );

@@ -1845,6 +1845,47 @@ export class Task {
     }
   }
 
+  public async resumeTask() {
+    logger.info('Resuming task:', { baseDir: this.project.baseDir, taskId: this.taskId });
+
+    const mode = this.task.currentMode || this.store.getProjectSettings(this.project.baseDir).currentMode;
+
+    if (mode === 'agent') {
+      // In agent mode, run the agent with current context messages
+      const profile = await this.getTaskAgentProfile();
+      if (!profile) {
+        logger.error('No active Agent profile found for resume');
+        this.addLogMessage('error', 'No active Agent profile found');
+        return;
+      }
+
+      const contextMessages = await this.contextManager.getContextMessages();
+      logger.info('Resuming agent task', { messageCount: contextMessages.length });
+
+      const promptContext: PromptContext = {
+        id: uuidv4(),
+      };
+
+      await this.saveTask({ state: DefaultTaskState.InProgress });
+
+      void this.runPromptInAgent(profile, '', promptContext, contextMessages, undefined, undefined, false);
+    } else {
+      // In other modes, check if last message is user
+      const contextMessages = await this.contextManager.getContextMessages();
+      const lastMessage = contextMessages[contextMessages.length - 1];
+
+      if (lastMessage && lastMessage.role === MessageRole.User) {
+        // Last message is from user, redo it
+        logger.info('Last message is from user, redoing prompt');
+        void this.redoLastUserPrompt(mode);
+      } else {
+        // Last message is not from user, send "Continue" to aider
+        logger.info('Last message is not from user, sending Continue prompt');
+        void this.runPrompt('Continue', mode, false);
+      }
+    }
+  }
+
   private async reloadConnectorMessages() {
     await this.runCommand('clear', false);
     this.contextManager.toConnectorMessages().forEach((message) => {

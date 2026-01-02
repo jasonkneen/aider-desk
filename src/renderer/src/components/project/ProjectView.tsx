@@ -299,6 +299,27 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
     [activeTaskId, api, createNewTask, project.baseDir, setOptimisticTasks],
   );
 
+  const handleProceed = useCallback(() => {
+    if (!activeTask) {
+      return;
+    }
+    api.runPrompt(project.baseDir, activeTask.id, 'Proceed.', activeTask.currentMode || 'code');
+  }, [activeTask, api, project.baseDir]);
+
+  const handleArchiveTask = useCallback(
+    async (taskId: string) => {
+      await handleUpdateTask(taskId, { archived: true });
+    },
+    [handleUpdateTask],
+  );
+
+  const handleUnarchiveTask = useCallback(
+    async (taskId: string) => {
+      await handleUpdateTask(taskId, { archived: false });
+    },
+    [handleUpdateTask],
+  );
+
   // Close current task
   useHotkeys(
     TASK_HOTKEYS.CLOSE_TASK,
@@ -405,6 +426,10 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
               isActive={isActive}
               shouldFocusPrompt={shouldFocusNewTask}
               showSettingsPage={showSettingsPage}
+              onProceed={handleProceed}
+              onArchiveTask={() => handleArchiveTask(activeTask.id)}
+              onUnarchiveTask={() => handleUnarchiveTask(activeTask.id)}
+              onDeleteTask={() => handleDeleteTask(activeTask.id)}
             />
           )}
         </div>
