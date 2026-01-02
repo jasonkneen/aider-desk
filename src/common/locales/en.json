@@ -1054,7 +1054,11 @@
       "listedMemories": "Listing {{count}} memories.",
       "ofType": "of type {{type}}",
       "noMemoriesOfType": "No memories found of type: {{type}}",
-      "all": "All"
+      "all": "All",
+      "delete": "Delete",
+      "memoryNotFound": "Not found",
+      "deleteDialogTitle": "Delete memory",
+      "deleteDialogText": "Are you sure you want to delete this memory?"
     },
     "subagents": {
       "groupRunning": "{{name}}: Subagent is working...",

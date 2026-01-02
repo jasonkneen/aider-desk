@@ -1,10 +1,14 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaBrain, FaCheckCircle, FaExclamationTriangle, FaTimesCircle } from 'react-icons/fa';
+import { FaBrain, FaCheckCircle, FaExclamationTriangle, FaTimesCircle, FaTrash } from 'react-icons/fa';
 import { CgSpinner } from 'react-icons/cg';
 
 import { ToolMessage } from '@/types/message';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { IconButton } from '@/components/common/IconButton';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { useApi } from '@/contexts/ApiContext';
 
 type Props = {
   message: ToolMessage;
@@ -14,6 +18,7 @@ type Props = {
 
 export const RetrieveMemoryToolMessage = ({ message, onRemove, compact = false }: Props) => {
   const { t } = useTranslation();
+  const api = useApi();
 
   const query = message.args.query as string;
   const limit = (message.args.limit as number) ?? 5;
@@ -21,6 +26,35 @@ export const RetrieveMemoryToolMessage = ({ message, onRemove, compact = false }
   const isError = content && typeof content === 'string' && content.startsWith('Failed to retrieve memories');
   const isDenied = content && typeof content === 'string' && content.includes('denied');
   const memoryCount = Array.isArray(content) ? content.length : 0;
+
+  const [currentMemories, setCurrentMemories] = useState<Set<string>>(new Set());
+  const [memoryToDelete, setMemoryToDelete] = useState<{ id: string; content: string } | null>(null);
+
+  useEffect(() => {
+    const loadMemories = async () => {
+      try {
+        const allMemories = await api.listAllMemories();
+        setCurrentMemories(new Set(allMemories.map((m) => m.id)));
+      } catch {
+        // Ignore errors loading memories
+      }
+    };
+    void loadMemories();
+  }, [api]);
+
+  const handleDeleteMemory = async () => {
+    if (!memoryToDelete) {
+      return;
+    }
+    await api.deleteMemory(memoryToDelete.id);
+    setMemoryToDelete(null);
+    try {
+      const allMemories = await api.listAllMemories();
+      setCurrentMemories(new Set(allMemories.map((m) => m.id)));
+    } catch {
+      // Ignore errors loading memories
+    }
+  };
 
   const title = (
     <div className="flex items-center gap-2 w-full text-left">
@@ -98,17 +132,32 @@ export const RetrieveMemoryToolMessage = ({ message, onRemove, compact = false }
             {/* Memory List */}
             {content.length > 0 ? (
               <div className="space-y-2">
-                {content.map((memory) => (
-                  <div key={memory.id} className="border border-border-dark-light rounded bg-bg-primary-light p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-3xs text-text-muted bg-bg-secondary px-2 py-1 rounded">{memory.type}</span>
-                      <span className="text-3xs text-text-muted">{new Date(memory.timestamp).toLocaleDateString()}</span>
+                {content.map((memory) => {
+                  const memoryExists = currentMemories.has(memory.id);
+                  return (
+                    <div key={memory.id} className={`border border-border-dark-light rounded bg-bg-primary-light p-3 ${!memoryExists ? 'opacity-50' : ''}`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-3xs text-text-muted bg-bg-secondary px-2 py-1 rounded">
+                          {memoryExists ? memory.type : `${memory.type} (${t('toolMessage.memory.memoryNotFound')})`}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-3xs text-text-muted">{new Date(memory.timestamp).toLocaleDateString()}</span>
+                          {memoryExists && (
+                            <IconButton
+                              icon={<FaTrash className="w-3.5 h-3.5" />}
+                              onClick={() => setMemoryToDelete({ id: memory.id, content: memory.content })}
+                              tooltip={t('toolMessage.memory.delete')}
+                              className="p-1.5 hover:bg-bg-tertiary hover:text-error rounded-md"
+                            />
+                          )}
+                        </div>
+                      </div>
+                      <pre className="whitespace-pre-wrap text-2xs text-text-primary max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth">
+                        {memory.content}
+                      </pre>
                     </div>
-                    <pre className="whitespace-pre-wrap text-2xs text-text-primary max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth">
-                      {memory.content}
-                    </pre>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-2xs text-text-tertiary bg-bg-secondary">
@@ -136,5 +185,25 @@ export const RetrieveMemoryToolMessage = ({ message, onRemove, compact = false }
     return title;
   }
 
-  return <ExpandableMessageBlock title={title} content={renderContent()} usageReport={message.usageReport} onRemove={onRemove} />;
+  return (
+    <>
+      <ExpandableMessageBlock title={title} content={renderContent()} usageReport={message.usageReport} onRemove={onRemove} />
+      {memoryToDelete && (
+        <ConfirmDialog
+          title={t('toolMessage.memory.deleteDialogTitle')}
+          onConfirm={handleDeleteMemory}
+          onCancel={() => setMemoryToDelete(null)}
+          confirmButtonText={t('toolMessage.memory.delete')}
+          confirmButtonClass="bg-error hover:bg-error"
+        >
+          <div className="text-sm text-text-secondary space-y-2">
+            <div>{t('toolMessage.memory.deleteDialogText')}</div>
+            <pre className="whitespace-pre-wrap bg-bg-secondary p-3 rounded text-xs max-h-[150px] overflow-y-auto scrollbar-thin scrollbar-track-bg-secondary scrollbar-thumb-bg-tertiary">
+              {memoryToDelete.content}
+            </pre>
+          </div>
+        </ConfirmDialog>
+      )}
+    </>
+  );
 };

@@ -13,6 +13,7 @@
 - added task actions based on the task state for easier workflow
 - added task settings page with smart task state and auto-generate task name configuration
 - improved instructions for using memory tools for better utilization
+- added ability to delete memories from the retrieve memory tool message
 
 ## [0.46.0]
 
