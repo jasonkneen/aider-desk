@@ -273,6 +273,7 @@ src/
           Slider.tsx
           StyledTooltip.tsx
           Table.tsx
+          TaskStateChip.tsx
           TextArea.tsx
           TriStateCheckbox.tsx
           VerticalDotsMenu.tsx
@@ -302,6 +303,7 @@ src/
           GrepToolMessage.tsx
           GroupMessageBlock.tsx
           index.ts
+          InterruptedMessageBlock.tsx
           ListMemoriesToolMessage.tsx
           ListTasksToolMessage.tsx
           LoadingMessageBlock.tsx
@@ -310,6 +312,8 @@ src/
           MessageBar.tsx
           MessageBlock.tsx
           Messages.tsx
+          MessagesActions.tsx
+          ReadyForReviewMessageBlock.tsx
           ReflectedMessageBlock.tsx
           ResponseMessageBlock.tsx
           RetrieveMemoryToolMessage.tsx
@@ -1990,6 +1994,8 @@ File: src/common/locales/en.json
     "copy": "Copy",
     "copied": "Copied!",
     "interrupted": "Interrupted by user.",
+    "taskInterrupted": "Task Interrupted",
+    "taskInterruptedDescription": "The task was interrupted by the user while in progress.",
     "delete": "Delete",
     "redo": "Redo",
     "edit": "Edit",
@@ -2001,7 +2007,9 @@ File: src/common/locales/en.json
     "nextUserMessage": "Next user message",
     "messageBar": "Message Bar",
     "exportNotAvailableWithVirtualized": "Export to image is not available when using virtualized message rendering. Change to standard rendering in Settings -> General -> Message Display.",
-    "execute": "Execute"
+    "execute": "Execute",
+    "taskReadyForReview": "Task Ready for Review",
+    "markAsDone": "Mark as done"
   },
   "errors": {
     "frozenTitle": "AIDER FROZEN?",
@@ -2556,6 +2564,15 @@ File: src/common/locales/en.json
     "archiveSelectedConfirm": "Are you sure you want to archive {{count}} selected tasks?",
     "unarchiveSelectedConfirm": "Are you sure you want to unarchive {{count}} selected tasks?",
     "generatingName": "Generating name..."
+  },
+  "taskState": {
+    "TODO": "Todo",
+    "IN_PROGRESS": "In Progress",
+    "INTERRUPTED": "Interrupted",
+    "MORE_INFO_NEEDED": "More Info Needed",
+    "READY_FOR_REVIEW": "Ready for Review",
+    "READY_FOR_IMPLEMENTATION": "Ready for Implementation",
+    "DONE": "Done"
   },
   "worktree": {
     "aheadCommits": "↑ {{count}} commits",
@@ -3297,6 +3314,8 @@ File: src/common/locales/zh.json
     "copy": "复制",
     "copied": "已复制!",
     "interrupted": "被用户中断。",
+    "taskInterrupted": "任务中断",
+    "taskInterruptedDescription": "任务在进行过程中被用户中断。",
     "delete": "删除",
     "redo": "重做",
     "edit": "编辑",
@@ -3308,7 +3327,9 @@ File: src/common/locales/zh.json
     "nextUserMessage": "下一条用户消息",
     "messageBar": "消息栏",
     "exportNotAvailableWithVirtualized": "使用虚拟化消息渲染时无法导出为图片。请在 设置 -> 常规 -> 消息显示 中更改为标准渲染。",
-    "execute": "执行"
+    "execute": "执行",
+    "taskReadyForReview": "任务准备就绪，待审查",
+    "markAsDone": "标记为完成"
   },
   "errors": {
     "frozenTitle": "AIDER冻结了?",
@@ -3913,6 +3934,15 @@ File: src/common/locales/zh.json
     "archiveSelectedConfirm": "您确定要归档 {{count}} 个选中的任务吗？",
     "unarchiveSelectedConfirm": "您确定要取消归档 {{count}} 个选中的任务吗？",
     "generatingName": "正在生成名称..."
+  },
+  "taskState": {
+    "TODO": "待办",
+    "IN_PROGRESS": "进行中",
+    "INTERRUPTED": "已中断",
+    "MORE_INFO_NEEDED": "需要更多信息",
+    "READY_FOR_REVIEW": "待审核",
+    "READY_FOR_IMPLEMENTATION": "待实现",
+    "DONE": "已完成"
   },
   "worktree": {
     "aheadCommits": "↑ {{count}} 次提交",
@@ -5194,6 +5224,16 @@ export type WorkingMode = z.infer<typeof WorkingModeSchema>;
 ⋮----
 export type TaskData = z.infer<typeof TaskDataSchema>;
 ⋮----
+export enum DefaultTaskState {
+  Todo = 'TODO',
+  InProgress = 'IN_PROGRESS',
+  Interrupted = 'INTERRUPTED',
+  MoreInfoNeeded = 'MORE_INFO_NEEDED',
+  ReadyForReview = 'READY_FOR_REVIEW',
+  ReadyForImplementation = 'READY_FOR_IMPLEMENTATION',
+  Done = 'DONE',
+}
+⋮----
 export interface TodoItem {
   name: string;
   completed: boolean;
@@ -6017,6 +6057,7 @@ import {
   ContextFile,
   ContextMessage,
   ContextUserMessage,
+  DefaultTaskState,
   McpTool,
   McpToolInputSchema,
   PromptContext,
@@ -6047,7 +6088,7 @@ import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.j
 // @ts-expect-error istextorbinary is not typed properly
 import { isBinary } from 'istextorbinary';
 import { fileTypeFromBuffer } from 'file-type';
-import { TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
+import { HELPERS_TOOL_GROUP_NAME, TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 ⋮----
 import { createPowerToolset } from './tools/power';
 import { createTodoToolset } from './tools/todo';
@@ -6207,9 +6248,13 @@ error: error.message, // Pass the validation error message
 ⋮----
 : null; // Return null if the LLM couldn't repair the call
 ⋮----
-const onStepFinish = async (stepResult: StepResult<typeof toolSet>) =>
-⋮----
 // Get the model to use its temperature and max output tokens settings
+⋮----
+const getBaseModelCallParams = () =>
+⋮----
+const determineAndUpdateTaskState = async () =>
+⋮----
+const onStepFinish = async (stepResult: StepResult<typeof toolSet>) =>
 ⋮----
 // @ts-expect-error checking keys in error
 ⋮----
@@ -6222,6 +6267,8 @@ const onStepFinish = async (stepResult: StepResult<typeof toolSet>) =>
 // Clean up abort controller only if we created it
 ⋮----
 // Always send a final "finished" message, regardless of whether there was text or tools
+⋮----
+private filterResultMessages(resultMessages: ContextMessage[])
 ⋮----
 private async prepareMessages(task: Task, profile: AgentProfile, contextMessages: ModelMessage[], contextFiles: ContextFile[]): Promise<ModelMessage[]>
 ⋮----
@@ -8795,6 +8842,7 @@ import {
   AIDER_TOOL_GET_CONTEXT_FILES,
   AIDER_TOOL_GROUP_NAME,
   AIDER_TOOL_RUN_PROMPT,
+  HELPERS_TOOL_GROUP_NAME,
   MEMORY_TOOL_DELETE,
   MEMORY_TOOL_GROUP_NAME,
   MEMORY_TOOL_LIST,
@@ -10143,6 +10191,7 @@ import {
   ContextAssistantMessage,
   ContextFile,
   ContextMessage,
+  DefaultTaskState,
   EditFormat,
   FileEdit,
   LogData,
@@ -10512,7 +10561,7 @@ public sendToolMessage(data: ToolData)
 ⋮----
 public async clearContext(addToHistory = false, updateContextInfo = true)
 ⋮----
-public interruptResponse(addMessage = true)
+public interruptResponse(updateState = true)
 ⋮----
 public applyEdits(edits: FileEdit[])
 ⋮----
@@ -10536,8 +10585,6 @@ private addUserMessage(id: string, content: string, promptContext?: PromptContex
 public async removeLastMessage()
 ⋮----
 public async redoLastUserPrompt(mode: Mode, updatedPrompt?: string)
-⋮----
-await this.reloadConnectorMessages(); // This sends 'clear-task' which truncates UI messages
 ⋮----
 // No need to await runPrompt here, let it run in the background
 ⋮----
@@ -14154,6 +14201,24 @@ const handleSort = (column: Column<T>) =>
 onClick=
 
 ================
+File: src/renderer/src/components/common/TaskStateChip.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { twMerge } from 'tailwind-merge';
+import { DefaultTaskState } from '@common/types';
+⋮----
+type Props = {
+  state: string;
+  className?: string;
+};
+⋮----
+const getStateTextClass = (state: string): string =>
+⋮----
+export const TaskStateChip = (
+⋮----
+<span className=
+
+================
 File: src/renderer/src/components/common/TextArea.tsx
 ================
 import { ReactNode, TextareaHTMLAttributes } from 'react';
@@ -14874,6 +14939,15 @@ File: src/renderer/src/components/message/index.ts
 
 
 ================
+File: src/renderer/src/components/message/InterruptedMessageBlock.tsx
+================
+import { RiAlertLine } from 'react-icons/ri';
+import { useTranslation } from 'react-i18next';
+import { clsx } from 'clsx';
+⋮----
+<div className=
+
+================
 File: src/renderer/src/components/message/ListMemoriesToolMessage.tsx
 ================
 import { useTranslation } from 'react-i18next';
@@ -15129,16 +15203,16 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'rea
 import { toPng } from 'html-to-image';
 import { MdKeyboardDoubleArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
-import { IoPlay } from 'react-icons/io5';
+import { TaskData } from '@common/types';
 ⋮----
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
+import { MessagesActions } from './MessagesActions';
 ⋮----
 import { isGroupMessage, isUserMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
-import { Button } from '@/components/common/Button';
 import { useScrollingPaused } from '@/hooks/useScrollingPaused';
 import { useUserMessageNavigation } from '@/hooks/useUserMessageNavigation';
 ⋮----
@@ -15151,13 +15225,14 @@ export type MessagesRef = {
 type Props = {
   baseDir: string;
   taskId: string;
+  task: TaskData;
   messages: Message[];
   allFiles?: string[];
   renderMarkdown: boolean;
   removeMessage: (message: Message) => void;
   redoLastUserPrompt: () => void;
   editLastUserMessage: (content: string) => void;
-  processing: boolean;
+  onMarkAsDone: () => void;
 };
 ⋮----
 // Group messages by promptContext.group.id
@@ -15169,6 +15244,41 @@ const exportToImage = async () =>
 // eslint-disable-next-line no-console
 ⋮----
 aria-label=
+
+================
+File: src/renderer/src/components/message/MessagesActions.tsx
+================
+import { IoPlay } from 'react-icons/io5';
+import { useTranslation } from 'react-i18next';
+import { DefaultTaskState, TaskData } from '@common/types';
+⋮----
+import { InterruptedMessageBlock } from './InterruptedMessageBlock';
+import { ReadyForReviewMessageBlock } from './ReadyForReviewMessageBlock';
+⋮----
+import { Button } from '@/components/common/Button';
+⋮----
+type Props = {
+  task: TaskData;
+  processedMessagesLength: number;
+  lastUserMessageIndex: number;
+  redoLastUserPrompt: () => void;
+  onMarkAsDone: () => void;
+};
+
+================
+File: src/renderer/src/components/message/ReadyForReviewMessageBlock.tsx
+================
+import { RiCheckLine } from 'react-icons/ri';
+import { useTranslation } from 'react-i18next';
+import { clsx } from 'clsx';
+⋮----
+import { Button } from '@/components/common/Button';
+⋮----
+type Props = {
+  onMarkAsDone: () => void;
+};
+⋮----
+<div className=
 
 ================
 File: src/renderer/src/components/message/ReflectedMessageBlock.tsx
@@ -15612,21 +15722,21 @@ return result; // Return default if rawContent is empty
 ================
 File: src/renderer/src/components/message/VirtualizedMessages.tsx
 ================
-import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef } from 'react';
 import { MdKeyboardDoubleArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { IoPlay } from 'react-icons/io5';
+import { TaskData } from '@common/types';
+import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef } from 'react';
 ⋮----
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
+import { MessagesActions } from './MessagesActions';
 ⋮----
 import { isGroupMessage, isUserMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
 import { showInfoNotification } from '@/utils/notifications';
-import { Button } from '@/components/common/Button';
 import { useScrollingPaused } from '@/hooks/useScrollingPaused';
 ⋮----
 export type VirtualizedMessagesRef = {
@@ -15638,13 +15748,14 @@ export type VirtualizedMessagesRef = {
 type Props = {
   baseDir: string;
   taskId: string;
+  task: TaskData;
   messages: Message[];
   allFiles?: string[];
   renderMarkdown: boolean;
   removeMessage: (message: Message) => void;
   redoLastUserPrompt: () => void;
   editLastUserMessage: (content: string) => void;
-  processing: boolean;
+  onMarkAsDone: () => void;
 };
 ⋮----
 // Group messages by promptContext.group.id
@@ -15653,9 +15764,7 @@ type Props = {
 ⋮----
 estimateSize: () => 44, // Initial estimate, will be measured
 ⋮----
-// Scroll to the last item when new messages arrive
-⋮----
-// eslint-disable-next-line react-hooks/exhaustive-deps
+// Scroll to last item when new messages arrive
 ⋮----
 const exportToImage = async () =>
 ⋮----
@@ -17533,7 +17642,7 @@ onSquash=
 ================
 File: src/renderer/src/components/project/TaskSidebar.tsx
 ================
-import { TaskData } from '@common/types';
+import { DefaultTaskState, TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
 import { KeyboardEvent, MouseEvent, useState, memo, useRef, useEffect } from 'react';
 import { HiOutlinePencil, HiOutlineTrash, HiPlus, HiCheck, HiSparkles } from 'react-icons/hi';
@@ -17557,6 +17666,7 @@ import { IconButton } from '@/components/common/IconButton';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { LoadingText } from '@/components/common/LoadingText';
+import { TaskStateChip } from '@/components/common/TaskStateChip';
 ⋮----
 type TaskMenuButtonProps = {
   onEdit: () => void;
@@ -17706,7 +17816,7 @@ const arePropsEqual = (prevProps: Props, nextProps: Props): boolean =>
 ================
 File: src/renderer/src/components/project/TaskView.tsx
 ================
-import { Mode, Model, ModelsData, ProjectData, TaskData, TodoItem } from '@common/types';
+import { DefaultTaskState, Mode, Model, ModelsData, ProjectData, TaskData, TodoItem } from '@common/types';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CgSpinner } from 'react-icons/cg';
@@ -17792,6 +17902,8 @@ const handleModelChange = (modelsData: ModelsData | null) =>
 ⋮----
 const handleModeChange = (mode: Mode) =>
 ⋮----
+const handleMarkAsDone = () =>
+⋮----
 const runPrompt = (prompt: string) =>
 ⋮----
 // This submission is an edit of a previous message
@@ -17808,8 +17920,6 @@ const handleEditLastUserMessage = (content?: string) =>
 const handleRestartTask = () =>
 ⋮----
 const handleRedoLastUserPrompt = () =>
-⋮----
-// Keep messages up to and excluding the one being redone
 ⋮----
 const handleRemoveMessage = (messageToRemove: Message) =>
 ⋮----
@@ -20142,12 +20252,14 @@ export const useSettings = () =>
 File: src/renderer/src/contexts/TaskContext.tsx
 ================
 import React, { createContext, ReactNode, startTransition, useCallback, useContext, useEffect, useState } from 'react';
+import { usePrevious } from '@reactuses/core';
 import {
   AutocompletionData,
   ClearTaskData,
   CommandOutputData,
   ContextFile,
   ContextFilesUpdatedData,
+  DefaultTaskState,
   LogData,
   ModelsData,
   QuestionData,
@@ -20180,7 +20292,6 @@ import { useApi } from '@/contexts/ApiContext';
 export interface TaskState {
   loading: boolean;
   loaded: boolean;
-  processing: boolean;
   messages: Message[];
   tokensInfo: TokensInfoData | null;
   question: QuestionData | null;
@@ -20192,26 +20303,27 @@ export interface TaskState {
   aiderModelsData: ModelsData | null;
 }
 ⋮----
-export interface TaskContextType {
-  getTaskState: (taskId: string, loadIfNotLoaded?: boolean) => TaskState | null;
+interface TaskEventSubscriberProps {
+  taskId: string;
+  baseDir: string;
+  task: TaskData;
+  updateTaskState: (taskId: string, updates: Partial<TaskState>) => void;
   clearSession: (taskId: string, messagesOnly: boolean) => void;
-  restartTask: (taskId: string) => void;
-  setMessages: (taskId: string, updateMessages: (prevState: Message[]) => Message[]) => void;
+  setQuestion: (taskId: string, question: QuestionData | null) => void;
   setTodoItems: (taskId: string, updateTodoItems: (prev: TodoItem[]) => TodoItem[]) => void;
-  setAiderModelsData: (taskId: string, modelsData: ModelsData | null) => void;
-  answerQuestion: (taskId: string, answer: string) => void;
-  interruptResponse: (taskId: string) => void;
-  updateTaskAgentProfile: (taskId: string, agentProfileId: string, provider: string, model: string) => void;
-  refreshAllFiles: (taskId: string, useGit?: boolean) => Promise<void>;
+  setMessages: (taskId: string, updateMessages: (prevState: Message[]) => Message[]) => void;
 }
 ⋮----
-// eslint-disable-next-line no-console
-⋮----
-// setEditingMessageIndex(null);
-⋮----
-const subscribeForTaskEvents = (taskId: string) =>
-⋮----
-const setProcessing = (processing: boolean) =>
+const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
+  taskId,
+  baseDir,
+  task,
+  updateTaskState,
+  clearSession,
+  setQuestion,
+  setTodoItems,
+  setMessages,
+}) =>
 ⋮----
 const setAiderTotalCost = (aiderTotalCost: number) =>
 ⋮----
@@ -20270,6 +20382,23 @@ const handleContextFilesUpdated = (
 const handleUpdateAiderModels = (data: ModelsData) =>
 ⋮----
 // eslint-disable-next-line no-console
+⋮----
+export interface TaskContextType {
+  getTaskState: (taskId: string, loadIfNotLoaded?: boolean) => TaskState | null;
+  clearSession: (taskId: string, messagesOnly: boolean) => void;
+  restartTask: (taskId: string) => void;
+  setMessages: (taskId: string, updateMessages: (prevState: Message[]) => Message[]) => void;
+  setTodoItems: (taskId: string, updateTodoItems: (prev: TodoItem[]) => TodoItem[]) => void;
+  setAiderModelsData: (taskId: string, modelsData: ModelsData | null) => void;
+  answerQuestion: (taskId: string, answer: string) => void;
+  interruptResponse: (taskId: string) => void;
+  updateTaskAgentProfile: (taskId: string, agentProfileId: string, provider: string, model: string) => void;
+  refreshAllFiles: (taskId: string, useGit?: boolean) => Promise<void>;
+}
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// setEditingMessageIndex(null);
 
 ================
 File: src/renderer/src/hooks/useAudioRecorder.ts
