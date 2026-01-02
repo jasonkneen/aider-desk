@@ -509,6 +509,11 @@ export enum MemoryEmbeddingProvider {
   SentenceTransformers = 'sentence-transformers',
 }
 
+export interface TaskSettings {
+  smartTaskState: boolean;
+  autoGenerateTaskName: boolean;
+}
+
 export interface MemoryConfig {
   enabled: boolean;
   provider: MemoryEmbeddingProvider;
@@ -585,6 +590,7 @@ export interface SettingsData {
     };
   };
   memory: MemoryConfig;
+  taskSettings: TaskSettings;
   hotkeyConfig?: HotkeyConfig;
 }
 

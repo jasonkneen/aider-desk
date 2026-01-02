@@ -82,6 +82,10 @@ export const DEFAULT_SETTINGS: SettingsData = {
     model: 'Xenova/all-MiniLM-L6-v2',
     maxDistance: 1.5,
   },
+  taskSettings: {
+    smartTaskState: true,
+    autoGenerateTaskName: true,
+  },
 };
 
 const compareBaseDirs = (baseDir1: string, baseDir2: string): boolean => {
@@ -162,6 +166,10 @@ export class Store {
       memory: {
         ...DEFAULT_SETTINGS.memory,
         ...settings?.memory,
+      },
+      taskSettings: {
+        ...DEFAULT_SETTINGS.taskSettings,
+        ...settings?.taskSettings,
       },
     };
   }

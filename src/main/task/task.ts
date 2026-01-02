@@ -703,7 +703,13 @@ export class Task {
 
     if (this.task.state === DefaultTaskState.InProgress) {
       // Determine task state based on the last assistant message
-      const state = await this.determineTaskState(agentMessages);
+      const settings = this.store.getSettings();
+      let state: string | null = DefaultTaskState.ReadyForReview;
+
+      if (settings.taskSettings.smartTaskState) {
+        state = await this.determineTaskState(agentMessages);
+      }
+
       await this.saveTask({
         completedAt: new Date().toISOString(),
         state: state || DefaultTaskState.ReadyForReview,
@@ -718,25 +724,26 @@ export class Task {
   }
 
   private getTaskNameFromPrompt(prompt: string): string {
-    const saveFallbackName = () => {
-      const fallbackName = prompt.trim().split(' ').slice(0, 5).join(' ');
-      void this.saveTask({ name: fallbackName });
-    };
+    const fallbackName = prompt.trim().split(' ').slice(0, 5).join(' ');
 
-    this.generateTaskNameInBackground(prompt)
-      .then((taskName) => {
-        if (taskName) {
-          void this.saveTask({ name: taskName });
-        } else {
-          saveFallbackName();
-        }
-      })
-      .catch((error) => {
-        logger.warn('Failed to generate task name:', error);
-        saveFallbackName();
-      });
-
-    return '<<generating>>';
+    const settings = this.store.getSettings();
+    if (settings.taskSettings.autoGenerateTaskName) {
+      this.generateTaskNameInBackground(prompt)
+        .then((taskName) => {
+          if (taskName) {
+            void this.saveTask({ name: taskName });
+          } else {
+            void this.saveTask({ name: fallbackName });
+          }
+        })
+        .catch((error) => {
+          logger.warn('Failed to generate task name:', error);
+          void this.saveTask({ name: fallbackName });
+        });
+      return '<<generating>>';
+    } else {
+      return fallbackName;
+    }
   }
 
   private async generateTaskNameInBackground(prompt: string): Promise<string | null> {

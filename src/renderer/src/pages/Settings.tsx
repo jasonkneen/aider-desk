@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
 import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer, FaBrain, FaMicrophone, FaKeyboard } from 'react-icons/fa';
 import { MdTerminal } from 'react-icons/md';
+import { LuClipboardList } from 'react-icons/lu';
 
 import { getPathBasename } from '@/utils/path-utils';
 import { useApi } from '@/contexts/ApiContext';
@@ -15,6 +16,7 @@ import { ServerSettings } from '@/components/settings/ServerSettings';
 import { MemorySettings } from '@/components/settings/MemorySettings';
 import { VoiceSettings } from '@/components/settings/VoiceSettings';
 import { HotkeysSettings } from '@/components/settings/HotkeysSettings';
+import { TaskSettings } from '@/components/settings/TaskSettings';
 
 type Props = {
   settings: SettingsData;
@@ -33,7 +35,7 @@ type Props = {
   setProviders?: (providers: ProviderProfile[]) => void;
 };
 
-type PageId = 'general' | 'aider' | 'agents' | 'memory' | 'voice' | 'hotkeys' | 'server' | 'about';
+type PageId = 'general' | 'aider' | 'agents' | 'tasks' | 'memory' | 'voice' | 'hotkeys' | 'server' | 'about';
 
 interface SidebarItem {
   id: string;
@@ -120,6 +122,12 @@ export const Settings = ({
           label: getPathBasename(project.baseDir),
         })),
       ],
+    },
+    {
+      id: 'tasks',
+      pageId: 'tasks',
+      label: t('settings.tabs.tasks'),
+      icon: <LuClipboardList className="w-4 h-4" />,
     },
     {
       id: 'memory',
@@ -238,6 +246,8 @@ export const Settings = ({
         );
       case 'memory':
         return <MemorySettings settings={settings} setSettings={updateSettings} />;
+      case 'tasks':
+        return <TaskSettings settings={settings} setSettings={updateSettings} />;
       case 'voice':
         return <VoiceSettings providers={providers} setProviders={setProviders} initialProviderId={initialOptions?.providerId as string | undefined} />;
       case 'hotkeys':

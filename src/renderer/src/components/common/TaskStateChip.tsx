@@ -12,9 +12,9 @@ const getStateTextClass = (state: string): string => {
     case DefaultTaskState.Interrupted:
       return 'text-button-danger';
     case DefaultTaskState.Todo:
-      return 'text-text-muted-light';
+      return 'text-text-primary';
     case DefaultTaskState.Done:
-      return 'text-success';
+      return 'text-text-muted-light';
     case DefaultTaskState.MoreInfoNeeded:
       return 'text-error';
     case DefaultTaskState.ReadyForReview:
@@ -24,7 +24,7 @@ const getStateTextClass = (state: string): string => {
     case DefaultTaskState.InProgress:
       return 'text-button-primary';
     default:
-      return 'text-text-muted';
+      return 'text-text-primary';
   }
 };
 
