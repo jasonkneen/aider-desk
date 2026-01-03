@@ -24,6 +24,7 @@ import {
   ResponseChunkData,
   ResponseCompletedData,
   SettingsData,
+  TaskContext,
   TaskStateData,
   TaskData,
   TodoItem,
@@ -195,6 +196,9 @@ export class Task {
 
     // Migrate missing task-level settings from project settings
     await this.migrateFromProjectSettings();
+
+    // Migrate task state based on last message in context
+    await this.migrateTaskState();
   }
 
   /**
@@ -214,6 +218,60 @@ export class Task {
       this.task.weakModelLocked = projectSettings.weakModelLocked ?? false;
 
       await this.saveTask(undefined, false);
+    }
+  }
+
+  /**
+   * @deprecated Migrate task state based on last message in context
+   */
+  private async migrateTaskState() {
+    // Skip if state is already set
+    if (this.task.state) {
+      return;
+    }
+
+    const contextPath = path.join(this.getProjectDir(), AIDER_DESK_TASKS_DIR, this.taskId, 'context.json');
+
+    if (!(await fileExists(contextPath))) {
+      logger.debug('No existing task context found for state migration', {
+        baseDir: this.project.baseDir,
+        taskId: this.taskId,
+      });
+      return;
+    }
+
+    try {
+      const content = await fs.readFile(contextPath, 'utf8');
+      const contextData = JSON.parse(content) as TaskContext;
+      const messages = contextData.contextMessages || [];
+
+      if (messages.length === 0) {
+        logger.debug('No messages found in context for state migration', {
+          baseDir: this.project.baseDir,
+          taskId: this.taskId,
+        });
+        return;
+      }
+
+      const lastMessage = messages[messages.length - 1];
+
+      // Set state based on last message role
+      const newState = lastMessage.role === MessageRole.User ? DefaultTaskState.Todo : DefaultTaskState.ReadyForReview;
+
+      logger.info('Migrated task state', {
+        baseDir: this.project.baseDir,
+        taskId: this.taskId,
+        lastMessageRole: lastMessage.role,
+        newState,
+      });
+
+      await this.saveTask({ state: newState }, false);
+    } catch (error) {
+      logger.error('Failed to migrate task state', {
+        baseDir: this.project.baseDir,
+        taskId: this.taskId,
+        error: error instanceof Error ? error.message : String(error),
+      });
     }
   }
 

@@ -59,7 +59,7 @@ export const TaskStateActions = ({ task, onResumeTask, onMarkAsDone, onProceed, 
 
   if (task.state === DefaultTaskState.Todo) {
     return renderSection(
-      <RiPlayLine className="h-4 w-4 flex-shrink-0 text-info-light" />,
+      <RiPlayLine className="h-4 w-4 flex-shrink-0 text-text-tertiary" />,
       t('messages.taskTodoDescription'),
       <>
         <Button key="execute" variant="outline" color="primary" size="xs" onClick={onResumeTask}>
@@ -85,7 +85,7 @@ export const TaskStateActions = ({ task, onResumeTask, onMarkAsDone, onProceed, 
 
   if (task.state === DefaultTaskState.ReadyForReview) {
     return renderSection(
-      <RiCheckLine className="h-4 w-4 flex-shrink-0 text-info-light" />,
+      <RiCheckLine className="h-4 w-4 flex-shrink-0 text-tertiary" />,
       t('messages.taskReadyForReview'),
       <>
         <Button key="markAsDone" variant="outline" color="primary" size="xs" onClick={onMarkAsDone}>
@@ -97,7 +97,7 @@ export const TaskStateActions = ({ task, onResumeTask, onMarkAsDone, onProceed, 
 
   if (task.state === DefaultTaskState.ReadyForImplementation) {
     return renderSection(
-      <RiCheckLine className="h-4 w-4 flex-shrink-0 text-info-light" />,
+      <RiCheckLine className="h-4 w-4 flex-shrink-0 text-tertiary" />,
       t('messages.taskReadyForImplementation'),
       <>
         <Button key="proceed" variant="outline" color="primary" size="xs" onClick={handleProceedClick}>

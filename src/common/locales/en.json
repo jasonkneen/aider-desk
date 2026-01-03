@@ -738,7 +738,7 @@
     "resume": "Resume",
     "taskReadyForReview": "Task Ready for Review",
     "taskTodo": "Task Not Started",
-    "taskTodoDescription": "Task has not started yet. Click Execute to begin.",
+    "taskTodoDescription": "Task Ready to Execute.",
     "markAsDone": "Mark as done",
     "taskReadyForImplementation": "Task Ready for Implementation",
     "taskDone": "Task Completed",
