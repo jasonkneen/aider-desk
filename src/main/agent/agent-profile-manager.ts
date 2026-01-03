@@ -418,7 +418,10 @@ export class AgentProfileManager {
 
       // Sanitize profile with defaults
       const profile = this.sanitizeAgentProfile(loadedProfile, dirName);
-      await this.saveProfileToFile(profile, filePath);
+      if (JSON.stringify(profile) !== JSON.stringify(loadedProfile)) {
+        logger.info(`Saving sanitized agent profile to ${filePath}`);
+        await this.saveProfileToFile(profile, filePath);
+      }
 
       // Discover and load rule files for this profile
       profile.ruleFiles = await getAllRuleFilesForProfile(profile, dirName);
