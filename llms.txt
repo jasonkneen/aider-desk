@@ -303,7 +303,6 @@ src/
           GrepToolMessage.tsx
           GroupMessageBlock.tsx
           index.ts
-          InterruptedMessageBlock.tsx
           ListMemoriesToolMessage.tsx
           ListTasksToolMessage.tsx
           LoadingMessageBlock.tsx
@@ -312,14 +311,13 @@ src/
           MessageBar.tsx
           MessageBlock.tsx
           Messages.tsx
-          MessagesActions.tsx
-          ReadyForReviewMessageBlock.tsx
           ReflectedMessageBlock.tsx
           ResponseMessageBlock.tsx
           RetrieveMemoryToolMessage.tsx
           SemanticSearchToolMessage.tsx
           StoreMemoryToolMessage.tsx
           SubagentToolMessage.tsx
+          TaskStateActions.tsx
           ThinkingAnswerBlock.tsx
           ToolMessageBlock.tsx
           UpdateMemoryToolMessage.tsx
@@ -432,6 +430,7 @@ src/
           ServerSettings.tsx
           SettingsDialog.tsx
           SettingsPage.tsx
+          TaskSettings.tsx
           VoiceSettings.tsx
         terminal/
           Terminal.scss
@@ -1452,7 +1451,9 @@ File: src/common/locales/en.json
     "placeholder": "e.g. anthropic/claude-sonnet-4-20250514",
     "chooseModelsToAdd": "Choose models to add...",
     "library": {
-      "all": "All"
+      "all": "All",
+      "deleteMemoryTitle": "Delete Memory",
+      "deleteMemoryDialogText": "Are you sure you want to delete this memory?"
     }
   },
   "modelLibrary": {
@@ -1642,6 +1643,7 @@ File: src/common/locales/en.json
       "general": "General",
       "aider": "Aider",
       "agents": "Agents",
+      "tasks": "Tasks",
       "memory": "Memory",
       "voice": "Voice",
       "hotkeys": "Hotkeys",
@@ -1709,6 +1711,13 @@ File: src/common/locales/en.json
       "title": "Start Up",
       "emptyTask": "Start with empty task",
       "lastTask": "Load last task"
+    },
+    "tasks": {
+      "title": "Tasks",
+      "smartTaskState": "Smart Task State",
+      "smartTaskStateTooltip": "When enabled, the model intelligently analyzes the agent's response to classify the task as 'More Info Needed', 'Ready for Implementation', or 'Ready for Review'. When disabled, the task state will always be set to 'Ready for Review'.",
+      "autoGenerateTaskName": "Auto-Generate Task Name",
+      "autoGenerateTaskNameTooltip": "When enabled, the model generates a concise task name from your prompt. When disabled, the first 5 words of your prompt will be used as the task name."
     },
     "language": "Language",
     "notifications": {
@@ -2008,8 +2017,18 @@ File: src/common/locales/en.json
     "messageBar": "Message Bar",
     "exportNotAvailableWithVirtualized": "Export to image is not available when using virtualized message rendering. Change to standard rendering in Settings -> General -> Message Display.",
     "execute": "Execute",
+    "resume": "Resume",
     "taskReadyForReview": "Task Ready for Review",
-    "markAsDone": "Mark as done"
+    "taskTodo": "Task Not Started",
+    "taskTodoDescription": "Task has not started yet. Click Execute to begin.",
+    "markAsDone": "Mark as done",
+    "taskReadyForImplementation": "Task Ready for Implementation",
+    "taskDone": "Task Completed",
+    "taskDoneArchived": "Task Completed and Archived",
+    "proceed": "Proceed",
+    "archive": "Archive",
+    "unarchive": "Unarchive",
+    "confirmDelete": "Confirm Delete"
   },
   "errors": {
     "frozenTitle": "AIDER FROZEN?",
@@ -2317,7 +2336,11 @@ File: src/common/locales/en.json
       "listedMemories": "Listing {{count}} memories.",
       "ofType": "of type {{type}}",
       "noMemoriesOfType": "No memories found of type: {{type}}",
-      "all": "All"
+      "all": "All",
+      "delete": "Delete",
+      "memoryNotFound": "Not found",
+      "deleteDialogTitle": "Delete memory",
+      "deleteDialogText": "Are you sure you want to delete this memory?"
     },
     "subagents": {
       "groupRunning": "{{name}}: Subagent is working...",
@@ -2814,7 +2837,9 @@ File: src/common/locales/zh.json
     "placeholder": "输入模型名称",
     "chooseModelsToAdd": "选择要添加的模型...",
     "library": {
-      "all": "全部"
+      "all": "全部",
+      "deleteMemoryTitle": "删除记忆",
+      "deleteMemoryDialogText": "您确定要删除此记忆吗？"
     }
   },
   "modelLibrary": {
@@ -3007,6 +3032,7 @@ File: src/common/locales/zh.json
       "hotkeys": "快捷键",
       "server": "服务器",
       "memory": "记忆",
+      "tasks": "任务",
       "voice": "语音",
       "about": "关于"
     },
@@ -3071,6 +3097,13 @@ File: src/common/locales/zh.json
       "title": "启动",
       "emptyTask": "启动时创建新任务",
       "lastTask": "加载上次任务"
+    },
+    "tasks": {
+      "title": "任务",
+      "smartTaskState": "智能任务状态",
+      "smartTaskStateTooltip": "启用后，模型会智能分析代理的响应，将任务分类为'需要更多信息'、'准备实施'或'准备审查'。禁用时，任务状态将始终设置为'准备审查'。",
+      "autoGenerateTaskName": "自动生成任务名称",
+      "autoGenerateTaskNameTooltip": "启用后，模型会根据您的提示生成简洁的任务名称。禁用时，将使用提示的前5个词作为任务名称。"
     },
     "language": "语言",
     "notifications": {
@@ -3328,8 +3361,18 @@ File: src/common/locales/zh.json
     "messageBar": "消息栏",
     "exportNotAvailableWithVirtualized": "使用虚拟化消息渲染时无法导出为图片。请在 设置 -> 常规 -> 消息显示 中更改为标准渲染。",
     "execute": "执行",
+    "resume": "继续",
     "taskReadyForReview": "任务准备就绪，待审查",
-    "markAsDone": "标记为完成"
+    "taskTodo": "任务未开始",
+    "taskTodoDescription": "任务尚未开始。点击执行开始。",
+    "markAsDone": "标记为完成",
+    "taskReadyForImplementation": "任务准备就绪，待实施",
+    "taskDone": "任务已完成",
+    "taskDoneArchived": "任务已完成并已归档",
+    "proceed": "继续",
+    "archive": "归档",
+    "unarchive": "取消归档",
+    "confirmDelete": "确认删除"
   },
   "errors": {
     "frozenTitle": "AIDER冻结了?",
@@ -3652,7 +3695,11 @@ File: src/common/locales/zh.json
       "listedMemories": "正在列出记忆。",
       "ofType": "类型为 {{type}}",
       "noMemoriesOfType": "未找到类型为 {{type}} 的记忆",
-      "all": "全部"
+      "all": "全部",
+      "delete": "删除",
+      "memoryNotFound": "未找到",
+      "deleteDialogTitle": "删除记忆",
+      "deleteDialogText": "确定要删除这条记忆吗？"
     },
     "subagents": {
       "groupRunning": "{{name}}: 子代理正在工作...",
@@ -4356,6 +4403,7 @@ export interface ApplicationAPI {
   runPrompt: (baseDir: string, taskId: string, prompt: string, mode?: Mode) => void;
   savePrompt: (baseDir: string, taskId: string, prompt: string) => Promise<void>;
   redoLastUserPrompt: (baseDir: string, taskId: string, mode: Mode, updatedPrompt?: string) => void;
+  resumeTask: (baseDir: string, taskId: string) => void;
   answerQuestion: (baseDir: string, taskId: string, answer: string) => void;
   loadInputHistory: (baseDir: string) => Promise<string[]>;
   isOpenDialogSupported: () => boolean;
@@ -4981,6 +5029,11 @@ export enum MemoryEmbeddingProvider {
   SentenceTransformers = 'sentence-transformers',
 }
 ⋮----
+export interface TaskSettings {
+  smartTaskState: boolean;
+  autoGenerateTaskName: boolean;
+}
+⋮----
 export interface MemoryConfig {
   enabled: boolean;
   provider: MemoryEmbeddingProvider;
@@ -5057,6 +5110,7 @@ export interface SettingsData {
     };
   };
   memory: MemoryConfig;
+  taskSettings: TaskSettings;
   hotkeyConfig?: HotkeyConfig;
 }
 ⋮----
@@ -6057,7 +6111,6 @@ import {
   ContextFile,
   ContextMessage,
   ContextUserMessage,
-  DefaultTaskState,
   McpTool,
   McpToolInputSchema,
   PromptContext,
@@ -6099,7 +6152,7 @@ import { createMemoryToolset } from './tools/memory';
 import { createSkillsToolset } from './tools/skills';
 import { MCP_CLIENT_TIMEOUT, McpManager } from './mcp-manager';
 import { ApprovalManager } from './tools/approval-manager';
-import { ANSWER_RESPONSE_START_TAG, extractPromptContextFromToolResult, THINKING_RESPONSE_STAR_TAG } from './utils';
+import { ANSWER_RESPONSE_START_TAG, extractPromptContextFromToolResult, findLastUserMessage, THINKING_RESPONSE_STAR_TAG } from './utils';
 import { extractReasoningMiddleware } from './middlewares/extract-reasoning-middleware';
 ⋮----
 import { MemoryManager } from '@/memory/memory-manager';
@@ -6214,7 +6267,7 @@ private fixInputSchema(provider: LlmProviderName, inputSchema: McpToolInputSchem
 async runAgent(
     task: Task,
     profile: AgentProfile,
-    prompt: string,
+    prompt: string | null,
     promptContext?: PromptContext,
     initialContextMessages?: ContextMessage[],
     initialContextFiles?: ContextFile[],
@@ -6251,8 +6304,6 @@ error: error.message, // Pass the validation error message
 // Get the model to use its temperature and max output tokens settings
 ⋮----
 const getBaseModelCallParams = () =>
-⋮----
-const determineAndUpdateTaskState = async () =>
 ⋮----
 const onStepFinish = async (stepResult: StepResult<typeof toolSet>) =>
 ⋮----
@@ -6539,7 +6590,7 @@ const newMessages = [...messages]; // Create a mutable copy
 ================
 File: src/main/agent/utils.ts
 ================
-import { PromptContext } from '@common/types';
+import { ContextMessage, ContextUserMessage, MessageRole, PromptContext } from '@common/types';
 ⋮----
 /**
  * Extracts PromptContext from a tool result if available.
@@ -6547,6 +6598,8 @@ import { PromptContext } from '@common/types';
  * @returns PromptContext if found, undefined otherwise
  */
 export const extractPromptContextFromToolResult = (toolResult: unknown): PromptContext | undefined =>
+⋮----
+export const findLastUserMessage = (messages: ContextMessage[]): ContextUserMessage | undefined =>
 
 ================
 File: src/main/connector/connector-manager.ts
@@ -7051,9 +7104,9 @@ export interface HookEventMap {
   onTaskInitialized: { task: TaskData };
   onTaskClosed: { task: TaskData };
   onPromptSubmitted: { prompt: string; mode: Mode };
-  onPromptStarted: { prompt: string; mode: Mode };
+  onPromptStarted: { prompt: string | null; mode: Mode };
   onPromptFinished: { responses: ResponseCompletedData[] };
-  onAgentStarted: { prompt: string };
+  onAgentStarted: { prompt: string | null };
   onAgentFinished: { resultMessages: unknown[] };
   onAgentStepFinished: { stepResult: unknown };
   onToolCalled: { toolName: string; args: Record<string, unknown> | undefined };
@@ -8879,6 +8932,7 @@ import {
   PromptTemplateName,
   TaskNamePromptData,
   ToolPermissions,
+  UpdateTaskStateData,
 } from './types';
 ⋮----
 import { AIDER_DESK_DEFAULT_PROMPTS_DIR, AIDER_DESK_GLOBAL_PROMPTS_DIR, AIDER_DESK_PROMPTS_DIR } from '@/constants';
@@ -8920,7 +8974,7 @@ public async dispose(): Promise<void>
 ⋮----
 private render(name: PromptTemplateName, data: unknown, projectDir?: string): string
 ⋮----
-const isAllowed = (tool: string) => agentProfile.toolApprovals[`$
+const isAllowed = (tool: string)
 ⋮----
 anyEnabled: false, // Will be set below
 ⋮----
@@ -9008,6 +9062,13 @@ export interface ConflictResolutionPromptData {
   theirsPath?: string;
 }
 ⋮----
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+export interface UpdateTaskStateData {
+  // Static for now
+}
+⋮----
+// Static for now
+⋮----
 export type PromptTemplateName =
   | 'system-prompt'
   | 'init-project'
@@ -9016,7 +9077,8 @@ export type PromptTemplateName =
   | 'commit-message'
   | 'task-name'
   | 'conflict-resolution'
-  | 'conflict-resolution-system';
+  | 'conflict-resolution-system'
+  | 'update-task-state';
 
 ================
 File: src/main/server/rest-api/agent-api.ts
@@ -9196,6 +9258,8 @@ registerRoutes(router: Router): void
 // Get input history
 ⋮----
 // Redo last user prompt
+⋮----
+// Resume task
 ⋮----
 // Validate path
 ⋮----
@@ -10372,7 +10436,7 @@ public async runPromptInAider(prompt: string, promptContext: PromptContext, mode
 ⋮----
 public async runPromptInAgent(
     profile: AgentProfile,
-    prompt: string,
+    prompt: string | null,
     promptContext: PromptContext = { id: uuidv4() },
     contextMessages?: ContextMessage[],
     contextFiles?: ContextFile[],
@@ -10382,11 +10446,19 @@ public async runPromptInAgent(
 ⋮----
 // send messages to connectors
 ⋮----
+// Determine task state based on the last assistant message
+⋮----
 private getTaskNameFromPrompt(prompt: string): string
 ⋮----
-const saveFallbackName = () =>
-⋮----
 private async generateTaskNameInBackground(prompt: string): Promise<string | null>
+⋮----
+private async determineTaskState(resultMessages: ContextMessage[]): Promise<string | null>
+⋮----
+// Find the last assistant message from result messages
+⋮----
+// Extract reasoning and text from the last assistant message
+⋮----
+// Create a user message wrapping the last assistant message information
 ⋮----
 public async runSubagent(
     profile: AgentProfile,
@@ -10587,6 +10659,16 @@ public async removeLastMessage()
 public async redoLastUserPrompt(mode: Mode, updatedPrompt?: string)
 ⋮----
 // No need to await runPrompt here, let it run in the background
+⋮----
+public async resumeTask()
+⋮----
+// In other modes, check if last message is user
+⋮----
+// Last message is from user, redo it
+⋮----
+// Last message is not from user, send "Continue" to aider
+⋮----
+private getCurrentMode()
 ⋮----
 private async reloadConnectorMessages()
 ⋮----
@@ -12098,6 +12180,8 @@ async removeLastMessage(baseDir: string, taskId: string): Promise<void>
 ⋮----
 async redoLastUserPrompt(baseDir: string, taskId: string, mode: Mode, updatedPrompt?: string): Promise<void>
 ⋮----
+async resumeTask(baseDir: string, taskId: string): Promise<void>
+⋮----
 async compactConversation(baseDir: string, taskId: string, mode: Mode, customInstructions?: string): Promise<void>
 ⋮----
 async loadInputHistory(baseDir: string): Promise<string[]>
@@ -13051,6 +13135,7 @@ restartTask(baseDir: string, taskId: string): void
 runPrompt(baseDir: string, taskId: string, prompt: string, mode?: Mode): void
 savePrompt(baseDir: string, taskId: string, prompt: string): Promise<void>
 redoLastUserPrompt(baseDir: string, taskId: string, mode: Mode, updatedPrompt?: string): void
+resumeTask(baseDir: string, taskId: string): void
 answerQuestion(baseDir: string, taskId: string, answer: string): void
 loadInputHistory(baseDir: string): Promise<string[]>
 isOpenDialogSupported(): boolean
@@ -14939,15 +15024,6 @@ File: src/renderer/src/components/message/index.ts
 
 
 ================
-File: src/renderer/src/components/message/InterruptedMessageBlock.tsx
-================
-import { RiAlertLine } from 'react-icons/ri';
-import { useTranslation } from 'react-i18next';
-import { clsx } from 'clsx';
-⋮----
-<div className=
-
-================
 File: src/renderer/src/components/message/ListMemoriesToolMessage.tsx
 ================
 import { useTranslation } from 'react-i18next';
@@ -15204,10 +15280,10 @@ import { toPng } from 'html-to-image';
 import { MdKeyboardDoubleArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { TaskData } from '@common/types';
+import { TaskStateActions } from 'src/renderer/src/components/message/TaskStateActions';
 ⋮----
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
-import { MessagesActions } from './MessagesActions';
 ⋮----
 import { isGroupMessage, isUserMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
@@ -15230,9 +15306,13 @@ type Props = {
   allFiles?: string[];
   renderMarkdown: boolean;
   removeMessage: (message: Message) => void;
-  redoLastUserPrompt: () => void;
+  resumeTask: () => void;
   editLastUserMessage: (content: string) => void;
   onMarkAsDone: () => void;
+  onProceed?: () => void;
+  onArchiveTask?: () => void;
+  onUnarchiveTask?: () => void;
+  onDeleteTask?: () => void;
 };
 ⋮----
 // Group messages by promptContext.group.id
@@ -15244,41 +15324,6 @@ const exportToImage = async () =>
 // eslint-disable-next-line no-console
 ⋮----
 aria-label=
-
-================
-File: src/renderer/src/components/message/MessagesActions.tsx
-================
-import { IoPlay } from 'react-icons/io5';
-import { useTranslation } from 'react-i18next';
-import { DefaultTaskState, TaskData } from '@common/types';
-⋮----
-import { InterruptedMessageBlock } from './InterruptedMessageBlock';
-import { ReadyForReviewMessageBlock } from './ReadyForReviewMessageBlock';
-⋮----
-import { Button } from '@/components/common/Button';
-⋮----
-type Props = {
-  task: TaskData;
-  processedMessagesLength: number;
-  lastUserMessageIndex: number;
-  redoLastUserPrompt: () => void;
-  onMarkAsDone: () => void;
-};
-
-================
-File: src/renderer/src/components/message/ReadyForReviewMessageBlock.tsx
-================
-import { RiCheckLine } from 'react-icons/ri';
-import { useTranslation } from 'react-i18next';
-import { clsx } from 'clsx';
-⋮----
-import { Button } from '@/components/common/Button';
-⋮----
-type Props = {
-  onMarkAsDone: () => void;
-};
-⋮----
-<div className=
 
 ================
 File: src/renderer/src/components/message/ReflectedMessageBlock.tsx
@@ -15326,13 +15371,17 @@ className=
 ================
 File: src/renderer/src/components/message/RetrieveMemoryToolMessage.tsx
 ================
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FaBrain, FaCheckCircle, FaExclamationTriangle, FaTimesCircle } from 'react-icons/fa';
+import { FaBrain, FaCheckCircle, FaExclamationTriangle, FaTimesCircle, FaTrash } from 'react-icons/fa';
 import { CgSpinner } from 'react-icons/cg';
 ⋮----
 import { ToolMessage } from '@/types/message';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { IconButton } from '@/components/common/IconButton';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -15340,13 +15389,25 @@ type Props = {
   compact?: boolean;
 };
 ⋮----
+const loadMemories = async () =>
+⋮----
+// Ignore errors loading memories
+⋮----
+const handleDeleteMemory = async () =>
+⋮----
+// Ignore errors loading memories
+⋮----
 {/* Query parameters */}
 ⋮----
 {/* Memory List */}
 ⋮----
+onClick=
+⋮----
 // Fallback for unexpected content (backward compatibility)
 ⋮----
-return <ExpandableMessageBlock title=
+title=
+⋮----
+confirmButtonText=
 
 ================
 File: src/renderer/src/components/message/SemanticSearchToolMessage.tsx
@@ -15422,6 +15483,42 @@ const renderHeader = () => (
       </div>
     </div>
   );
+
+================
+File: src/renderer/src/components/message/TaskStateActions.tsx
+================
+import { IoPlayOutline } from 'react-icons/io5';
+import { RiAlertLine, RiCheckLine, RiPlayLine } from 'react-icons/ri';
+import { useTranslation } from 'react-i18next';
+import { useState, ReactNode } from 'react';
+import { DefaultTaskState, TaskData } from '@common/types';
+⋮----
+import { Button } from '@/components/common/Button';
+⋮----
+type Props = {
+  task: TaskData;
+  onResumeTask: () => void;
+  onMarkAsDone: () => void;
+  onProceed?: () => void;
+  onArchiveTask?: () => void;
+  onUnarchiveTask?: () => void;
+  onDeleteTask?: () => void;
+};
+⋮----
+const handleDeleteClick = () =>
+⋮----
+const handleCancelDelete = () =>
+⋮----
+const handleConfirmDelete = () =>
+⋮----
+const handleProceedClick = () =>
+⋮----
+const handleArchiveClick = () =>
+⋮----
+const handleUnarchiveClick = () =>
+⋮----
+const renderSection = (icon: ReactNode, text: string, actions: ReactNode) =>
+⋮----
 
 ================
 File: src/renderer/src/components/message/ThinkingAnswerBlock.tsx
@@ -15727,12 +15824,12 @@ import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { TaskData } from '@common/types';
 import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef } from 'react';
+import { TaskStateActions } from 'src/renderer/src/components/message/TaskStateActions';
 ⋮----
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
-import { MessagesActions } from './MessagesActions';
 ⋮----
-import { isGroupMessage, isUserMessage, Message } from '@/types/message';
+import { isGroupMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
@@ -15753,9 +15850,13 @@ type Props = {
   allFiles?: string[];
   renderMarkdown: boolean;
   removeMessage: (message: Message) => void;
-  redoLastUserPrompt: () => void;
+  resumeTask: () => void;
   editLastUserMessage: (content: string) => void;
   onMarkAsDone: () => void;
+  onProceed?: () => void;
+  onArchiveTask?: () => void;
+  onUnarchiveTask?: () => void;
+  onDeleteTask?: () => void;
 };
 ⋮----
 // Group messages by promptContext.group.id
@@ -17557,6 +17658,9 @@ const handleToggleCollapse = () =>
 // Optionally switch to the new task
 ⋮----
 // eslint-disable-next-line no-console
+⋮----
+onUnarchiveTask=
+onDeleteTask=
 
 ================
 File: src/renderer/src/components/project/TaskBar.tsx
@@ -17871,6 +17975,10 @@ type Props = {
   isActive?: boolean;
   showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
   shouldFocusPrompt?: boolean;
+  onProceed?: () => void;
+  onArchiveTask?: () => void;
+  onUnarchiveTask?: () => void;
+  onDeleteTask?: () => void;
 };
 ⋮----
 // Focus prompt field
@@ -17920,6 +18028,16 @@ const handleEditLastUserMessage = (content?: string) =>
 const handleRestartTask = () =>
 ⋮----
 const handleRedoLastUserPrompt = () =>
+⋮----
+const handleResumeTask = () =>
+⋮----
+const handleProceed = () =>
+⋮----
+const handleArchiveTask = () =>
+⋮----
+const handleUnarchiveTask = () =>
+⋮----
+const handleDeleteTask = () =>
 ⋮----
 const handleRemoveMessage = (messageToRemove: Message) =>
 ⋮----
@@ -19447,6 +19565,27 @@ const handleLanguageChange = (language: string) =>
 const handleZoomChange = (zoomLevel: number) =>
 ⋮----
 <ModalOverlayLayout title=
+
+================
+File: src/renderer/src/components/settings/TaskSettings.tsx
+================
+import { SettingsData } from '@common/types';
+import { useTranslation } from 'react-i18next';
+⋮----
+import { Checkbox } from '../common/Checkbox';
+import { Section } from '../common/Section';
+import { InfoIcon } from '../common/InfoIcon';
+⋮----
+type Props = {
+  settings: SettingsData;
+  setSettings: (settings: SettingsData) => void;
+};
+⋮----
+const handleSmartTaskStateChange = (checked: boolean) =>
+⋮----
+const handleAutoGenerateTaskNameChange = (checked: boolean) =>
+⋮----
+<Section title=
 
 ================
 File: src/renderer/src/components/settings/VoiceSettings.tsx
@@ -21371,6 +21510,7 @@ import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
 import { FaChevronDown, FaChevronRight, FaCog, FaInfoCircle, FaRobot, FaServer, FaBrain, FaMicrophone, FaKeyboard } from 'react-icons/fa';
 import { MdTerminal } from 'react-icons/md';
+import { LuClipboardList } from 'react-icons/lu';
 ⋮----
 import { getPathBasename } from '@/utils/path-utils';
 import { useApi } from '@/contexts/ApiContext';
@@ -21382,6 +21522,7 @@ import { ServerSettings } from '@/components/settings/ServerSettings';
 import { MemorySettings } from '@/components/settings/MemorySettings';
 import { VoiceSettings } from '@/components/settings/VoiceSettings';
 import { HotkeysSettings } from '@/components/settings/HotkeysSettings';
+import { TaskSettings } from '@/components/settings/TaskSettings';
 ⋮----
 type Props = {
   settings: SettingsData;
@@ -21400,7 +21541,7 @@ type Props = {
   setProviders?: (providers: ProviderProfile[]) => void;
 };
 ⋮----
-type PageId = 'general' | 'aider' | 'agents' | 'memory' | 'voice' | 'hotkeys' | 'server' | 'about';
+type PageId = 'general' | 'aider' | 'agents' | 'tasks' | 'memory' | 'voice' | 'hotkeys' | 'server' | 'about';
 ⋮----
 interface SidebarItem {
   id: string;
