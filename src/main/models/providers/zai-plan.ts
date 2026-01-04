@@ -45,7 +45,7 @@ const loadZaiPlanModels = async (profile: ProviderProfile, settings: SettingsDat
         return {
           id: model.id,
           providerId: profile.id,
-          temperature: 0.1, // Default temperature for ZAI models
+          temperature: 0.7, // Default temperature for ZAI models
         } satisfies Model;
       }) || [];
 
