@@ -17,8 +17,7 @@ export class WebScraper {
     if (isElectron()) {
       return await this.scrapeWithBrowserWindow(url, timeout, abortSignal, format);
     } else {
-      return 'Not implemented';
-      // return await this.scrapeWithFetch(url, timeout, abortSignal);
+      return await this.scrapeWithFetch(url, timeout, abortSignal);
     }
   }
 
