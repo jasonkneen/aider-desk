@@ -6,6 +6,7 @@ import { LuClipboardList } from 'react-icons/lu';
 import { ToolMessage } from '@/types/message';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { TaskStateChip } from '@/components/common/TaskStateChip';
 
 type Props = {
   message: ToolMessage;
@@ -23,10 +24,12 @@ export const ListTasksToolMessage = ({ message, onRemove, compact = false }: Pro
     description?: string;
     createdAt?: string;
     updatedAt?: string;
+    state?: string;
   };
 
   const offset = (message.args.offset as number) ?? 0;
   const limit = (message.args.limit as number) ?? 20;
+  const state = (message.args.state as string) ?? undefined;
   const content = message.content && JSON.parse(message.content);
   const isError = content && typeof content === 'string' && content.startsWith('Error listing tasks:');
   const isDenied = content && typeof content === 'string' && content.startsWith('Listing tasks denied by user.');
@@ -37,7 +40,7 @@ export const ListTasksToolMessage = ({ message, onRemove, compact = false }: Pro
         <LuClipboardList className="w-4 h-4" />
       </div>
       <div className="text-xs text-text-primary flex flex-wrap gap-1">
-        <span>{t('toolMessage.tasks.listTasks')}</span>
+        <span>{state ? t('toolMessage.tasks.listTasksWithState', { state }) : t('toolMessage.tasks.listTasks')}</span>
       </div>
       {!content && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light flex-shrink-0" />}
       {content &&
@@ -100,6 +103,7 @@ export const ListTasksToolMessage = ({ message, onRemove, compact = false }: Pro
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-text-secondary">{task.name}</span>
+                  {task.state && <TaskStateChip state={task.state} className="-ml-0.5" />}
                   {task.archived && <span className="px-1.5 py-0.5 text-3xs bg-bg-secondary text-text-muted rounded">{t('toolMessage.tasks.archived')}</span>}
                 </div>
               </div>

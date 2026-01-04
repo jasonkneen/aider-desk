@@ -903,6 +903,7 @@
     "deniedByReason": "用户拒绝: {{reason}}",
     "tasks": {
       "listTasks": "列出任务",
+      "listTasksWithState": "列出状态为 {{state}} 的任务",
       "getTask": "获取任务",
       "getTaskMessage": "获取任务消息",
       "createTask": "创建任务",

@@ -7,6 +7,7 @@ import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { TaskStateChip } from '@/components/common/TaskStateChip';
 
 type Props = {
   message: ToolMessage;
@@ -88,23 +89,6 @@ export const GetTaskToolMessage = ({ message, onRemove, compact = false }: Props
       );
     }
 
-    const getStateBadge = (state: string) => {
-      const stateConfig = {
-        active: { color: 'text-success', label: t('toolMessage.tasks.active') },
-        completed: {
-          color: 'text-text-primary',
-          label: t('toolMessage.tasks.completed'),
-        },
-        archived: {
-          color: 'text-text-muted',
-          label: t('toolMessage.tasks.archived'),
-        },
-      };
-
-      const config = stateConfig[state as keyof typeof stateConfig] || stateConfig.active;
-      return <span className={`px-2 py-0.5 text-3xs ${config.color} bg-bg-secondary rounded font-medium`}>{config.label}</span>;
-    };
-
     return (
       <div className="px-4 py-1 text-2xs text-text-tertiary bg-bg-secondary">
         <div className="space-y-3">
@@ -114,7 +98,7 @@ export const GetTaskToolMessage = ({ message, onRemove, compact = false }: Props
               <div className="flex items-center gap-2">
                 <span className="font-medium text-text-secondary">{content.name}</span>
               </div>
-              {getStateBadge(content.state)}
+              {content.state && <TaskStateChip state={content.state} className="-ml-0.5" />}
             </div>
             <div className="space-y-1 text-3xs text-text-muted">
               <div>

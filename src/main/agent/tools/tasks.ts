@@ -24,13 +24,14 @@ export const createTasksToolset = (task: Task, profile: AgentProfile, promptCont
     inputSchema: z.object({
       offset: z.number().optional().describe('The number of tasks to skip (for pagination)'),
       limit: z.number().optional().default(20).describe('The maximum number of tasks to return (default: 20)'),
+      state: z.string().optional().describe('Filter tasks by state (e.g., TODO, IN_PROGRESS, DONE)'),
     }),
-    execute: async ({ offset = 0, limit = 20 }, { toolCallId }) => {
-      task.addToolMessage(toolCallId, TASKS_TOOL_GROUP_NAME, TASKS_TOOL_LIST_TASKS, { offset, limit }, undefined, undefined, promptContext);
+    execute: async ({ offset = 0, limit = 20, state }, { toolCallId }) => {
+      task.addToolMessage(toolCallId, TASKS_TOOL_GROUP_NAME, TASKS_TOOL_LIST_TASKS, { offset, limit, state }, undefined, undefined, promptContext);
 
       const questionKey = `${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_LIST_TASKS}`;
       const questionText = 'Approve listing tasks?';
-      const questionSubject = `Offset: ${offset}, Limit: ${limit}`;
+      const questionSubject = `Offset: ${offset}, Limit: ${limit}, State: ${state || 'all'}`;
 
       const [isApproved, userInput] = await approvalManager.handleApproval(questionKey, questionText, questionSubject);
 
@@ -39,7 +40,12 @@ export const createTasksToolset = (task: Task, profile: AgentProfile, promptCont
       }
 
       try {
-        const allTasks = await task.getProject().getTasks();
+        let allTasks = await task.getProject().getTasks();
+
+        // Filter by state if provided
+        if (state) {
+          allTasks = allTasks.filter((t) => t.state === state);
+        }
 
         // Apply pagination
         const startIndex = Math.max(0, offset);
@@ -52,6 +58,7 @@ export const createTasksToolset = (task: Task, profile: AgentProfile, promptCont
           createdAt: t.createdAt,
           updatedAt: t.updatedAt,
           archived: t.archived,
+          state: t.state,
         }));
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -99,6 +106,7 @@ export const createTasksToolset = (task: Task, profile: AgentProfile, promptCont
           model: targetTask.task.model,
           mode: targetTask.task.currentMode,
           archived: targetTask.task.archived,
+          state: targetTask.task.state,
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);

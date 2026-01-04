@@ -927,6 +927,7 @@
     "deniedByReason": "Denied by user:\n{{reason}}",
     "tasks": {
       "listTasks": "List tasks",
+      "listTasksWithState": "List tasks with state: {{state}}",
       "getTask": "Get task",
       "getTaskMessage": "Get task message",
       "createTask": "Create task",
