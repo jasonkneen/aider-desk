@@ -2020,7 +2020,7 @@ File: src/common/locales/en.json
     "resume": "Resume",
     "taskReadyForReview": "Task Ready for Review",
     "taskTodo": "Task Not Started",
-    "taskTodoDescription": "Task has not started yet. Click Execute to begin.",
+    "taskTodoDescription": "Task Ready to Execute.",
     "markAsDone": "Mark as done",
     "taskReadyForImplementation": "Task Ready for Implementation",
     "taskDone": "Task Completed",
@@ -10269,6 +10269,7 @@ import {
   ResponseChunkData,
   ResponseCompletedData,
   SettingsData,
+  TaskContext,
   TaskStateData,
   TaskData,
   TodoItem,
@@ -10350,10 +10351,21 @@ private async loadTaskData()
 ⋮----
 // Migrate missing task-level settings from project settings
 ⋮----
+// Migrate task state based on last message in context
+⋮----
 /**
    * @deprecated Migrate missing task-level settings from project settings
    */
 private async migrateFromProjectSettings()
+⋮----
+/**
+   * @deprecated Migrate task state based on last message in context
+   */
+private async migrateTaskState()
+⋮----
+// Skip if state is already set
+⋮----
+// Set state based on last message role
 ⋮----
 /**
    * Generate a branch name from task name (first 7 words, separated by '-')
