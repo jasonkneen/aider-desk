@@ -508,7 +508,7 @@ export class Task {
     if (clearContext) {
       this.eventManager.sendClearTask(this.project.baseDir, this.taskId, true, true);
     }
-    this.interruptResponse(false);
+    this.interruptResponse();
     this.resolveAgentRunPromises();
 
     await this.aiderManager.kill();
@@ -910,7 +910,10 @@ export class Task {
     prompt: string,
     promptContext: PromptContext = { id: uuidv4() },
     mode?: Mode,
-    messages: { role: MessageRole; content: string }[] = this.contextManager.toConnectorMessages(),
+    messages: {
+      role: MessageRole;
+      content: string;
+    }[] = this.contextManager.toConnectorMessages(),
     files: ContextFile[] = this.contextManager.getContextFiles(),
     options?: AiderRunOptions,
   ): Promise<ResponseCompletedData[]> {
@@ -1283,7 +1286,10 @@ export class Task {
   public async askQuestion(questionData: QuestionData, awaitAnswer = true): Promise<[string, string | undefined]> {
     const hookResult = await this.hookManager.trigger('onQuestionAsked', { question: questionData }, this, this.project);
     if (hookResult.result && typeof hookResult.result === 'string') {
-      logger.info('Question answered by hook', { question: questionData.text, answer: hookResult.result });
+      logger.info('Question answered by hook', {
+        question: questionData.text,
+        answer: hookResult.result,
+      });
       return [hookResult.result, undefined];
     }
 
@@ -1464,6 +1470,31 @@ export class Task {
       const matchedFiles: string[] = [];
       const seen = new Set<string>();
 
+      // First pass: match files by full path
+      const matchedFileNames = new Set<string>();
+      for (const filePath of addableFiles) {
+        if (!isValidProjectFile(filePath, this.getTaskDir())) {
+          continue;
+        }
+
+        const normalizedPath = filePath.replace(/\\/g, '/');
+
+        if (normalizedPrompt.includes(normalizedPath.toLowerCase())) {
+          matchedFiles.push(normalizedPath);
+          seen.add(normalizedPath);
+          matchedFileNames.add(path.posix.basename(normalizedPath));
+        }
+      }
+
+      // Check if any context file matches a path in the prompt and track those names
+      for (const contextFile of contextFiles) {
+        const normalizedContextPath = contextFile.path.replace(/\\/g, '/');
+        if (normalizedPrompt.includes(normalizedContextPath.toLowerCase())) {
+          matchedFileNames.add(path.posix.basename(normalizedContextPath));
+        }
+      }
+
+      // Second pass: match files by filename only (if not already matched by path)
       for (const filePath of addableFiles) {
         if (!isValidProjectFile(filePath, this.getTaskDir())) {
           continue;
@@ -1472,10 +1503,18 @@ export class Task {
         const normalizedPath = filePath.replace(/\\/g, '/');
         const fileName = path.posix.basename(normalizedPath);
 
-        const isPathMatch = normalizedPrompt.includes(normalizedPath.toLowerCase());
-        const isNameMatch = fileName.length > 0 && normalizedPrompt.includes(fileName.toLowerCase());
+        // Skip if already matched by path
+        if (seen.has(normalizedPath)) {
+          continue;
+        }
 
-        if ((isPathMatch || isNameMatch) && !seen.has(normalizedPath)) {
+        // Skip if filename was already matched by path (prevents false positives)
+        if (matchedFileNames.has(fileName)) {
+          continue;
+        }
+
+        // Only match by filename if it's not empty and appears in the prompt
+        if (fileName.length > 0 && normalizedPrompt.includes(fileName.toLowerCase())) {
           matchedFiles.push(normalizedPath);
           seen.add(normalizedPath);
         }
@@ -1638,7 +1677,10 @@ export class Task {
           });
         } catch (error) {
           // Rule file doesn't exist or can't be accessed
-          logger.debug('Could not access agent rule file', { ruleFilePath, error });
+          logger.debug('Could not access agent rule file', {
+            ruleFilePath,
+            error,
+          });
         }
       }
     }
@@ -1771,7 +1813,7 @@ export class Task {
     }
   }
 
-  public interruptResponse(updateState = true) {
+  public interruptResponse() {
     logger.info('Interrupting response:', {
       baseDir: this.project.baseDir,
       taskId: this.taskId,
@@ -1786,7 +1828,7 @@ export class Task {
     this.agent.interrupt();
     this.promptFinished();
 
-    if (this.initialized && updateState) {
+    if (this.initialized && this.task.state === DefaultTaskState.InProgress) {
       void this.saveTask({
         state: DefaultTaskState.Interrupted,
         interruptedAt: new Date().toISOString(),
@@ -1915,7 +1957,10 @@ export class Task {
   }
 
   public async resumeTask() {
-    logger.info('Resuming task:', { baseDir: this.project.baseDir, taskId: this.taskId });
+    logger.info('Resuming task:', {
+      baseDir: this.project.baseDir,
+      taskId: this.taskId,
+    });
 
     const mode = this.getCurrentMode();
 
@@ -2471,7 +2516,7 @@ ${error.stderr}`,
       return;
     }
 
-    this.interruptResponse(false);
+    this.interruptResponse();
     await this.close(false, false);
     await this.init();
     if (this.task.createdAt) {
@@ -2582,7 +2627,9 @@ ${error.stderr}`,
                 this.promptsManager.getGenerateCommitMessagePrompt(this),
                 `Generate a concise conventional commit message for these changes:\n\n${changesDiff}\n\nOnly answer with the commit message, nothing else.`,
               );
-              logger.info('Generated commit message:', { commitMessage: effectiveCommitMessage });
+              logger.info('Generated commit message:', {
+                commitMessage: effectiveCommitMessage,
+              });
             } catch (error) {
               logger.warn('Failed to generate AI commit message, falling back to task name:', error);
               // Fallback to task name if AI generation fails
@@ -2900,7 +2947,9 @@ ${error.stderr}`,
           this.addLogMessage('info', `Resolved ${filePath}`, true, promptContext);
 
           // Stage the file
-          await execWithShellPath(`git add -- "${filePath}"`, { cwd: worktreePath });
+          await execWithShellPath(`git add -- "${filePath}"`, {
+            cwd: worktreePath,
+          });
         } finally {
           // Clean up temp files
           await Promise.allSettled([fs.unlink(basePath).catch(() => {}), fs.unlink(oursPath).catch(() => {}), fs.unlink(theirsPath).catch(() => {})]);

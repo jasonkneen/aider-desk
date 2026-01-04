@@ -16,6 +16,7 @@
 - added ability to delete memories from the retrieve memory tool message
 - added optional state input argument to list tasks tool to filter by state
 - added optional format for fetch tool to fetch markdown, html or raw content
+- matching for full path when checking if file exists in the context before asking to add it
 
 ## [0.46.0]
 

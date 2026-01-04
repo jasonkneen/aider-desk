@@ -894,10 +894,3 @@ export interface BranchInfo {
   isCurrent: boolean;
   hasWorktree: boolean;
 }
-
-export interface Test {
-  name: string;
-  description: string;
-  status: 'todo' | 'in_progress' | 'done';
-  message: string;
-}
