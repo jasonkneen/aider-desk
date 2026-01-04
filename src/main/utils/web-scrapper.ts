@@ -6,17 +6,28 @@ import type { BrowserWindow as BrowserWindowType } from 'electron';
 import { isAbortError } from '@/utils/errors';
 import { isElectron } from '@/app';
 
+type WebScrapeFormat = 'markdown' | 'html' | 'raw';
+
 export class WebScraper {
-  async scrape(url: string, timeout: number = 60000, abortSignal?: AbortSignal): Promise<string> {
+  async scrape(url: string, timeout: number = 60000, abortSignal?: AbortSignal, format: WebScrapeFormat = 'markdown'): Promise<string> {
+    if (format === 'raw') {
+      return await this.scrapeWithFetch(url, timeout, abortSignal);
+    }
+
     if (isElectron()) {
-      return await this.scrapeWithBrowserWindow(url, timeout, abortSignal);
+      return await this.scrapeWithBrowserWindow(url, timeout, abortSignal, format);
     } else {
       return 'Not implemented';
       // return await this.scrapeWithFetch(url, timeout, abortSignal);
     }
   }
 
-  private async scrapeWithBrowserWindow(url: string, timeout: number = 60000, abortSignal?: AbortSignal): Promise<string> {
+  private async scrapeWithBrowserWindow(
+    url: string,
+    timeout: number = 60000,
+    abortSignal?: AbortSignal,
+    format: WebScrapeFormat = 'markdown',
+  ): Promise<string> {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { BrowserWindow } = require('electron');
 
@@ -65,8 +76,11 @@ export class WebScraper {
       // Get content type from headers with timeout and abort signal
       const contentType = await Promise.race([this.getContentType(window), timeoutPromise, abortPromise]);
 
-      // If it's HTML, convert to markdown-like text
+      // If it's HTML, convert to markdown-like text or return HTML based on format
       if (contentType.includes('text/html') || this.looksLikeHTML(content)) {
+        if (format === 'html') {
+          return content;
+        }
         return this.htmlToMarkDown(content);
       }
 
@@ -123,6 +137,47 @@ export class WebScraper {
     }
   }
 
+  private async scrapeWithFetch(url: string, timeout: number = 60000, abortSignal?: AbortSignal): Promise<string> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    if (abortSignal) {
+      abortSignal.addEventListener('abort', () => controller.abort());
+    }
+
+    try {
+      const response = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        },
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const contentType = response.headers.get('content-type') || '';
+
+      // If it's HTML, return the text content
+      if (contentType.includes('text/html')) {
+        const text = await response.text();
+        return text;
+      }
+
+      // For other content types, return as text
+      return await response.text();
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (isAbortError(error)) {
+        return 'Operation was cancelled by user.';
+      }
+      return `Error: ${error instanceof Error ? error.message : String(error)}`;
+    }
+  }
+
   private looksLikeHTML(content: string): boolean {
     const htmlPatterns = [/<!DOCTYPE\s+html/i, /<html/i, /<head/i, /<body/i, /<div/i, /<p>/i, /<a\s+href=/i];
 
@@ -151,7 +206,7 @@ export class WebScraper {
   }
 }
 
-export const scrapeWeb = async (url: string, timeout: number = 60000, abortSignal?: AbortSignal) => {
+export const scrapeWeb = async (url: string, timeout: number = 60000, abortSignal?: AbortSignal, format: WebScrapeFormat = 'markdown') => {
   const scraper = new WebScraper();
-  return await scraper.scrape(url, timeout, abortSignal);
+  return await scraper.scrape(url, timeout, abortSignal, format);
 };

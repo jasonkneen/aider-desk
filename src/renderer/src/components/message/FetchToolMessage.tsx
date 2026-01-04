@@ -6,6 +6,8 @@ import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { highlightWithLowlight } from '@/utils/highlighter';
+import { CopyMessageButton } from '@/components/message/CopyMessageButton';
 
 type Props = {
   message: ToolMessage;
@@ -17,6 +19,7 @@ export const FetchToolMessage = ({ message, onRemove, compact = false }: Props) 
   const { t } = useTranslation();
 
   const url = message.args.url as string;
+  const format = (message.args.format as string) || 'markdown';
   const content = message.content && JSON.parse(message.content);
   const isError = content && typeof content === 'string' && content.startsWith('Error:');
   const isDenied = content && typeof content === 'string' && content.startsWith('URL fetch from');
@@ -75,19 +78,14 @@ export const FetchToolMessage = ({ message, onRemove, compact = false }: Props) 
       return null;
     }
 
-    const contentLength = content.length;
-    const maxPreviewLength = 2000;
-    const isTruncated = contentLength > maxPreviewLength;
-    const displayContent = isTruncated ? content.substring(0, maxPreviewLength) + '...' : content;
-
     return (
       <div className="px-3 text-xs text-text-tertiary bg-bg-secondary">
-        <div className="space-y-3">
-          <div>
-            <pre className="whitespace-pre-wrap bg-bg-primary-light p-2 rounded text-2xs max-h-[600px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth text-text-secondary">
-              {displayContent}
-            </pre>
-            {isTruncated && <div className="text-text-muted text-3xs mt-1">{t('toolMessage.power.fetch.contentTruncated')}</div>}
+        <div className="space-y-3 relative">
+          <pre className="whitespace-pre-wrap bg-bg-primary-light p-2 rounded text-2xs max-h-[600px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth text-text-secondary">
+            {format === 'html' ? highlightWithLowlight(content, 'html') : format === 'markdown' ? highlightWithLowlight(content, 'markdown') : content}
+          </pre>
+          <div className="absolute top-0 right-3">
+            <CopyMessageButton content={content} />
           </div>
         </div>
       </div>

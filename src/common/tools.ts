@@ -90,7 +90,7 @@ const myFunction = () => {
     'Search code in the repository using Elasticsearch-like query syntax. Use this tool first for any code-related questions to find out relationships between files and what files need to be changed.',
   [POWER_TOOL_BASH]: 'Executes a shell command. For safety, commands may be sandboxed or require user approval (approval handled by Agent).',
   [POWER_TOOL_FETCH]:
-    'Fetches and returns the content of a web page from a specified URL. Useful for retrieving web content, documentation, or external resources.',
+    'Fetches and returns the content of a web page from a specified URL. Useful for retrieving web content, documentation, or external resources. Supports three formats: "markdown" (default, converts HTML to markdown), "html" (returns raw HTML), "raw" (fetches raw content via HTTP, ideal for API responses or raw files like GitHub raw files).',
   [SUBAGENTS_TOOL_RUN_TASK]: 'Description is generated dynamically based on enabled agent profiles with subagent functionality.',
 } as const;
 

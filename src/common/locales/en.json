@@ -1024,8 +1024,7 @@
         "resultLabel": "Result {{index}}"
       },
       "fetch": {
-        "title": "Fetch",
-        "contentTruncated": "Content truncated. Full content available in copy."
+        "title": "Fetch"
       }
     },
     "memory": {

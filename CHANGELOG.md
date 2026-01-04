@@ -15,6 +15,7 @@
 - improved instructions for using memory tools for better utilization
 - added ability to delete memories from the retrieve memory tool message
 - added optional state input argument to list tasks tool to filter by state
+- added optional format for fetch tool to fetch markdown, html or raw content
 
 ## [0.46.0]
 

@@ -996,8 +996,7 @@
         "resultLabel": "结果 {{index}}"
       },
       "fetch": {
-        "title": "抓取网页内容",
-        "contentTruncated": "内容已截断。完整内容可在复制中查看。"
+        "title": "抓取网页内容"
       }
     },
     "memory": {

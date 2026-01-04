@@ -573,8 +573,15 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
     inputSchema: z.object({
       url: z.string().describe('The URL to fetch.'),
       timeout: z.number().int().min(0).optional().default(60000).describe('Timeout for the fetch operation in milliseconds. Default: 60000 ms.'),
+      format: z
+        .enum(['markdown', 'html', 'raw'])
+        .optional()
+        .default('markdown')
+        .describe(
+          'Format of the response: "markdown" (default, converts HTML to markdown), "html" (returns raw HTML), "raw" (fetches raw content via HTTP, ideal for API responses or raw files).',
+        ),
     }),
-    execute: async ({ url, timeout }, { toolCallId }) => {
+    execute: async ({ url, timeout, format }, { toolCallId }) => {
       task.addToolMessage(
         toolCallId,
         TOOL_GROUP_NAME,
@@ -582,6 +589,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         {
           url,
           timeout,
+          format,
         },
         undefined,
         undefined,
@@ -590,7 +598,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
 
       const questionKey = `${TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TOOL_FETCH}`;
       const questionText = `Approve fetching content from URL '${url}'?`;
-      const questionSubject = `URL: ${url}\nTimeout: ${timeout}ms`;
+      const questionSubject = `URL: ${url}\nTimeout: ${timeout}ms\nFormat: ${format}`;
 
       const [isApproved, userInput] = await approvalManager.handleApproval(questionKey, questionText, questionSubject);
 
@@ -603,7 +611,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
       }
 
       try {
-        return await scrapeWeb(url, timeout, abortSignal);
+        return await scrapeWeb(url, timeout, abortSignal, format);
       } catch (error) {
         if (isAbortError(error)) {
           return 'Operation was cancelled by user.';
