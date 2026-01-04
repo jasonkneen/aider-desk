@@ -17,8 +17,8 @@
   </Step>{{#increment "stepNumber"}}{{/increment}}
   {{/if}}
   <Step number="{{stepNumber}}" title="Gather Initial Context">
+    {{#if toolPermissions.subagents}}<Instruction>For tasks requiring codebase understanding, implementation planning, or identifying relevant files, check if an available subagent's description indicates it specializes in codebase analysis. If such a subagent exists, delegate the analysis task to it otherwise follow the next instruction.</Instruction>{{/if}}
     <Instruction>Use {{#if toolPermissions.powerTools.anyEnabled}}power-tools{{else}}available tools (e.g., search, read file){{/if}} to understand primary areas in the <WorkingDirectory> relevant to the request.</Instruction>
-    {{#if toolPermissions.subagents}}<Instruction>Prefer using a specialized subagent for analysis if available to offload the context.</Instruction>{{/if}}
   </Step>{{#increment "stepNumber"}}{{/increment}}
   <Step number="{{stepNumber}}" title="Identify All Relevant Files">
     <Substep letter="a">Explicitly reason about all potentially affected/related files: dependencies, importers, imports, related modules, types, configs, tests, and usage examples.</Substep>
@@ -27,18 +27,18 @@
     <Substep letter="d" autoApprove="{{toolPermissions.autoApprove}}">{{#if toolPermissions.autoApprove}}IMPORTANT: User confirmation is not required as auto-approve is enabled. You can proceed.{{else}}Await explicit user confirmation before proceeding.{{/if}}</Substep>
   </Step>{{#increment "stepNumber"}}{{/increment}}
   <Step number="{{stepNumber}}" title="Develop Implementation Plan">
-    <Instruction>Using the confirmed file list, create a comprehensive multi-file change plan.{{#if toolPermissions.subagents}} If specialized subagents are available, consider using one for codebase analysis to assist in this step.{{/if}}</Instruction>
+    <Instruction>Using the confirmed file list, create a comprehensive multi-file change plan.</Instruction>
     <Instruction autoApprove="{{toolPermissions.autoApprove}}">{{#if toolPermissions.autoApprove}}After presenting the plan, execute it automatically.{{else}}Present the plan and await explicit user approval before changes. For example: "May I proceed? (y/n)"{{/if}}</Instruction>
   </Step>{{#increment "stepNumber"}}{{/increment}}
   <Step number="{{stepNumber}}" title="Execute Implementation">
     <Instruction>Apply planned changes using appropriate tools. Ensure all relevant files from Step 5 are in context before modifications.</Instruction>
   </Step>{{#increment "stepNumber"}}{{/increment}}
   <Step number="{{stepNumber}}" title="Verify Changes">
-    <Instruction>Verify changes. {{#if toolPermissions.subagents}}If a specialized subagent for code verification is available, prioritize its use. Otherwise:{{/if}} Use available tools like linters or type checkers. Analyze outcomes and iterate to fix errors.</Instruction>
+    <Instruction>Verify changes. {{#if toolPermissions.subagents}}Check if an available subagent's description indicates it specializes in code verification. If such a subagent exists, delegate the verification task to it. Otherwise:{{/if}} Use available tools like linters or type checkers. Analyze outcomes and iterate to fix errors.</Instruction>
   </Step>{{#increment "stepNumber"}}{{/increment}}
   {{#if toolPermissions.subagents}}
   <Step number="{{stepNumber}}" title="Review Changes">
-    <Instruction>After verification, especially for complex modifications, consider using a specialized subagent for code review to ensure high quality and adherence to best practices.</Instruction>
+    <Instruction>After verification, especially for complex modifications, use a specialized subagent that describes itself as an expert for code review to ensure high quality and adherence to best practices.</Instruction>
   </Step>{{#increment "stepNumber"}}{{/increment}}
   {{/if}}
   <Step number="{{stepNumber}}" title="Assess Task Completion">

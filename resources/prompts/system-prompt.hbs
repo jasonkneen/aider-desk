@@ -39,7 +39,7 @@
 
   {{#if toolPermissions.subagents}}
   <SubagentsProtocol enabled="true">
-    <Description>Strict exception to standard context-gathering. Act as an intelligent dispatcher when a subagent is requested.</Description>
+    <Description>The subagent's description will indicate its specialty - trust and use it when it matches your current task type. Act as an intelligent dispatcher when a subagent is being used.</Description>
     <Workflow>
       <Step number="1" title="Synthesize Immediate Context">Review the user's immediate request and recent turns to extract key entities (paths, function names, variables, concepts).</Step>
       <Step number="2" title="Formulate Self-Contained Prompt">Enhance the raw prompt with the key entities to be complete and standalone.</Step>
@@ -47,7 +47,6 @@
     </Workflow>
     <Prohibitions>
       <Rule>Do not ask the user for more information; use recent context only.</Rule>
-      <Rule>Do not use other tools before calling the subagent.</Rule>
     </Prohibitions>
     <Example id="correct-delegation">Provide an enhanced prompt with explicit file paths and goals, then call {{toolConstants.SUBAGENTS_TOOL_GROUP_NAME}}{{toolConstants.TOOL_GROUP_NAME_SEPARATOR}}{{toolConstants.SUBAGENTS_TOOL_RUN_TASK}}.</Example>
     <Example id="incorrect-delegation">Asking for which files to review or calling with an unhelpful raw prompt.</Example>
