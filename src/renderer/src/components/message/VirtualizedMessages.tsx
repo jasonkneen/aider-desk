@@ -8,7 +8,7 @@ import { TaskStateActions } from 'src/renderer/src/components/message/TaskStateA
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
 
-import { isGroupMessage, Message } from '@/types/message';
+import { isGroupMessage, isUserMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
@@ -30,6 +30,7 @@ type Props = {
   renderMarkdown: boolean;
   removeMessage: (message: Message) => void;
   resumeTask: () => void;
+  redoLastUserPrompt: () => void;
   editLastUserMessage: (content: string) => void;
   onMarkAsDone: () => void;
   onProceed?: () => void;
@@ -49,6 +50,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
       renderMarkdown,
       removeMessage,
       resumeTask,
+      redoLastUserPrompt,
       editLastUserMessage,
       onMarkAsDone,
       onProceed,
@@ -63,6 +65,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
 
     // Group messages by promptContext.group.id
     const processedMessages = useMemo(() => groupMessagesByPromptContext(messages), [messages]);
+    const lastUserMessageIndex = processedMessages.findLastIndex(isUserMessage);
 
     // Create virtualizer for dynamic sized items
     const virtualizer = useVirtualizer({
@@ -155,8 +158,8 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
                       allFiles={allFiles}
                       renderMarkdown={renderMarkdown}
                       remove={virtualRow.index === messages.length - 1 ? () => removeMessage(message) : undefined}
-                      redo={undefined}
-                      edit={undefined}
+                      redo={virtualRow.index === lastUserMessageIndex ? redoLastUserPrompt : undefined}
+                      edit={virtualRow.index === lastUserMessageIndex ? editLastUserMessage : undefined}
                     />
                   )}
                 </div>

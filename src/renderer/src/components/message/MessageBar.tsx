@@ -71,7 +71,7 @@ export const MessageBar = ({ className, content, usageReport, remove, redo, edit
                 onClick={handleEditClick}
               >
                 <MdEdit className="w-4 h-4" />
-                <span className="whitespace-nowrap mb-[-4px]">{t('messages.edit')}</span>
+                <span className="whitespace-nowrap">{t('messages.edit')}</span>
               </li>
             )}
             {redo && (
@@ -80,7 +80,7 @@ export const MessageBar = ({ className, content, usageReport, remove, redo, edit
                 onClick={handleRedoClick}
               >
                 <MdRedo className="w-4 h-4" />
-                <span className="whitespace-nowrap mb-[-4px]">{t('messages.redo')}</span>
+                <span className="whitespace-nowrap">{t('messages.redo')}</span>
               </li>
             )}
             {remove && (
@@ -89,7 +89,7 @@ export const MessageBar = ({ className, content, usageReport, remove, redo, edit
                 onClick={handleRemoveClick}
               >
                 <MdDeleteForever className="w-4 h-4" />
-                <span className="whitespace-nowrap mb-[-4px]">{t('messages.delete')}</span>
+                <span className="whitespace-nowrap">{t('messages.delete')}</span>
               </li>
             )}
           </ul>

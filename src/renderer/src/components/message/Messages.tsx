@@ -30,6 +30,7 @@ type Props = {
   renderMarkdown: boolean;
   removeMessage: (message: Message) => void;
   resumeTask: () => void;
+  redoLastUserPrompt: () => void;
   editLastUserMessage: (content: string) => void;
   onMarkAsDone: () => void;
   onProceed?: () => void;
@@ -49,6 +50,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
       renderMarkdown,
       removeMessage,
       resumeTask,
+      redoLastUserPrompt,
       editLastUserMessage,
       onMarkAsDone,
       onProceed,
@@ -64,6 +66,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
 
     // Group messages by promptContext.group.id
     const processedMessages = groupMessagesByPromptContext(messages);
+    const lastUserMessageIndex = processedMessages.findLastIndex(isUserMessage);
 
     const { scrollingPaused, setScrollingPaused, scrollToBottom, eventHandlers } = useScrollingPaused({
       onAutoScroll: () => messagesEndRef.current?.scrollIntoView(),
@@ -164,8 +167,8 @@ export const Messages = forwardRef<MessagesRef, Props>(
               allFiles={allFiles}
               renderMarkdown={renderMarkdown}
               remove={index === messages.length - 1 ? () => removeMessage(message) : undefined}
-              redo={undefined}
-              edit={undefined}
+              redo={index === lastUserMessageIndex ? redoLastUserPrompt : undefined}
+              edit={index === lastUserMessageIndex ? editLastUserMessage : undefined}
             />
           );
         })}

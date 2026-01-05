@@ -1,5 +1,9 @@
 # Changelog
 
+## [UNRELEASED]
+
+- added missing menu actions to the last user message
+
 ## [0.47.0]
 
 - added ability to pin tasks to the top of the task sidebar
