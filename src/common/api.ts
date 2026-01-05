@@ -213,4 +213,7 @@ export interface ApplicationAPI {
   deleteMemory: (id: string) => Promise<boolean>;
   deleteProjectMemories: (projectId: string) => Promise<number>;
   getMemoryEmbeddingProgress: () => Promise<MemoryEmbeddingProgress>;
+
+  // Clipboard operations
+  writeToClipboard: (text: string) => Promise<void>;
 }

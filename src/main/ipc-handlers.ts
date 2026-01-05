@@ -11,7 +11,7 @@ import {
   TodoItem,
   AgentProfile,
 } from '@common/types';
-import { ipcMain } from 'electron';
+import { ipcMain, clipboard } from 'electron';
 
 import { EventsHandler } from './events-handler';
 
@@ -451,5 +451,9 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
 
   ipcMain.handle('get-memory-embedding-progress', async () => {
     return eventsHandler.getMemoryEmbeddingProgress();
+  });
+
+  ipcMain.handle('clipboard-write-text', async (_, text: string) => {
+    clipboard.writeText(text);
   });
 };

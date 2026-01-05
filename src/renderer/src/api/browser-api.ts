@@ -841,6 +841,28 @@ export class BrowserApi implements ApplicationAPI {
       .then((r) => r.data.deletedCount);
   }
 
+  async writeToClipboard(text: string): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // Fallback for mobile browsers and non-secure contexts
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      try {
+        document.execCommand('copy');
+      } finally {
+        document.body.removeChild(textArea);
+      }
+    }
+  }
+
   // Agent profile operations
   getAllAgentProfiles(baseDir?: string): Promise<AgentProfile[]> {
     return this.get('/agent-profiles', { baseDir });

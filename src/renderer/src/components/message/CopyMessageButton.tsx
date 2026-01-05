@@ -5,6 +5,7 @@ import { twMerge } from 'tailwind-merge';
 import { IconButton } from '../common/IconButton';
 
 import { showInfoNotification } from '@/utils/notifications';
+import { useApi } from '@/contexts/ApiContext';
 
 type Props = {
   content: string;
@@ -14,9 +15,15 @@ type Props = {
 
 export const CopyMessageButton = ({ content, className, alwaysShow = false }: Props) => {
   const { t } = useTranslation();
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(content);
-    showInfoNotification(t('messages.copied'));
+  const api = useApi();
+  const copyToClipboard = async () => {
+    try {
+      await api.writeToClipboard(content);
+      showInfoNotification(t('messages.copied'));
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to copy to clipboard:', error);
+    }
   };
 
   return (

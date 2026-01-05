@@ -570,6 +570,8 @@ const api: ApplicationAPI = {
   deleteProjectMemories: (projectId) => ipcRenderer.invoke('delete-project-memories', projectId),
   getMemoryEmbeddingProgress: () => ipcRenderer.invoke('get-memory-embedding-progress'),
 
+  writeToClipboard: (text: string) => ipcRenderer.invoke('clipboard-write-text', text),
+
   addAgentProfilesUpdatedListener: (callback) => {
     const listener = (_, data) => callback(data);
     ipcRenderer.on('agent-profiles-updated', listener);

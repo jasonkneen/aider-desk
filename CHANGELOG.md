@@ -3,6 +3,7 @@
 ## [UNRELEASED]
 
 - added missing menu actions to the last user message
+- correctly handling copy actions on MacOS and mobile devices
 
 ## [0.47.0]
 

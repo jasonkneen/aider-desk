@@ -348,11 +348,16 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
   );
 
   const handleCopyTaskId = useCallback(
-    (taskId: string) => {
-      void navigator.clipboard.writeText(taskId);
-      showInfoNotification(t('taskSidebar.taskIdCopied', { taskId }));
+    async (taskId: string) => {
+      try {
+        await api.writeToClipboard(taskId);
+        showInfoNotification(t('taskSidebar.taskIdCopied', { taskId }));
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to copy task ID:', error);
+      }
     },
-    [t],
+    [api, t],
   );
 
   const handleDuplicateTask = useCallback(

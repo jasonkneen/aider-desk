@@ -100,28 +100,33 @@ export const useContextMenu = () => {
       // Always show copy option
       options.push({
         label: t('contextMenu.copy'),
-        action: () => {
-          // If there's selected text, copy that
-          if (selectionText) {
-            navigator.clipboard.writeText(selectionText);
-          } else {
-            // Otherwise, use the stored target element
-            if (targetElement) {
-              let textToCopy = '';
+        action: async () => {
+          try {
+            // If there's selected text, copy that
+            if (selectionText) {
+              await api.writeToClipboard(selectionText);
+            } else {
+              // Otherwise, use the stored target element
+              if (targetElement) {
+                let textToCopy = '';
 
-              // Handle input elements
-              if (targetElement instanceof HTMLInputElement || targetElement instanceof HTMLTextAreaElement) {
-                textToCopy = targetElement.value;
-              }
-              // Handle other elements with text content
-              else if (targetElement.textContent) {
-                textToCopy = targetElement.textContent.trim();
-              }
+                // Handle input elements
+                if (targetElement instanceof HTMLInputElement || targetElement instanceof HTMLTextAreaElement) {
+                  textToCopy = targetElement.value;
+                }
+                // Handle other elements with text content
+                else if (targetElement.textContent) {
+                  textToCopy = targetElement.textContent.trim();
+                }
 
-              if (textToCopy) {
-                navigator.clipboard.writeText(textToCopy);
+                if (textToCopy) {
+                  await api.writeToClipboard(textToCopy);
+                }
               }
             }
+          } catch (error) {
+            // eslint-disable-next-line no-console
+            console.error('Failed to copy to clipboard:', error);
           }
         },
       });

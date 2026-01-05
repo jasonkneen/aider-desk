@@ -259,7 +259,14 @@ export const ServerSettings = ({ settings, setSettings }: Props) => {
                 </a>
                 <IconButton
                   icon={<BiCopy className="h-5 w-5" />}
-                  onClick={() => navigator.clipboard.writeText(tunnelStatus.url!)}
+                  onClick={async () => {
+                    try {
+                      await api.writeToClipboard(tunnelStatus.url!);
+                    } catch (error) {
+                      // eslint-disable-next-line no-console
+                      console.error('Failed to copy URL:', error);
+                    }
+                  }}
                   tooltip={t('settings.server.copyUrl')}
                 />
               </div>
