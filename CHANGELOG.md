@@ -5,6 +5,7 @@
 - added missing menu actions to the last user message
 - correctly handling copy actions on MacOS and mobile devices
 - correctly handling export to markdown in browsers
+- removed duplicate AGENTS.md entry from the system prompt knowledge section
 
 ## [0.47.0]
 

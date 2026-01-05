@@ -93,7 +93,7 @@ AiderDesk is an Electron-based desktop application that provides a GUI wrapper f
 **Build System**: Powered by electron-vite for development and building, with esbuild for the MCP server component.
 
 ### Technology Stack
-- **Frontend**: React 18 with TypeScript, Tailwind CSS, Framer Motion
+- **Frontend**: React 19 with TypeScript, Tailwind CSS, Framer Motion
 - **Backend**: Electron, Node.js, Python (Aider integration)
 - **AI Integration**: Vercel AI SDK, multiple LLM providers (OpenAI, Anthropic, Gemini, etc.)
 - **Build Tools**: electron-vite, esbuild, TypeScript project references

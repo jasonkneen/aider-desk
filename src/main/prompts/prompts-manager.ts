@@ -361,9 +361,7 @@ export class PromptsManager {
   };
 
   private getRulesContent = async (task: Task, agentProfile?: AgentProfile) => {
-    const fsModule = await import('fs');
     const ruleFiles = await task.getRuleFilesAsContextFiles(agentProfile);
-    const agentsFilePath = path.join(task.getProjectDir(), 'AGENTS.md');
 
     const ruleFilesContent = await Promise.all(
       ruleFiles.map(async (file) => {
@@ -388,11 +386,7 @@ export class PromptsManager {
       }),
     );
 
-    const agentsFileContent = fsModule.existsSync(agentsFilePath)
-      ? `      <File name="AGENTS.md"><![CDATA[\n${fsModule.readFileSync(agentsFilePath, 'utf8')}\n]]></File>`
-      : '';
-
-    return [agentsFileContent, ...ruleFilesContent].filter(Boolean).join('\n');
+    return ruleFilesContent.filter(Boolean).join('\n');
   };
 
   public getInitProjectPrompt = (task: Task) => {
