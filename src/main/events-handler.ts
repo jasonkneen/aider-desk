@@ -617,8 +617,12 @@ export class EventsHandler {
     );
   }
 
+  async generateTaskMarkdown(baseDir: string, taskId: string): Promise<string | null> {
+    return (await this.projectManager.getProject(baseDir).getTask(taskId)?.generateContextMarkdown()) || null;
+  }
+
   async exportTaskToMarkdown(baseDir: string, taskId: string): Promise<void> {
-    const markdownContent = await this.projectManager.getProject(baseDir).getTask(taskId)?.generateContextMarkdown();
+    const markdownContent = await this.generateTaskMarkdown(baseDir, taskId);
 
     if (markdownContent) {
       try {

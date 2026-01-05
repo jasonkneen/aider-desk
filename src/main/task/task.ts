@@ -863,8 +863,6 @@ export class Task {
       logger.info('Determining task state:', {
         baseDir: this.project.baseDir,
         taskId: this.taskId,
-        wrappedMessage,
-        answer,
       });
 
       const trimmedAnswer = answer.trim();

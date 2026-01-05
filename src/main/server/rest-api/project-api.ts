@@ -549,8 +549,17 @@ export class ProjectApi extends BaseApi {
         }
 
         const { projectDir, taskId } = parsed;
-        await this.eventsHandler.exportTaskToMarkdown(projectDir, taskId);
-        res.status(200).json({ message: 'Session exported to markdown' });
+        const markdownContent = await this.eventsHandler.generateTaskMarkdown(projectDir, taskId);
+
+        if (!markdownContent) {
+          res.status(404).json({ error: 'Task not found or no content to export' });
+          return;
+        }
+
+        const filename = `session-${new Date().toISOString().replace(/:/g, '-').substring(0, 19)}.md`;
+        res.setHeader('Content-Type', 'text/markdown');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.status(200).send(markdownContent);
       }),
     );
 
