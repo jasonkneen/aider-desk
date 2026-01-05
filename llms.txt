@@ -2209,6 +2209,7 @@ File: src/common/locales/en.json
     "deniedByReason": "Denied by user:\n{{reason}}",
     "tasks": {
       "listTasks": "List tasks",
+      "listTasksWithState": "List tasks with state: {{state}}",
       "getTask": "Get task",
       "getTaskMessage": "Get task message",
       "createTask": "Create task",
@@ -2305,8 +2306,7 @@ File: src/common/locales/en.json
         "resultLabel": "Result {{index}}"
       },
       "fetch": {
-        "title": "Fetch",
-        "contentTruncated": "Content truncated. Full content available in copy."
+        "title": "Fetch"
       }
     },
     "memory": {
@@ -3572,6 +3572,7 @@ File: src/common/locales/zh.json
     "deniedByReason": "用户拒绝: {{reason}}",
     "tasks": {
       "listTasks": "列出任务",
+      "listTasksWithState": "列出状态为 {{state}} 的任务",
       "getTask": "获取任务",
       "getTaskMessage": "获取任务消息",
       "createTask": "创建任务",
@@ -3664,8 +3665,7 @@ File: src/common/locales/zh.json
         "resultLabel": "结果 {{index}}"
       },
       "fetch": {
-        "title": "抓取网页内容",
-        "contentTruncated": "内容已截断。完整内容可在复制中查看。"
+        "title": "抓取网页内容"
       }
     },
     "memory": {
@@ -5381,13 +5381,6 @@ export interface BranchInfo {
   isCurrent: boolean;
   hasWorktree: boolean;
 }
-⋮----
-export interface Test {
-  name: string;
-  description: string;
-  status: 'todo' | 'in_progress' | 'done';
-  message: string;
-}
 
 ================
 File: src/common/utils.ts
@@ -5833,6 +5826,8 @@ import { ApprovalManager } from './approval-manager';
 import { Task } from '@/task';
 ⋮----
 export const createTasksToolset = (task: Task, profile: AgentProfile, promptContext?: PromptContext): ToolSet =>
+⋮----
+// Filter by state if provided
 ⋮----
 // Apply pagination
 ⋮----
@@ -8233,7 +8228,7 @@ const loadZaiPlanModels = async (profile: ProviderProfile, settings: SettingsDat
 ⋮----
 // ZAI uses specific endpoint for model discovery
 ⋮----
-temperature: 0.1, // Default temperature for ZAI models
+temperature: 0.7, // Default temperature for ZAI models
 ⋮----
 const hasZaiPlanEnvVars = (): boolean
 ⋮----
@@ -10486,7 +10481,10 @@ public sendPromptToAider(
     prompt: string,
     promptContext: PromptContext = { id: uuidv4() },
     mode?: Mode,
-    messages: { role: MessageRole; content: string }[] = this.contextManager.toConnectorMessages(),
+    messages: {
+      role: MessageRole;
+      content: string;
+    }[] = this.contextManager.toConnectorMessages(),
     files: ContextFile[] = this.contextManager.getContextFiles(),
     options?: AiderRunOptions,
 ): Promise<ResponseCompletedData[]>
@@ -10591,6 +10589,18 @@ const extractModelInfo = (modelName: string | null | undefined) =>
 ⋮----
 private async detectAndAddFilesFromPrompt(prompt: string): Promise<void>
 ⋮----
+// First pass: match files by full path
+⋮----
+// Check if any context file matches a path in the prompt and track those names
+⋮----
+// Second pass: match files by filename only (if not already matched by path)
+⋮----
+// Skip if already matched by path
+⋮----
+// Skip if filename was already matched by path (prevents false positives)
+⋮----
+// Only match by filename if it's not empty and appears in the prompt
+⋮----
 public async getAddableFiles(searchRegex?: string): Promise<string[]>
 ⋮----
 public async getAllFiles(useGit = true): Promise<string[]>
@@ -10645,7 +10655,7 @@ public sendToolMessage(data: ToolData)
 ⋮----
 public async clearContext(addToHistory = false, updateContextInfo = true)
 ⋮----
-public interruptResponse(updateState = true)
+public interruptResponse()
 ⋮----
 public applyEdits(edits: FileEdit[])
 ⋮----
@@ -11503,13 +11513,18 @@ import type { BrowserWindow as BrowserWindowType } from 'electron';
 import { isAbortError } from '@/utils/errors';
 import { isElectron } from '@/app';
 ⋮----
+type WebScrapeFormat = 'markdown' | 'html' | 'raw';
+⋮----
 export class WebScraper
 ⋮----
-async scrape(url: string, timeout: number = 60000, abortSignal?: AbortSignal): Promise<string>
+async scrape(url: string, timeout: number = 60000, abortSignal?: AbortSignal, format: WebScrapeFormat = 'markdown'): Promise<string>
 ⋮----
-// return await this.scrapeWithFetch(url, timeout, abortSignal);
-⋮----
-private async scrapeWithBrowserWindow(url: string, timeout: number = 60000, abortSignal?: AbortSignal): Promise<string>
+private async scrapeWithBrowserWindow(
+    url: string,
+    timeout: number = 60000,
+    abortSignal?: AbortSignal,
+    format: WebScrapeFormat = 'markdown',
+): Promise<string>
 ⋮----
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 ⋮----
@@ -11527,7 +11542,7 @@ private async scrapeWithBrowserWindow(url: string, timeout: number = 60000, abor
 ⋮----
 // Get content type from headers with timeout and abort signal
 ⋮----
-// If it's HTML, convert to markdown-like text
+// If it's HTML, convert to markdown-like text or return HTML based on format
 ⋮----
 // Cleanup window
 ⋮----
@@ -11541,6 +11556,12 @@ private async getContentType(window: BrowserWindowType): Promise<string>
 ⋮----
 private async cleanupWindow(window: BrowserWindowType): Promise<void>
 ⋮----
+private async scrapeWithFetch(url: string, timeout: number = 60000, abortSignal?: AbortSignal): Promise<string>
+⋮----
+// If it's HTML, return the text content
+⋮----
+// For other content types, return as text
+⋮----
 private looksLikeHTML(content: string): boolean
 ⋮----
 private cleanHtml(content: string): string
@@ -11549,7 +11570,7 @@ private cleanHtml(content: string): string
 ⋮----
 private htmlToMarkDown(content: string): string
 ⋮----
-export const scrapeWeb = async (url: string, timeout: number = 60000, abortSignal?: AbortSignal) =>
+export const scrapeWeb = async (url: string, timeout: number = 60000, abortSignal?: AbortSignal, format: WebScrapeFormat = 'markdown') =>
 
 ================
 File: src/main/versions/index.ts
@@ -14791,6 +14812,8 @@ import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { highlightWithLowlight } from '@/utils/highlighter';
+import { CopyMessageButton } from '@/components/message/CopyMessageButton';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -14913,6 +14936,7 @@ import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { TaskStateChip } from '@/components/common/TaskStateChip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -15072,6 +15096,7 @@ import { LuClipboardList } from 'react-icons/lu';
 import { ToolMessage } from '@/types/message';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { TaskStateChip } from '@/components/common/TaskStateChip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -15086,6 +15111,7 @@ type Task = {
     description?: string;
     createdAt?: string;
     updatedAt?: string;
+    state?: string;
   };
 ⋮----
 return <ExpandableMessageBlock title=
