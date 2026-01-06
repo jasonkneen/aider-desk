@@ -216,4 +216,5 @@ export interface ApplicationAPI {
 
   // Clipboard operations
   writeToClipboard: (text: string) => Promise<void>;
+  openPath: (path: string) => Promise<boolean>;
 }

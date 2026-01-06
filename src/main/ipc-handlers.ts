@@ -287,6 +287,10 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     return eventsHandler.openLogsDirectory();
   });
 
+  ipcMain.handle('open-path', async (_, path: string) => {
+    return eventsHandler.openPath(path);
+  });
+
   ipcMain.handle('get-custom-commands', async (_, baseDir: string) => {
     return eventsHandler.getCustomCommands(baseDir);
   });

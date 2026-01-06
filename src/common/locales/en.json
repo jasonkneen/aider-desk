@@ -1197,6 +1197,7 @@
     "reasoning-effort": "Set the reasoning effort level (values: minimal/low/medium/high depending on model)",
     "reset": "Drop all files and clear the chat history",
     "run": "Run a shell command and optionally add the output to the chat",
+    "task-info": "Show task information",
     "test": "Run a predefined test command and add the output to the chat on non-zero exit code",
     "think-tokens": "Set the thinking token budget (supports formats like 8096, 8k, 10.5k, 0.5M)",
     "tokens": "Report on the number of tokens used by the current chat context",
@@ -1289,7 +1290,6 @@
     "untitled": "[Untitled]",
     "exportAsMarkdown": "Export as markdown",
     "exportAsImage": "Export as image",
-    "copyTaskId": "Copy task ID",
     "taskIdCopied": "Task ID {{taskId}} copied to clipboard",
     "duplicateTask": "Duplicate Task",
     "search": "Search tasks",
@@ -1309,6 +1309,21 @@
     "archiveSelectedConfirm": "Are you sure you want to archive {{count}} selected tasks?",
     "unarchiveSelectedConfirm": "Are you sure you want to unarchive {{count}} selected tasks?",
     "generatingName": "Generating name..."
+  },
+  "taskInfo": {
+    "createdAt": "Created at",
+    "updatedAt": "Updated at",
+    "worktreeDirectory": "Worktree Directory",
+    "baseBranch": "Base Branch",
+    "baseCommit": "Base Commit",
+    "targetBranch": "Target Branch",
+    "lastMergeState": "Last Merge State",
+    "beforeMergeCommit": "Before Merge Commit",
+    "mergeTimestamp": "Merge Timestamp",
+    "openFolder": "Open Folder",
+    "taskId": "Task ID",
+    "state": "State",
+    "messageCount": "Message count"
   },
   "taskState": {
     "TODO": "Todo",

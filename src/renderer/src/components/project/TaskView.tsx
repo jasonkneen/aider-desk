@@ -7,11 +7,12 @@ import { getProviderModelId } from '@common/agent';
 import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { useLocalStorage } from '@reactuses/core';
 import { useHotkeys } from 'react-hotkeys-hook';
+import { v4 as uuidv4 } from 'uuid';
 
 import { useSidebarWidth } from './useSidebarWidth';
 
 import { StyledTooltip } from '@/components/common/StyledTooltip';
-import { isLogMessage, isResponseMessage, isToolMessage, isUserMessage, Message } from '@/types/message';
+import { isLogMessage, isResponseMessage, isToolMessage, isUserMessage, Message, TaskInfoMessage } from '@/types/message';
 import { Messages, MessagesRef } from '@/components/message/Messages';
 import { VirtualizedMessages, VirtualizedMessagesRef } from '@/components/message/VirtualizedMessages';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -374,6 +375,17 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       }
     };
 
+    const handleShowTaskInfo = () => {
+      const taskInfo: TaskInfoMessage = {
+        id: uuidv4(),
+        type: 'task-info',
+        content: '',
+        task: JSON.parse(JSON.stringify(task)) as TaskData,
+        messageCount: taskState?.messages.length || 0,
+      };
+      setMessages(task.id, (prevMessages) => [...prevMessages, taskInfo]);
+    };
+
     const handleTerminalViewResize = () => {
       terminalViewRef.current?.resize();
     };
@@ -557,6 +569,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                 scrollToBottom={handleScrollToBottom}
                 onAutoApproveChanged={handleAutoApproveChanged}
                 showSettingsPage={showSettingsPage}
+                showTaskInfo={handleShowTaskInfo}
               />
             </div>
           </div>

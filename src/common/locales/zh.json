@@ -1171,6 +1171,7 @@
     "think-tokens": "设置思考令牌预算（支持 8096、8k、10.5k、0.5M 等格式）",
     "tokens": "报告当前聊天上下文使用的令牌数量",
     "undo": "撤消 Aider 完成的最后一次 git 提交",
+    "task-info": "显示任务信息",
     "web": "抓取网页内容并保存到文件。使用 /web url [文件] 格式，其中 [文件] 为可选参数"
   },
   "telemetry": {
@@ -1296,7 +1297,6 @@
     "untitled": "[未命名]",
     "exportAsMarkdown": "导出为 Markdown",
     "exportAsImage": "导出为图片",
-    "copyTaskId": "复制任务 ID",
     "taskIdCopied": "任务 ID {{taskId}} 已复制到剪贴板",
     "duplicateTask": "复制任务",
     "search": "搜索任务",
@@ -1316,6 +1316,21 @@
     "archiveSelectedConfirm": "您确定要归档 {{count}} 个选中的任务吗？",
     "unarchiveSelectedConfirm": "您确定要取消归档 {{count}} 个选中的任务吗？",
     "generatingName": "正在生成名称..."
+  },
+  "taskInfo": {
+    "createdAt": "创建于",
+    "updatedAt": "更新于",
+    "worktreeDirectory": "工作树目录",
+    "baseBranch": "基础分支",
+    "baseCommit": "基础提交",
+    "targetBranch": "目标分支",
+    "lastMergeState": "最后合并状态",
+    "beforeMergeCommit": "合并前提交",
+    "mergeTimestamp": "合并时间戳",
+    "openFolder": "在文件夹中打开",
+    "taskId": "任务 ID",
+    "state": "状态",
+    "messageCount": "消息数量"
   },
   "taskState": {
     "TODO": "待办",

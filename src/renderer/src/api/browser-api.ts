@@ -880,6 +880,11 @@ export class BrowserApi implements ApplicationAPI {
     }
   }
 
+  async openPath(): Promise<boolean> {
+    // Not available in browser context
+    return false;
+  }
+
   // Agent profile operations
   getAllAgentProfiles(baseDir?: string): Promise<AgentProfile[]> {
     return this.get('/agent-profiles', { baseDir });

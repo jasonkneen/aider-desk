@@ -765,6 +765,20 @@ export class EventsHandler {
     }
   }
 
+  async openPath(path: string): Promise<boolean> {
+    try {
+      const { shell } = await import('electron');
+      await shell.openPath(path);
+      return true;
+    } catch (error) {
+      logger.error('Failed to open path:', {
+        path,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return false;
+    }
+  }
+
   async isProjectPath(path: string): Promise<boolean> {
     return await isProjectPath(path);
   }

@@ -12,7 +12,6 @@ import { COLLAPSED_WIDTH, EXPANDED_WIDTH, TaskSidebar } from '@/components/proje
 import { useApi } from '@/contexts/ApiContext';
 import { TaskProvider } from '@/contexts/TaskContext';
 import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
-import { showInfoNotification } from '@/utils/notifications';
 import { getSortedVisibleTasks } from '@/utils/task-utils';
 
 type Props = {
@@ -356,19 +355,6 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
     [api, project.baseDir],
   );
 
-  const handleCopyTaskId = useCallback(
-    async (taskId: string) => {
-      try {
-        await api.writeToClipboard(taskId);
-        showInfoNotification(t('taskSidebar.taskIdCopied', { taskId }));
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Failed to copy task ID:', error);
-      }
-    },
-    [api, t],
-  );
-
   const handleDuplicateTask = useCallback(
     async (taskId: string) => {
       try {
@@ -405,7 +391,6 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
           deleteTask={handleDeleteTask}
           onExportToMarkdown={handleExportTaskToMarkdown}
           onExportToImage={handleExportTaskToImage}
-          onCopyTaskId={handleCopyTaskId}
           onDuplicateTask={handleDuplicateTask}
         />
 

@@ -571,6 +571,7 @@ const api: ApplicationAPI = {
   getMemoryEmbeddingProgress: () => ipcRenderer.invoke('get-memory-embedding-progress'),
 
   writeToClipboard: (text: string) => ipcRenderer.invoke('clipboard-write-text', text),
+  openPath: (path: string) => ipcRenderer.invoke('open-path', path),
 
   addAgentProfilesUpdatedListener: (callback) => {
     const listener = (_, data) => callback(data);

@@ -1,8 +1,8 @@
-import { Group, PromptContext, TokensInfoData, UsageReportData } from '@common/types';
+import { Group, PromptContext, TaskData, TokensInfoData, UsageReportData } from '@common/types';
 
 export interface Message {
   id: string;
-  type: 'user' | 'response' | 'loading' | 'reflected-message' | 'command-output' | 'log' | 'tokens-info' | 'tool' | 'group';
+  type: 'user' | 'response' | 'loading' | 'reflected-message' | 'command-output' | 'log' | 'tokens-info' | 'tool' | 'group' | 'task-info';
   content: string;
   promptContext?: PromptContext;
   children?: Message[];
@@ -91,4 +91,14 @@ export interface GroupMessage extends Message {
 
 export const isGroupMessage = (message: Message): message is GroupMessage => {
   return message.type === 'group';
+};
+
+export interface TaskInfoMessage extends Message {
+  type: 'task-info';
+  task: TaskData;
+  messageCount: number;
+}
+
+export const isTaskInfoMessage = (message: Message): message is TaskInfoMessage => {
+  return message.type === 'task-info';
 };

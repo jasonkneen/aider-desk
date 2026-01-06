@@ -9,10 +9,11 @@ import { CgSpinner } from 'react-icons/cg';
 import { MdImage, MdOutlineSearch, MdPushPin } from 'react-icons/md';
 import { clsx } from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
-import { BiCopy, BiDuplicate, BiArchive, BiArchiveIn } from 'react-icons/bi';
+import { BiDuplicate, BiArchive, BiArchiveIn } from 'react-icons/bi';
 import { HiXMark } from 'react-icons/hi2';
 import { useDebounce, useLongPress } from '@reactuses/core';
 
+import { useTask } from '@/contexts/TaskContext';
 import { getSortedVisibleTasks } from '@/utils/task-utils';
 import { Input } from '@/components/common/Input';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
@@ -31,7 +32,6 @@ type TaskMenuButtonProps = {
   onDelete?: () => void;
   onExportToMarkdown?: () => void;
   onExportToImage?: () => void;
-  onCopyTaskId?: () => void;
   onDuplicateTask?: () => void;
   onArchiveTask?: () => void;
   onUnarchiveTask?: () => void;
@@ -44,7 +44,6 @@ const TaskMenuButton = ({
   onDelete,
   onExportToMarkdown,
   onExportToImage,
-  onCopyTaskId,
   onDuplicateTask,
   onArchiveTask,
   onUnarchiveTask,
@@ -85,12 +84,6 @@ const TaskMenuButton = ({
   const handleExportToImageClick = (e: MouseEvent) => {
     e.stopPropagation();
     onExportToImage?.();
-    setIsMenuOpen(false);
-  };
-
-  const handleCopyTaskIdClick = (e: MouseEvent) => {
-    e.stopPropagation();
-    onCopyTaskId?.();
     setIsMenuOpen(false);
   };
 
@@ -173,15 +166,6 @@ const TaskMenuButton = ({
               >
                 <MdImage className="w-4 h-4" />
                 <span className="whitespace-nowrap">{t('taskSidebar.exportAsImage')}</span>
-              </li>
-            )}
-            {onCopyTaskId && (
-              <li
-                className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
-                onClick={handleCopyTaskIdClick}
-              >
-                <BiCopy className="w-4 h-4" />
-                <span className="whitespace-nowrap">{t('taskSidebar.copyTaskId')}</span>
               </li>
             )}
             {onDuplicateTask && (
@@ -318,7 +302,6 @@ type Props = {
   deleteTask?: (taskId: string) => Promise<void>;
   onExportToMarkdown?: (taskId: string) => void;
   onExportToImage?: (taskId: string) => void;
-  onCopyTaskId?: (taskId: string) => void;
   onDuplicateTask?: (taskId: string) => void;
 };
 
@@ -335,10 +318,10 @@ const TaskSidebarComponent = ({
   deleteTask,
   onExportToMarkdown,
   onExportToImage,
-  onCopyTaskId,
   onDuplicateTask,
 }: Props) => {
   const { t } = useTranslation();
+  const { getTaskState } = useTask();
   const [deleteConfirmTaskId, setDeleteConfirmTaskId] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTaskName, setEditTaskName] = useState<string>('');
@@ -629,12 +612,12 @@ const TaskSidebarComponent = ({
   };
 
   const renderTaskStateIcon = (task: TaskData, isCollapsed: boolean = false) => {
-    // const taskState = getTaskState(task.id, false);
+    const taskState = getTaskState(task.id, false);
     const iconSize = isCollapsed ? 'w-3.5 h-3.5' : 'w-4 h-4';
 
-    // if (taskState?.question) {
-    //   return <span className={clsx('text-text-primary', isCollapsed ? 'text-xs' : 'text-sm')}>?</span>;
-    // }
+    if (taskState?.question) {
+      return <span className={clsx('text-text-primary', isCollapsed ? 'text-xs' : 'text-sm')}>?</span>;
+    }
     return task?.state === DefaultTaskState.InProgress ? <CgSpinner className={clsx('animate-spin', iconSize, 'text-text-primary')} /> : null;
   };
 
@@ -702,7 +685,6 @@ const TaskSidebarComponent = ({
               onDelete={task.createdAt ? () => handleDeleteClick(task.id) : undefined}
               onExportToMarkdown={onExportToMarkdown && task.createdAt ? () => onExportToMarkdown(task.id) : undefined}
               onExportToImage={onExportToImage && task.createdAt ? () => onExportToImage(task.id) : undefined}
-              onCopyTaskId={onCopyTaskId && task.createdAt ? () => onCopyTaskId(task.id) : undefined}
               onDuplicateTask={onDuplicateTask && task.createdAt ? () => onDuplicateTask(task.id) : undefined}
               onArchiveTask={task.archived || !task.createdAt ? undefined : () => handleArchiveTask(task.id)}
               onUnarchiveTask={task.archived ? () => handleUnarchiveTask(task.id) : undefined}
