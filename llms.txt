@@ -4550,6 +4550,9 @@ export interface ApplicationAPI {
   deleteMemory: (id: string) => Promise<boolean>;
   deleteProjectMemories: (projectId: string) => Promise<number>;
   getMemoryEmbeddingProgress: () => Promise<MemoryEmbeddingProgress>;
+
+  // Clipboard operations
+  writeToClipboard: (text: string) => Promise<void>;
 }
 ⋮----
 // Todo operations
@@ -4565,6 +4568,8 @@ export interface ApplicationAPI {
 // Agent profile operations
 ⋮----
 // Memory operations
+⋮----
+// Clipboard operations
 
 ================
 File: src/common/tools.ts
@@ -10615,6 +10620,10 @@ public async getRuleFilesAsContextFiles(profile?: AgentProfile): Promise<Context
 ⋮----
 // Global rules directory doesn't exist or can't be read
 ⋮----
+// Include AGENTS.md from project root if it exists
+⋮----
+// AGENTS.md doesn't exist, which is fine
+⋮----
 // Get project rule files
 ⋮----
 // Project rules directory doesn't exist or can't be read
@@ -10624,10 +10633,6 @@ public async getRuleFilesAsContextFiles(profile?: AgentProfile): Promise<Context
 // Convert to relative path with ~/ prefix if in home directory
 ⋮----
 // Rule file doesn't exist or can't be accessed
-⋮----
-// Include AGENTS.md from project root if it exists
-⋮----
-// AGENTS.md doesn't exist, which is fine
 ⋮----
 public getRepoMap(): string
 ⋮----
@@ -12311,6 +12316,8 @@ async getTasks(baseDir: string): Promise<TaskData[]>
 ⋮----
 async loadTask(baseDir: string, taskId: string): Promise<TaskStateData>
 ⋮----
+async generateTaskMarkdown(baseDir: string, taskId: string): Promise<string | null>
+⋮----
 async exportTaskToMarkdown(baseDir: string, taskId: string): Promise<void>
 ⋮----
 setZoomLevel(zoomLevel: number): void
@@ -12467,7 +12474,7 @@ import {
   TodoItem,
   AgentProfile,
 } from '@common/types';
-import { ipcMain } from 'electron';
+import { ipcMain, clipboard } from 'electron';
 ⋮----
 import { EventsHandler } from './events-handler';
 ⋮----
@@ -13209,7 +13216,9 @@ deleteTask(baseDir: string, id: string): Promise<boolean>
 duplicateTask(baseDir: string, taskId: string): Promise<TaskData>
 getTasks(baseDir: string): Promise<TaskData[]>
 loadTask(baseDir: string, id: string): Promise<TaskStateData>
-exportTaskToMarkdown(baseDir: string, taskId: string): Promise<void>
+⋮----
+async exportTaskToMarkdown(baseDir: string, taskId: string): Promise<void>
+⋮----
 getRecentProjects(): Promise<string[]>
 addRecentProject(baseDir: string): Promise<void>
 removeRecentProject(baseDir: string): Promise<void>
@@ -13335,11 +13344,15 @@ resolveWorktreeConflictsWithAgent(baseDir: string, taskId: string): Promise<void
 // Memory operations
 listAllMemories(): Promise<MemoryEntry[]>
 ⋮----
-deleteMemory(id: string): Promise<boolean>
+async deleteMemory(id: string): Promise<boolean>
 ⋮----
 getMemoryEmbeddingProgress(): Promise<MemoryEmbeddingProgress>
 ⋮----
-deleteProjectMemories(projectId: string): Promise<number>
+async deleteProjectMemories(projectId: string): Promise<number>
+⋮----
+async writeToClipboard(text: string): Promise<void>
+⋮----
+// Fallback for mobile browsers and non-secure contexts
 ⋮----
 // Agent profile operations
 getAllAgentProfiles(baseDir?: string): Promise<AgentProfile[]>
@@ -14678,6 +14691,7 @@ import { twMerge } from 'tailwind-merge';
 import { IconButton } from '../common/IconButton';
 ⋮----
 import { showInfoNotification } from '@/utils/notifications';
+import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type Props = {
   content: string;
@@ -14685,7 +14699,9 @@ type Props = {
   alwaysShow?: boolean;
 };
 ⋮----
-const copyToClipboard = () =>
+const copyToClipboard = async () =>
+⋮----
+// eslint-disable-next-line no-console
 ⋮----
 icon=
 
@@ -15345,6 +15361,7 @@ type Props = {
   renderMarkdown: boolean;
   removeMessage: (message: Message) => void;
   resumeTask: () => void;
+  redoLastUserPrompt: () => void;
   editLastUserMessage: (content: string) => void;
   onMarkAsDone: () => void;
   onProceed?: () => void;
@@ -15867,7 +15884,7 @@ import { TaskStateActions } from 'src/renderer/src/components/message/TaskStateA
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
 ⋮----
-import { isGroupMessage, Message } from '@/types/message';
+import { isGroupMessage, isUserMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
@@ -15889,6 +15906,7 @@ type Props = {
   renderMarkdown: boolean;
   removeMessage: (message: Message) => void;
   resumeTask: () => void;
+  redoLastUserPrompt: () => void;
   editLastUserMessage: (content: string) => void;
   onMarkAsDone: () => void;
   onProceed?: () => void;
@@ -17690,6 +17708,8 @@ const handleToggleCollapse = () =>
 // eslint-disable-next-line no-console
 ⋮----
 // Close current task
+⋮----
+// eslint-disable-next-line no-console
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
@@ -19542,6 +19562,13 @@ label=
 ⋮----
 <span className=
 ⋮----
+onClick=
+⋮----
+await api.writeToClipboard(tunnelStatus.url!);
+⋮----
+// eslint-disable-next-line no-console
+console.error('Failed to copy URL:', error);
+⋮----
 tooltip=
 
 ================
@@ -20333,6 +20360,8 @@ const handleContextMenu = (params: Electron.ContextMenuParams) =>
 // Handle input elements
 ⋮----
 // Handle other elements with text content
+⋮----
+// eslint-disable-next-line no-console
 
 ================
 File: src/renderer/src/contexts/ModelProviderContext.tsx
@@ -24224,7 +24253,7 @@ File: package.json
 ================
 {
   "name": "aider-desk",
-  "version": "0.47.0-dev",
+  "version": "0.48.0-dev",
   "description": "Aider desktop application wrapper",
   "main": "./out/main/index.js",
   "author": "Hotovo",
