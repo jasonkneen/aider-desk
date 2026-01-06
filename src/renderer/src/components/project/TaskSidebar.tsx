@@ -1,6 +1,6 @@
 import { DefaultTaskState, TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { KeyboardEvent, MouseEvent, useState, memo, useRef, useEffect } from 'react';
+import { KeyboardEvent, MouseEvent, useState, memo, useRef, useEffect, useOptimistic, startTransition } from 'react';
 import { HiOutlinePencil, HiOutlineTrash, HiPlus, HiCheck, HiSparkles } from 'react-icons/hi';
 import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { FaEllipsisVertical } from 'react-icons/fa6';
@@ -13,7 +13,6 @@ import { BiCopy, BiDuplicate, BiArchive, BiArchiveIn } from 'react-icons/bi';
 import { HiXMark } from 'react-icons/hi2';
 import { useDebounce, useLongPress } from '@reactuses/core';
 
-import { useTask } from '@/contexts/TaskContext';
 import { getSortedVisibleTasks } from '@/utils/task-utils';
 import { Input } from '@/components/common/Input';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
@@ -228,26 +227,8 @@ const TaskMenuButton = ({
   );
 };
 
-type Props = {
-  loading: boolean;
-  tasks: TaskData[];
-  activeTaskId: string | null;
-  onTaskSelect: (taskId: string) => void;
-  createNewTask?: () => void;
-  className?: string;
-  isCollapsed: boolean;
-  onToggleCollapse: () => void;
-  updateTask?: (taskId: string, updates: Partial<TaskData>) => Promise<void>;
-  deleteTask?: (taskId: string) => Promise<void>;
-  onExportToMarkdown?: (taskId: string) => void;
-  onExportToImage?: (taskId: string) => void;
-  onCopyTaskId?: (taskId: string) => void;
-  onDuplicateTask?: (taskId: string) => void;
-};
-
 // Multiselect Menu Component
 const MultiselectMenu = ({
-  selectedCount: _selectedCount,
   hasArchived,
   onDelete,
   onArchive,
@@ -257,7 +238,6 @@ const MultiselectMenu = ({
   menuRef,
   buttonRef,
 }: {
-  selectedCount: number;
   hasArchived: boolean;
   onDelete: () => void;
   onArchive: () => void;
@@ -325,6 +305,23 @@ const MultiselectMenu = ({
   );
 };
 
+type Props = {
+  loading: boolean;
+  tasks: TaskData[];
+  activeTaskId: string | null;
+  onTaskSelect: (taskId: string) => void;
+  createNewTask?: () => void;
+  className?: string;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
+  updateTask?: (taskId: string, updates: Partial<TaskData>) => Promise<void>;
+  deleteTask?: (taskId: string) => Promise<void>;
+  onExportToMarkdown?: (taskId: string) => void;
+  onExportToImage?: (taskId: string) => void;
+  onCopyTaskId?: (taskId: string) => void;
+  onDuplicateTask?: (taskId: string) => void;
+};
+
 const TaskSidebarComponent = ({
   loading,
   tasks,
@@ -342,7 +339,6 @@ const TaskSidebarComponent = ({
   onDuplicateTask,
 }: Props) => {
   const { t } = useTranslation();
-  const { getTaskState } = useTask();
   const [deleteConfirmTaskId, setDeleteConfirmTaskId] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTaskName, setEditTaskName] = useState<string>('');
@@ -351,6 +347,7 @@ const TaskSidebarComponent = ({
   const [searchQuery, setSearchQuery] = useState<string>('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const debouncedSearchQuery = useDebounce(searchQuery, 50);
+  const [optimisticActiveTaskId, setOptimisticActiveTaskId] = useOptimistic(activeTaskId);
 
   // Multiselect state
   const [isMultiselectMode, setIsMultiselectMode] = useState<boolean>(false);
@@ -399,7 +396,10 @@ const TaskSidebarComponent = ({
     } else if (isMultiselectMode) {
       handleTaskClickInMultiselect(e, taskId);
     } else {
-      onTaskSelect(taskId);
+      startTransition(() => {
+        setOptimisticActiveTaskId(taskId);
+        onTaskSelect(taskId);
+      });
     }
   };
 
@@ -629,12 +629,12 @@ const TaskSidebarComponent = ({
   };
 
   const renderTaskStateIcon = (task: TaskData, isCollapsed: boolean = false) => {
-    const taskState = getTaskState(task.id, false);
+    // const taskState = getTaskState(task.id, false);
     const iconSize = isCollapsed ? 'w-3.5 h-3.5' : 'w-4 h-4';
 
-    if (taskState?.question) {
-      return <span className={clsx('text-text-primary', isCollapsed ? 'text-xs' : 'text-sm')}>?</span>;
-    }
+    // if (taskState?.question) {
+    //   return <span className={clsx('text-text-primary', isCollapsed ? 'text-xs' : 'text-sm')}>?</span>;
+    // }
     return task?.state === DefaultTaskState.InProgress ? <CgSpinner className={clsx('animate-spin', iconSize, 'text-text-primary')} /> : null;
   };
 
@@ -647,7 +647,7 @@ const TaskSidebarComponent = ({
           {...longPressProps}
           className={clsx(
             'group relative flex items-center justify-between py-1 pl-2.5 cursor-pointer transition-colors border select-none',
-            activeTaskId === task.id && !isMultiselectMode
+            optimisticActiveTaskId === task.id && !isMultiselectMode
               ? 'bg-bg-secondary border-border-dark-light'
               : selectedTasks.has(task.id) && isMultiselectMode
                 ? 'bg-bg-secondary border-border-dark-light'
@@ -680,7 +680,7 @@ const TaskSidebarComponent = ({
                 <div
                   className={clsx(
                     'text-xs font-medium truncate transition-colors',
-                    task.archived && activeTaskId !== task.id ? 'text-text-muted group-hover:text-text-primary' : 'text-text-primary',
+                    task.archived && optimisticActiveTaskId !== task.id ? 'text-text-muted group-hover:text-text-primary' : 'text-text-primary',
                   )}
                 >
                   {task.name || t('taskSidebar.untitled')}
@@ -788,7 +788,6 @@ const TaskSidebarComponent = ({
                         <HiXMark className="w-5 h-5 text-text-primary" />
                       </button>
                       <MultiselectMenu
-                        selectedCount={selectedTasks.size}
                         hasArchived={Array.from(selectedTasks).some((taskId) => tasks.find((task) => task.id === taskId)?.archived)}
                         onDelete={() => setBulkDeleteConfirm(true)}
                         onArchive={() => setBulkArchiveConfirm(true)}

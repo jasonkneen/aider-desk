@@ -1,7 +1,6 @@
 import { DefaultTaskState, Mode, Model, ModelsData, ProjectData, TaskData, TodoItem } from '@common/types';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CgSpinner } from 'react-icons/cg';
 import { ResizableBox, ResizeCallbackData } from 'react-resizable';
 import { clsx } from 'clsx';
 import { getProviderModelId } from '@common/agent';
@@ -35,6 +34,7 @@ import { useModelProviders } from '@/contexts/ModelProviderContext';
 import { useTask } from '@/contexts/TaskContext';
 import { useAgents } from '@/contexts/AgentsContext';
 import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
+import { LoadingOverlay } from '@/components/common/LoadingOverlay';
 
 type AddFileDialogOptions = {
   readOnly: boolean;
@@ -89,7 +89,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       useTask();
     const { getProfiles } = useAgents();
 
-    const taskState = getTaskState(task.id);
+    const taskState = getTaskState(task.id, isActive);
     const aiderModelsData = taskState?.aiderModelsData || null;
     const currentMode = task.currentMode || 'code';
 
@@ -164,13 +164,6 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       return currentMode === 'agent' && activeAgentProfile?.useTodoTools;
     }, [currentMode, activeAgentProfile?.useTodoTools]);
 
-    const renderLoading = (message: string) => (
-      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-bg-primary to-bg-primary-light z-10">
-        <CgSpinner className="animate-spin w-8 h-8" />
-        <div className="mt-2 text-xs text-center text-text-primary">{message}</div>
-      </div>
-    );
-
     const handleOpenModelSelector = useCallback(() => {
       projectTopBarRef.current?.openMainModelSelector();
     }, []);
@@ -184,7 +177,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     }, []);
 
     if (!taskState) {
-      return renderLoading(t('common.loadingTask'));
+      return <LoadingOverlay message={t('common.loadingTask')} />;
     }
 
     const { loading, loaded, allFiles, contextFiles, autocompletionWords, aiderTotalCost, tokensInfo, question, todoItems, messages } = taskState;
@@ -404,12 +397,13 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     };
 
     if (!projectSettings || !settings) {
-      return renderLoading(t('common.loadingProjectSettings'));
+      return <LoadingOverlay message={t('common.loadingProjectSettings')} />;
     }
 
     return (
       <div className={clsx('h-full bg-gradient-to-b from-bg-primary to-bg-primary-light relative', isMobile ? 'flex flex-col' : 'flex')}>
-        {!loaded && renderLoading(t('common.loadingTask'))}
+        {!loaded && <LoadingOverlay message={t('common.loadingTask')} />}
+        {messagesPending && transitionMessages.length === 0 && <LoadingOverlay message={t('common.loadingMessages')} />}
         <div className="flex flex-col flex-grow overflow-hidden">
           <TaskBar
             ref={projectTopBarRef}
@@ -488,7 +482,6 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                       onDeleteTask={handleDeleteTask}
                     />
                   )}
-                  {messagesPending && transitionMessages.length === 0 && renderLoading(t('common.loadingMessages'))}
                 </>
               )}
             </div>

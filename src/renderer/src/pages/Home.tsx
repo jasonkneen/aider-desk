@@ -1,5 +1,5 @@
 import { ProjectData } from '@common/types';
-import { Activity, useCallback, useEffect, useState } from 'react';
+import { Activity, startTransition, useCallback, useEffect, useOptimistic, useState } from 'react';
 import { MdBarChart, MdSettings, MdUpload } from 'react-icons/md';
 import { PiNotebookFill } from 'react-icons/pi';
 import { useTranslation } from 'react-i18next';
@@ -35,6 +35,7 @@ export const Home = () => {
   const api = useApi();
   const { PROJECT_HOTKEYS } = useConfiguredHotkeys();
   const [openProjects, setOpenProjects] = useState<ProjectData[]>([]);
+  const [optimisticOpenProjects, setOptimisticOpenProjects] = useOptimistic(openProjects);
   const [previousProjectBaseDir, setPreviousProjectBaseDir] = useState<string | null>(null);
   const [isOpenProjectDialogVisible, setIsOpenProjectDialogVisible] = useState(false);
   const [showSettingsInfo, setShowSettingsInfo] = useState<ShowSettingsInfo | null>(null);
@@ -43,7 +44,7 @@ export const Home = () => {
   const [isModelLibraryVisible, setIsModelLibraryVisible] = useState(false);
   const [isCtrlTabbing, setIsCtrlTabbing] = useState(false);
 
-  const activeProject = openProjects.find((project) => project.active) || openProjects[0];
+  const activeProject = optimisticOpenProjects.find((project) => project.active) || optimisticOpenProjects[0];
 
   const handleReorderProjects = async (reorderedProjects: ProjectData[]) => {
     setOpenProjects(reorderedProjects);
@@ -108,19 +109,30 @@ export const Home = () => {
   }, [api]);
 
   const setActiveProject = useCallback(
-    async (baseDir: string) => {
-      const projects = await api.setActiveProject(baseDir);
-      setOpenProjects(projects);
+    (baseDir: string) => {
+      startTransition(async () => {
+        setOptimisticOpenProjects((prev) =>
+          prev.map((project) => ({
+            ...project,
+            active: project.baseDir === baseDir,
+          })),
+        );
+        const projects = await api.setActiveProject(baseDir);
+        setOpenProjects(projects);
+      });
     },
-    [api],
+    [api, setOptimisticOpenProjects],
   );
 
   const handleCloseProject = useCallback(
-    async (projectBaseDir: string) => {
-      const updatedProjects = await api.removeOpenProject(projectBaseDir);
-      setOpenProjects(updatedProjects);
+    (projectBaseDir: string) => {
+      startTransition(async () => {
+        setOptimisticOpenProjects((prev) => prev.filter((project) => project.baseDir !== projectBaseDir));
+        const updatedProjects = await api.removeOpenProject(projectBaseDir);
+        setOpenProjects(updatedProjects);
+      });
     },
-    [api],
+    [api, setOptimisticOpenProjects],
   );
 
   // Close current project tab
@@ -207,14 +219,14 @@ export const Home = () => {
 
   const switchToProjectByIndex = useCallback(
     (index: number) => {
-      if (index < openProjects.length) {
-        const targetProject = openProjects[index];
+      if (index < optimisticOpenProjects.length) {
+        const targetProject = optimisticOpenProjects[index];
         if (targetProject && targetProject.baseDir !== activeProject?.baseDir) {
           void setActiveProject(targetProject.baseDir);
         }
       }
     },
-    [openProjects, activeProject, setActiveProject],
+    [optimisticOpenProjects, activeProject, setActiveProject],
   );
 
   // Switch to specific project tabs (Alt/Cmd + 1-9)
@@ -238,7 +250,7 @@ export const Home = () => {
     },
     { scopes: 'home', enableOnFormTags: true, enableOnContentEditable: true },
     [
-      openProjects,
+      optimisticOpenProjects,
       activeProject,
       setActiveProject,
       switchToProjectByIndex,
@@ -260,23 +272,23 @@ export const Home = () => {
     (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (openProjects.length <= 1) {
+      if (optimisticOpenProjects.length <= 1) {
         return;
       }
 
       setIsCtrlTabbing(true);
-      if (!isCtrlTabbing && previousProjectBaseDir && openProjects.some((project) => project.baseDir === previousProjectBaseDir)) {
+      if (!isCtrlTabbing && previousProjectBaseDir && optimisticOpenProjects.some((project) => project.baseDir === previousProjectBaseDir)) {
         setPreviousProjectBaseDir(activeProject?.baseDir || null);
         void setActiveProject(previousProjectBaseDir);
       } else {
-        const currentIndex = openProjects.findIndex((project) => project.baseDir === activeProject?.baseDir);
-        const nextIndex = (currentIndex + 1) % openProjects.length;
-        void setActiveProject(openProjects[nextIndex].baseDir);
+        const currentIndex = optimisticOpenProjects.findIndex((project) => project.baseDir === activeProject?.baseDir);
+        const nextIndex = (currentIndex + 1) % optimisticOpenProjects.length;
+        void setActiveProject(optimisticOpenProjects[nextIndex].baseDir);
         setPreviousProjectBaseDir(activeProject?.baseDir || null);
       }
     },
     { scopes: 'home', keydown: true, keyup: false, enableOnFormTags: true, enableOnContentEditable: true },
-    [openProjects, activeProject, previousProjectBaseDir, isCtrlTabbing, setActiveProject, PROJECT_HOTKEYS.CYCLE_NEXT_PROJECT],
+    [optimisticOpenProjects, activeProject, previousProjectBaseDir, isCtrlTabbing, setActiveProject, PROJECT_HOTKEYS.CYCLE_NEXT_PROJECT],
   );
 
   // Ctrl+Shift+Tab cycling (backward)
@@ -285,23 +297,23 @@ export const Home = () => {
     (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (openProjects.length <= 1) {
+      if (optimisticOpenProjects.length <= 1) {
         return;
       }
 
       setIsCtrlTabbing(true);
-      if (!isCtrlTabbing && previousProjectBaseDir && openProjects.some((project) => project.baseDir === previousProjectBaseDir)) {
+      if (!isCtrlTabbing && previousProjectBaseDir && optimisticOpenProjects.some((project) => project.baseDir === previousProjectBaseDir)) {
         setPreviousProjectBaseDir(activeProject?.baseDir || null);
         void setActiveProject(previousProjectBaseDir);
       } else {
-        const currentIndex = openProjects.findIndex((project) => project.baseDir === activeProject?.baseDir);
-        const prevIndex = (currentIndex - 1 + openProjects.length) % openProjects.length;
-        void setActiveProject(openProjects[prevIndex].baseDir);
+        const currentIndex = optimisticOpenProjects.findIndex((project) => project.baseDir === activeProject?.baseDir);
+        const prevIndex = (currentIndex - 1 + optimisticOpenProjects.length) % optimisticOpenProjects.length;
+        void setActiveProject(optimisticOpenProjects[prevIndex].baseDir);
         setPreviousProjectBaseDir(activeProject?.baseDir || null);
       }
     },
     { scopes: 'home', keydown: true, keyup: false, enableOnFormTags: true, enableOnContentEditable: true },
-    [openProjects, activeProject, previousProjectBaseDir, isCtrlTabbing, setActiveProject, PROJECT_HOTKEYS.CYCLE_PREV_PROJECT],
+    [optimisticOpenProjects, activeProject, previousProjectBaseDir, isCtrlTabbing, setActiveProject, PROJECT_HOTKEYS.CYCLE_PREV_PROJECT],
   );
 
   // Reset Ctrl+Tab state on Control key up
@@ -322,22 +334,16 @@ export const Home = () => {
   };
 
   const handleCloseOtherProjects = async (baseDir: string) => {
-    const projectsToClose = openProjects.filter((p) => p.baseDir !== baseDir);
+    const projectsToClose = optimisticOpenProjects.filter((p) => p.baseDir !== baseDir);
     for (const project of projectsToClose) {
-      await handleCloseProject(project.baseDir);
+      handleCloseProject(project.baseDir);
     }
   };
 
   const handleCloseAllProjects = async () => {
-    for (const project of openProjects) {
-      await handleCloseProject(project.baseDir);
+    for (const project of optimisticOpenProjects) {
+      handleCloseProject(project.baseDir);
     }
-  };
-
-  const projectOperations = {
-    onCloseProject: handleCloseProject,
-    onCloseOtherProjects: handleCloseOtherProjects,
-    onCloseAllProjects: handleCloseAllProjects,
   };
 
   const handleShowSettingsPage = useCallback((pageId?: string, options?: Record<string, unknown>) => {
@@ -352,12 +358,13 @@ export const Home = () => {
   }, []);
 
   const renderProjectPanels = () =>
-    openProjects.map((project) => (
+    optimisticOpenProjects.map((project) => (
       <ProjectSettingsProvider key={project.baseDir} baseDir={project.baseDir}>
         <div
           className="absolute top-0 left-0 w-full h-full"
           style={{
-            display: activeProject?.baseDir === project.baseDir ? 'block' : 'none',
+            contentVisibility: activeProject?.baseDir === project.baseDir ? 'visible' : 'hidden',
+            zIndex: activeProject?.baseDir === project.baseDir ? 1 : 0,
           }}
         >
           <ProjectView project={project} isActive={activeProject?.baseDir === project.baseDir} showSettingsPage={handleShowSettingsPage} />
@@ -392,11 +399,13 @@ export const Home = () => {
       <div className="flex flex-col h-full border-2 border-border-default relative">
         <div className="flex border-b-2 border-border-default justify-between bg-gradient-to-b from-bg-primary to-bg-primary-light">
           <ProjectTabs
-            openProjects={openProjects}
+            openProjects={optimisticOpenProjects}
             activeProject={activeProject}
             onAddProject={() => setIsOpenProjectDialogVisible(true)}
             onSetActiveProject={setActiveProject}
-            projectOperations={projectOperations}
+            onCloseProject={handleCloseProject}
+            onCloseAllProjects={handleCloseAllProjects}
+            onCloseOtherProjects={handleCloseOtherProjects}
             onReorderProjects={handleReorderProjects}
           />
           <div className="flex items-center">
@@ -440,15 +449,15 @@ export const Home = () => {
             />
           </div>
         </div>
-        <Activity mode={isOpenProjectDialogVisible ? 'visible' : 'hidden'}>
-          <OpenProjectDialog onClose={() => setIsOpenProjectDialogVisible(false)} onAddProject={handleAddProject} openProjects={openProjects} />
-        </Activity>
+        {isOpenProjectDialogVisible && (
+          <OpenProjectDialog onClose={() => setIsOpenProjectDialogVisible(false)} onAddProject={handleAddProject} openProjects={optimisticOpenProjects} />
+        )}
         <Activity mode={showSettingsInfo !== null ? 'visible' : 'hidden'} key={showSettingsInfo?.pageId || 'general'}>
           <SettingsPage
             onClose={() => setShowSettingsInfo(null)}
             initialPageId={showSettingsInfo?.pageId || 'general'}
             initialOptions={showSettingsInfo?.options}
-            openProjects={openProjects}
+            openProjects={optimisticOpenProjects}
           />
         </Activity>
         <Activity mode={isUsageDashboardVisible ? 'visible' : 'hidden'}>
@@ -464,11 +473,9 @@ export const Home = () => {
             onClose={handleCloseReleaseNotes}
           />
         )}
-        <Activity mode={releaseNotesContent ? 'hidden' : 'visible'}>
-          <TelemetryInfoDialog />
-        </Activity>
+        {!releaseNotesContent && <TelemetryInfoDialog />}
         <div className="flex-1 overflow-hidden relative">
-          {openProjects.length > 0 ? renderProjectPanels() : <NoProjectsOpen onOpenProject={() => setIsOpenProjectDialogVisible(true)} />}
+          {optimisticOpenProjects.length > 0 ? renderProjectPanels() : <NoProjectsOpen onOpenProject={() => setIsOpenProjectDialogVisible(true)} />}
         </div>
       </div>
     </div>

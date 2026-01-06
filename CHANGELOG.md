@@ -7,6 +7,7 @@
 - correctly handling export to markdown in browsers
 - removed duplicate AGENTS.md entry from the system prompt knowledge section
 - added direct support for Synthetic provider
+- optimized performance when switching between tasks and projects
 
 ## [0.47.0]
 

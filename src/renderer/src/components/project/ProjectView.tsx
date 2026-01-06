@@ -1,12 +1,12 @@
 import { InputHistoryData, ProjectData, ProjectStartMode, TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { startTransition, useCallback, useEffect, useOptimistic, useRef, useState } from 'react';
+import { startTransition, useCallback, useEffect, useOptimistic, useRef, useState, useTransition } from 'react';
 import { useLocalStorage } from '@reactuses/core';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { CgSpinner } from 'react-icons/cg';
 
 import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
+import { LoadingOverlay } from '@/components/common/LoadingOverlay';
 import { TaskView, TaskViewRef } from '@/components/project/TaskView';
 import { COLLAPSED_WIDTH, EXPANDED_WIDTH, TaskSidebar } from '@/components/project/TaskSidebar';
 import { useApi } from '@/contexts/ApiContext';
@@ -39,6 +39,7 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
   const taskViewRef = useRef<TaskViewRef>(null);
   const creatingTaskRef = useRef(false);
   const activeTask = activeTaskId ? optimisticTasks.find((task) => task.id === activeTaskId) : null;
+  const [isActiveTaskSwitching, startActiveTaskTransition] = useTransition();
 
   const focusActiveTaskPrompt = useCallback(() => {
     taskViewRef.current?.focusPromptField();
@@ -54,23 +55,27 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
     try {
       const existingNewTask = tasks.find((task) => !task.createdAt);
       if (existingNewTask) {
-        // when there is active task and is new we don't need to create new one
-        setActiveTaskId(existingNewTask.id);
-        focusActiveTaskPrompt();
+        startActiveTaskTransition(() => {
+          // when there is active task and is new we don't need to create new one
+          setActiveTaskId(existingNewTask.id);
+          focusActiveTaskPrompt();
+        });
         return;
       }
 
-      const newTask = await api.createNewTask(project.baseDir);
-      // Task will be automatically added via the existing listener
-      setActiveTaskId(newTask.id);
-      setShouldFocusNewTask(true);
+      startActiveTaskTransition(async () => {
+        const newTask = await api.createNewTask(project.baseDir);
+        // Task will be automatically added via the existing listener
+        setActiveTaskId(newTask.id);
+        setShouldFocusNewTask(true);
+      });
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Failed to create new task:', error);
     } finally {
       creatingTaskRef.current = false;
     }
-  }, [api, project.baseDir, focusActiveTaskPrompt, tasks, starting, tasksLoading]);
+  }, [starting, tasksLoading, tasks, focusActiveTaskPrompt, api, project.baseDir]);
 
   useHotkeys(
     TASK_HOTKEYS.NEW_TASK,
@@ -84,28 +89,13 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
 
   useEffect(() => {
     const handleStartupMode = async (tasks: TaskData[]) => {
-      const mode = settings?.startupMode ?? ProjectStartMode.Empty;
-      const existingNewTask = tasks.find((task) => !task.createdAt);
-      let startupTask: TaskData | null = null;
+      startActiveTaskTransition(async () => {
+        const mode = settings?.startupMode ?? ProjectStartMode.Empty;
+        const existingNewTask = tasks.find((task) => !task.createdAt);
+        let startupTask: TaskData | null = null;
 
-      switch (mode) {
-        case ProjectStartMode.Empty: {
-          if (existingNewTask) {
-            startupTask = existingNewTask;
-          } else if (!creatingTaskRef.current) {
-            creatingTaskRef.current = true;
-            try {
-              startupTask = await api.createNewTask(project.baseDir);
-            } finally {
-              creatingTaskRef.current = false;
-            }
-          }
-          break;
-        }
-        case ProjectStartMode.Last: {
-          startupTask = tasks.filter((task) => task.createdAt && task.updatedAt).sort((a, b) => b.updatedAt!.localeCompare(a.updatedAt!))[0];
-
-          if (!startupTask) {
+        switch (mode) {
+          case ProjectStartMode.Empty: {
             if (existingNewTask) {
               startupTask = existingNewTask;
             } else if (!creatingTaskRef.current) {
@@ -116,14 +106,31 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
                 creatingTaskRef.current = false;
               }
             }
+            break;
           }
-          break;
-        }
-      }
+          case ProjectStartMode.Last: {
+            startupTask = tasks.filter((task) => task.createdAt && task.updatedAt).sort((a, b) => b.updatedAt!.localeCompare(a.updatedAt!))[0];
 
-      if (startupTask) {
-        setActiveTaskId(startupTask.id);
-      }
+            if (!startupTask) {
+              if (existingNewTask) {
+                startupTask = existingNewTask;
+              } else if (!creatingTaskRef.current) {
+                creatingTaskRef.current = true;
+                try {
+                  startupTask = await api.createNewTask(project.baseDir);
+                } finally {
+                  creatingTaskRef.current = false;
+                }
+              }
+            }
+            break;
+          }
+        }
+
+        if (startupTask) {
+          setActiveTaskId(startupTask.id);
+        }
+      });
     };
 
     const handleProjectStarted = () => {
@@ -211,8 +218,10 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
   }, [api, project.baseDir, settings?.startupMode]);
 
   const handleTaskSelect = useCallback((taskId: string) => {
-    setActiveTaskId(taskId);
-    setShouldFocusNewTask(false);
+    startActiveTaskTransition(() => {
+      setActiveTaskId(taskId);
+      setShouldFocusNewTask(false);
+    });
   }, []);
 
   const switchToTaskByIndex = useCallback(
@@ -374,28 +383,14 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
     [api, project.baseDir, handleTaskSelect],
   );
 
-  const renderLoading = () => {
-    return (
-      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-bg-primary to-bg-primary-light z-10">
-        <CgSpinner className="animate-spin w-10 h-10" />
-        <div className="mt-2 text-sm text-center text-text-primary">{t('common.startingUp')}</div>
-      </div>
-    );
-  };
-
   if (!projectSettings || !settings) {
-    return (
-      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-bg-primary to-bg-primary-light z-10">
-        <CgSpinner className="animate-spin w-10 h-10" />
-        <div className="mt-2 text-sm text-center text-text-primary">{t('common.loadingProjectSettings')}</div>
-      </div>
-    );
+    return <LoadingOverlay message={t('common.loadingProjectSettings')} />;
   }
 
   return (
     <TaskProvider baseDir={project.baseDir} tasks={tasks}>
       <div className="h-full w-full bg-gradient-to-b from-bg-primary to-bg-primary-light relative">
-        {starting && renderLoading()}
+        {starting && <LoadingOverlay message={t('common.startingUp')} />}
 
         <TaskSidebar
           loading={tasksLoading}
@@ -420,6 +415,7 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
             left: isTaskBarCollapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH,
           }}
         >
+          {isActiveTaskSwitching && <LoadingOverlay message={t('common.loadingTask')} />}
           {activeTask && (
             <TaskView
               key={activeTask.id}

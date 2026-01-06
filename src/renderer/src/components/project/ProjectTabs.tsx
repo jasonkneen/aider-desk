@@ -1,6 +1,6 @@
 import { ProjectData } from '@common/types';
 import { CSS } from '@dnd-kit/utilities';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Tab, TabGroup, TabList } from '@headlessui/react';
 import { clsx } from 'clsx';
 import { MdAdd, MdClose, MdChevronLeft, MdChevronRight } from 'react-icons/md';
@@ -12,22 +12,27 @@ import type { DragEndEvent } from '@dnd-kit/core';
 
 import { MenuOption, useContextMenu } from '@/contexts/ContextMenuContext';
 
-type ProjectOperations = {
-  onCloseProject: (baseDir: string) => Promise<void>;
-  onCloseOtherProjects: (baseDir: string) => Promise<void>;
-  onCloseAllProjects: () => Promise<void>;
-};
-
 type Props = {
   openProjects: ProjectData[];
   activeProject: ProjectData | undefined;
   onAddProject: () => void;
   onSetActiveProject: (baseDir: string) => void;
-  projectOperations: ProjectOperations;
+  onCloseProject: (baseDir: string) => void;
+  onCloseOtherProjects: (baseDir: string) => void;
+  onCloseAllProjects: () => void;
   onReorderProjects: (projects: ProjectData[]) => void;
 };
 
-export const ProjectTabs = ({ openProjects, activeProject, onAddProject, onSetActiveProject, projectOperations, onReorderProjects }: Props) => {
+export const ProjectTabs = ({
+  openProjects,
+  activeProject,
+  onAddProject,
+  onSetActiveProject,
+  onCloseOtherProjects,
+  onCloseProject,
+  onCloseAllProjects,
+  onReorderProjects,
+}: Props) => {
   const tabsContainerRef = useRef<HTMLDivElement>(null);
   const [showLeftScrollButton, setShowLeftScrollButton] = useState(false);
   const [showRightScrollButton, setShowRightScrollButton] = useState(false);
@@ -134,7 +139,9 @@ export const ProjectTabs = ({ openProjects, activeProject, onAddProject, onSetAc
                   key={project.baseDir}
                   project={project}
                   activeProject={activeProject}
-                  projectOperations={projectOperations}
+                  onCloseProject={onCloseProject}
+                  onCloseOtherProjects={onCloseOtherProjects}
+                  onCloseAllProjects={onCloseAllProjects}
                   openProjectsNumber={openProjects.length}
                 />
               ))}
@@ -163,22 +170,24 @@ export const ProjectTabs = ({ openProjects, activeProject, onAddProject, onSetAc
 type SortableTabItemProps = {
   project: ProjectData;
   activeProject: ProjectData | undefined;
-  projectOperations: ProjectOperations;
+  onCloseProject: (baseDir: string) => void;
+  onCloseOtherProjects: (baseDir: string) => void;
+  onCloseAllProjects: () => void;
   openProjectsNumber: number;
 };
 
-const SortableTabItem = ({ project, activeProject, projectOperations, openProjectsNumber }: SortableTabItemProps) => {
+const SortableTabItem = ({ project, activeProject, onCloseProject, onCloseOtherProjects, onCloseAllProjects, openProjectsNumber }: SortableTabItemProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.baseDir });
   const { showMenu } = useContextMenu();
   const { t } = useTranslation();
 
-  const handleRightClick = (event: React.MouseEvent) => {
+  const handleRightClick = (event: MouseEvent) => {
     event.preventDefault();
 
     const options: MenuOption[] = [
       {
         label: t('contextMenu.close'),
-        action: () => projectOperations.onCloseProject(project.baseDir),
+        action: () => onCloseProject(project.baseDir),
       },
     ];
 
@@ -186,11 +195,11 @@ const SortableTabItem = ({ project, activeProject, projectOperations, openProjec
       options.push(
         {
           label: t('contextMenu.closeOtherTabs'),
-          action: () => projectOperations.onCloseOtherProjects(project.baseDir),
+          action: () => onCloseOtherProjects(project.baseDir),
         },
         {
           label: t('contextMenu.closeAllTabs'),
-          action: () => projectOperations.onCloseAllProjects(),
+          action: () => onCloseAllProjects(),
         },
       );
     }
@@ -231,7 +240,7 @@ const SortableTabItem = ({ project, activeProject, projectOperations, openProjec
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation(); // Prevent tab selection/drag initiation
-            projectOperations.onCloseProject(project.baseDir);
+            onCloseProject(project.baseDir);
           }}
         >
           <MdClose className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 transition-opacity duration-200" />
