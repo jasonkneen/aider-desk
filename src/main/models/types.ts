@@ -22,6 +22,7 @@ export type LlmProviderName =
   | 'openai-compatible'
   | 'openrouter'
   | 'requesty'
+  | 'synthetic'
   | 'vertex-ai'
   | 'zai-plan';
 

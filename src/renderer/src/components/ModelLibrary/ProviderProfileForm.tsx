@@ -22,6 +22,7 @@ import {
   OpenAiParameters,
   OpenRouterParameters,
   RequestyParameters,
+  SyntheticParameters,
   VertexAIParameters,
   ZaiPlanParameters,
 } from '@/components/ModelLibrary/providers';
@@ -51,6 +52,7 @@ const PROVIDER_PARAMETERS_MAP: Record<LlmProviderName, ComponentType<ProviderPar
   'openai-compatible': OpenAiCompatibleParameters,
   openrouter: OpenRouterParameters,
   requesty: RequestyParameters,
+  synthetic: SyntheticParameters,
   'vertex-ai': VertexAIParameters,
   'zai-plan': ZaiPlanParameters,
 };

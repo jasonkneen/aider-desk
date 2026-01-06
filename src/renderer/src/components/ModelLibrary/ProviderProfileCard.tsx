@@ -24,6 +24,7 @@ import {
   OpenAiIcon,
   OpenRouterIcon,
   RequestyIcon,
+  SyntheticIcon,
   VertexAiIcon,
   ZaiPlanIcon,
 } from '@/icons';
@@ -46,6 +47,7 @@ const PROVIDER_ICON_MAP: Record<LlmProviderName, ComponentType<{ width?: number;
   'openai-compatible': OpenAiCompatibleIcon,
   openrouter: OpenRouterIcon,
   requesty: RequestyIcon,
+  synthetic: SyntheticIcon,
   'vertex-ai': VertexAiIcon,
   'zai-plan': ZaiPlanIcon,
 };

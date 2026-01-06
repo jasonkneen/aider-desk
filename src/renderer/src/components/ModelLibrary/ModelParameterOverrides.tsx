@@ -38,6 +38,7 @@ const PROVIDER_OVERRIDES_MAP: Partial<Record<LlmProviderName, ComponentType<Prov
   lmstudio: DefaultModelOverrides,
   minimax: DefaultModelOverrides,
   ollama: DefaultModelOverrides,
+  synthetic: DefaultModelOverrides,
   'zai-plan': DefaultModelOverrides,
 };
 

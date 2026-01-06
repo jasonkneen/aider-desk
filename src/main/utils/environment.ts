@@ -58,6 +58,7 @@ const readApiKeyFromConfFile = (filePath: string, envVarName: string): string | 
           OPENROUTER_API_KEY: ['openrouter'],
           CEREBRAS_API_KEY: ['cerebras'],
           REQUESTY_API_KEY: ['requesty'],
+          SYNTHETIC_API_KEY: ['synthetic'],
         };
 
         const providerNames = envVarToProviderName[envVarName] || [envVarName.replace(/_API_KEY$/, '').toLowerCase()];

@@ -45,6 +45,7 @@ vi.mock('@/components/ModelLibrary/providers', () => ({
   RequestyParameters: () => <div>Requesty Parameters</div>,
   VertexAIParameters: () => <div>VertexAI Parameters</div>,
   ZaiPlanParameters: () => <div>ZaiPlan Parameters</div>,
+  SyntheticParameters: () => <div>Synthetic Parameters</div>,
 }));
 
 describe('ProviderProfileForm', () => {

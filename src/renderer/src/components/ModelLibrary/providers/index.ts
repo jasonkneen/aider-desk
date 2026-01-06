@@ -13,6 +13,7 @@ export * from './OpenAiParameters';
 export * from './OpenAiCompatibleParameters';
 export * from './OpenRouterParameters';
 export * from './RequestyParameters';
+export * from './SyntheticParameters';
 export * from './VertexAIParameters';
 export * from './ZaiPlanParameters';
 

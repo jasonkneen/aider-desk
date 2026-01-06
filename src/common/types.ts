@@ -13,6 +13,7 @@ import {
   OpenRouterProvider,
   RequestyProvider,
   VertexAiProvider,
+  SyntheticProvider,
 } from '@common/agent';
 import { z } from 'zod';
 
@@ -576,6 +577,7 @@ export interface SettingsData {
     'openai-compatible'?: OpenAiCompatibleProvider;
     openrouter?: OpenRouterProvider;
     requesty?: RequestyProvider;
+    synthetic?: SyntheticProvider;
     'vertex-ai'?: VertexAiProvider;
   };
   telemetryEnabled: boolean;

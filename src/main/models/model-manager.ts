@@ -29,6 +29,7 @@ import { openaiProviderStrategy } from './providers/openai';
 import { openaiCompatibleProviderStrategy } from './providers/openai-compatible';
 import { openrouterProviderStrategy } from './providers/openrouter';
 import { requestyProviderStrategy } from './providers/requesty';
+import { syntheticProviderStrategy } from './providers/synthetic';
 import { vertexAiProviderStrategy } from './providers/vertex-ai';
 import { zaiPlanProviderStrategy } from './providers/zai-plan';
 
@@ -92,6 +93,7 @@ export class ModelManager {
     'openai-compatible': openaiCompatibleProviderStrategy,
     openrouter: openrouterProviderStrategy,
     requesty: requestyProviderStrategy,
+    synthetic: syntheticProviderStrategy,
     'vertex-ai': vertexAiProviderStrategy,
     'zai-plan': zaiPlanProviderStrategy,
   };

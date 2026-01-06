@@ -324,6 +324,9 @@
     "baseUrlPlaceholder": "http://localhost",
     "apiKey": "API Key"
   },
+  "synthetic": {
+    "apiKey": "API Key"
+  },
   "zaiPlan": {
     "apiKey": "API Key"
   },
@@ -348,6 +351,7 @@
     "openai-compatible": "OpenAI Compatible",
     "openrouter": "OpenRouter",
     "requesty": "Requesty",
+    "synthetic": "Synthetic",
     "vertex-ai": "Vertex AI",
     "zai-plan": "Z.AI Coding Plan",
     "azure": "Azure"

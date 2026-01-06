@@ -1,16 +1,14 @@
-import { Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
+import { Model, ModelInfo, ProviderProfile, SettingsData } from '@common/types';
 import { isZaiPlanProvider, ZaiPlanProvider } from '@common/agent';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 
-import { calculateCost, getDefaultUsageReport } from './default';
+import { getDefaultUsageReport } from './default';
 
 import type { LanguageModelV2 } from '@ai-sdk/provider';
-import type { LanguageModelUsage } from 'ai';
 
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
 import { getEffectiveEnvironmentVariable } from '@/utils';
-import { Task } from '@/task';
 
 const loadZaiPlanModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> => {
   if (!isZaiPlanProvider(profile.provider)) {
@@ -109,24 +107,6 @@ const createZaiPlanLlm = (profile: ProviderProfile, model: Model, settings: Sett
     headers: profile.headers,
   });
   return compatibleProvider(model.id);
-};
-
-export const getZaiPlanUsageReport = (task: Task, provider: ProviderProfile, model: Model, usage: LanguageModelUsage): UsageReportData => {
-  const totalSentTokens = usage.inputTokens || 0;
-  const receivedTokens = usage.outputTokens || 0;
-  const cacheReadTokens = usage.cachedInputTokens || 0;
-  const sentTokens = totalSentTokens - cacheReadTokens;
-
-  const messageCost = calculateCost(model, sentTokens, receivedTokens, cacheReadTokens);
-
-  return {
-    model: `${provider.id}/${model.id}`,
-    sentTokens,
-    receivedTokens,
-    cacheReadTokens,
-    messageCost,
-    agentTotalCost: task.task.agentTotalCost + messageCost,
-  };
 };
 
 const getZaiPlanModelInfo = (_provider: ProviderProfile, modelId: string, allModelInfos: Record<string, ModelInfo>): ModelInfo | undefined => {
