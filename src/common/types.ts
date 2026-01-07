@@ -513,6 +513,7 @@ export enum MemoryEmbeddingProvider {
 export interface TaskSettings {
   smartTaskState: boolean;
   autoGenerateTaskName: boolean;
+  showTaskStateActions: boolean;
 }
 
 export interface MemoryConfig {

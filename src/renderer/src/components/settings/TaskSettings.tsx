@@ -33,6 +33,16 @@ export const TaskSettings = ({ settings, setSettings }: Props) => {
     });
   };
 
+  const handleShowTaskStateActionsChange = (checked: boolean) => {
+    setSettings({
+      ...settings,
+      taskSettings: {
+        ...settings.taskSettings,
+        showTaskStateActions: checked,
+      },
+    });
+  };
+
   return (
     <div className="space-y-6 h-full flex flex-col">
       <Section title={t('settings.tasks.title')} className="px-4 py-5">
@@ -55,6 +65,16 @@ export const TaskSettings = ({ settings, setSettings }: Props) => {
               label={t('settings.tasks.autoGenerateTaskName')}
             />
             <InfoIcon tooltip={t('settings.tasks.autoGenerateTaskNameTooltip')} />
+          </div>
+
+          <div className="flex items-start gap-1">
+            <Checkbox
+              id="show-task-state-actions"
+              checked={settings.taskSettings?.showTaskStateActions ?? true}
+              onChange={handleShowTaskStateActionsChange}
+              label={t('settings.tasks.showTaskStateActions')}
+            />
+            <InfoIcon tooltip={t('settings.tasks.showTaskStateActionsTooltip')} />
           </div>
         </div>
       </Section>

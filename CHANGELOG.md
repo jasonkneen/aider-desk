@@ -11,6 +11,7 @@
 - added /task-info command for task information
 - added favicon to browser clients
 - properly using the compacting threshold from the task when updated
+- added configuration option to hide task state actions
 
 ## [0.47.0]
 

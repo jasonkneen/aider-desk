@@ -85,6 +85,7 @@ export const DEFAULT_SETTINGS: SettingsData = {
   taskSettings: {
     smartTaskState: true,
     autoGenerateTaskName: true,
+    showTaskStateActions: true,
   },
 };
 

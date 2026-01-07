@@ -439,7 +439,9 @@
       "smartTaskState": "Smart Task State",
       "smartTaskStateTooltip": "When enabled, the model intelligently analyzes the agent's response to classify the task as 'More Info Needed', 'Ready for Implementation', or 'Ready for Review'. When disabled, the task state will always be set to 'Ready for Review'.",
       "autoGenerateTaskName": "Auto-Generate Task Name",
-      "autoGenerateTaskNameTooltip": "When enabled, the model generates a concise task name from your prompt. When disabled, the first 5 words of your prompt will be used as the task name."
+      "autoGenerateTaskNameTooltip": "When enabled, the model generates a concise task name from your prompt. When disabled, the first 5 words of your prompt will be used as the task name.",
+      "showTaskStateActions": "Show Task State Actions",
+      "showTaskStateActionsTooltip": "When enabled, task state actions are displayed at the bottom of messages. Disable to hide these actions."
     },
     "language": "Language",
     "notifications": {

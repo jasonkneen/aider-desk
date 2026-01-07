@@ -14,6 +14,7 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
 import { useScrollingPaused } from '@/hooks/useScrollingPaused';
 import { useUserMessageNavigation } from '@/hooks/useUserMessageNavigation';
+import { useSettings } from '@/contexts/SettingsContext';
 
 export type MessagesRef = {
   exportToImage: () => void;
@@ -60,6 +61,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
     },
     ref,
   ) => {
+    const { settings } = useSettings();
     const { t } = useTranslation();
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -173,15 +175,17 @@ export const Messages = forwardRef<MessagesRef, Props>(
           );
         })}
         <div ref={messagesEndRef} />
-        <TaskStateActions
-          task={task}
-          onResumeTask={resumeTask}
-          onMarkAsDone={onMarkAsDone}
-          onProceed={onProceed}
-          onArchiveTask={onArchiveTask}
-          onUnarchiveTask={onUnarchiveTask}
-          onDeleteTask={onDeleteTask}
-        />
+        {settings?.taskSettings?.showTaskStateActions && (
+          <TaskStateActions
+            task={task}
+            onResumeTask={resumeTask}
+            onMarkAsDone={onMarkAsDone}
+            onProceed={onProceed}
+            onArchiveTask={onArchiveTask}
+            onUnarchiveTask={onUnarchiveTask}
+            onDeleteTask={onDeleteTask}
+          />
+        )}
       </div>
     );
   },

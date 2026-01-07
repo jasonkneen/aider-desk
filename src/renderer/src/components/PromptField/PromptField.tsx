@@ -1095,4 +1095,3 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
 );
 
 PromptField.displayName = 'PromptField';
-PromptField.displayName = 'PromptField';
