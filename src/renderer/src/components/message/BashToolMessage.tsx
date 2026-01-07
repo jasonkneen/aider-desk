@@ -21,6 +21,7 @@ export const BashToolMessage = ({ message, onRemove, compact = false }: Props) =
   const content = message.content && JSON.parse(message.content);
   const isError = content && typeof content === 'object' && 'exitCode' in content && content.exitCode !== 0;
   const isDenied = content && typeof content === 'string' && content.startsWith('Bash command execution denied by ');
+  const isFinished = message.finished !== false;
 
   const title = (
     <div className="flex items-center gap-2 w-full text-left">
@@ -34,8 +35,9 @@ export const BashToolMessage = ({ message, onRemove, compact = false }: Props) =
         </span>
         <CopyMessageButton content={command} alwaysShow={true} className="w-3.5 h-3.5" />
       </div>
-      {!content && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light flex-shrink-0" />}
-      {content &&
+      {!isFinished && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light flex-shrink-0" />}
+      {isFinished &&
+        content &&
         (isError ? (
           <span className="text-left flex-shrink-0">
             <StyledTooltip id={`bash-error-tooltip-${message.id}`} maxWidth={600} />
@@ -68,29 +70,28 @@ export const BashToolMessage = ({ message, onRemove, compact = false }: Props) =
             </div>
           ) : (
             <>
-              {content && (
-                <div className="flex items-center gap-2">
-                  <div className="font-semibold text-text-secondary">{t('toolMessage.power.bash.exitCode')}:</div>
-                  <div>{content.exitCode}</div>
-                </div>
-              )}
-              {content.stdout && (
+              {!content.stderr && (
                 <div className="relative">
                   <pre className="whitespace-pre-wrap bg-bg-primary-light p-3 rounded text-2xs text-text-secondary max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth font-mono">
-                    {content.stdout}
+                    {content.stdout || ''}
                   </pre>
                 </div>
               )}
-              {content.stderr && (
+              {content && content.stderr && (
                 <div className="relative">
                   <pre className="whitespace-pre-wrap bg-bg-primary-light p-3 rounded text-2xs text-error max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth font-mono">
                     {content.stderr}
                   </pre>
                 </div>
               )}
+              {isFinished && content && content.exitCode !== null && content.exitCode !== undefined && (
+                <div className="flex items-center gap-2">
+                  <div className="font-semibold text-text-secondary">{t('toolMessage.power.bash.exitCode')}:</div>
+                  <div>{content.exitCode}</div>
+                </div>
+              )}
             </>
           )}
-          {!content && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light flex-shrink-0" />}
         </div>
       </div>
     );

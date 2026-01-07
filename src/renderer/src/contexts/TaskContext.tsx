@@ -301,7 +301,7 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
       }
     };
 
-    const handleTool = ({ id, serverName, toolName, args, response, usageReport, promptContext }: ToolData) => {
+    const handleTool = ({ id, serverName, toolName, args, response, usageReport, promptContext, finished }: ToolData) => {
       if (serverName === TODO_TOOL_GROUP_NAME) {
         handleTodoTool(toolName, args as Record<string, unknown>, response);
 
@@ -321,6 +321,7 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
           content: response || '',
           usageReport,
           promptContext,
+          finished,
         };
         return toolMessage;
       };
@@ -339,6 +340,7 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
             content: response || '',
             usageReport,
             promptContext,
+            finished,
           } as ToolMessage;
           return updatedMessages;
         } else {

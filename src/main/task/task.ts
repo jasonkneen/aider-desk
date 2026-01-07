@@ -1848,6 +1848,7 @@ export class Task {
     usageReport?: UsageReportData,
     promptContext?: PromptContext,
     saveToDb = true,
+    finished = !!response,
   ) {
     logger.debug('Sending tool message:', {
       id,
@@ -1858,6 +1859,7 @@ export class Task {
       response: typeof response === 'string' ? response.substring(0, 100) : response,
       usageReport,
       promptContext,
+      finished,
     });
     const data: ToolData = {
       type: 'tool',
@@ -1870,6 +1872,7 @@ export class Task {
       response,
       usageReport,
       promptContext,
+      finished,
     };
 
     if (response && usageReport && saveToDb) {

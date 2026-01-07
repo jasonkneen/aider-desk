@@ -1,7 +1,6 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 
 import { tool, type ToolSet } from 'ai';
 import { z } from 'zod';
@@ -32,8 +31,6 @@ import { Task } from '@/task';
 import logger from '@/logger';
 import { filterIgnoredFiles, scrapeWeb } from '@/utils';
 import { isAbortError, isFileNotFoundError } from '@/utils/errors';
-
-const execAsync = promisify(exec);
 
 export const createPowerToolset = (task: Task, profile: AgentProfile, promptContext?: PromptContext, abortSignal?: AbortSignal): ToolSet => {
   const approvalManager = new ApprovalManager(task, profile);
@@ -502,6 +499,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         undefined,
         undefined,
         promptContext,
+        false, // not finished yet
       );
 
       const toolId = `${TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TOOL_BASH}`;
@@ -532,39 +530,126 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
       }
 
       const absoluteCwd = cwd ? path.resolve(task.getTaskDir(), cwd) : task.getTaskDir();
-      try {
-        const { stdout, stderr } = await execAsync(command, {
-          cwd: absoluteCwd,
-          timeout: timeout,
-          signal: abortSignal,
-        });
-        return { stdout, stderr, exitCode: 0 };
-      } catch (error: unknown) {
-        if (isAbortError(error)) {
-          return 'Operation was cancelled by user.';
+
+      return await new Promise((resolve) => {
+        let stdout = '';
+        let stderr = '';
+        let exitCode = 0;
+        let timeoutHandle: NodeJS.Timeout | null = null;
+        let isResolved = false;
+
+        const cleanup = () => {
+          if (timeoutHandle) {
+            clearTimeout(timeoutHandle);
+            timeoutHandle = null;
+          }
+        };
+
+        const resolveWithResult = () => {
+          if (isResolved) {
+            return;
+          }
+          isResolved = true;
+          cleanup();
+
+          resolve({ stdout, stderr, exitCode });
+        };
+
+        const abortListener = () => {
+          if (isResolved) {
+            return;
+          }
+          isResolved = true;
+          cleanup();
+
+          const cancelledMessage = 'Operation was cancelled by user.';
+          resolve(cancelledMessage);
+        };
+
+        // Listen for abort signal
+        abortSignal?.addEventListener('abort', abortListener);
+
+        try {
+          const childProcess = spawn(command, {
+            cwd: absoluteCwd,
+            shell: true,
+            env: process.env,
+          });
+
+          // Set timeout
+          timeoutHandle = setTimeout(() => {
+            if (!isResolved) {
+              childProcess.kill('SIGTERM');
+              stderr = `Error: Command timed out after ${timeout}ms. Consider increasing the timeout parameter.`;
+              exitCode = 124;
+              resolveWithResult();
+            }
+          }, timeout);
+
+          childProcess.stdout?.on('data', (data: Buffer) => {
+            const chunk = data.toString('utf-8');
+            stdout += chunk;
+
+            // Send streaming update
+            task.addToolMessage(
+              toolCallId,
+              TOOL_GROUP_NAME,
+              TOOL_BASH,
+              { command, cwd, timeout },
+              JSON.stringify({ stdout, stderr: '', exitCode: null }),
+              undefined,
+              promptContext,
+              false,
+              false, // not finished yet
+            );
+          });
+
+          childProcess.stderr?.on('data', (data: Buffer) => {
+            const chunk = data.toString('utf-8');
+            stderr += chunk;
+
+            // Send streaming update
+            task.addToolMessage(
+              toolCallId,
+              TOOL_GROUP_NAME,
+              TOOL_BASH,
+              { command, cwd, timeout },
+              JSON.stringify({ stdout, stderr, exitCode: null }),
+              undefined,
+              promptContext,
+              false,
+              false, // not finished yet
+            );
+          });
+
+          childProcess.on('error', (error: Error) => {
+            if (!isResolved) {
+              stderr = error.message;
+              exitCode = 1;
+              resolveWithResult();
+            }
+          });
+
+          childProcess.on('exit', (code: number | null, signal: string | null) => {
+            if (!isResolved) {
+              if (code !== null) {
+                exitCode = code;
+              } else if (signal === 'SIGTERM') {
+                exitCode = 124; // Timeout exit code
+              } else {
+                exitCode = 1;
+              }
+              resolveWithResult();
+            }
+          });
+        } catch (error: unknown) {
+          if (!isResolved) {
+            stderr = error instanceof Error ? error.message : String(error);
+            exitCode = 1;
+            resolveWithResult();
+          }
         }
-        const execError = error as {
-          stdout?: string;
-          stderr?: string;
-          message?: string;
-          code?: number | string;
-          signal?: string;
-          killed?: boolean;
-        };
-
-        // Check for timeout - exec throws with signal='SIGTERM' or code='ETIMEDOUT' when timeout is exceeded
-        const isTimeout = execError.killed || execError.signal === 'SIGTERM' || execError.code === 'ETIMEDOUT';
-
-        const stderr = isTimeout
-          ? `Error: Command timed out after ${timeout}ms. Consider increasing the timeout parameter.`
-          : execError.stderr || execError.message || String(error);
-
-        return {
-          stdout: execError.stdout || '',
-          stderr,
-          exitCode: typeof execError.code === 'number' ? execError.code : isTimeout ? 124 : 1,
-        };
-      }
+      });
     },
   });
 

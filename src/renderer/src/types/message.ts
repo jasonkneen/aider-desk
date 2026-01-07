@@ -49,6 +49,7 @@ export interface ToolMessage extends Message {
   args: Record<string, unknown>;
   content: string; // Empty while executing, contains result when complete
   usageReport?: UsageReportData;
+  finished?: boolean;
 }
 
 export const isUserMessage = (message: Message): message is UserMessage => {

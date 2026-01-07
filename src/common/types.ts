@@ -176,6 +176,7 @@ export interface ToolData {
   response?: string;
   usageReport?: UsageReportData;
   promptContext?: PromptContext;
+  finished?: boolean;
 }
 
 export interface ContextFilesUpdatedData {
