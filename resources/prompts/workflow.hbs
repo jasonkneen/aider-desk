@@ -34,7 +34,7 @@
     <Instruction>Apply planned changes using appropriate tools. Ensure all relevant files from Step 5 are in context before modifications.</Instruction>
   </Step>{{#increment "stepNumber"}}{{/increment}}
   <Step number="{{stepNumber}}" title="Verify Changes">
-    <Instruction>Verify changes. {{#if toolPermissions.subagents}}Check if an available subagent's description indicates it specializes in code verification. If such a subagent exists, delegate the verification task to it. Otherwise:{{/if}} Use available tools like linters or type checkers. Analyze outcomes and iterate to fix errors.</Instruction>
+    <Instruction>ALWAYS verify your changes. {{#if toolPermissions.subagents}}Check if an available subagent's description indicates it specializes in code verification. If such a subagent exists, delegate the verification task to it. Otherwise:{{/if}} Use available tools like linters or type checkers. Analyze outcomes and iterate to fix errors.</Instruction>
   </Step>{{#increment "stepNumber"}}{{/increment}}
   {{#if toolPermissions.subagents}}
   <Step number="{{stepNumber}}" title="Review Changes">

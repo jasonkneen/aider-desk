@@ -10,7 +10,7 @@ import { AgentProfileManager } from '@/agent/agent-profile-manager';
 import { Task } from '@/task';
 import logger from '@/logger';
 
-const getSubagentId = (subagent: AgentProfile): string => {
+export const getSubagentId = (subagent: AgentProfile): string => {
   return subagent.name.toLowerCase().replace(/\s+/g, '-');
 };
 

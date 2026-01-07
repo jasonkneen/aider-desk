@@ -19,6 +19,7 @@ import { extractTextContent } from '@common/utils';
 import logger from '@/logger';
 import { type CacheControl } from '@/models';
 import { Task } from '@/task';
+import { getSubagentId } from '@/agent/tools/subagents';
 
 /**
  * Optimizes the messages before sending them to the LLM. This should reduce the token count and improve the performance.
@@ -104,7 +105,7 @@ const addImportantReminders = (
     );
 
     if (automaticSubagents.length > 0) {
-      const subagents = automaticSubagents.map((subagent) => `    - ${subagent.name}`).join('\n');
+      const subagents = automaticSubagents.map((subagent) => `    - ${getSubagentId(subagent)}: ${subagent.subagent.description}`).join('\n');
       reminders.push(`Use the following automatic subagents when appropriate based on their descriptions:\n${subagents}`);
     }
   }
@@ -123,7 +124,7 @@ const addImportantReminders = (
       profile.toolApprovals[`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_RETRIEVE}`] !== ToolApprovalState.Never;
     const storeMemoryAllowed = profile.toolApprovals[`${MEMORY_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${MEMORY_TOOL_STORE}`] !== ToolApprovalState.Never;
     if (retrieveMemoryAllowed) {
-      reminders.push('Retrieve relevant memories using at the beginning of a task to see if there is any relevant information.');
+      reminders.push('Retrieve relevant memories at the beginning of a task to see if there is any relevant information.');
     }
     if (storeMemoryAllowed) {
       reminders.push(
@@ -136,7 +137,7 @@ const addImportantReminders = (
     return messages;
   }
 
-  const importantReminders = `\n\n<ImportantReminders>\n${reminders.map((reminder) => `   <ImportantReminder>\n${reminder}\n   </ImportantReminder>`).join('\n ')}</ImportantReminders>`;
+  const importantReminders = `\n\n<ThisIsImportant>\n${reminders.map((reminder) => `<Reminder>\n${reminder}\n</Reminder>`).join('\n ')}\n</ThisIsImportant>`;
 
   const updatedFirstUserMessage = {
     ...userRequestMessage,
