@@ -10,6 +10,7 @@
 - optimized performance when switching between tasks and projects
 - added /task-info command for task information
 - added favicon to browser clients
+- properly using the compacting threshold from the task when updated
 
 ## [0.47.0]
 

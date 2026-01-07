@@ -1252,7 +1252,8 @@ export class Agent {
     promptContext?: PromptContext,
     abortSignal?: AbortSignal,
   ) {
-    const { contextCompactingThreshold = 0 } = this.store.getProjectSettings(task.getProjectDir());
+    const contextCompactingThreshold =
+      task.task.contextCompactingThreshold ?? this.store.getProjectSettings(task.getProjectDir())?.contextCompactingThreshold ?? 0;
     const usageReport = resultMessages[resultMessages.length - 1]?.usageReport;
     const maxTokens = this.modelManager.getModel(profile.provider, profile.model)?.maxInputTokens;
 
