@@ -1,12 +1,16 @@
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RiTerminalLine, RiErrorWarningFill, RiCheckboxCircleFill, RiCloseCircleFill } from 'react-icons/ri';
 import { CgSpinner } from 'react-icons/cg';
+import { MdKeyboardDoubleArrowDown } from 'react-icons/md';
 
 import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { CopyMessageButton } from '@/components/message/CopyMessageButton';
+import { IconButton } from '@/components/common/IconButton';
+import { useScrollingPaused } from '@/hooks/useScrollingPaused';
 
 type Props = {
   message: ToolMessage;
@@ -22,6 +26,28 @@ export const BashToolMessage = ({ message, onRemove, compact = false }: Props) =
   const isError = content && typeof content === 'object' && 'exitCode' in content && content.exitCode !== 0;
   const isDenied = content && typeof content === 'string' && content.startsWith('Bash command execution denied by ');
   const isFinished = message.finished !== false;
+
+  const stdoutRef = useRef<HTMLDivElement>(null);
+  const stderrRef = useRef<HTMLDivElement>(null);
+
+  const handleScrollToBottom = () => {
+    if (stdoutRef.current) {
+      stdoutRef.current.scrollTo({ top: stdoutRef.current.scrollHeight, behavior: 'smooth' });
+    }
+    if (stderrRef.current) {
+      stderrRef.current.scrollTo({ top: stderrRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  };
+
+  const { scrollingPaused, scrollToBottom, eventHandlers } = useScrollingPaused({
+    onAutoScroll: handleScrollToBottom,
+  });
+
+  useEffect(() => {
+    if (!scrollingPaused) {
+      handleScrollToBottom();
+    }
+  }, [content, scrollingPaused]);
 
   const title = (
     <div className="flex items-center gap-2 w-full text-left">
@@ -64,24 +90,54 @@ export const BashToolMessage = ({ message, onRemove, compact = false }: Props) =
         <div className="space-y-2">
           {content && typeof content === 'string' ? (
             <div className={isDenied ? 'text-warning' : 'text-error'}>
-              <pre className="whitespace-pre-wrap bg-bg-primary-light p-3 rounded text-2xs max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth font-mono">
+              <div className="whitespace-pre-wrap bg-bg-primary-light p-3 rounded text-2xs max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth font-mono">
                 {content}
-              </pre>
+              </div>
             </div>
           ) : (
             <>
               {!content.stderr && (
                 <div className="relative">
-                  <pre className="whitespace-pre-wrap bg-bg-primary-light p-3 rounded text-2xs text-text-secondary max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth font-mono">
+                  <div
+                    ref={stdoutRef}
+                    {...eventHandlers}
+                    className="whitespace-pre-wrap bg-bg-primary-light p-3 rounded text-2xs text-text-secondary max-h-[100px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth font-mono"
+                  >
                     {content.stdout || ''}
-                  </pre>
+                  </div>
+                  {scrollingPaused && (
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10">
+                      <IconButton
+                        icon={<MdKeyboardDoubleArrowDown className="h-4 w-4" />}
+                        onClick={scrollToBottom}
+                        tooltip={t('messages.scrollToBottom')}
+                        className="bg-bg-primary-light border border-border-default shadow-lg hover:bg-bg-secondary transition-colors duration-200"
+                        aria-label={t('messages.scrollToBottom')}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
               {content && content.stderr && (
                 <div className="relative">
-                  <pre className="whitespace-pre-wrap bg-bg-primary-light p-3 rounded text-2xs text-error max-h-[200px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth font-mono">
+                  <div
+                    ref={stderrRef}
+                    className="whitespace-pre-wrap bg-bg-primary-light p-3 rounded text-2xs text-error max-h-[100px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth font-mono"
+                    {...eventHandlers}
+                  >
                     {content.stderr}
-                  </pre>
+                  </div>
+                  {scrollingPaused && (
+                    <div className="absolute bottom-2 right-2 z-10">
+                      <IconButton
+                        icon={<MdKeyboardDoubleArrowDown className="h-4 w-4" />}
+                        onClick={scrollToBottom}
+                        tooltip={t('messages.scrollToBottom')}
+                        className="bg-bg-primary-light border border-border-default shadow-lg hover:bg-bg-secondary transition-colors duration-200"
+                        aria-label={t('messages.scrollToBottom')}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
               {isFinished && content && content.exitCode !== null && content.exitCode !== undefined && (

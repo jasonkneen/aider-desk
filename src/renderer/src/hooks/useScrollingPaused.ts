@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { TouchEvent, UIEvent, useCallback, useState, WheelEvent } from 'react';
 
 interface UseScrollingPausedOptions {
   onAutoScroll: () => void;
@@ -11,17 +11,17 @@ interface UseScrollingPausedReturn {
   setScrollingPaused: (paused: boolean) => void;
   scrollToBottom: () => void;
   eventHandlers: {
-    onScroll: (e: React.UIEvent<HTMLDivElement>) => void;
-    onWheel: (e: React.WheelEvent<HTMLDivElement>) => void;
-    onTouchStart: (e: React.TouchEvent<HTMLDivElement>) => void;
-    onTouchMove: (e: React.TouchEvent<HTMLDivElement>) => void;
+    onScroll: (e: UIEvent<HTMLDivElement>) => void;
+    onWheel: (e: WheelEvent<HTMLDivElement>) => void;
+    onTouchStart: (e: TouchEvent<HTMLDivElement>) => void;
+    onTouchMove: (e: TouchEvent<HTMLDivElement>) => void;
   };
 }
 
 export const useScrollingPaused = ({ onAutoScroll, threshold = 10, bottomThreshold = 20 }: UseScrollingPausedOptions): UseScrollingPausedReturn => {
   const [scrollingPaused, setScrollingPaused] = useState(false);
 
-  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+  const handleScroll = useCallback((e: UIEvent<HTMLDivElement>) => {
     const element = e.currentTarget;
 
     // Check if content is smaller than scroll area (no scrollbar needed)
@@ -34,7 +34,8 @@ export const useScrollingPaused = ({ onAutoScroll, threshold = 10, bottomThresho
   }, []);
 
   const handleWheel = useCallback(
-    (e: React.WheelEvent<HTMLDivElement>) => {
+    (e: WheelEvent<HTMLDivElement>) => {
+      e.stopPropagation();
       // Only pause when scrolling up (negative deltaY)
       if (e.deltaY < 0) {
         setScrollingPaused(true);
@@ -50,14 +51,14 @@ export const useScrollingPaused = ({ onAutoScroll, threshold = 10, bottomThresho
     [bottomThreshold],
   );
 
-  const handleTouchStart = useCallback((e: React.TouchEvent<HTMLDivElement>) => {
+  const handleTouchStart = useCallback((e: TouchEvent<HTMLDivElement>) => {
     const touch = e.touches[0];
     const element = e.currentTarget;
     element.dataset.touchStartY = touch.clientY.toString();
   }, []);
 
   const handleTouchMove = useCallback(
-    (e: React.TouchEvent<HTMLDivElement>) => {
+    (e: TouchEvent<HTMLDivElement>) => {
       const touch = e.touches[0];
       const element = e.currentTarget;
       const touchStartY = element.dataset.touchStartY ? parseFloat(element.dataset.touchStartY) : touch.clientY;
