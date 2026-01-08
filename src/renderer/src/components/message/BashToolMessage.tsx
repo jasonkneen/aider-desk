@@ -110,7 +110,7 @@ export const BashToolMessage = ({ message, onRemove, compact = false }: Props) =
                   <div
                     ref={stdoutRef}
                     {...eventHandlers}
-                    className="whitespace-pre-wrap bg-bg-primary-light p-3 rounded text-2xs text-text-secondary max-h-[100px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth font-mono"
+                    className="whitespace-pre-wrap bg-bg-primary-light p-3 rounded text-2xs text-text-secondary max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth font-mono"
                   >
                     {content.stdout || ''}
                   </div>
@@ -131,7 +131,7 @@ export const BashToolMessage = ({ message, onRemove, compact = false }: Props) =
                 <div className="relative">
                   <div
                     ref={stderrRef}
-                    className="whitespace-pre-wrap bg-bg-primary-light p-3 rounded text-2xs text-error max-h-[100px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth font-mono"
+                    className="whitespace-pre-wrap bg-bg-primary-light p-3 rounded text-2xs text-error max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-secondary-light hover:scrollbar-thumb-bg-fourth font-mono"
                     {...eventHandlers}
                   >
                     {content.stderr}
