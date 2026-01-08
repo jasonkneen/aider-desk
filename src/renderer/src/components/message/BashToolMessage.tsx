@@ -39,7 +39,7 @@ export const BashToolMessage = ({ message, onRemove, compact = false }: Props) =
     }
   };
 
-  const { scrollingPaused, scrollToBottom, eventHandlers } = useScrollingPaused({
+  const { scrollingPaused, scrollToBottom, eventHandlers, setScrollingPaused } = useScrollingPaused({
     onAutoScroll: handleScrollToBottom,
   });
 
@@ -48,6 +48,15 @@ export const BashToolMessage = ({ message, onRemove, compact = false }: Props) =
       handleScrollToBottom();
     }
   }, [content, scrollingPaused]);
+
+  const handleExpandedChange = (open: boolean) => {
+    if (open) {
+      setTimeout(() => {
+        handleScrollToBottom();
+        setScrollingPaused(false);
+      }, 100);
+    }
+  };
 
   const title = (
     <div className="flex items-center gap-2 w-full text-left">
@@ -128,7 +137,7 @@ export const BashToolMessage = ({ message, onRemove, compact = false }: Props) =
                     {content.stderr}
                   </div>
                   {scrollingPaused && (
-                    <div className="absolute bottom-2 right-2 z-10">
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10">
                       <IconButton
                         icon={<MdKeyboardDoubleArrowDown className="h-4 w-4" />}
                         onClick={scrollToBottom}
@@ -157,5 +166,7 @@ export const BashToolMessage = ({ message, onRemove, compact = false }: Props) =
     return title;
   }
 
-  return <ExpandableMessageBlock title={title} content={renderContent()} usageReport={message.usageReport} onRemove={onRemove} />;
+  return (
+    <ExpandableMessageBlock title={title} content={renderContent()} usageReport={message.usageReport} onRemove={onRemove} onOpenChange={handleExpandedChange} />
+  );
 };

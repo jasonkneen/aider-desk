@@ -12,6 +12,7 @@ type Props = {
   usageReport?: UsageReportData;
   onRemove?: () => void;
   initialExpanded?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 export interface ExpandableMessageBlockRef {
@@ -20,13 +21,14 @@ export interface ExpandableMessageBlockRef {
 }
 
 export const ExpandableMessageBlock = forwardRef<ExpandableMessageBlockRef, Props>(
-  ({ title, content, copyContent, usageReport, onRemove, initialExpanded = false }, ref) => {
+  ({ title, content, copyContent, usageReport, onRemove, initialExpanded = false, onOpenChange }, ref) => {
     const [isExpanded, setIsExpanded] = useState(initialExpanded);
     const [isInitialAutoExpand, setIsInitialAutoExpand] = useState(!initialExpanded);
 
     const handleExpandedChange = (open: boolean) => {
       setIsExpanded(open);
       setIsInitialAutoExpand(false);
+      onOpenChange?.(open);
     };
 
     useImperativeHandle(ref, () => ({
