@@ -86,7 +86,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     const { isMobile } = useResponsive();
     const api = useApi();
     const { models } = useModelProviders();
-    const { getTaskState, clearSession, restartTask, setMessages, setTodoItems, setAiderModelsData, answerQuestion, interruptResponse, refreshAllFiles } =
+    const { getTaskState, clearSession, resetTask, setMessages, setTodoItems, setAiderModelsData, answerQuestion, interruptResponse, refreshAllFiles } =
       useTask();
     const { getProfiles } = useAgents();
 
@@ -284,8 +284,8 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       }, 0);
     };
 
-    const handleRestartTask = () => {
-      restartTask(task.id);
+    const handleResetTask = () => {
+      resetTask(task.id);
       setAiderModelsData(task.id, null);
     };
 
@@ -617,7 +617,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                     maxInputTokens={currentModel?.maxInputTokens || 0}
                     clearMessages={clearMessages}
                     runCommand={runCommand}
-                    restartTask={handleRestartTask}
+                    resetTask={handleResetTask}
                     mode={currentMode}
                     showFileDialog={() =>
                       setAddFileDialogOptions({
@@ -659,7 +659,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
             maxInputTokens={maxInputTokens}
             clearMessages={clearMessages}
             runCommand={runCommand}
-            restartTask={handleRestartTask}
+            resetTask={handleResetTask}
             mode={currentMode}
             setAddFileDialogOptions={setAddFileDialogOptions}
             task={task}

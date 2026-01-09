@@ -923,7 +923,7 @@
     "agent": "Agent",
     "aider": "Aider",
     "total": "Total",
-    "restartTask": "Restart task",
+    "resetTask": "Reset",
     "tokenUsage": "{{usedTokens}} of {{maxTokens}}",
     "contextCompactingThreshold": "Auto-compact threshold",
     "contextCompactingThresholdOff": "Off",

@@ -19,6 +19,7 @@ const CURRENT_CONTEXT_VERSION = 2;
 export class ContextManager {
   private messages: ContextMessage[];
   private files: ContextFile[];
+  private loadPromise: Promise<void> | null = null;
   private loaded = false;
   private autosaveEnabled = false;
   private readonly storagePath: string;
@@ -484,32 +485,18 @@ export class ContextManager {
 
   async load(): Promise<void> {
     try {
-      if (!(await fileExists(this.storagePath))) {
-        logger.debug('No existing task context found:', {
-          taskId: this.taskId,
-        });
-        this.loaded = true;
+      if (this.loaded) {
         return;
       }
 
-      this.disableAutosave();
-
-      const content = await fs.readFile(this.storagePath, 'utf8');
-      const contextData = content ? JSON.parse(content) : null;
-
-      if (!contextData) {
-        logger.debug('Empty task context found:', { taskId: this.taskId });
-        this.loaded = true;
+      if (this.loadPromise) {
+        await this.loadPromise;
         return;
       }
 
-      const migratedData = await this.migrateContext(contextData);
-
-      this.messages = migratedData.contextMessages || [];
-      this.files = migratedData.contextFiles || [];
-      this.loaded = true;
-
-      await this.cleanupContext();
+      this.loadPromise = this.loadInternal();
+      await this.loadPromise;
+      this.loadPromise = null;
 
       logger.info(`Task context loaded from ${this.storagePath}`, {
         taskId: this.taskId,
@@ -523,6 +510,35 @@ export class ContextManager {
     } finally {
       this.enableAutosave();
     }
+  }
+
+  private async loadInternal(): Promise<void> {
+    if (!(await fileExists(this.storagePath))) {
+      logger.debug('No existing task context found:', {
+        taskId: this.taskId,
+      });
+      this.loaded = true;
+      return;
+    }
+
+    this.disableAutosave();
+
+    const content = await fs.readFile(this.storagePath, 'utf8');
+    const contextData = content ? JSON.parse(content) : null;
+
+    if (!contextData) {
+      logger.debug('Empty task context found:', { taskId: this.taskId });
+      this.loaded = true;
+      return;
+    }
+
+    const migratedData = await this.migrateContext(contextData);
+
+    this.messages = migratedData.contextMessages || [];
+    this.files = migratedData.contextFiles || [];
+    this.loaded = true;
+
+    await this.cleanupContext();
   }
 
   async loadMessages(messages: ContextMessage[]): Promise<void> {

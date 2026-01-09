@@ -268,8 +268,8 @@ export class BrowserApi implements ApplicationAPI {
   restartProject(baseDir: string): void {
     this.post('/project/restart', { projectDir: baseDir });
   }
-  restartTask(baseDir: string, taskId: string): void {
-    this.post('/project/tasks/restart', { projectDir: baseDir, taskId });
+  resetTask(baseDir: string, taskId: string): void {
+    this.post('/project/tasks/reset', { projectDir: baseDir, taskId });
   }
   runPrompt(baseDir: string, taskId: string, prompt: string, mode?: Mode): void {
     this.post('/run-prompt', { projectDir: baseDir, taskId, prompt, mode });

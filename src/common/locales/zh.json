@@ -899,7 +899,7 @@
     "agent": "代理",
     "aider": "Aider",
     "total": "全部的",
-    "restartTask": "重启任务",
+    "resetTask": "重置",
     "tokenUsage": "{{usedTokens}} / {{maxTokens}}",
     "contextCompactingThreshold": "自动压缩上下文阈值",
     "contextCompactingThresholdOff": "关闭",

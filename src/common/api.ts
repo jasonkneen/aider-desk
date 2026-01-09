@@ -62,7 +62,7 @@ export interface ApplicationAPI {
   startProject: (baseDir: string) => Promise<void>;
   stopProject: (baseDir: string) => void;
   restartProject: (baseDir: string) => void;
-  restartTask: (baseDir: string, taskId: string) => void;
+  resetTask: (baseDir: string, taskId: string) => void;
   runPrompt: (baseDir: string, taskId: string, prompt: string, mode?: Mode) => void;
   savePrompt: (baseDir: string, taskId: string, prompt: string) => Promise<void>;
   redoLastUserPrompt: (baseDir: string, taskId: string, mode: Mode, updatedPrompt?: string) => void;

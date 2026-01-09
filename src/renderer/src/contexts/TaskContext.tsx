@@ -513,7 +513,7 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
 export interface TaskContextType {
   getTaskState: (taskId: string, loadIfNotLoaded?: boolean) => TaskState | null;
   clearSession: (taskId: string, messagesOnly: boolean) => void;
-  restartTask: (taskId: string) => void;
+  resetTask: (taskId: string) => void;
   setMessages: (taskId: string, updateMessages: (prevState: Message[]) => Message[]) => void;
   setTodoItems: (taskId: string, updateTodoItems: (prev: TodoItem[]) => TodoItem[]) => void;
   setAiderModelsData: (taskId: string, modelsData: ModelsData | null) => void;
@@ -676,9 +676,9 @@ export const TaskProvider: React.FC<{
     [updateTaskState],
   );
 
-  const restartTask = useCallback(
+  const resetTask = useCallback(
     (taskId: string) => {
-      api.restartTask(baseDir, taskId);
+      api.resetTask(baseDir, taskId);
       clearSession(taskId, false);
     },
     [api, baseDir, clearSession],
@@ -776,7 +776,7 @@ export const TaskProvider: React.FC<{
       value={{
         getTaskState,
         clearSession,
-        restartTask,
+        resetTask,
         setTodoItems,
         setMessages,
         setAiderModelsData,

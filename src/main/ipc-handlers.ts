@@ -63,8 +63,8 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     await eventsHandler.restartProject(baseDir);
   });
 
-  ipcMain.on('restart-task', async (_, baseDir: string, taskId: string) => {
-    await eventsHandler.restartTask(baseDir, taskId);
+  ipcMain.on('reset-task', async (_, baseDir: string, taskId: string) => {
+    await eventsHandler.resetTask(baseDir, taskId);
   });
 
   ipcMain.handle('show-open-dialog', async (_, options: Electron.OpenDialogSyncOptions) => {

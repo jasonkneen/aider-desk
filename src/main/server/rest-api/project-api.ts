@@ -10,7 +10,7 @@ const RestartProjectSchema = z.object({
   projectDir: z.string().min(1, 'Project directory is required'),
 });
 
-const RestartTaskSchema = z.object({
+const ResetTaskSchema = z.object({
   projectDir: z.string().min(1, 'Project directory is required'),
   taskId: z.string().min(1, 'Task id is required'),
 });
@@ -509,18 +509,18 @@ export class ProjectApi extends BaseApi {
       }),
     );
 
-    // Restart task
+    // Reset task
     router.post(
-      '/project/tasks/restart',
+      '/project/tasks/reset',
       this.handleRequest(async (req, res) => {
-        const parsed = this.validateRequest(RestartTaskSchema, req.body, res);
+        const parsed = this.validateRequest(ResetTaskSchema, req.body, res);
         if (!parsed) {
           return;
         }
 
         const { projectDir, taskId } = parsed;
-        await this.eventsHandler.restartTask(projectDir, taskId);
-        res.status(200).json({ message: 'Task restarted' });
+        await this.eventsHandler.resetTask(projectDir, taskId);
+        res.status(200).json({ message: 'Task reset' });
       }),
     );
 

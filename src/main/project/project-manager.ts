@@ -91,7 +91,7 @@ export class ProjectManager {
     await this.closeProject(baseDir);
 
     const project = this.getProject(baseDir);
-    project.forEachTask((task) => task.restart());
+    project.forEachTask((task) => task.reset());
   }
 
   public async close(): Promise<void> {

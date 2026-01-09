@@ -29,7 +29,7 @@ export const createMockTaskContext = (overrides: Partial<TaskContextType> = {}) 
   const defaultMock = {
     getTaskState: vi.fn(() => mockTaskState),
     clearSession: vi.fn(),
-    restartTask: vi.fn(),
+    resetTask: vi.fn(),
     setMessages: vi.fn(),
     setTodoItems: vi.fn(),
     setAiderModelsData: vi.fn(),

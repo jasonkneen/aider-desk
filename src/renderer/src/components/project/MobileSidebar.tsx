@@ -22,7 +22,7 @@ type Props = {
   maxInputTokens: number;
   clearMessages: (clearContext?: boolean) => void;
   runCommand: (command: string) => void;
-  restartTask: () => void;
+  resetTask: () => void;
   mode: Mode;
   setAddFileDialogOptions: React.Dispatch<React.SetStateAction<AddFileDialogOptions | null>>;
   task: TaskData;
@@ -42,7 +42,7 @@ export const MobileSidebar = ({
   maxInputTokens,
   clearMessages,
   runCommand,
-  restartTask,
+  resetTask,
   mode,
   setAddFileDialogOptions,
   task,
@@ -69,7 +69,7 @@ export const MobileSidebar = ({
           maxInputTokens={maxInputTokens}
           clearMessages={clearMessages}
           runCommand={runCommand}
-          restartTask={restartTask}
+          resetTask={resetTask}
           mode={mode}
           showFileDialog={() =>
             setAddFileDialogOptions({

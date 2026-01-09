@@ -76,6 +76,7 @@ export const INTERNAL_TASK_ID = 'internal';
 
 export class Task {
   private initialized = false;
+  private initPromise: Promise<void> | null = null;
   private connectors: Connector[] = [];
   private currentQuestion: QuestionData | null = null;
   private currentQuestionResolves: ((answer: [string, string | undefined]) => void)[] = [];
@@ -358,6 +359,17 @@ export class Task {
       return;
     }
 
+    if (this.initPromise) {
+      await this.initPromise;
+      return;
+    }
+
+    this.initPromise = this.initInternal();
+    await this.initPromise;
+    this.initPromise = null;
+  }
+
+  private async initInternal() {
     // Check if worktree is enabled for this task
     const workingMode = this.task.workingMode;
     const existingWorktree = await this.worktreeManager.getTaskWorktree(this.project.baseDir, this.taskId);
@@ -2512,7 +2524,7 @@ ${error.stderr}`,
     }
   }
 
-  async restart() {
+  async reset() {
     if (!this.initialized) {
       return;
     }
@@ -2524,6 +2536,7 @@ ${error.stderr}`,
       await this.saveTask({
         aiderTotalCost: 0,
         agentTotalCost: 0,
+        state: DefaultTaskState.Todo,
       });
     }
     await this.updateContextInfo();

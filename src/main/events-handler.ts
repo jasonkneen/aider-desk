@@ -125,10 +125,10 @@ export class EventsHandler {
     return await this.modelManager.createVoiceSession(providerProfile);
   }
 
-  async restartTask(baseDir: string, taskId: string): Promise<void> {
+  async resetTask(baseDir: string, taskId: string): Promise<void> {
     const task = this.projectManager.getProject(baseDir).getTask(taskId);
     if (task) {
-      await task.restart();
+      await task.reset();
     }
   }
 

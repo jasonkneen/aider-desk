@@ -2,7 +2,7 @@ import { Mode, TokensInfoData, TaskData } from '@common/types';
 import { ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IoChevronDown, IoChevronUp, IoClose } from 'react-icons/io5';
-import { MdOutlineRefresh } from 'react-icons/md';
+import { MdOutlineRefresh, MdSettingsBackupRestore } from 'react-icons/md';
 
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { TokenUsageBar } from '@/components/TokenUsageBar';
@@ -12,14 +12,14 @@ type Props = {
   aiderTotalCost: number;
   clearMessages?: () => void;
   refreshRepoMap?: () => void;
-  restartTask?: () => void;
+  resetTask?: () => void;
   maxInputTokens?: number;
   mode: Mode;
   task: TaskData;
   updateTask: (updates: Partial<TaskData>) => void;
 };
 
-export const CostInfo = ({ tokensInfo, aiderTotalCost, clearMessages, refreshRepoMap, restartTask, maxInputTokens = 0, mode, task, updateTask }: Props) => {
+export const CostInfo = ({ tokensInfo, aiderTotalCost, clearMessages, refreshRepoMap, resetTask, maxInputTokens = 0, mode, task, updateTask }: Props) => {
   const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [refreshingAnimation, setRefreshingAnimation] = useState(false);
@@ -96,17 +96,17 @@ export const CostInfo = ({ tokensInfo, aiderTotalCost, clearMessages, refreshRep
         <div className="flex items-center h-[20px] mt-1">
           <div className="flex-1">{renderLabelValue('costInfo.total', `$${(aiderTotalCost + agentTotalCost).toFixed(5)}`)}</div>
           <div className="ml-0 max-w-0 group-hover:max-w-xs opacity-0 group-hover:opacity-100 group-hover:px-1 group-hover:ml-1 transition-all duration-300 overflow-hidden">
-            {restartTask && (
+            {resetTask && (
               <button
-                onClick={restartTask}
-                data-tooltip-id="restart-project-tooltip"
-                className="p-0.5 hover:bg-bg-tertiary rounded-md text-text-muted hover:text-text-tertiary transition-colors"
-                data-tooltip-content={t('costInfo.restartTask')}
+                onClick={resetTask}
+                data-tooltip-id="reset-project-tooltip"
+                className="p-1 hover:bg-bg-tertiary rounded-md text-text-muted hover:text-text-tertiary transition-colors mb-1"
+                data-tooltip-content={t('costInfo.resetTask')}
               >
-                <MdOutlineRefresh className="w-4 h-4" />
+                <MdSettingsBackupRestore className="w-4 h-4" />
               </button>
             )}
-            <StyledTooltip id="restart-project-tooltip" />
+            <StyledTooltip id="reset-project-tooltip" />
           </div>
         </div>
 

@@ -13,7 +13,7 @@ type Props = {
   maxInputTokens: number;
   clearMessages: (clearContext?: boolean) => void;
   runCommand: (command: string) => void;
-  restartTask: () => void;
+  resetTask: () => void;
   mode: Mode;
   showFileDialog: () => void;
   task: TaskData;
@@ -31,7 +31,7 @@ export const FilesContextInfoContent = ({
   maxInputTokens,
   clearMessages,
   runCommand,
-  restartTask,
+  resetTask,
   mode,
   showFileDialog,
   task,
@@ -57,7 +57,7 @@ export const FilesContextInfoContent = ({
         maxInputTokens={maxInputTokens}
         clearMessages={clearMessages}
         refreshRepoMap={() => runCommand('map-refresh')}
-        restartTask={restartTask}
+        resetTask={resetTask}
         mode={mode}
         task={task}
         updateTask={updateTask}
