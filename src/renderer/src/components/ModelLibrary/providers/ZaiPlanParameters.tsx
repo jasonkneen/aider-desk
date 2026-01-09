@@ -2,6 +2,8 @@ import { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ZaiPlanProvider } from '@common/agent';
 
+import { ZaiPlanAdvancedSettings } from './ZaiPlanAdvancedSettings';
+
 import { Input } from '@/components/common/Input';
 import { useEffectiveEnvironmentVariable } from '@/hooks/useEffectiveEnvironmentVariable';
 
@@ -43,6 +45,8 @@ export const ZaiPlanParameters = ({ provider, onChange }: Props) => {
               })
         }
       />
+
+      <ZaiPlanAdvancedSettings provider={provider} onChange={onChange} />
     </div>
   );
 };

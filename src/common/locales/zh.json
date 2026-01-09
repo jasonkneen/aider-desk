@@ -278,7 +278,30 @@
     "apiKey": "API 密钥"
   },
   "zaiPlan": {
-    "apiKey": "API 密钥"
+    "apiKey": "API 密钥",
+    "mcp": {
+      "title": "MCP 服务器",
+      "infoTooltip": "添加 Z.AI Coding Plan MCP 服务器以为智能体启用更多功能。",
+      "vision": {
+        "name": "视觉",
+        "description": "使用 GLM-4.6V 模型进行图像和视频分析"
+      },
+      "zread": {
+        "name": "Zread",
+        "description": "搜索和阅读 GitHub 仓库文档和代码"
+      },
+      "webReader": {
+        "name": "网页阅读器",
+        "description": "获取和提取网页内容"
+      },
+      "webSearch": {
+        "name": "网页搜索",
+        "description": "搜索网络获取实时信息"
+      },
+      "add": "添加",
+      "adding": "添加中...",
+      "configured": "已配置"
+    }
   },
   "anthropic": {
     "apiKey": "API 密钥"

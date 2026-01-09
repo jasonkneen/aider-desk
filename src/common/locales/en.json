@@ -328,7 +328,30 @@
     "apiKey": "API Key"
   },
   "zaiPlan": {
-    "apiKey": "API Key"
+    "apiKey": "API Key",
+    "mcp": {
+      "title": "MCP Servers",
+      "infoTooltip": "Add Z.AI Coding Plan MCP servers to enable additional capabilities for the agent.",
+      "vision": {
+        "name": "Vision",
+        "description": "Image and video analysis using GLM-4.6V model"
+      },
+      "zread": {
+        "name": "Zread",
+        "description": "Search and read GitHub repository documentation and code"
+      },
+      "webReader": {
+        "name": "Web Reader",
+        "description": "Fetch and extract content from web pages"
+      },
+      "webSearch": {
+        "name": "Web Search",
+        "description": "Search the web for real-time information"
+      },
+      "add": "Add",
+      "adding": "Adding...",
+      "configured": "Configured"
+    }
   },
   "azure": {
     "apiKey": "API Key",

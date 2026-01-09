@@ -17,6 +17,7 @@
 - agent mode set as default for new projects and updated empty task message
 - properly replacing ~ in paths of power tools for HOME
 - added agent creator skill
+- added MCP tool auto-setup to Z.AI Coding Plan provider
 
 ## [0.47.0]
 
