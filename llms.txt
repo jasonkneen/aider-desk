@@ -1727,7 +1727,9 @@ File: src/common/locales/en.json
       "smartTaskState": "Smart Task State",
       "smartTaskStateTooltip": "When enabled, the model intelligently analyzes the agent's response to classify the task as 'More Info Needed', 'Ready for Implementation', or 'Ready for Review'. When disabled, the task state will always be set to 'Ready for Review'.",
       "autoGenerateTaskName": "Auto-Generate Task Name",
-      "autoGenerateTaskNameTooltip": "When enabled, the model generates a concise task name from your prompt. When disabled, the first 5 words of your prompt will be used as the task name."
+      "autoGenerateTaskNameTooltip": "When enabled, the model generates a concise task name from your prompt. When disabled, the first 5 words of your prompt will be used as the task name.",
+      "showTaskStateActions": "Show Task State Actions",
+      "showTaskStateActionsTooltip": "When enabled, task state actions are displayed at the bottom of messages. Disable to hide these actions."
     },
     "language": "Language",
     "notifications": {
@@ -3132,7 +3134,9 @@ File: src/common/locales/zh.json
       "smartTaskState": "智能任务状态",
       "smartTaskStateTooltip": "启用后，模型会智能分析代理的响应，将任务分类为'需要更多信息'、'准备实施'或'准备审查'。禁用时，任务状态将始终设置为'准备审查'。",
       "autoGenerateTaskName": "自动生成任务名称",
-      "autoGenerateTaskNameTooltip": "启用后，模型会根据您的提示生成简洁的任务名称。禁用时，将使用提示的前5个词作为任务名称。"
+      "autoGenerateTaskNameTooltip": "启用后，模型会根据您的提示生成简洁的任务名称。禁用时，将使用提示的前5个词作为任务名称。",
+      "showTaskStateActions": "显示任务状态操作",
+      "showTaskStateActionsTooltip": "启用后，任务状态操作将显示在消息底部。禁用以隐藏这些操作。"
     },
     "language": "语言",
     "notifications": {
@@ -4797,6 +4801,7 @@ export interface ToolData {
   response?: string;
   usageReport?: UsageReportData;
   promptContext?: PromptContext;
+  finished?: boolean;
 }
 ⋮----
 export interface ContextFilesUpdatedData {
@@ -5091,6 +5096,7 @@ export enum MemoryEmbeddingProvider {
 export interface TaskSettings {
   smartTaskState: boolean;
   autoGenerateTaskName: boolean;
+  showTaskStateActions: boolean;
 }
 ⋮----
 export interface MemoryConfig {
@@ -5690,8 +5696,7 @@ File: src/main/agent/tools/power.ts
 ================
 import fs from 'fs/promises';
 import path from 'path';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 ⋮----
 import { tool, type ToolSet } from 'ai';
 import { z } from 'zod';
@@ -5752,13 +5757,33 @@ absolute: false, // Keep paths relative to cwd for easier processing
 ⋮----
 const searchRegex = new RegExp(searchTerm, caseSensitive ? undefined : 'i'); // Simpler for line-by-line test
 ⋮----
+false, // not finished yet
+⋮----
 // Pattern validation
 ⋮----
 // Check denied patterns first
 ⋮----
 // Check allowed patterns - if matches, skip approval and execute directly
 ⋮----
-// Check for timeout - exec throws with signal='SIGTERM' or code='ETIMEDOUT' when timeout is exceeded
+const cleanup = () =>
+⋮----
+const resolveWithResult = () =>
+⋮----
+const abortListener = () =>
+⋮----
+// Listen for abort signal
+⋮----
+// Set timeout
+⋮----
+// Send streaming update
+⋮----
+false, // not finished yet
+⋮----
+// Send streaming update
+⋮----
+false, // not finished yet
+⋮----
+exitCode = 124; // Timeout exit code
 ⋮----
 // Use parameter maxTokens if provided, otherwise use the default
 ⋮----
@@ -5826,7 +5851,7 @@ import { AgentProfileManager } from '@/agent/agent-profile-manager';
 import { Task } from '@/task';
 import logger from '@/logger';
 ⋮----
-const getSubagentId = (subagent: AgentProfile): string =>
+export const getSubagentId = (subagent: AgentProfile): string =>
 ⋮----
 export const createSubagentsToolset = async (
   _settings: SettingsData,
@@ -6555,6 +6580,7 @@ import { extractTextContent } from '@common/utils';
 import logger from '@/logger';
 import { type CacheControl } from '@/models';
 import { Task } from '@/task';
+import { getSubagentId } from '@/agent/tools/subagents';
 ⋮----
 /**
  * Optimizes the messages before sending them to the LLM. This should reduce the token count and improve the performance.
@@ -10751,6 +10777,7 @@ public addToolMessage(
     usageReport?: UsageReportData,
     promptContext?: PromptContext,
     saveToDb = true,
+    finished = !!response,
 )
 ⋮----
 // Update total costs when adding the tool message
@@ -14745,15 +14772,19 @@ return <ExpandableMessageBlock title=
 ================
 File: src/renderer/src/components/message/BashToolMessage.tsx
 ================
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RiTerminalLine, RiErrorWarningFill, RiCheckboxCircleFill, RiCloseCircleFill } from 'react-icons/ri';
 import { CgSpinner } from 'react-icons/cg';
+import { MdKeyboardDoubleArrowDown } from 'react-icons/md';
 ⋮----
 import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { CopyMessageButton } from '@/components/message/CopyMessageButton';
+import { IconButton } from '@/components/common/IconButton';
+import { useScrollingPaused } from '@/hooks/useScrollingPaused';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -14761,7 +14792,13 @@ type Props = {
   compact?: boolean;
 };
 ⋮----
-return <ExpandableMessageBlock title=
+const handleScrollToBottom = () =>
+⋮----
+const handleExpandedChange = (open: boolean) =>
+⋮----
+aria-label=
+⋮----
+<ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/CommandOutputMessageBlock.tsx
@@ -14903,6 +14940,7 @@ type Props = {
   usageReport?: UsageReportData;
   onRemove?: () => void;
   initialExpanded?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 ⋮----
 export interface ExpandableMessageBlockRef {
@@ -15444,6 +15482,7 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
 import { useScrollingPaused } from '@/hooks/useScrollingPaused';
 import { useUserMessageNavigation } from '@/hooks/useUserMessageNavigation';
+import { useSettings } from '@/contexts/SettingsContext';
 ⋮----
 export type MessagesRef = {
   exportToImage: () => void;
@@ -16019,6 +16058,7 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
 import { showInfoNotification } from '@/utils/notifications';
 import { useScrollingPaused } from '@/hooks/useScrollingPaused';
+import { useSettings } from '@/contexts/SettingsContext';
 ⋮----
 export type VirtualizedMessagesRef = {
   exportToImage: () => void;
@@ -19774,6 +19814,8 @@ const handleSmartTaskStateChange = (checked: boolean) =>
 ⋮----
 const handleAutoGenerateTaskNameChange = (checked: boolean) =>
 ⋮----
+const handleShowTaskStateActionsChange = (checked: boolean) =>
+⋮----
 <Section title=
 
 ================
@@ -20983,7 +21025,7 @@ const checkScreenSize = () =>
 ================
 File: src/renderer/src/hooks/useScrollingPaused.ts
 ================
-import { useCallback, useState } from 'react';
+import { TouchEvent, UIEvent, useCallback, useState, WheelEvent } from 'react';
 ⋮----
 interface UseScrollingPausedOptions {
   onAutoScroll: () => void;
@@ -20996,10 +21038,10 @@ interface UseScrollingPausedReturn {
   setScrollingPaused: (paused: boolean) => void;
   scrollToBottom: () => void;
   eventHandlers: {
-    onScroll: (e: React.UIEvent<HTMLDivElement>) => void;
-    onWheel: (e: React.WheelEvent<HTMLDivElement>) => void;
-    onTouchStart: (e: React.TouchEvent<HTMLDivElement>) => void;
-    onTouchMove: (e: React.TouchEvent<HTMLDivElement>) => void;
+    onScroll: (e: UIEvent<HTMLDivElement>) => void;
+    onWheel: (e: WheelEvent<HTMLDivElement>) => void;
+    onTouchStart: (e: TouchEvent<HTMLDivElement>) => void;
+    onTouchMove: (e: TouchEvent<HTMLDivElement>) => void;
   };
 }
 ⋮----
@@ -23741,6 +23783,7 @@ export interface ToolMessage extends Message {
   args: Record<string, unknown>;
   content: string; // Empty while executing, contains result when complete
   usageReport?: UsageReportData;
+  finished?: boolean;
 }
 ⋮----
 content: string; // Empty while executing, contains result when complete
