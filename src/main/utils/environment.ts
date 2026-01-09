@@ -297,7 +297,7 @@ export const getDefaultProjectSettings = (
     mainModel: determineMainModel(store.getSettings(), store.getProviders(), providerModels, baseDir),
     weakModel: determineWeakModel(baseDir),
     modelEditFormats: {},
-    currentMode: 'code',
+    currentMode: 'agent',
     agentProfileId: defaultAgentProfileId,
     autoApproveLocked: false,
   };

@@ -118,7 +118,7 @@ export class Task {
       aiderTotalCost: 0,
       agentTotalCost: 0,
       mainModel: '',
-      currentMode: 'code',
+      currentMode: 'agent',
       contextCompactingThreshold: 0,
       weakModelLocked: false,
       ...initialTaskData,

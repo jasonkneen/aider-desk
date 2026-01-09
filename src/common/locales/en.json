@@ -1390,7 +1390,6 @@
       "aiCoding": "Generate and modify code with AI assistance",
       "contextManagement": "Add files to context for better results",
       "multiModel": "Choose from multiple AI models and providers",
-      "modes": "Switch between Agent and Aider modes",
       "commands": "Execute commands and run tests"
     },
     "tips": {
@@ -1398,7 +1397,18 @@
       "addFiles": "Add files to context using the sidebar or /add command",
       "askQuestion": "Type your request in the prompt field below",
       "useCommands": "Use / commands for quick actions",
-      "switchMode": "Try Agent mode for autonomous task completion"
+      "switchMode": "Switch between modes using the mode selector below"
+    },
+    "modes": {
+      "title": "Choosing the Right Mode",
+      "agent": {
+        "title": "Agent Mode",
+        "description": "Use for autonomous tasks, complex workflows, and multi-step operations. The agent plans and executes tasks independently using available tools."
+      },
+      "code": {
+        "title": "Code Mode",
+        "description": "Use for direct code changes and specific tasks. Important: Add files to context to ensure the AI works on the right files."
+      }
     }
   }
 }

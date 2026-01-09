@@ -14,6 +14,7 @@
 - added configuration option to hide task state actions
 - added output streaming to bash power tool during the execution
 - improved retrieve memories tool description for better results
+- agent mode set as default for new projects and updated empty task message
 
 ## [0.47.0]
 

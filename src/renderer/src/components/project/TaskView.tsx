@@ -442,7 +442,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
             )}
             <div className="overflow-hidden flex-grow relative">
               {displayedMessages.length === 0 && !loading && !messagesPending && task.state !== DefaultTaskState.InProgress ? (
-                <WelcomeMessage />
+                <WelcomeMessage onModeChange={handleModeChange} />
               ) : (
                 <>
                   {settings.virtualizedRendering ? (

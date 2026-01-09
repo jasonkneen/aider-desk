@@ -80,7 +80,7 @@ export class Project {
       initialTaskData = {
         mainModel: determineMainModel(this.store.getSettings(), this.store.getProviders(), providerModels.models || [], this.baseDir),
         weakModel: determineWeakModel(this.baseDir),
-        currentMode: 'code',
+        currentMode: 'agent',
       };
     }
 
