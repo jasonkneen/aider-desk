@@ -13,6 +13,7 @@
 - properly using the compacting threshold from the task when updated
 - added configuration option to hide task state actions
 - added output streaming to bash power tool during the execution
+- improved retrieve memories tool description for better results
 
 ## [0.47.0]
 
