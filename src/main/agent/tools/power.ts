@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import os from 'os';
 import path from 'path';
 import { spawn } from 'child_process';
 
@@ -32,6 +33,18 @@ import logger from '@/logger';
 import { filterIgnoredFiles, scrapeWeb } from '@/utils';
 import { isAbortError, isFileNotFoundError } from '@/utils/errors';
 
+/**
+ * Expands a tilde (~) at the beginning of a path to the user's home directory.
+ * @param filePath - The file path to expand
+ * @returns The expanded path with ~ replaced by the home directory
+ */
+const expandTilde = (filePath: string): string => {
+  if (filePath.startsWith('~/') || filePath === '~') {
+    return filePath.replace('~', os.homedir());
+  }
+  return filePath;
+};
+
 export const createPowerToolset = (task: Task, profile: AgentProfile, promptContext?: PromptContext, abortSignal?: AbortSignal): ToolSet => {
   const approvalManager = new ApprovalManager(task, profile);
 
@@ -57,6 +70,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
     }),
     execute: async (args, { toolCallId }) => {
       const { filePath, searchTerm, replacementText, isRegex, replaceAll } = args;
+      const expandedPath = expandTilde(filePath);
       task.addToolMessage(toolCallId, TOOL_GROUP_NAME, TOOL_FILE_EDIT, args, undefined, undefined, promptContext);
 
       if (searchTerm === replacementText) {
@@ -104,7 +118,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         return `File edit to '${filePath}' denied by user. Reason: ${userInput}`;
       }
 
-      const absolutePath = path.resolve(task.getTaskDir(), filePath);
+      const absolutePath = path.resolve(task.getTaskDir(), expandedPath);
       try {
         const fileContent = await fs.readFile(absolutePath, { encoding: 'utf8', signal: abortSignal });
         let modifiedContent: string;
@@ -161,6 +175,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
       lineLimit: z.number().int().min(1).optional().default(1000).describe('The maximum number of lines to read. Default: 1000.'),
     }),
     execute: async ({ filePath, withLines, lineOffset, lineLimit }, { toolCallId }) => {
+      const expandedPath = expandTilde(filePath);
       task.addToolMessage(
         toolCallId,
         TOOL_GROUP_NAME,
@@ -185,7 +200,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         return `File read of '${filePath}' denied by user. Reason: ${userInput}`;
       }
 
-      const absolutePath = path.resolve(task.getTaskDir(), filePath);
+      const absolutePath = path.resolve(task.getTaskDir(), expandedPath);
       try {
         const fileContentBuffer = await fs.readFile(absolutePath, { signal: abortSignal });
         if (isBinary(absolutePath, fileContentBuffer)) {
@@ -239,6 +254,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         ),
     }),
     execute: async ({ filePath, content, mode }, { toolCallId }) => {
+      const expandedPath = expandTilde(filePath);
       task.addToolMessage(
         toolCallId,
         TOOL_GROUP_NAME,
@@ -267,7 +283,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         return `File write to '${filePath}' denied by user. Reason: ${userInput}`;
       }
 
-      const absolutePath = path.resolve(task.getTaskDir(), filePath);
+      const absolutePath = path.resolve(task.getTaskDir(), expandedPath);
 
       try {
         await fs.mkdir(path.dirname(absolutePath), { recursive: true });
@@ -317,6 +333,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
       ignore: z.array(z.string()).optional().describe('An array of glob patterns to ignore.'),
     }),
     execute: async ({ pattern, cwd, ignore }, { toolCallId }) => {
+      const expandedCwd = cwd ? expandTilde(cwd) : cwd;
       task.addToolMessage(
         toolCallId,
         TOOL_GROUP_NAME,
@@ -340,7 +357,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         return `Glob search with pattern '${pattern}' denied by user. Reason: ${userInput}`;
       }
 
-      const absoluteCwd = cwd ? path.resolve(task.getTaskDir(), cwd) : task.getTaskDir();
+      const absoluteCwd = expandedCwd ? path.resolve(task.getTaskDir(), expandedCwd) : task.getTaskDir();
       try {
         const files = await glob(pattern, {
           cwd: absoluteCwd,
@@ -487,6 +504,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
       timeout: z.number().int().min(0).optional().default(120000).describe('Timeout for the command execution in milliseconds. Default: 120000 ms.'),
     }),
     execute: async ({ command, cwd, timeout }, { toolCallId }) => {
+      const expandedCwd = cwd ? expandTilde(cwd) : cwd;
       task.addToolMessage(
         toolCallId,
         TOOL_GROUP_NAME,
@@ -529,7 +547,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         return `Bash command execution denied by user. Reason: ${userInput}`;
       }
 
-      const absoluteCwd = cwd ? path.resolve(task.getTaskDir(), cwd) : task.getTaskDir();
+      const absoluteCwd = expandedCwd ? path.resolve(task.getTaskDir(), expandedCwd) : task.getTaskDir();
 
       return await new Promise((resolve) => {
         let stdout = '';
