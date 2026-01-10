@@ -10,8 +10,6 @@
 
 ## 🎬 Overview
 
-See AiderDesk's autonomous AI agent in action:
-
 <div align="center">
   <a href="https://www.youtube.com/watch?v=KSWlhB-O2SE">
     <img src="https://img.youtube.com/vi/9oyIdntCh7g/0.jpg" alt="AiderDesk Overview Video" width=400>
@@ -45,6 +43,7 @@ AiderDesk is packed with features designed for modern software development:
 * **🌐 REST API**: Integrate AiderDesk with external tools and workflows.
 * **🌐 AiderDesk as MCP Server**: Expose AiderDesk's core functionality to other MCP-compatible clients (Claude Desktop, Cursor, etc.).
 
+[**Learn more about AiderDesk →**](https://aiderdesk.hotovo.com/docs)
 
 ---
 
