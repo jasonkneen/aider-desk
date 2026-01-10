@@ -2587,6 +2587,11 @@ ${error.stderr}`,
       if (!currentWorktree) {
         const branchName = this.generateBranchName();
         this.task.worktree = await this.worktreeManager.createWorktree(this.project.baseDir, this.taskId, branchName);
+
+        const settings = this.store.getSettings();
+        if (settings.taskSettings.worktreeSymlinkFolders && settings.taskSettings.worktreeSymlinkFolders.length > 0) {
+          await this.worktreeManager.createSymlinks(this.project.baseDir, this.task.worktree.path, settings.taskSettings.worktreeSymlinkFolders);
+        }
       }
       this.task.workingMode = mode;
     } else if (mode === 'local') {

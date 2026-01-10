@@ -467,7 +467,14 @@
       "autoGenerateTaskName": "自动生成任务名称",
       "autoGenerateTaskNameTooltip": "启用后，模型会根据您的提示生成简洁的任务名称。禁用时，将使用提示的前5个词作为任务名称。",
       "showTaskStateActions": "显示任务状态操作",
-      "showTaskStateActionsTooltip": "启用后，任务状态操作将显示在消息底部。禁用以隐藏这些操作。"
+      "showTaskStateActionsTooltip": "启用后，任务状态操作将显示在消息底部。禁用以隐藏这些操作。",
+      "worktree": "工作树",
+      "worktreeSymlinkFoldersLabel": "符号链接文件夹",
+      "worktreeSymlinkFoldersTooltip": "这些文件夹将从项目根目录符号链接到任务工作树。适用于像 node_modules 这样的大型依赖。",
+      "noSymlinkFolders": "未配置符号链接文件夹",
+      "symlinkFolderPlaceholder": "文件夹名称（例如 node_modules）",
+      "addSymlinkFolder": "添加",
+      "removeSymlinkFolder": "移除文件夹"
     },
     "language": "语言",
     "notifications": {

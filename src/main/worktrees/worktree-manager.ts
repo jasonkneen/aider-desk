@@ -1,5 +1,6 @@
 import path, { join } from 'path';
-import fs, { mkdir, rm } from 'fs/promises';
+import fs, { mkdir, rm, lstat, symlink } from 'fs/promises';
+import { existsSync } from 'fs';
 
 import { ConflictResolutionFileContext, MergeState, RebaseState, Worktree, WorktreeAheadCommits, WorktreeUncommittedFiles } from '@common/types';
 
@@ -197,6 +198,58 @@ export class WorktreeManager {
         throw new Error(`Failed to create worktree: ${error instanceof Error ? error.message : String(error)}`);
       }
     });
+  }
+
+  async createSymlinks(projectPath: string, worktreePath: string, folderNames: string[]): Promise<void> {
+    if (folderNames.length === 0) {
+      logger.debug('No symlink folders configured, skipping symlink creation');
+      return;
+    }
+    logger.debug(`Creating symlinks for folders: ${folderNames.join(', ')}`);
+    for (const folderName of folderNames) {
+      const sourcePath = join(projectPath, folderName);
+      const targetPath = join(worktreePath, folderName);
+      try {
+        if (!(await this.existsAndIsDirectory(sourcePath))) {
+          logger.debug(`Source folder does not exist or is not a directory: ${sourcePath}`);
+          continue;
+        }
+        if (existsSync(targetPath)) {
+          logger.debug(`Target already exists in worktree, skipping: ${targetPath}`);
+          continue;
+        }
+        const isTrackedByGit = await this.isFolderTrackedByGit(projectPath, folderName);
+        if (isTrackedByGit) {
+          logger.debug(`Folder is tracked by Git, skipping symlink creation: ${folderName}`);
+          continue;
+        }
+        await symlink(sourcePath, targetPath, 'dir');
+        logger.info(`Created symlink: ${targetPath} -> ${sourcePath}`);
+      } catch (error) {
+        logger.warn(`Failed to create symlink for ${folderName}:`, error);
+      }
+    }
+  }
+
+  private async existsAndIsDirectory(path: string): Promise<boolean> {
+    try {
+      if (!existsSync(path)) {
+        return false;
+      }
+      const stats = await lstat(path);
+      return stats.isDirectory();
+    } catch {
+      return false;
+    }
+  }
+
+  private async isFolderTrackedByGit(projectPath: string, folderName: string): Promise<boolean> {
+    try {
+      const { stdout } = await execWithShellPath(`git ls-files "${folderName}"`, { cwd: projectPath });
+      return stdout.trim().length > 0;
+    } catch {
+      return false;
+    }
   }
 
   async removeWorktree(projectDir: string, worktree: Worktree): Promise<void> {

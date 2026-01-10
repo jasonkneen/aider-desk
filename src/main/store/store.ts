@@ -86,6 +86,7 @@ export const DEFAULT_SETTINGS: SettingsData = {
     smartTaskState: true,
     autoGenerateTaskName: true,
     showTaskStateActions: true,
+    worktreeSymlinkFolders: ['node_modules', 'vendor', '__pycache__', '.venv', 'venv'],
   },
 };
 
@@ -171,6 +172,7 @@ export class Store {
       taskSettings: {
         ...DEFAULT_SETTINGS.taskSettings,
         ...settings?.taskSettings,
+        worktreeSymlinkFolders: settings?.taskSettings?.worktreeSymlinkFolders || DEFAULT_SETTINGS.taskSettings.worktreeSymlinkFolders,
       },
     };
   }

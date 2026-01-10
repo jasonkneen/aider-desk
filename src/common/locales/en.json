@@ -468,7 +468,14 @@
       "autoGenerateTaskName": "Auto-Generate Task Name",
       "autoGenerateTaskNameTooltip": "When enabled, the model generates a concise task name from your prompt. When disabled, the first 5 words of your prompt will be used as the task name.",
       "showTaskStateActions": "Show Task State Actions",
-      "showTaskStateActionsTooltip": "When enabled, task state actions are displayed at the bottom of messages. Disable to hide these actions."
+      "showTaskStateActionsTooltip": "When enabled, task state actions are displayed at the bottom of messages. Disable to hide these actions.",
+      "worktree": "Worktree",
+      "worktreeSymlinkFoldersLabel": "Symlink Folders",
+      "worktreeSymlinkFoldersTooltip": "These folders will be symlinked from the project root to the task worktree. Useful for large dependencies like node_modules.",
+      "noSymlinkFolders": "No symlink folders configured",
+      "symlinkFolderPlaceholder": "Folder name (e.g. node_modules)",
+      "addSymlinkFolder": "Add",
+      "removeSymlinkFolder": "Remove folder"
     },
     "language": "Language",
     "notifications": {

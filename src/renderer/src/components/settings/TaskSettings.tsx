@@ -1,9 +1,12 @@
 import { SettingsData } from '@common/types';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Chip } from '../common/Chip';
 import { Checkbox } from '../common/Checkbox';
 import { Section } from '../common/Section';
 import { InfoIcon } from '../common/InfoIcon';
+import { Button } from '../common/Button';
 
 type Props = {
   settings: SettingsData;
@@ -12,6 +15,7 @@ type Props = {
 
 export const TaskSettings = ({ settings, setSettings }: Props) => {
   const { t } = useTranslation();
+  const [newFolder, setNewFolder] = useState('');
 
   const handleSmartTaskStateChange = (checked: boolean) => {
     setSettings({
@@ -39,6 +43,37 @@ export const TaskSettings = ({ settings, setSettings }: Props) => {
       taskSettings: {
         ...settings.taskSettings,
         showTaskStateActions: checked,
+      },
+    });
+  };
+
+  const handleAddSymlinkFolder = () => {
+    const trimmedFolder = newFolder.trim();
+    if (!trimmedFolder) {
+      return;
+    }
+
+    const currentFolders = settings.taskSettings.worktreeSymlinkFolders || [];
+    if (!currentFolders.includes(trimmedFolder)) {
+      setSettings({
+        ...settings,
+        taskSettings: {
+          ...settings.taskSettings,
+          worktreeSymlinkFolders: [...currentFolders, trimmedFolder],
+        },
+      });
+    }
+
+    setNewFolder('');
+  };
+
+  const handleRemoveSymlinkFolder = (folder: string) => {
+    const currentFolders = settings.taskSettings.worktreeSymlinkFolders || [];
+    setSettings({
+      ...settings,
+      taskSettings: {
+        ...settings.taskSettings,
+        worktreeSymlinkFolders: currentFolders.filter((f) => f !== folder),
       },
     });
   };
@@ -75,6 +110,52 @@ export const TaskSettings = ({ settings, setSettings }: Props) => {
               label={t('settings.tasks.showTaskStateActions')}
             />
             <InfoIcon tooltip={t('settings.tasks.showTaskStateActionsTooltip')} />
+          </div>
+        </div>
+      </Section>
+
+      <Section id="worktree" title={t('settings.tasks.worktree')}>
+        <div className="px-4 py-3 pt-4 space-y-3">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-1">
+              <label className="text-xs text-text-primary font-medium">{t('settings.tasks.worktreeSymlinkFoldersLabel')}</label>
+              <InfoIcon tooltip={t('settings.tasks.worktreeSymlinkFoldersTooltip')} />
+            </div>
+
+            <div className="flex gap-2 items-center">
+              <input
+                type="text"
+                value={newFolder}
+                onChange={(e) => setNewFolder(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddSymlinkFolder();
+                  }
+                }}
+                placeholder={t('settings.tasks.symlinkFolderPlaceholder')}
+                className="w-64 bg-bg-secondary-light border border-border-default rounded px-2 py-1 text-xs text-text-primary focus:outline-none focus:border-border-light"
+              />
+              <Button variant="outline" size="xs" onClick={handleAddSymlinkFolder}>
+                {t('settings.tasks.addSymlinkFolder')}
+              </Button>
+            </div>
+
+            {settings.taskSettings.worktreeSymlinkFolders && settings.taskSettings.worktreeSymlinkFolders.length > 0 ? (
+              <div className="mt-1 flex flex-wrap gap-1 max-h-40 overflow-y-auto p-0.5 scrollbar-thin scrollbar-track-bg-secondary-light scrollbar-thumb-bg-tertiary hover:scrollbar-thumb-bg-fourth w-full">
+                {settings.taskSettings.worktreeSymlinkFolders.map((folder) => (
+                  <Chip
+                    key={folder}
+                    label={folder}
+                    onRemove={() => handleRemoveSymlinkFolder(folder)}
+                    removeTooltip={t('settings.tasks.removeSymlinkFolder')}
+                    className="bg-bg-secondary"
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-2xs text-text-muted">{t('settings.tasks.noSymlinkFolders')}</div>
+            )}
           </div>
         </div>
       </Section>

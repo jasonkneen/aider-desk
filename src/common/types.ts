@@ -516,6 +516,7 @@ export interface TaskSettings {
   smartTaskState: boolean;
   autoGenerateTaskName: boolean;
   showTaskStateActions: boolean;
+  worktreeSymlinkFolders: string[];
 }
 
 export interface MemoryConfig {
