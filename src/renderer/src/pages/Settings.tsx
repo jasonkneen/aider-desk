@@ -265,19 +265,19 @@ export const Settings = ({
     <div className="flex flex-1 h-full min-h-0 overflow-hidden">
       {/* Sidebar */}
       <div className="w-64 flex-shrink-0 overflow-y-auto pt-0 bg-bg-primary border-r border-border-default-dark scrollbar-thin scrollbar-track-transparent scrollbar-thumb-bg-tertiary">
-        <div className="p-2 space-y-1">
+        <div className="p-2 space-y-0.5">
           {sidebarItems.map((item) => (
             <div key={item.id}>
               <div
                 className={clsx(
-                  'flex items-center px-3 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors duration-150 select-none',
+                  'flex items-center px-3 py-1.5 text-sm font-medium rounded-md cursor-pointer transition-colors duration-150 select-none',
                   activePage === item.pageId
                     ? 'bg-bg-active text-text-primary bg-bg-secondary'
                     : 'text-text-secondary hover:bg-bg-tertiary hover:text-text-primary',
                 )}
                 onClick={() => handleItemClick(item)}
               >
-                {item.children && item.children.length > 0 && (
+                {!!item.children?.length && (
                   <div
                     className="mr-2 p-0.5 rounded hover:bg-bg-tertiary-strong transition-colors"
                     onClick={(e) => {
@@ -288,7 +288,7 @@ export const Settings = ({
                     {expandedPages[item.id] ? <FaChevronDown className="w-3 h-3" /> : <FaChevronRight className="w-3 h-3" />}
                   </div>
                 )}
-                {!item.children && <span className="w-6" />} {/* Spacer for items without children */}
+                {!item.children?.length && <span className="w-6" />} {/* Spacer for items without children */}
                 <span className="mr-3">{item.icon}</span>
                 <span className="flex-1 truncate uppercase">{item.label}</span>
               </div>
