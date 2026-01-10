@@ -365,6 +365,7 @@ src/
             VertexAiAdvancedSettings.tsx
             VertexAiModelOverrides.tsx
             VertexAIParameters.tsx
+            ZaiPlanAdvancedSettings.tsx
             ZaiPlanParameters.tsx
           DisableStreaming.tsx
           index.ts
@@ -1616,7 +1617,30 @@ File: src/common/locales/en.json
     "apiKey": "API Key"
   },
   "zaiPlan": {
-    "apiKey": "API Key"
+    "apiKey": "API Key",
+    "mcp": {
+      "title": "MCP Servers",
+      "infoTooltip": "Add Z.AI Coding Plan MCP servers to enable additional capabilities for the agent.",
+      "vision": {
+        "name": "Vision",
+        "description": "Image and video analysis using GLM-4.6V model"
+      },
+      "zread": {
+        "name": "Zread",
+        "description": "Search and read GitHub repository documentation and code"
+      },
+      "webReader": {
+        "name": "Web Reader",
+        "description": "Fetch and extract content from web pages"
+      },
+      "webSearch": {
+        "name": "Web Search",
+        "description": "Search the web for real-time information"
+      },
+      "add": "Add",
+      "adding": "Adding...",
+      "configured": "Configured"
+    }
   },
   "azure": {
     "apiKey": "API Key",
@@ -2188,7 +2212,7 @@ File: src/common/locales/en.json
     "agent": "Agent",
     "aider": "Aider",
     "total": "Total",
-    "restartTask": "Restart task",
+    "resetTask": "Reset",
     "tokenUsage": "{{usedTokens}} of {{maxTokens}}",
     "contextCompactingThreshold": "Auto-compact threshold",
     "contextCompactingThresholdOff": "Off",
@@ -2678,7 +2702,6 @@ File: src/common/locales/en.json
       "aiCoding": "Generate and modify code with AI assistance",
       "contextManagement": "Add files to context for better results",
       "multiModel": "Choose from multiple AI models and providers",
-      "modes": "Switch between Agent and Aider modes",
       "commands": "Execute commands and run tests"
     },
     "tips": {
@@ -2686,7 +2709,18 @@ File: src/common/locales/en.json
       "addFiles": "Add files to context using the sidebar or /add command",
       "askQuestion": "Type your request in the prompt field below",
       "useCommands": "Use / commands for quick actions",
-      "switchMode": "Try Agent mode for autonomous task completion"
+      "switchMode": "Switch between modes using the mode selector below"
+    },
+    "modes": {
+      "title": "Choosing the Right Mode",
+      "agent": {
+        "title": "Agent Mode",
+        "description": "Use for autonomous tasks, complex workflows, and multi-step operations. The agent plans and executes tasks independently using available tools."
+      },
+      "code": {
+        "title": "Code Mode",
+        "description": "Use for direct code changes and specific tasks. Important: Add files to context to ensure the AI works on the right files."
+      }
     }
   }
 }
@@ -2974,7 +3008,30 @@ File: src/common/locales/zh.json
     "apiKey": "API 密钥"
   },
   "zaiPlan": {
-    "apiKey": "API 密钥"
+    "apiKey": "API 密钥",
+    "mcp": {
+      "title": "MCP 服务器",
+      "infoTooltip": "添加 Z.AI Coding Plan MCP 服务器以为智能体启用更多功能。",
+      "vision": {
+        "name": "视觉",
+        "description": "使用 GLM-4.6V 模型进行图像和视频分析"
+      },
+      "zread": {
+        "name": "Zread",
+        "description": "搜索和阅读 GitHub 仓库文档和代码"
+      },
+      "webReader": {
+        "name": "网页阅读器",
+        "description": "获取和提取网页内容"
+      },
+      "webSearch": {
+        "name": "网页搜索",
+        "description": "搜索网络获取实时信息"
+      },
+      "add": "添加",
+      "adding": "添加中...",
+      "configured": "已配置"
+    }
   },
   "anthropic": {
     "apiKey": "API 密钥"
@@ -3572,7 +3629,7 @@ File: src/common/locales/zh.json
     "agent": "代理",
     "aider": "Aider",
     "total": "全部的",
-    "restartTask": "重启任务",
+    "resetTask": "重置",
     "tokenUsage": "{{usedTokens}} / {{maxTokens}}",
     "contextCompactingThreshold": "自动压缩上下文阈值",
     "contextCompactingThresholdOff": "关闭",
@@ -4093,7 +4150,6 @@ File: src/common/locales/zh.json
       "aiCoding": "使用 AI 辅助生成和修改代码",
       "contextManagement": "添加文件到上下文以获得更好的结果",
       "multiModel": "选择多种 AI 模型和提供商",
-      "modes": "在代理和 Aider 模式之间切换",
       "commands": "执行命令和运行测试"
     },
     "tips": {
@@ -4101,7 +4157,18 @@ File: src/common/locales/zh.json
       "addFiles": "使用侧边栏或 /add 命令添加文件到上下文",
       "askQuestion": "在下方的提示字段中输入您的请求",
       "useCommands": "使用 / 命令进行快速操作",
-      "switchMode": "尝试代理模式以实现自主任务完成"
+      "switchMode": "使用下方的模式选择器在模式之间切换"
+    },
+    "modes": {
+      "title": "选择正确的模式",
+      "agent": {
+        "title": "代理模式",
+        "description": "用于自主任务、复杂工作流程和多步骤操作。代理会使用可用工具独立规划和执行任务。"
+      },
+      "code": {
+        "title": "代码模式",
+        "description": "用于直接代码更改和特定任务。重要提示：将文件添加到上下文以确保 AI 处理正确的文件。"
+      }
     }
   }
 }
@@ -4455,7 +4522,7 @@ export interface ApplicationAPI {
   startProject: (baseDir: string) => Promise<void>;
   stopProject: (baseDir: string) => void;
   restartProject: (baseDir: string) => void;
-  restartTask: (baseDir: string, taskId: string) => void;
+  resetTask: (baseDir: string, taskId: string) => void;
   runPrompt: (baseDir: string, taskId: string, prompt: string, mode?: Mode) => void;
   savePrompt: (baseDir: string, taskId: string, prompt: string) => Promise<void>;
   redoLastUserPrompt: (baseDir: string, taskId: string, mode: Mode, updatedPrompt?: string) => void;
@@ -5695,6 +5762,7 @@ export const createMemoryToolset = (task: Task, profile: AgentProfile, memoryMan
 File: src/main/agent/tools/power.ts
 ================
 import fs from 'fs/promises';
+import os from 'os';
 import path from 'path';
 import { spawn } from 'child_process';
 ⋮----
@@ -5727,6 +5795,13 @@ import { Task } from '@/task';
 import logger from '@/logger';
 import { filterIgnoredFiles, scrapeWeb } from '@/utils';
 import { isAbortError, isFileNotFoundError } from '@/utils/errors';
+⋮----
+/**
+ * Expands a tilde (~) at the beginning of a path to the user's home directory.
+ * @param filePath - The file path to expand
+ * @returns The expanded path with ~ replaced by the home directory
+ */
+const expandTilde = (filePath: string): string =>
 ⋮----
 export const createPowerToolset = (task: Task, profile: AgentProfile, promptContext?: PromptContext, abortSignal?: AbortSignal): ToolSet =>
 ⋮----
@@ -9391,7 +9466,7 @@ registerRoutes(router: Router): void
 ⋮----
 // Duplicate task
 ⋮----
-// Restart task
+// Reset task
 ⋮----
 // Load task data
 ⋮----
@@ -10295,6 +10370,8 @@ private async migrateContext(contextData: unknown): Promise<TaskContext>
 ⋮----
 async load(): Promise<void>
 ⋮----
+private async loadInternal(): Promise<void>
+⋮----
 async loadMessages(messages: ContextMessage[]): Promise<void>
 ⋮----
 // Clear all current messages
@@ -10497,6 +10574,8 @@ public async saveTask(updates?: Partial<TaskData>, updateTimestamps = true): Pro
 // Internal task is not saved
 ⋮----
 public async init()
+⋮----
+private async initInternal()
 ⋮----
 // Check if worktree is enabled for this task
 ⋮----
@@ -10913,7 +10992,7 @@ public async runCustomCommand(commandName: string, args: string[], mode: Mode = 
 ⋮----
 // Clear loading message after execution completes (success or failure)
 ⋮----
-async restart()
+async reset()
 ⋮----
 public async updateTask(updates: Partial<TaskData>): Promise<TaskData>
 ⋮----
@@ -12295,7 +12374,7 @@ async restartProject(baseDir: string): Promise<void>
 ⋮----
 async createVoiceSession(providerProfile: ProviderProfile): Promise<VoiceSession>
 ⋮----
-async restartTask(baseDir: string, taskId: string): Promise<void>
+async resetTask(baseDir: string, taskId: string): Promise<void>
 ⋮----
 getOpenProjects(): ProjectData[]
 ⋮----
@@ -13278,7 +13357,7 @@ startProject(baseDir: string): Promise<void>
 stopProject(baseDir: string): void
 ⋮----
 restartProject(baseDir: string): void
-restartTask(baseDir: string, taskId: string): void
+resetTask(baseDir: string, taskId: string): void
 runPrompt(baseDir: string, taskId: string, prompt: string, mode?: Mode): void
 savePrompt(baseDir: string, taskId: string, prompt: string): Promise<void>
 redoLastUserPrompt(baseDir: string, taskId: string, mode: Mode, updatedPrompt?: string): void
@@ -16931,11 +17010,48 @@ const handleCredentialsChange = (e: ChangeEvent<HTMLTextAreaElement>) =>
 label=
 
 ================
+File: src/renderer/src/components/ModelLibrary/providers/ZaiPlanAdvancedSettings.tsx
+================
+import { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ZaiPlanProvider } from '@common/agent';
+import { SettingsData, McpServerConfig } from '@common/types';
+import { FaCheck, FaPlus, FaInfoCircle, FaExternalLinkAlt } from 'react-icons/fa';
+⋮----
+import { useSettings } from '@/contexts/SettingsContext';
+import { Button } from '@/components/common/Button';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+⋮----
+type Props = {
+  provider: ZaiPlanProvider;
+  onChange: (updated: ZaiPlanProvider) => void;
+};
+⋮----
+type McpServerInfo = {
+  key: string;
+  name: string;
+  description: string;
+  config: McpServerConfig;
+  documentationLink: string;
+};
+⋮----
+const isServerConfigured = (serverKey: string): boolean =>
+⋮----
+const handleAddServer = async (serverInfo: McpServerInfo) =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+<Button onClick=
+⋮----
+
+================
 File: src/renderer/src/components/ModelLibrary/providers/ZaiPlanParameters.tsx
 ================
 import { ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ZaiPlanProvider } from '@common/agent';
+⋮----
+import { ZaiPlanAdvancedSettings } from './ZaiPlanAdvancedSettings';
 ⋮----
 import { Input } from '@/components/common/Input';
 import { useEffectiveEnvironmentVariable } from '@/hooks/useEffectiveEnvironmentVariable';
@@ -16944,8 +17060,6 @@ type Props = {
   provider: ZaiPlanProvider;
   onChange: (updated: ZaiPlanProvider) => void;
 };
-⋮----
-export const ZaiPlanParameters = (
 ⋮----
 const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
@@ -17633,7 +17747,7 @@ type Props = {
   maxInputTokens: number;
   clearMessages: (clearContext?: boolean) => void;
   runCommand: (command: string) => void;
-  restartTask: () => void;
+  resetTask: () => void;
   mode: Mode;
   showFileDialog: () => void;
   task: TaskData;
@@ -17651,7 +17765,7 @@ export const FilesContextInfoContent = ({
   maxInputTokens,
   clearMessages,
   runCommand,
-  restartTask,
+  resetTask,
   mode,
   showFileDialog,
   task,
@@ -17686,7 +17800,7 @@ type Props = {
   maxInputTokens: number;
   clearMessages: (clearContext?: boolean) => void;
   runCommand: (command: string) => void;
-  restartTask: () => void;
+  resetTask: () => void;
   mode: Mode;
   setAddFileDialogOptions: React.Dispatch<React.SetStateAction<AddFileDialogOptions | null>>;
   task: TaskData;
@@ -17706,7 +17820,7 @@ export const MobileSidebar = ({
   maxInputTokens,
   clearMessages,
   runCommand,
-  restartTask,
+  resetTask,
   mode,
   setAddFileDialogOptions,
   task,
@@ -18256,7 +18370,7 @@ setEditingMessageIndex(null); // Clear editing state
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
-const handleRestartTask = () =>
+const handleResetTask = () =>
 ⋮----
 const handleRedoLastUserPrompt = () =>
 ⋮----
@@ -18420,11 +18534,21 @@ const setWidth = (newWidth: number) =>
 ================
 File: src/renderer/src/components/project/WelcomeMessage.tsx
 ================
+import { RiRobot2Line } from 'react-icons/ri';
 import { useTranslation } from 'react-i18next';
-import { FiCode, FiFile, FiLayers, FiZap, FiTerminal } from 'react-icons/fi';
+import { FiCode, FiFile, FiLayers, FiTerminal } from 'react-icons/fi';
+import { CgTerminal } from 'react-icons/cg';
 ⋮----
 // @ts-expect-error TypeScript is not aware of asset import
 import icon from '../../../../../resources/icon.png?asset';
+⋮----
+import type { Mode } from '@common/types';
+⋮----
+type Props = {
+  onModeChange?: (mode: Mode) => void;
+};
+⋮----
+const handleModeClick = (mode: Mode) =>
 
 ================
 File: src/renderer/src/components/project/WorktreeActionDialog.tsx
@@ -20322,7 +20446,7 @@ import { Mode, TokensInfoData, TaskData } from '@common/types';
 import { ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IoChevronDown, IoChevronUp, IoClose } from 'react-icons/io5';
-import { MdOutlineRefresh } from 'react-icons/md';
+import { MdOutlineRefresh, MdSettingsBackupRestore } from 'react-icons/md';
 ⋮----
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { TokenUsageBar } from '@/components/TokenUsageBar';
@@ -20332,7 +20456,7 @@ type Props = {
   aiderTotalCost: number;
   clearMessages?: () => void;
   refreshRepoMap?: () => void;
-  restartTask?: () => void;
+  resetTask?: () => void;
   maxInputTokens?: number;
   mode: Mode;
   task: TaskData;
@@ -20758,7 +20882,7 @@ const handleUpdateAiderModels = (data: ModelsData) =>
 export interface TaskContextType {
   getTaskState: (taskId: string, loadIfNotLoaded?: boolean) => TaskState | null;
   clearSession: (taskId: string, messagesOnly: boolean) => void;
-  restartTask: (taskId: string) => void;
+  resetTask: (taskId: string) => void;
   setMessages: (taskId: string, updateMessages: (prevState: Message[]) => Message[]) => void;
   setTodoItems: (taskId: string, updateTodoItems: (prev: TodoItem[]) => TodoItem[]) => void;
   setAiderModelsData: (taskId: string, modelsData: ModelsData | null) => void;
@@ -24526,6 +24650,7 @@ File: package.json
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint src --fix --cache",
+    "lint:check": "eslint src --cache",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
     "typecheck:mcp": "tsc --noEmit -p tsconfig.mcp-server.json --composite false",
