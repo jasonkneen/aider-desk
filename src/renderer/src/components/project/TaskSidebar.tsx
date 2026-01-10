@@ -1,13 +1,14 @@
 import { DefaultTaskState, TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
 import { KeyboardEvent, MouseEvent, useState, memo, useRef, useEffect, useOptimistic, startTransition } from 'react';
+import { createPortal } from 'react-dom';
 import { HiOutlinePencil, HiOutlineTrash, HiPlus, HiCheck, HiSparkles } from 'react-icons/hi';
-import { RiMenuUnfold4Line } from 'react-icons/ri';
+import { RiMenuUnfold4Line, RiFlag2Line } from 'react-icons/ri';
 import { FaEllipsisVertical } from 'react-icons/fa6';
 import { IoLogoMarkdown } from 'react-icons/io';
 import { IoGitBranch } from 'react-icons/io5';
 import { CgSpinner } from 'react-icons/cg';
-import { MdImage, MdOutlineSearch, MdPushPin } from 'react-icons/md';
+import { MdImage, MdOutlineSearch, MdPushPin, MdChevronRight } from 'react-icons/md';
 import { clsx } from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BiDuplicate, BiArchive, BiArchiveIn } from 'react-icons/bi';
@@ -23,12 +24,13 @@ import { IconButton } from '@/components/common/IconButton';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { LoadingText } from '@/components/common/LoadingText';
-import { TaskStateChip } from '@/components/common/TaskStateChip';
+import { getTaskStateLabel, TaskStateChip } from '@/components/common/TaskStateChip';
 
 export const COLLAPSED_WIDTH = 44;
 export const EXPANDED_WIDTH = 256;
 
 type TaskMenuButtonProps = {
+  task: TaskData;
   onEdit: () => void;
   onDelete?: () => void;
   onExportToMarkdown?: () => void;
@@ -37,10 +39,12 @@ type TaskMenuButtonProps = {
   onArchiveTask?: () => void;
   onUnarchiveTask?: () => void;
   onTogglePin?: () => void;
+  onChangeState?: (newState: string) => void;
   isPinned?: boolean;
 };
 
 const TaskMenuButton = ({
+  task,
   onEdit,
   onDelete,
   onExportToMarkdown,
@@ -49,15 +53,33 @@ const TaskMenuButton = ({
   onArchiveTask,
   onUnarchiveTask,
   onTogglePin,
+  onChangeState,
   isPinned,
 }: TaskMenuButtonProps) => {
   const { t } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isStateSubmenuOpen, setIsStateSubmenuOpen] = useState(false);
+  const [submenuPosition, setSubmenuPosition] = useState<{ top: number; left: number } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLDivElement>(null);
+  const stateSubmenuItemRef = useRef<HTMLLIElement>(null);
+  const stateSubmenuRef = useRef<HTMLDivElement>(null);
 
-  useClickOutside([menuRef, buttonRef], () => {
+  useEffect(() => {
+    if (isStateSubmenuOpen && stateSubmenuItemRef.current) {
+      const rect = stateSubmenuItemRef.current.getBoundingClientRect();
+      setSubmenuPosition({
+        top: rect.top,
+        left: rect.right + 4,
+      });
+    } else {
+      setSubmenuPosition(null);
+    }
+  }, [isStateSubmenuOpen]);
+
+  useClickOutside([menuRef, buttonRef, stateSubmenuRef], () => {
     setIsMenuOpen(false);
+    setIsStateSubmenuOpen(false);
   });
 
   const handleMenuClick = () => {
@@ -109,6 +131,17 @@ const TaskMenuButton = ({
   const handlePinClick = (e: MouseEvent) => {
     e.stopPropagation();
     onTogglePin?.();
+  };
+
+  const handleStateSubmenuToggle = () => {
+    setIsStateSubmenuOpen(!isStateSubmenuOpen);
+  };
+
+  const handleStateChange = (e: MouseEvent, state: string) => {
+    e.stopPropagation();
+    onChangeState?.(state);
+    setIsStateSubmenuOpen(false);
+    setIsMenuOpen(false);
   };
 
   return (
@@ -178,6 +211,20 @@ const TaskMenuButton = ({
                 <span className="whitespace-nowrap">{t('taskSidebar.duplicateTask')}</span>
               </li>
             )}
+            {task.state !== DefaultTaskState.InProgress && (
+              <li
+                ref={stateSubmenuItemRef}
+                className="relative flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStateSubmenuToggle();
+                }}
+              >
+                <RiFlag2Line className="w-4 h-4" />
+                <span className="whitespace-nowrap flex-1">{t('taskSidebar.changeState')}</span>
+                <MdChevronRight className="w-3.5 h-3.5 text-text-muted" />
+              </li>
+            )}
             {onArchiveTask && (
               <li
                 className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
@@ -208,6 +255,39 @@ const TaskMenuButton = ({
           </ul>
         </div>
       )}
+      {isStateSubmenuOpen &&
+        submenuPosition &&
+        createPortal(
+          <div
+            ref={stateSubmenuRef}
+            style={{
+              position: 'fixed',
+              top: `${submenuPosition.top}px`,
+              left: `${submenuPosition.left}px`,
+            }}
+            className="w-[180px] bg-bg-secondary-light border border-border-default-dark rounded shadow-lg z-[9999]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ul className="py-1">
+              {[
+                DefaultTaskState.Todo,
+                DefaultTaskState.ReadyForImplementation,
+                DefaultTaskState.ReadyForReview,
+                DefaultTaskState.MoreInfoNeeded,
+                DefaultTaskState.Done,
+              ].map((state) => (
+                <li
+                  key={state}
+                  className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
+                  onClick={(e) => handleStateChange(e, state)}
+                >
+                  {getTaskStateLabel(t, state)}
+                </li>
+              ))}
+            </ul>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };
@@ -507,6 +587,17 @@ const TaskSidebarComponent = ({
     }
   };
 
+  const handleChangeState = async (taskId: string, newState: string) => {
+    try {
+      if (updateTask) {
+        await updateTask(taskId, { state: newState });
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to change state:', error);
+    }
+  };
+
   // Multiselect handlers
   const handleTaskCtrlClick = (e: MouseEvent, taskId: string) => {
     e.preventDefault();
@@ -687,6 +778,7 @@ const TaskSidebarComponent = ({
 
           {!isMultiselectMode && (
             <TaskMenuButton
+              task={task}
               onEdit={() => handleEditClick(task.id, task.name)}
               onDelete={task.createdAt ? () => handleDeleteClick(task.id) : undefined}
               onExportToMarkdown={onExportToMarkdown && task.createdAt ? () => onExportToMarkdown(task.id) : undefined}
@@ -695,6 +787,7 @@ const TaskSidebarComponent = ({
               onArchiveTask={task.archived || !task.createdAt ? undefined : () => handleArchiveTask(task.id)}
               onUnarchiveTask={task.archived ? () => handleUnarchiveTask(task.id) : undefined}
               onTogglePin={() => handleTogglePin(task.id)}
+              onChangeState={(newState) => handleChangeState(task.id, newState)}
               isPinned={task.pinned || false}
             />
           )}

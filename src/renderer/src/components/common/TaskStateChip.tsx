@@ -2,6 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
 import { DefaultTaskState } from '@common/types';
 
+import type { TFunction } from 'i18next';
+
 type Props = {
   state: string;
   className?: string;
@@ -28,6 +30,10 @@ const getStateTextClass = (state: string): string => {
   }
 };
 
+export const getTaskStateLabel = (t: TFunction, state: string) => {
+  return t(`taskState.${state}`, { defaultValue: state.replace(/[-_]/g, ' ') });
+};
+
 export const TaskStateChip = ({ state, className = '' }: Props) => {
   const { t } = useTranslation();
 
@@ -35,7 +41,7 @@ export const TaskStateChip = ({ state, className = '' }: Props) => {
 
   return (
     <span className={twMerge('text-4xs px-1 rounded border border-border-dark-light bg-bg-tertiary-emphasis', stateTextClass, className)}>
-      {t(`taskState.${state}`, { defaultValue: state.replace(/[-_]/g, ' ') })}
+      {getTaskStateLabel(t, state)}
     </span>
   );
 };

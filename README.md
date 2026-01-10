@@ -79,15 +79,13 @@ AiderDesk's Agent Mode transforms the application into a powerful, autonomous co
 - **Aider**: AI-powered code generation and refactoring
 - **Aider with Power Search**: Hybrid approach combining code generation with advanced search
 
+[**Learn more about Agent Mode →**](https://aiderdesk.hotovo.com/docs/features/agent)
+
 ---
 
 ### 🌿 Git Worktrees: Isolated Development Environments
 
 AiderDesk's Git Worktrees feature provides professional-grade isolation for your development work, enabling safe experimentation and parallel development without affecting your main project branch.
-
-<div align="center">
-  <img src="https://img.youtube.com/vi/placeholder-worktree-demo/0.jpg" alt="Git Worktrees Demo Video" width=400> <!-- TODO: Add actual video ID -->
-</div>
 
 #### Key Benefits:
 
@@ -129,6 +127,8 @@ AiderDesk's Memory system enables the agent to **store and retrieve durable, pro
 - **Agent Integration**: Automatically retrieves relevant memories at task start and stores outcomes after completion
 - **Manual Management**: Browse, filter, and delete memories from Settings
 
+[**Learn more about Memory →**](https://aiderdesk.hotovo.com/docs/features/memory)
+
 ---
 
 ### 📋 Skills: Extend Agent with Expertise
@@ -145,6 +145,8 @@ Skills let you package **reusable, on-demand expertise** that the agent can load
 - **Domain-Specific Playbooks**: Internal processes, project conventions, brand guidelines
 - **Project-Specific Knowledge**: Keep `.aider-desk/skills/` in your repo for team sharing
 - **Global Skills**: Personal skills in `~/.aider-desk/skills/` for all your projects
+
+[**Learn more about Skills →**](https://aiderdesk.hotovo.com/docs/features/skills)
 
 ---
 
@@ -166,6 +168,8 @@ Hooks allow you to **extend AiderDesk's behavior** by executing custom JavaScrip
 - **Global Hooks**: `~/.aider-desk/hooks/` (all projects)
 - **Project Hooks**: `.aider-desk/hooks/` (project-specific)
 
+[**Learn more about Hooks →**](https://aiderdesk.hotovo.com/docs/features/hooks)
+
 ---
 
 ### 📂 Task System: Organize Your Work
@@ -179,6 +183,8 @@ AiderDesk's task management system provides a comprehensive way to organize work
 - **Task Operations**: Create, rename, duplicate, delete, export (Markdown/Image)
 
 Tasks are stored per project in `.aider-desk/tasks/` with full state persistence.
+
+[**Learn more about Task System →**](https://aiderdesk.hotovo.com/docs/features/task-system)
 
 ---
 
@@ -195,6 +201,8 @@ Keep the AI focused on the relevant code with flexible context management option
 1. **Automatic IDE Sync**: Use the IntelliJ IDEA or VSCode plugins to automatically add/remove the currently active file(s) in your editor to/from the AiderDesk context.
 2. **Manual Control**: Utilize the "Context Files" sidebar in AiderDesk, which displays your project's file tree. Click files to manually add or remove them from the context, giving you precise control.
 
+[**Learn more about Context Files →**](https://aiderdesk.hotovo.com/docs/features/context-files)
+
 ---
 
 ### 💰 Cost Optimization
@@ -210,285 +218,7 @@ AiderDesk provides multiple ways to optimize your AI spending:
 - **Context Optimization**: Agent only loads what's needed (skills, memories)
 - **Tool Approval Control**: Set tools to "Always", "Ask", or "Never" to prevent unnecessary operations
 
----
-
-### 📄 Comprehensive Context File Management
-
-Organize your work with a comprehensive task management system that goes beyond simple session saving. Tasks include chat history, context files, cost tracking, todo lists, and optional Git worktree isolation.
-
-- **Complete Work Organization**: Each task captures the full state including messages, files, costs, and todos.
-- **Flexible Working Modes**: Choose between local development or isolated Git worktrees for safe experimentation.
-- **Smart Cost Tracking**: Monitor Aider and Agent costs per-task for better budget management.
-- **Built-in Todo System**: Break down complex work with integrated todo lists that agents can manage automatically.
-- **Seamless Migration**: Automatically converts previous sessions to the new task format without data loss.
-
----
-
-### 🤖 Agent Mode & MCP Support
-
-Unlock advanced AI capabilities with AiderDesk's Agent mode. Built on the Vercel AI SDK, the agent can autonomously plan and execute complex tasks by leveraging a customizable set of tools.
-
-<div align="center">
-  <a href="https://youtu.be/Lsd7QReXfy4">
-    <img src="https://img.youtube.com/vi/Lsd7QReXfy4/0.jpg" alt="Agent Mode & MCP Demo Video" width=400>
-  </a>
-</div>
-
-#### Agent Capabilities:
-
-- **Tool-Driven**: Functionality is defined by connected tools (MCP servers + built-in Aider interaction).
-- **Autonomous Planning**: Breaks down complex requests into executable steps using available tools.
-- **Seamless Aider Integration**: Uses Aider for core coding tasks like generation and modification.
-- **Multi-Provider LLMs**: Supports various LLM providers (OpenAI, Anthropic, Gemini, Bedrock, Deepseek, OpenAI-compatible).
-- **Transparent Operation**: Observe the agent's reasoning, plans, and tool usage in the chat.
-
-#### 🛠️ Extending Capabilities with MCP
-
-Connect AiderDesk to [Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro) (MCP) servers to significantly enhance the Agent's abilities. MCP allows AI models to interact with external tools (web browsers, documentation systems, custom utilities).
-
-- **Access External Tools**: Grant the agent capabilities beyond built-in functions.
-- **Gather Richer Context**: Enable the agent to fetch external information before instructing Aider.
-- **Flexible Configuration**: Manage MCP servers and individual tools within Agent settings.
-
-AiderDesk is compatible with any MCP server, allowing you to tailor the agent's toolset precisely to your needs.
-
----
-
-### 🌐 REST API
-
-AiderDesk provides a REST API for external tools to interact with the application. The API is running on the same port as the main application (default 24337, configurable by `AIDER_DESK_PORT` environment variable).
-
-#### Add Context File
-
-<details>
-  <summary><code>/api/add-context-file</code></summary>
-
-- **Method:** POST
-- **Request Body:**
-  ```json
-  {
-    "projectDir": "path/to/your/project",
-    "path": "path/to/the/file",
-    "readOnly": false
-  }
-  ```
-- **Response:**
-  ```json
-  [
-    {
-      "path": "path/to/the/file",
-      "readOnly": false
-    }
-  ]
-  ```
-
-  Returns the list of context files in the project.
-
-</details>
-
-#### Drop Context File
-
-<details>
-  <summary><code>/api/drop-context-file</code></summary>
-
-- **Method:** POST
-- **Request Body:**
-  ```json
-  {
-    "projectDir": "path/to/your/project",
-    "path": "path/to/the/file"
-  }
-  ```
-- **Response:**
-  ```json
-  []
-  ```
-
-  Returns the list of context files in the project.
-
-</details>
-
-#### Get Context Files
-
-<details>
-  <summary><code>/api/get-context-files</code></summary>
-
-- **Method:** POST
-- **Request Body:**
-  ```json
-  {
-    "projectDir": "path/to/your/project"
-  }
-  ```
-- **Response:**
-  ```json
-  [
-    {
-      "path": "path/to/the/file",
-      "readOnly": false
-    }
-  ]
-  ```
-
-  Returns the list of context files in the project.
-
-</details>
-
-#### Get Addable Files
-
-<details>
-  <summary><code>/api/get-addable-files</code></summary>
-
-- **Method:** POST
-- **Request Body:**
-  ```json
-  {
-    "projectDir": "path/to/your/project",
-    "searchRegex": "optional/regex/filter"
-  }
-  ```
-- **Response:**
-  ```json
-  [
-    {
-      "path": "path/to/the/file"
-    }
-  ]
-  ```
-
-  Returns the list of files that can be added to the project.
-
-</details>
-
-#### Run Prompt
-
-<details>
-  <summary><code>/api/run-prompt</code></summary>
-
-- **Endpoint:** `/api/run-prompt`
-- **Method:** POST
-- **Request Body:**
-  ```json
-  {
-    "projectDir": "path/to/your/project",
-    "prompt": "Your prompt here",
-    "editFormat": "code" // Optional: "code", "ask", or "architect"
-  }
-  ```
-- **Response:**
-  ```json
-  [
-    {
-      "messageId": "unique-message-id",
-      "baseDir": "path/to/your/project",
-      "content": "The AI generated response",
-      "reflectedMessage": "Optional reflected message",
-      "editedFiles": ["file1.txt", "file2.py"],
-      "commitHash": "a1b2c3d4e5f6",
-      "commitMessage": "Optional commit message",
-      "diff": "Optional diff content",
-      "usageReport": {
-        "sentTokens": 100,
-        "receivedTokens": 200,
-        "messageCost": 0.5,
-        "totalCost": 1.0,
-        "mcpToolsCost": 0.2
-      }
-    }
-  ]
-  ```
-
-</details>
-
----
-
-### 🔌 AiderDesk as an MCP Server
-
-AiderDesk includes a built-in MCP server, allowing other MCP-compatible clients (like Claude Desktop, Cursor, etc.) to interact with AiderDesk's core functionalities.
-
-#### Configuration
-
-Add the following configuration to your MCP client settings, adjusting paths as needed:
-
-<details>
-  <summary>Windows</summary>
-
-```json
-{
-  "mcpServers": {
-    "aider-desk": {
-      "command": "node",
-      "args": ["path-to-appdata/aider-desk/mcp-server/aider-desk-mcp-server.js", "/path/to/project"],
-      "env": {
-        "AIDER_DESK_API_BASE_URL": "http://localhost:24337/api"
-      }
-    }
-  }
-}
-```
-
-**Note:** Replace `path-to-appdata` with the absolute path to your AppData directory. You can find this value by running `echo %APPDATA%` in your command prompt.
-
-</details>
-
-<details>
-  <summary>macOS</summary>
-
-```json
-{
-  "mcpServers": {
-    "aider-desk": {
-      "command": "node",
-      "args": ["/path/to/home/Library/Application Support/aider-desk/mcp-server/aider-desk-mcp-server.js", "/path/to/project"],
-      "env": {
-        "AIDER_DESK_API_BASE_URL": "http://localhost:24337/api"
-      }
-    }
-  }
-}
-```
-
-**Note:** Replace `/path/to/home` with the absolute path to your home directory. You can find this value by running `echo $HOME` in your terminal.
-
-</details>
-
-<details>
-  <summary>Linux</summary>
-
-```json
-{
-  "mcpServers": {
-    "aider-desk": {
-      "command": "node",
-      "args": ["/path/to/home/.config/aider-desk/mcp-server/aider-desk-mcp-server.js", "/path/to/project"],
-      "env": {
-        "AIDER_DESK_API_BASE_URL": "http://localhost:24337/api"
-      }
-    }
-  }
-}
-```
-
-**Note:** Replace `/path/to/home` with the absolute path to your home directory. You can find this value by running `echo $HOME` in your terminal.
-
-</details>
-
-**Arguments & Environment:**
-
-- **Command Argument 1:** Project directory path (required).
-- **`AIDER_DESK_API_BASE_URL`:** Base URL of the running AiderDesk API (default: `http://localhost:24337/api`).
-
-#### Available Tools via MCP
-
-The built-in server exposes these tools to MCP clients:
-
-- `add_context_file`: Add a file to AiderDesk's context.
-- `drop_context_file`: Remove a file from AiderDesk's context.
-- `get_context_files`: List files currently in AiderDesk's context.
-- `get_addable_files`: List project files available to be added to the context.
-- `run_prompt`: Execute a prompt within AiderDesk.
-
-**Note:** AiderDesk must be running for its MCP server to be accessible.
+[**Learn more about Cost Optimization →**](https://aiderdesk.hotovo.com/docs/features/cost-tracking)
 
 ---
 
@@ -497,15 +227,13 @@ The built-in server exposes these tools to MCP clients:
 ### Quick Start
 
 1. Download the latest release for your OS from [Releases](https://github.com/hotovo/aider-desk/releases).
-2. Run of executable.
+2. Run the executable.
 
 ### Recommended First Steps
 
 1. **Try Agent Mode**: Switch to Agent mode (`/agent`) and ask to agent to explore your codebase or implement a feature
 2. **Create a Skill**: Add a skill to `.aider-desk/skills/` to encode your team's conventions
 3. **Set Up Memory**: Enable Memory tools in Agent Settings to let to agent learn your project patterns
-
-### the executable.
 
 ### Troubleshooting
 

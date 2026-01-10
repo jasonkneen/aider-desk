@@ -7,6 +7,7 @@ import { CodeInline } from '@/components/common/CodeInline';
 import { CopyMessageButton } from '@/components/message/CopyMessageButton';
 import { IconButton } from '@/components/common/IconButton';
 import { useApi } from '@/contexts/ApiContext';
+import { getTaskStateLabel } from '@/components/common/TaskStateChip';
 
 type Props = {
   message: TaskInfoMessageType;
@@ -65,7 +66,7 @@ export const TaskInfoMessage = ({ message, onRemove }: Props) => {
         {task.state && (
           <div className="text-2xs flex items-center gap-2">
             <span className="text-text-muted">{t('taskInfo.state')}:</span>
-            <span className="text-text-secondary">{t(`taskState.${task.state}`, { defaultValue: task.state.replace(/[-_]/g, ' ') })}</span>
+            <span className="text-text-secondary">{getTaskStateLabel(t, task.state)}</span>
           </div>
         )}
 
