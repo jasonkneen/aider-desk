@@ -254,6 +254,45 @@ jobs:
           name: latest-mac-arm64-yml
           path: dist/latest-mac.yml
 
+  release-docker:
+    name: Release Docker image
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+    steps:
+      - uses: "actions/checkout@v1"
+
+      - name: Get version from package.json
+        id: get-version
+        run: |
+          # Get version from package.json
+          VERSION=$(node -e "console.log(require('./package.json').version)")
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Using version: $VERSION"
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build Docker image
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository }}
+          VERSION=${{ steps.get-version.outputs.version }}
+          
+          docker build -t ${IMAGE_NAME}:${VERSION} .
+          
+          echo "Built images:"
+          docker images | grep ${IMAGE_NAME}
+
+      - name: Push Docker image
+        run: |
+          IMAGE_NAME=ghcr.io/${{ github.repository }}
+          VERSION=${{ steps.get-version.outputs.version }}
+          
+          docker push ${IMAGE_NAME}:${VERSION}
+          
+          echo "Pushed image: ${IMAGE_NAME}:${VERSION}"
+
   combine-macos-yml:
     name: Combine macOS yml files
     runs-on: ubuntu-latest
