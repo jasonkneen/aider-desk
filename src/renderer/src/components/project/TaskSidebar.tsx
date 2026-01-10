@@ -5,6 +5,7 @@ import { HiOutlinePencil, HiOutlineTrash, HiPlus, HiCheck, HiSparkles } from 're
 import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { FaEllipsisVertical } from 'react-icons/fa6';
 import { IoLogoMarkdown } from 'react-icons/io';
+import { IoGitBranch } from 'react-icons/io5';
 import { CgSpinner } from 'react-icons/cg';
 import { MdImage, MdOutlineSearch, MdPushPin } from 'react-icons/md';
 import { clsx } from 'clsx';
@@ -671,8 +672,13 @@ const TaskSidebarComponent = ({
                 {task.pinned && <MdPushPin className="w-3 h-3 text-text-muted shrink-0 ml-1 rotate-45 group-hover:hidden" />}
               </div>
             )}
-            <div className="flex items-center gap-1 text-3xs text-text-muted">
+            <div className="flex items-center gap-0.5 text-3xs text-text-muted">
               <TaskStateChip state={task.state || DefaultTaskState.Todo} className="-ml-0.5" />
+              {task.workingMode === 'worktree' && (
+                <span className="px-1 py-0.5 rounded border border-border-dark-light bg-bg-tertiary-emphasis text-text-tertiary">
+                  <IoGitBranch className="w-3 h-3" />
+                </span>
+              )}
               {task.archived && <span>• {t('taskSidebar.archived')}</span>}
             </div>
           </div>

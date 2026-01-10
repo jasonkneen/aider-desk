@@ -19,6 +19,7 @@
 - added agent creator skill
 - added MCP tool auto-setup to Z.AI Coding Plan provider
 - added direct support for OpenCode ZEN provider
+- added icon to the task item in the sidebar in case is in worktree mode
 
 ## [0.47.0]
 
