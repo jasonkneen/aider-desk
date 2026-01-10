@@ -21,6 +21,7 @@
 - added direct support for OpenCode ZEN provider
 - added icon to the task item in the sidebar in case is in worktree mode
 - added change state submenu to task sidebar for updating task states
+- properly setting the default value for max output tokens when not specified in Aider modes
 
 ## [0.47.0]
 

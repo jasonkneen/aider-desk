@@ -1358,19 +1358,21 @@ class Connector:
     for model_id, info in models_info.items():
       if model_id in self.base_local_model_metadata:
         # skip models that are configured by other means
+        self.coder.io.tool_output(f"Skipping model: {model_id} as it is configured by other means")
         continue
 
       max_input_tokens = info.get("maxInputTokens")
-      # skip models that don't have maxInputTokens defined
       if max_input_tokens is None:
+        # skip models that don't have maxInputTokens defined
+        self.coder.io.tool_output(f"Skipping model: {model_id} as it doesn't have maxInputTokens defined")
         continue
 
       transformed_data[model_id] = {
         "max_tokens": max_input_tokens,
         "max_input_tokens": max_input_tokens,
-        "max_output_tokens": info.get('maxOutputTokens', 32000),
-        "input_cost_per_token": info.get('inputCostPerToken', 0),
-        "output_cost_per_token": info.get('outputCostPerToken', 0),
+        "max_output_tokens": info.get('maxOutputTokens') or 32000,
+        "input_cost_per_token": info.get('inputCostPerToken') or 0,
+        "output_cost_per_token": info.get('outputCostPerToken') or 0,
         "cache_creation_input_token_cost": info.get('cacheWriteInputTokenCost'),
         "cache_read_input_token_cost": info.get('cacheReadInputTokenCost'),
         "litellm_provider": model_id.split("/")[0],
