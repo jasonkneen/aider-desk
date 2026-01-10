@@ -79,7 +79,7 @@ AiderDesk's Agent Mode transforms the application into a powerful, autonomous co
 - **Aider**: AI-powered code generation and refactoring
 - **Aider with Power Search**: Hybrid approach combining code generation with advanced search
 
-[**Learn more about Agent Mode →**](https://aiderdesk.hotovo.com/docs/features/agent)
+[**Learn more about Agent Mode →**](https://aiderdesk.hotovo.com/docs/agent-mode)
 
 ---
 
@@ -184,7 +184,7 @@ AiderDesk's task management system provides a comprehensive way to organize work
 
 Tasks are stored per project in `.aider-desk/tasks/` with full state persistence.
 
-[**Learn more about Task System →**](https://aiderdesk.hotovo.com/docs/features/task-system)
+[**Learn more about Task System →**](https://aiderdesk.hotovo.com/docs/features/tasks)
 
 ---
 
@@ -201,7 +201,7 @@ Keep the AI focused on the relevant code with flexible context management option
 1. **Automatic IDE Sync**: Use the IntelliJ IDEA or VSCode plugins to automatically add/remove the currently active file(s) in your editor to/from the AiderDesk context.
 2. **Manual Control**: Utilize the "Context Files" sidebar in AiderDesk, which displays your project's file tree. Click files to manually add or remove them from the context, giving you precise control.
 
-[**Learn more about Context Files →**](https://aiderdesk.hotovo.com/docs/features/context-files)
+[**Learn more about Context Files →**](https://aiderdesk.hotovo.com/docs/features/ide-integration)
 
 ---
 
@@ -218,7 +218,7 @@ AiderDesk provides multiple ways to optimize your AI spending:
 - **Context Optimization**: Agent only loads what's needed (skills, memories)
 - **Tool Approval Control**: Set tools to "Always", "Ask", or "Never" to prevent unnecessary operations
 
-[**Learn more about Cost Optimization →**](https://aiderdesk.hotovo.com/docs/features/cost-tracking)
+[**Learn more about Cost Optimization →**](https://aiderdesk.hotovo.com/docs/features/usage-dashboard)
 
 ---
 
@@ -265,7 +265,7 @@ You can also specify a git URL for installing a development version of Aider:
 export AIDER_DESK_AIDER_VERSION=git+https://github.com/user/aider.git@branch-name
 ```
 
-This variable will be used during the initial setup and when AiderDesk checks for updates. For more detailed information, please refer to [our docs](https://aiderdesk.hotovo.com/docs/customization/custom-aider-version).
+This variable will be used during the initial setup and when AiderDesk checks for updates. For more detailed information, please refer to [our docs](https://aiderdesk.hotovo.com/docs/advanced/custom-aider-version).
 
 ## 👨‍💻 Development Setup
 
