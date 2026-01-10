@@ -92,7 +92,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
 
     const taskState = getTaskState(task.id, isActive);
     const aiderModelsData = taskState?.aiderModelsData || null;
-    const currentMode = task.currentMode || 'code';
+    const currentMode = task.currentMode || 'agent';
 
     const [addFileDialogOptions, setAddFileDialogOptions] = useState<AddFileDialogOptions | null>(null);
     const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
