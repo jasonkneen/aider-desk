@@ -422,6 +422,7 @@ AiderDesk now uses a unified model prefix system across all modes (Agent, Code, 
 | Groq | `groq/` |
 | Bedrock | `bedrock/` |
 | OpenAI Compatible | `openai-compatible/` |
+| OpenCode ZEN | `opencode/` |
 | Ollama | `ollama/` |
 | LM Studio | `lmstudio/` |
 | OpenRouter | `openrouter/` |

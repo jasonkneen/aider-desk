@@ -57,6 +57,7 @@ const readApiKeyFromConfFile = (filePath: string, envVarName: string): string | 
           DEEPSEEK_API_KEY: ['deepseek'],
           OPENROUTER_API_KEY: ['openrouter'],
           CEREBRAS_API_KEY: ['cerebras'],
+          OPENCODE_API_KEY: ['opencode'],
           REQUESTY_API_KEY: ['requesty'],
           SYNTHETIC_API_KEY: ['synthetic'],
         };

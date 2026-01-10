@@ -18,6 +18,7 @@
 - properly replacing ~ in paths of power tools for HOME
 - added agent creator skill
 - added MCP tool auto-setup to Z.AI Coding Plan provider
+- added direct support for OpenCode ZEN provider
 
 ## [0.47.0]
 

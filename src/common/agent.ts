@@ -47,6 +47,7 @@ export type LlmProviderName =
   | 'ollama'
   | 'openai'
   | 'openai-compatible'
+  | 'opencode'
   | 'openrouter'
   | 'requesty'
   | 'synthetic'
@@ -85,6 +86,7 @@ export const AVAILABLE_PROVIDERS: LlmProviderName[] = [
   'ollama',
   'openai',
   'openai-compatible',
+  'opencode',
   'openrouter',
   'requesty',
   'synthetic',
@@ -231,6 +233,12 @@ export interface RequestyProvider extends LlmProviderBase {
 }
 export const isRequestyProvider = (provider: LlmProviderBase): provider is RequestyProvider => provider.name === 'requesty';
 
+export interface OpenCodeProvider extends LlmProviderBase {
+  name: 'opencode';
+  apiKey: string;
+}
+export const isOpenCodeProvider = (provider: LlmProviderBase): provider is OpenCodeProvider => provider.name === 'opencode';
+
 export interface ZaiPlanProvider extends LlmProviderBase {
   name: 'zai-plan';
   apiKey: string;
@@ -263,6 +271,7 @@ export type LlmProvider =
   | CerebrasProvider
   | OpenAiCompatibleProvider
   | OllamaProvider
+  | OpenCodeProvider
   | OpenRouterProvider
   | RequestyProvider
   | SyntheticProvider
@@ -279,6 +288,7 @@ export const DEFAULT_PROVIDER_MODELS: Partial<Record<LlmProviderName, string>> =
   groq: 'moonshotai/kimi-k2-instruct-0905',
   openai: 'gpt-5.2',
   openrouter: 'anthropic/claude-sonnet-4.5',
+  opencode: 'claude-sonnet-4-5',
   requesty: 'anthropic/claude-sonnet-4-5',
   synthetic: 'anthropic/claude-sonnet-4.5',
   'zai-plan': 'glm-4.7',
@@ -610,6 +620,12 @@ export const getDefaultProviderParams = <T extends LlmProvider>(providerName: Ll
         sort: null,
         requireParameters: false,
       } satisfies OpenRouterProvider;
+      break;
+    case 'opencode':
+      provider = {
+        name: 'opencode',
+        apiKey: '',
+      } satisfies OpenCodeProvider;
       break;
     case 'lmstudio':
       provider = {

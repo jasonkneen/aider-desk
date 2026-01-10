@@ -11,6 +11,7 @@ export { MinimaxIcon } from './MinimaxIcon';
 export { OllamaIcon } from './OllamaIcon';
 export { OpenAiIcon } from './OpenAiIcon';
 export { OpenAiCompatibleIcon } from './OpenAiCompatibleIcon';
+export { OpenCodeIcon } from './OpenCodeIcon';
 export { OpenRouterIcon } from './OpenRouterIcon';
 export { RequestyIcon } from './RequestyIcon';
 export { SyntheticIcon } from './SyntheticIcon';

@@ -6,6 +6,7 @@ import { OpenRouterModelOverrides } from './providers/OpenRouterModelOverrides';
 import { GeminiModelOverrides } from './providers/GeminiModelOverrides';
 import { VertexAiModelOverrides } from './providers/VertexAiModelOverrides';
 import { OpenAiModelOverrides } from './providers/OpenAiModelOverrides';
+import { OpenCodeModelOverrides } from './providers/OpenCodeModelOverrides';
 import { RequestyModelOverrides } from './providers/RequestyModelOverrides';
 import { AzureModelOverrides } from './providers/AzureModelOverrides';
 import { OpenAiCompatibleModelOverrides } from './providers/OpenAiCompatibleModelOverrides';
@@ -26,6 +27,7 @@ const PROVIDER_OVERRIDES_MAP: Partial<Record<LlmProviderName, ComponentType<Prov
   gpustack: DefaultModelOverrides,
   'vertex-ai': VertexAiModelOverrides,
   openai: OpenAiModelOverrides,
+  opencode: OpenCodeModelOverrides,
   requesty: RequestyModelOverrides,
   azure: AzureModelOverrides,
   'openai-compatible': OpenAiCompatibleModelOverrides,

@@ -308,6 +308,9 @@
     "apiKey": "API Key",
     "modelPlaceholder": "e.g. anthropic/claude-3.7-sonnet"
   },
+  "opencode": {
+    "apiKey": "API Key"
+  },
   "requesty": {
     "apiKey": "API Key",
     "modelPlaceholder": "e.g. claude-4-sonnet",
@@ -371,6 +374,7 @@
     "minimax": "MiniMax",
     "ollama": "Ollama",
     "openai": "OpenAI",
+    "opencode": "OpenCode ZEN",
     "openai-compatible": "OpenAI Compatible",
     "openrouter": "OpenRouter",
     "requesty": "Requesty",
