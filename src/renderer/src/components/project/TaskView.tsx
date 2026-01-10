@@ -408,6 +408,14 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       });
     };
 
+    const handleAnswerQuestion = (answer: string) => {
+      answerQuestion(task.id, answer);
+    };
+
+    const handleInterruptResponse = () => {
+      interruptResponse(task.id);
+    };
+
     if (!projectSettings || !settings) {
       return <LoadingOverlay message={t('common.loadingProjectSettings')} />;
     }
@@ -555,8 +563,8 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                 showFileDialog={showFileDialog}
                 addFiles={handleAddFiles}
                 question={question}
-                answerQuestion={(answer) => answerQuestion(task.id, answer)}
-                interruptResponse={() => interruptResponse(task.id)}
+                answerQuestion={handleAnswerQuestion}
+                interruptResponse={handleInterruptResponse}
                 runCommand={runCommand}
                 runTests={runTests}
                 redoLastUserPrompt={handleRedoLastUserPrompt}

@@ -67,9 +67,9 @@ const EMPTY_TASK_STATE: TaskState = {
 const processingResponseMessageMap = new Map<string, ResponseMessage>();
 
 interface TaskEventSubscriberProps {
-  taskId: string;
   baseDir: string;
-  task: TaskData;
+  taskId: string;
+  state?: string;
   updateTaskState: (taskId: string, updates: Partial<TaskState>) => void;
   clearSession: (taskId: string, messagesOnly: boolean) => void;
   setQuestion: (taskId: string, question: QuestionData | null) => void;
@@ -78,9 +78,9 @@ interface TaskEventSubscriberProps {
 }
 
 const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
-  taskId,
   baseDir,
-  task,
+  taskId,
+  state,
   updateTaskState,
   clearSession,
   setQuestion,
@@ -89,9 +89,9 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
 }) => {
   const api = useApi();
   const { t } = useTranslation();
-  const previousState = usePrevious(task.state);
+  const previousState = usePrevious(state);
 
-  if (previousState === DefaultTaskState.InProgress && task.state !== DefaultTaskState.InProgress) {
+  if (previousState === DefaultTaskState.InProgress && state !== DefaultTaskState.InProgress) {
     setMessages(taskId, (prevMessages) => prevMessages.filter((message) => !isLoadingMessage(message)));
   }
 
@@ -712,13 +712,10 @@ export const TaskProvider: React.FC<{
 
   const answerQuestion = useCallback(
     (taskId: string, answer: string) => {
-      const taskState = taskStateMap.get(taskId);
-      if (taskState?.question) {
-        api.answerQuestion(baseDir, taskId, answer);
-        updateTaskState(taskId, { question: null });
-      }
+      api.answerQuestion(baseDir, taskId, answer);
+      updateTaskState(taskId, { question: null });
     },
-    [api, baseDir, taskStateMap, updateTaskState],
+    [api, baseDir, updateTaskState],
   );
 
   const interruptResponse = useCallback(
@@ -790,8 +787,8 @@ export const TaskProvider: React.FC<{
         <TaskEventSubscriber
           key={task.id}
           baseDir={baseDir}
-          task={task}
           taskId={task.id}
+          state={task.state}
           updateTaskState={updateTaskState}
           clearSession={clearSession}
           setQuestion={setQuestion}
