@@ -54,6 +54,10 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
     try {
       const existingNewTask = tasks.find((task) => !task.createdAt);
       if (existingNewTask) {
+        if (activeTaskId === existingNewTask.id) {
+          focusActiveTaskPrompt();
+          return;
+        }
         startActiveTaskTransition(() => {
           // when there is active task and is new we don't need to create new one
           setActiveTaskId(existingNewTask.id);
@@ -74,7 +78,7 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
     } finally {
       creatingTaskRef.current = false;
     }
-  }, [starting, tasksLoading, tasks, focusActiveTaskPrompt, api, project.baseDir]);
+  }, [starting, tasksLoading, tasks, activeTaskId, focusActiveTaskPrompt, api, project.baseDir]);
 
   useHotkeys(
     TASK_HOTKEYS.NEW_TASK,
@@ -108,7 +112,9 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
             break;
           }
           case ProjectStartMode.Last: {
-            startupTask = tasks.filter((task) => task.createdAt && task.updatedAt).sort((a, b) => b.updatedAt!.localeCompare(a.updatedAt!))[0];
+            startupTask = tasks
+              .filter((task) => task.createdAt && task.updatedAt && !task.archived)
+              .sort((a, b) => b.updatedAt!.localeCompare(a.updatedAt!))[0];
 
             if (!startupTask) {
               if (existingNewTask) {
@@ -216,12 +222,20 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
     };
   }, [api, project.baseDir, settings?.startupMode]);
 
-  const handleTaskSelect = useCallback((taskId: string) => {
-    startActiveTaskTransition(() => {
-      setActiveTaskId(taskId);
-      setShouldFocusNewTask(false);
-    });
-  }, []);
+  const handleTaskSelect = useCallback(
+    (taskId: string) => {
+      if (activeTaskId === taskId) {
+        focusActiveTaskPrompt();
+        return;
+      }
+
+      startActiveTaskTransition(() => {
+        setActiveTaskId(taskId);
+        setShouldFocusNewTask(false);
+      });
+    },
+    [activeTaskId, focusActiveTaskPrompt],
+  );
 
   const switchToTaskByIndex = useCallback(
     (index: number) => {
