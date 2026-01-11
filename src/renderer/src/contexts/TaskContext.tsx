@@ -91,9 +91,11 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
   const { t } = useTranslation();
   const previousState = usePrevious(state);
 
-  if (previousState === DefaultTaskState.InProgress && state !== DefaultTaskState.InProgress) {
-    setMessages(taskId, (prevMessages) => prevMessages.filter((message) => !isLoadingMessage(message)));
-  }
+  useEffect(() => {
+    if (previousState === DefaultTaskState.InProgress && state !== DefaultTaskState.InProgress) {
+      setMessages(taskId, (prevMessages) => prevMessages.filter((message) => !isLoadingMessage(message)));
+    }
+  }, [previousState, setMessages, state, taskId]);
 
   useEffect(() => {
     const setAiderTotalCost = (aiderTotalCost: number) => {
@@ -235,6 +237,8 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
           setAiderTotalCost(usageReport.aiderTotalCost);
         }
       }
+
+      processingResponseMessageMap.delete(taskId);
     };
 
     const handleCommandOutput = ({ command, output }: CommandOutputData) => {
