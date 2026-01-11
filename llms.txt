@@ -119,6 +119,7 @@ src/
         ollama.ts
         openai-compatible.ts
         openai.ts
+        opencode.ts
         openrouter.ts
         requesty.ts
         synthetic.ts
@@ -252,6 +253,7 @@ src/
           BaseDialog.tsx
           Button.tsx
           Checkbox.tsx
+          Chip.tsx
           CodeBlock.tsx
           CodeInline.tsx
           CompactSelect.tsx
@@ -354,6 +356,9 @@ src/
             OpenAiCompatibleParameters.tsx
             OpenAiModelOverrides.tsx
             OpenAiParameters.tsx
+            OpenCodeAdvancedSettings.tsx
+            OpenCodeModelOverrides.tsx
+            OpenCodeParameters.tsx
             OpenRouterAdvancedSettings.tsx
             OpenRouterModelOverrides.tsx
             OpenRouterParameters.tsx
@@ -520,6 +525,7 @@ src/
         OllamaIcon.tsx
         OpenAiCompatibleIcon.tsx
         OpenAiIcon.tsx
+        OpenCodeIcon.tsx
         OpenRouterIcon.tsx
         requesty.png
         RequestyIcon.tsx
@@ -1180,6 +1186,7 @@ transformed_data = {}
 # skip models that are configured by other means
 ⋮----
 max_input_tokens = info.get("maxInputTokens")
+⋮----
 # skip models that don't have maxInputTokens defined
 ⋮----
 # Update the model_info_manager.local_model_metadata
@@ -1597,6 +1604,9 @@ File: src/common/locales/en.json
     "apiKey": "API Key",
     "modelPlaceholder": "e.g. anthropic/claude-3.7-sonnet"
   },
+  "opencode": {
+    "apiKey": "API Key"
+  },
   "requesty": {
     "apiKey": "API Key",
     "modelPlaceholder": "e.g. claude-4-sonnet",
@@ -1660,6 +1670,7 @@ File: src/common/locales/en.json
     "minimax": "MiniMax",
     "ollama": "Ollama",
     "openai": "OpenAI",
+    "opencode": "OpenCode ZEN",
     "openai-compatible": "OpenAI Compatible",
     "openrouter": "OpenRouter",
     "requesty": "Requesty",
@@ -1753,7 +1764,14 @@ File: src/common/locales/en.json
       "autoGenerateTaskName": "Auto-Generate Task Name",
       "autoGenerateTaskNameTooltip": "When enabled, the model generates a concise task name from your prompt. When disabled, the first 5 words of your prompt will be used as the task name.",
       "showTaskStateActions": "Show Task State Actions",
-      "showTaskStateActionsTooltip": "When enabled, task state actions are displayed at the bottom of messages. Disable to hide these actions."
+      "showTaskStateActionsTooltip": "When enabled, task state actions are displayed at the bottom of messages. Disable to hide these actions.",
+      "worktree": "Worktree",
+      "worktreeSymlinkFoldersLabel": "Symlink Folders",
+      "worktreeSymlinkFoldersTooltip": "These folders will be symlinked from the project root to the task worktree. Useful for large dependencies like node_modules.",
+      "noSymlinkFolders": "No symlink folders configured",
+      "symlinkFolderPlaceholder": "Folder name (e.g. node_modules)",
+      "addSymlinkFolder": "Add",
+      "removeSymlinkFolder": "Remove folder"
     },
     "language": "Language",
     "notifications": {
@@ -2622,7 +2640,8 @@ File: src/common/locales/en.json
     "deleteSelectedConfirm": "Are you sure you want to delete {{count}} selected tasks?",
     "archiveSelectedConfirm": "Are you sure you want to archive {{count}} selected tasks?",
     "unarchiveSelectedConfirm": "Are you sure you want to unarchive {{count}} selected tasks?",
-    "generatingName": "Generating name..."
+    "generatingName": "Generating name...",
+    "changeState": "Change State"
   },
   "taskInfo": {
     "createdAt": "Created at",
@@ -3076,6 +3095,9 @@ File: src/common/locales/zh.json
     "apiKey": "API 密钥",
     "modelPlaceholder": "例如 anthropic/claude-3.7-sonnet"
   },
+  "opencode": {
+    "apiKey": "API 密钥"
+  },
   "requesty": {
     "apiKey": "API 密钥",
     "modelPlaceholder": "例如 claude-4-sonnet"
@@ -3098,6 +3120,7 @@ File: src/common/locales/zh.json
     "minimax": "Minimax",
     "ollama": "Ollama",
     "openai": "OpenAI",
+    "opencode": "OpenCode ZEN",
     "openai-compatible": "OpenAI Compatible",
     "openrouter": "OpenRouter",
     "requesty": "Requesty",
@@ -3193,7 +3216,14 @@ File: src/common/locales/zh.json
       "autoGenerateTaskName": "自动生成任务名称",
       "autoGenerateTaskNameTooltip": "启用后，模型会根据您的提示生成简洁的任务名称。禁用时，将使用提示的前5个词作为任务名称。",
       "showTaskStateActions": "显示任务状态操作",
-      "showTaskStateActionsTooltip": "启用后，任务状态操作将显示在消息底部。禁用以隐藏这些操作。"
+      "showTaskStateActionsTooltip": "启用后，任务状态操作将显示在消息底部。禁用以隐藏这些操作。",
+      "worktree": "工作树",
+      "worktreeSymlinkFoldersLabel": "符号链接文件夹",
+      "worktreeSymlinkFoldersTooltip": "这些文件夹将从项目根目录符号链接到任务工作树。适用于像 node_modules 这样的大型依赖。",
+      "noSymlinkFolders": "未配置符号链接文件夹",
+      "symlinkFolderPlaceholder": "文件夹名称（例如 node_modules）",
+      "addSymlinkFolder": "添加",
+      "removeSymlinkFolder": "移除文件夹"
     },
     "language": "语言",
     "notifications": {
@@ -4070,7 +4100,8 @@ File: src/common/locales/zh.json
     "deleteSelectedConfirm": "您确定要删除 {{count}} 个选中的任务吗？",
     "archiveSelectedConfirm": "您确定要归档 {{count}} 个选中的任务吗？",
     "unarchiveSelectedConfirm": "您确定要取消归档 {{count}} 个选中的任务吗？",
-    "generatingName": "正在生成名称..."
+    "generatingName": "正在生成名称...",
+    "changeState": "更改状态"
   },
   "taskInfo": {
     "createdAt": "创建于",
@@ -4225,6 +4256,7 @@ export type LlmProviderName =
   | 'ollama'
   | 'openai'
   | 'openai-compatible'
+  | 'opencode'
   | 'openrouter'
   | 'requesty'
   | 'synthetic'
@@ -4389,6 +4421,12 @@ export interface RequestyProvider extends LlmProviderBase {
 }
 export const isRequestyProvider = (provider: LlmProviderBase): provider is RequestyProvider
 ⋮----
+export interface OpenCodeProvider extends LlmProviderBase {
+  name: 'opencode';
+  apiKey: string;
+}
+export const isOpenCodeProvider = (provider: LlmProviderBase): provider is OpenCodeProvider
+⋮----
 export interface ZaiPlanProvider extends LlmProviderBase {
   name: 'zai-plan';
   apiKey: string;
@@ -4421,6 +4459,7 @@ export type LlmProvider =
   | CerebrasProvider
   | OpenAiCompatibleProvider
   | OllamaProvider
+  | OpenCodeProvider
   | OpenRouterProvider
   | RequestyProvider
   | SyntheticProvider
@@ -4715,6 +4754,7 @@ import {
   OllamaProvider,
   OpenAiCompatibleProvider,
   OpenAiProvider,
+  OpenCodeProvider,
   OpenRouterProvider,
   RequestyProvider,
   VertexAiProvider,
@@ -5164,6 +5204,7 @@ export interface TaskSettings {
   smartTaskState: boolean;
   autoGenerateTaskName: boolean;
   showTaskStateActions: boolean;
+  worktreeSymlinkFolders: string[];
 }
 ⋮----
 export interface MemoryConfig {
@@ -5226,6 +5267,7 @@ export interface SettingsData {
     lmstudio?: LmStudioProvider;
     minimax?: MinimaxProvider;
     'openai-compatible'?: OpenAiCompatibleProvider;
+    opencode?: OpenCodeProvider;
     openrouter?: OpenRouterProvider;
     requesty?: RequestyProvider;
     synthetic?: SyntheticProvider;
@@ -8111,6 +8153,58 @@ const createOpenAIVoiceSession = async (profile: ProviderProfile, settings: Sett
 // Voice support
 
 ================
+File: src/main/models/providers/opencode.ts
+================
+import { Model, ProviderProfile, SettingsData } from '@common/types';
+import { DEFAULT_MODEL_TEMPERATURE, isOpenCodeProvider, OpenCodeProvider } from '@common/agent';
+import { createOpenAI } from '@ai-sdk/openai';
+import { createAnthropic } from '@ai-sdk/anthropic';
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+⋮----
+import { getDefaultModelInfo, getDefaultUsageReport } from './default';
+⋮----
+import type { LanguageModelV2 } from '@ai-sdk/provider';
+⋮----
+import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
+import { getEffectiveEnvironmentVariable } from '@/utils';
+⋮----
+interface OpenCodeModel {
+  id: string;
+  object: string;
+  created: number;
+  owned_by: string;
+}
+⋮----
+interface OpenCodeModelsResponse {
+  object: string;
+  data: OpenCodeModel[];
+}
+⋮----
+type ModelEndpointType = 'openai' | 'anthropic' | 'gemini' | 'openai-compatible';
+⋮----
+const getModelEndpointType = (modelId: string): ModelEndpointType =>
+⋮----
+const getDefaultModelTemperature = (modelId: string) =>
+⋮----
+const loadOpencodeModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> =>
+⋮----
+export const hasOpencodeEnvVars = (settings: SettingsData): boolean =>
+⋮----
+export const getOpencodeAiderMapping = (provider: ProviderProfile, modelId: string, settings: SettingsData, projectDir: string): AiderModelMapping =>
+⋮----
+// Use openai prefix for OpenCode providers
+⋮----
+// === LLM Creation Functions ===
+export const createOpencodeLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
+⋮----
+// === Complete Strategy Implementation ===
+⋮----
+// Core LLM functions
+⋮----
+// Model discovery functions
+
+================
 File: src/main/models/providers/openrouter.ts
 ================
 import { AgentProfile, Model, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
@@ -8473,6 +8567,7 @@ import { minimaxProviderStrategy } from './providers/minimax';
 import { ollamaProviderStrategy } from './providers/ollama';
 import { openaiProviderStrategy } from './providers/openai';
 import { openaiCompatibleProviderStrategy } from './providers/openai-compatible';
+import { opencodeProviderStrategy } from './providers/opencode';
 import { openrouterProviderStrategy } from './providers/openrouter';
 import { requestyProviderStrategy } from './providers/requesty';
 import { syntheticProviderStrategy } from './providers/synthetic';
@@ -8635,32 +8730,12 @@ async createVoiceSession(provider: ProviderProfile): Promise<VoiceSession>
 File: src/main/models/types.ts
 ================
 import { AgentProfile, Model, ModelInfo, ProviderProfile, SettingsData, UsageReportData, VoiceSession } from '@common/types';
-import { LlmProvider } from '@common/agent';
+import { LlmProvider, LlmProviderName } from '@common/agent';
 ⋮----
 import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 import type { LanguageModelUsage, ToolSet } from 'ai';
 ⋮----
 import { Task } from '@/task';
-⋮----
-export type LlmProviderName =
-  | 'anthropic'
-  | 'azure'
-  | 'bedrock'
-  | 'cerebras'
-  | 'deepseek'
-  | 'gemini'
-  | 'gpustack'
-  | 'groq'
-  | 'lmstudio'
-  | 'minimax'
-  | 'ollama'
-  | 'openai'
-  | 'openai-compatible'
-  | 'openrouter'
-  | 'requesty'
-  | 'synthetic'
-  | 'vertex-ai'
-  | 'zai-plan';
 ⋮----
 export interface CacheControl {
   providerOptions: SharedV2ProviderOptions;
@@ -9724,17 +9799,39 @@ File: src/main/server/index.ts
 ================
 File: src/main/server/runner.ts
 ================
+import { normalizeBaseDir } from '@common/utils';
+import { ProjectData } from '@common/types';
+⋮----
 import logger from '@/logger';
 import { initManagers } from '@/managers';
 import { performStartUp } from '@/start-up';
 import { Store } from '@/store';
 import { AIDER_DESK_DATA_DIR } from '@/constants';
+import { getDefaultProjectSettings } from '@/utils';
+import { ModelManager } from '@/models';
+import { AgentProfileManager } from '@/agent';
+⋮----
+export const addProjectsFromEnv = async (store: Store, modelManager: ModelManager, agentProfileManager: AgentProfileManager): Promise<void> =>
+⋮----
+// Create all projects from the env var
+⋮----
+// Override open projects with the ones from env var
+⋮----
+// Preserve active state from existing projects if they match
+⋮----
+// Set the first project as active if none are active
 ⋮----
 const main = async (): Promise<void> =>
 ⋮----
 // Force headless mode for node-runner
 ⋮----
 const updateProgress = (
+⋮----
+// Initialize managers first
+⋮----
+// Check for AIDER_DESK_PROJECTS environment variable and add projects
+⋮----
+// Only run main if this file is being executed directly (not imported for testing)
 
 ================
 File: src/main/server/server-controller.ts
@@ -11847,7 +11944,8 @@ File: src/main/worktrees/index.ts
 File: src/main/worktrees/worktree-manager.ts
 ================
 import path, { join } from 'path';
-import fs, { mkdir, rm } from 'fs/promises';
+import fs, { mkdir, rm, lstat, symlink } from 'fs/promises';
+import { existsSync } from 'fs';
 ⋮----
 import { ConflictResolutionFileContext, MergeState, RebaseState, Worktree, WorktreeAheadCommits, WorktreeUncommittedFiles } from '@common/types';
 ⋮----
@@ -11923,6 +12021,12 @@ actualBaseBranch = branch; // Use the newly created branch name
 // Capture the base commit (the commit it's detached at)
 ⋮----
 // Use the baseRef for the branch name, or resolve the current branch if baseRef is 'HEAD'
+⋮----
+async createSymlinks(projectPath: string, worktreePath: string, folderNames: string[]): Promise<void>
+⋮----
+private async existsAndIsDirectory(path: string): Promise<boolean>
+⋮----
+private async isFolderTrackedByGit(projectPath: string, folderName: string): Promise<boolean>
 ⋮----
 async removeWorktree(projectDir: string, worktree: Worktree): Promise<void>
 ⋮----
@@ -12690,7 +12794,7 @@ import DailyRotateFile from 'winston-daily-rotate-file';
 ⋮----
 import { LOGS_DIR } from '@/constants';
 ⋮----
-// If we're not in production, also log to the console
+// If we're not in production OR running in headless mode (Docker), also log to the console
 
 ================
 File: src/main/managers.ts
@@ -12722,6 +12826,8 @@ export interface ManagersResult {
   eventsHandler: EventsHandler;
   serverController: ServerController;
   cleanup: () => Promise<void>;
+  modelManager: ModelManager;
+  agentProfileManager: AgentProfileManager;
 }
 ⋮----
 export const initManagers = async (store: Store, mainWindow: BrowserWindow | null = null): Promise<ManagersResult> =>
@@ -14001,6 +14107,24 @@ onChange(!checked);
 className="sr-only" // Hide the actual input but keep it accessible
 
 ================
+File: src/renderer/src/components/common/Chip.tsx
+================
+import { IoClose } from 'react-icons/io5';
+import { twMerge } from 'tailwind-merge';
+⋮----
+import { IconButton } from '@/components/common/IconButton';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+⋮----
+type Props = {
+  label: string;
+  onRemove?: () => void;
+  removeTooltip?: string;
+  className?: string;
+};
+⋮----
+className=
+
+================
 File: src/renderer/src/components/common/CodeBlock.tsx
 ================
 import { startTransition, useMemo, useOptimistic, useState } from 'react';
@@ -14168,16 +14292,18 @@ className=
 ================
 File: src/renderer/src/components/common/FileChip.tsx
 ================
-import { IoClose } from 'react-icons/io5';
 import { useTranslation } from 'react-i18next';
 ⋮----
-import { IconButton } from '@/components/common/IconButton';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Chip } from '@/components/common/Chip';
 ⋮----
 type Props = {
   path: string;
   onRemove: (path: string) => void;
 };
+⋮----
+export const FileChip = (
+⋮----
+return <Chip key=
 
 ================
 File: src/renderer/src/components/common/HtmlInfoDialog.tsx
@@ -14541,12 +14667,16 @@ import { useTranslation } from 'react-i18next';
 import { twMerge } from 'tailwind-merge';
 import { DefaultTaskState } from '@common/types';
 ⋮----
+import type { TFunction } from 'i18next';
+⋮----
 type Props = {
   state: string;
   className?: string;
 };
 ⋮----
 const getStateTextClass = (state: string): string =>
+⋮----
+export const getTaskStateLabel = (t: TFunction, state: string) =>
 ⋮----
 export const TaskStateChip = (
 ⋮----
@@ -15768,6 +15898,7 @@ import { CodeInline } from '@/components/common/CodeInline';
 import { CopyMessageButton } from '@/components/message/CopyMessageButton';
 import { IconButton } from '@/components/common/IconButton';
 import { useApi } from '@/contexts/ApiContext';
+import { getTaskStateLabel } from '@/components/common/TaskStateChip';
 ⋮----
 type Props = {
   message: TaskInfoMessageType;
@@ -16707,6 +16838,54 @@ const handleVoiceEnabledChange = (checked: boolean) =>
 label=
 
 ================
+File: src/renderer/src/components/ModelLibrary/providers/OpenCodeAdvancedSettings.tsx
+================
+export const OpenCodeAdvancedSettings = () =>
+
+================
+File: src/renderer/src/components/ModelLibrary/providers/OpenCodeModelOverrides.tsx
+================
+import { getDefaultProviderParams, LlmProvider } from '@common/agent';
+⋮----
+import { DisableStreaming } from '../DisableStreaming';
+⋮----
+type Props = {
+  provider: LlmProvider;
+  overrides: Record<string, unknown>;
+  onChange: (overrides: Record<string, unknown>) => void;
+};
+⋮----
+export const OpenCodeModelOverrides = (
+⋮----
+// Convert overrides to LlmProvider format
+⋮----
+// Convert back to overrides format
+const handleDisableStreamingChange = (disableStreaming: boolean) =>
+⋮----
+// Remove undefined values
+
+================
+File: src/renderer/src/components/ModelLibrary/providers/OpenCodeParameters.tsx
+================
+import { ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import { OpenCodeProvider } from '@common/agent';
+⋮----
+import { Input } from '@/components/common/Input';
+import { useEffectiveEnvironmentVariable } from '@/hooks/useEffectiveEnvironmentVariable';
+⋮----
+type Props = {
+  provider: OpenCodeProvider;
+  onChange: (updated: OpenCodeProvider) => void;
+};
+⋮----
+export const OpenCodeParameters = (
+⋮----
+const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
+⋮----
+label=
+
+================
 File: src/renderer/src/components/ModelLibrary/providers/OpenRouterAdvancedSettings.tsx
 ================
 import { useState, useEffect } from 'react';
@@ -17211,6 +17390,7 @@ import { OpenRouterModelOverrides } from './providers/OpenRouterModelOverrides';
 import { GeminiModelOverrides } from './providers/GeminiModelOverrides';
 import { VertexAiModelOverrides } from './providers/VertexAiModelOverrides';
 import { OpenAiModelOverrides } from './providers/OpenAiModelOverrides';
+import { OpenCodeModelOverrides } from './providers/OpenCodeModelOverrides';
 import { RequestyModelOverrides } from './providers/RequestyModelOverrides';
 import { AzureModelOverrides } from './providers/AzureModelOverrides';
 import { OpenAiCompatibleModelOverrides } from './providers/OpenAiCompatibleModelOverrides';
@@ -17365,6 +17545,7 @@ import {
   OllamaIcon,
   OpenAiCompatibleIcon,
   OpenAiIcon,
+  OpenCodeIcon,
   OpenRouterIcon,
   RequestyIcon,
   SyntheticIcon,
@@ -17477,6 +17658,7 @@ import {
   OllamaParameters,
   OpenAiCompatibleParameters,
   OpenAiParameters,
+  OpenCodeParameters,
   OpenRouterParameters,
   RequestyParameters,
   SyntheticParameters,
@@ -17560,6 +17742,7 @@ import {
   OllamaIcon,
   OpenAiCompatibleIcon,
   OpenAiIcon,
+  OpenCodeIcon,
   OpenRouterIcon,
   RequestyIcon,
   SyntheticIcon,
@@ -18107,12 +18290,14 @@ File: src/renderer/src/components/project/TaskSidebar.tsx
 import { DefaultTaskState, TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
 import { KeyboardEvent, MouseEvent, useState, memo, useRef, useEffect, useOptimistic, startTransition } from 'react';
+import { createPortal } from 'react-dom';
 import { HiOutlinePencil, HiOutlineTrash, HiPlus, HiCheck, HiSparkles } from 'react-icons/hi';
-import { RiMenuUnfold4Line } from 'react-icons/ri';
+import { RiMenuUnfold4Line, RiFlag2Line } from 'react-icons/ri';
 import { FaEllipsisVertical } from 'react-icons/fa6';
 import { IoLogoMarkdown } from 'react-icons/io';
+import { IoGitBranch } from 'react-icons/io5';
 import { CgSpinner } from 'react-icons/cg';
-import { MdImage, MdOutlineSearch, MdPushPin } from 'react-icons/md';
+import { MdImage, MdOutlineSearch, MdPushPin, MdChevronRight } from 'react-icons/md';
 import { clsx } from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
 import { BiDuplicate, BiArchive, BiArchiveIn } from 'react-icons/bi';
@@ -18128,9 +18313,10 @@ import { IconButton } from '@/components/common/IconButton';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { LoadingText } from '@/components/common/LoadingText';
-import { TaskStateChip } from '@/components/common/TaskStateChip';
+import { getTaskStateLabel, TaskStateChip } from '@/components/common/TaskStateChip';
 ⋮----
 type TaskMenuButtonProps = {
+  task: TaskData;
   onEdit: () => void;
   onDelete?: () => void;
   onExportToMarkdown?: () => void;
@@ -18139,6 +18325,7 @@ type TaskMenuButtonProps = {
   onArchiveTask?: () => void;
   onUnarchiveTask?: () => void;
   onTogglePin?: () => void;
+  onChangeState?: (newState: string) => void;
   isPinned?: boolean;
 };
 ⋮----
@@ -18160,6 +18347,10 @@ const handleUnarchiveTaskClick = (e: MouseEvent) =>
 ⋮----
 const handlePinClick = (e: MouseEvent) =>
 ⋮----
+const handleStateSubmenuToggle = () =>
+⋮----
+const handleStateChange = (e: MouseEvent, state: string) =>
+⋮----
 <div className=
 ⋮----
 data-tooltip-content=
@@ -18170,9 +18361,11 @@ className={clsx(
           )}
 onClick=
 ⋮----
+e.stopPropagation();
+handleStateSubmenuToggle();
+⋮----
 // Multiselect Menu Component
 ⋮----
-e.stopPropagation();
 onDelete();
 ⋮----
 onArchive();
@@ -18223,6 +18416,10 @@ const handleTogglePin = async (taskId: string) =>
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
+const handleChangeState = async (taskId: string, newState: string) =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
 // Multiselect handlers
 const handleTaskCtrlClick = (e: MouseEvent, taskId: string) =>
 ⋮----
@@ -18242,9 +18439,9 @@ return <span className=
 ⋮----
 label=
 ⋮----
-onEdit=
-⋮----
 onTogglePin=
+⋮----
+onChangeState=
 ⋮----
 <h3 className="text-sm font-semibold uppercase h-5">
 ⋮----
@@ -19923,11 +20120,14 @@ const handleZoomChange = (zoomLevel: number) =>
 File: src/renderer/src/components/settings/TaskSettings.tsx
 ================
 import { SettingsData } from '@common/types';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 ⋮----
+import { Chip } from '../common/Chip';
 import { Checkbox } from '../common/Checkbox';
 import { Section } from '../common/Section';
 import { InfoIcon } from '../common/InfoIcon';
+import { Button } from '../common/Button';
 ⋮----
 type Props = {
   settings: SettingsData;
@@ -19940,7 +20140,13 @@ const handleAutoGenerateTaskNameChange = (checked: boolean) =>
 ⋮----
 const handleShowTaskStateActionsChange = (checked: boolean) =>
 ⋮----
+const handleAddSymlinkFolder = () =>
+⋮----
+const handleRemoveSymlinkFolder = (folder: string) =>
+⋮----
 <Section title=
+⋮----
+onChange=
 
 ================
 File: src/renderer/src/components/settings/VoiceSettings.tsx
@@ -21626,6 +21832,33 @@ export const OpenAiIcon = ({ width = 64, height = 64, className }: Props) => (
 );
 
 ================
+File: src/renderer/src/icons/OpenCodeIcon.tsx
+================
+type Props = {
+  width?: number;
+  height?: number;
+  className?: string;
+};
+⋮----
+export const OpenCodeIcon = ({ width = 64, height = 64, className }: Props) => (
+  <div
+    aria-label="OpenCode ZEN"
+    className={`flex items-center justify-center rounded-md ${className || ''}`}
+    style={{
+      backgroundColor: '#131010',
+      color: 'rgb(255, 255, 255)',
+      height: `${height}px`,
+      width: `${width}px`,
+    }}
+  >
+    <svg width={width * 0.95} height={height * 0.95} viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M320 224V352H192V224H320Z" fill="#5A5858"></path>
+      <path fillRule="evenodd" clipRule="evenodd" d="M384 416H128V96H384V416ZM320 160H192V352H320V160Z" fill="white"></path>
+    </svg>
+  </div>
+);
+
+================
 File: src/renderer/src/icons/OpenRouterIcon.tsx
 ================
 type Props = {
@@ -22031,7 +22264,7 @@ className=
 e.stopPropagation();
 toggleExpand(item.id);
 ⋮----
-{!item.children && <span className="w-6" />} {/* Spacer for items without children */}
+{!item.children?.length && <span className="w-6" />} {/* Spacer for items without children */}
 ⋮----
 {/* Children */}
 ⋮----
@@ -24659,7 +24892,9 @@ File: package.json
     "dev": "electron-vite dev",
     "dev:no-hmr": "NO_HMR=true electron-vite dev",
     "build:mcp": "esbuild src/mcp-server/aider-desk-mcp-server.ts --bundle --platform=node --outdir=out/mcp-server",
-    "build:server": "esbuild src/main/server/runner.ts --bundle --platform=node --outdir=out/server --external:better-sqlite3 --external:@homebridge/node-pty-prebuilt-multiarch --external:@probelabs/probe --external:electron --tsconfig=tsconfig.server.json && cp -r resources out/resources",
+    "prebuild:server": "electron-vite build && npm run build:mcp",
+    "build:server": "vite build --config vite.config.server.ts && cp -r resources/ out/resources",
+    "postbuild:server": "npm rebuild",
     "build": "npm run typecheck && electron-vite build && npm run build:mcp",
     "postinstall": "electron-builder install-app-deps && node scripts/download-uv.mjs && node scripts/download-probe.mjs && patch-package",
     "build:unpack": "npm run build && electron-builder --dir",
@@ -24667,7 +24902,7 @@ File: package.json
     "build:mac": "npm run build && electron-builder --mac",
     "build:linux": "npm run build && electron-builder --linux",
     "prepare": "husky",
-    "start:server": "AIDER_DESK_HEADLESS=true node out/server/runner.js",
+    "start:server": "node out/server/runner.js",
     "test": "npm run test:node && npm run test:web",
     "test:node": "NODE_ENV=test vitest run --config vitest.config.node.ts",
     "test:web": "NODE_ENV=test vitest run --config vitest.config.web.ts",
