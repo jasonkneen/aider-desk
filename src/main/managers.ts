@@ -38,7 +38,7 @@ export const initManagers = async (store: Store, mainWindow: BrowserWindow | nul
   const mcpManager = new McpManager();
   const activeProject = store.getOpenProjects().find((project) => project.active);
 
-  void mcpManager.initMcpConnectors(store.getSettings().mcpServers, activeProject?.baseDir);
+  void mcpManager.initMcpConnectors(store.getSettings().mcpServers, activeProject?.baseDir, activeProject?.baseDir);
 
   // Initialize event manager (no main window in headless)
   const eventManager = new EventManager(mainWindow);

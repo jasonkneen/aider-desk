@@ -184,7 +184,7 @@ export class EventsHandler {
 
     this.store.setOpenProjects(updatedProjects);
 
-    void this.mcpManager.initMcpConnectors(this.store.getSettings().mcpServers, baseDir);
+    void this.mcpManager.initMcpConnectors(this.store.getSettings().mcpServers, baseDir, baseDir);
 
     return updatedProjects;
   }
@@ -396,7 +396,8 @@ export class EventsHandler {
     // Get the currently active project's base directory
     const activeProject = this.store.getOpenProjects().find((p) => p.active);
     const projectDir = activeProject ? activeProject.baseDir : null;
-    await this.mcpManager.initMcpConnectors(mcpServers, projectDir, force);
+    // taskDir defaults to projectDir when there's no task context
+    await this.mcpManager.initMcpConnectors(mcpServers, projectDir, projectDir, force);
   }
 
   async createTerminal(baseDir: string, taskId: string, cols?: number, rows?: number): Promise<string> {

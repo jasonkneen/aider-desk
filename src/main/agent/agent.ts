@@ -615,7 +615,7 @@ export class Agent {
 
     try {
       // reinitialize MCP clients for the current task and wait for them to be ready
-      await this.mcpManager.initMcpConnectors(settings.mcpServers, task.getTaskDir(), false, profile.enabledServers);
+      await this.mcpManager.initMcpConnectors(settings.mcpServers, task.getProjectDir(), task.getTaskDir(), false, profile.enabledServers);
     } catch (error) {
       logger.error('Error reinitializing MCP clients:', error);
       task.addLogMessage('error', `Error reinitializing MCP clients: ${error}`, false, promptContext);

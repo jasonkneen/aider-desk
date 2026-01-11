@@ -20,11 +20,13 @@ export interface McpConnector {
 export class McpManager {
   private mcpConnectors: Record<string, Promise<McpConnector>> = {};
   private currentProjectDir: string | null = null;
+  private currentTaskDir: string | null = null;
   private currentInitId: string | null = null;
 
   async initMcpConnectors(
     mcpServers: Record<string, McpServerConfig>,
     projectDir: string | null = this.currentProjectDir,
+    taskDir: string | null = this.currentTaskDir,
     forceReload = false,
     enabledServers?: string[],
   ): Promise<McpConnector[]> {
@@ -56,13 +58,15 @@ export class McpManager {
     for (const [serverName, serverConfig] of Object.entries(mcpServers)) {
       this.mcpConnectors[serverName] = this.initMcpConnector(
         projectDir,
+        taskDir,
         serverName,
         serverConfig,
-        forceReload || (!!projectDir && projectDir !== this.currentProjectDir),
+        forceReload || (!!projectDir && projectDir !== this.currentProjectDir) || (!!taskDir && taskDir !== this.currentTaskDir),
         initId,
       );
     }
     this.currentProjectDir = projectDir;
+    this.currentTaskDir = taskDir;
 
     const enabledMcpConnectors = enabledServers
       ? enabledServers.filter((serverName) => this.mcpConnectors[serverName]).map((serverName) => this.mcpConnectors[serverName])
@@ -73,6 +77,7 @@ export class McpManager {
 
   private async initMcpConnector(
     projectDir: string | null,
+    taskDir: string | null,
     serverName: string,
     config: McpServerConfig,
     forceReload = false,
@@ -80,7 +85,7 @@ export class McpManager {
   ): Promise<McpConnector> {
     const oldConnectorPromise = this.mcpConnectors[serverName];
 
-    config = this.interpolateServerConfig(config, projectDir);
+    config = this.interpolateServerConfig(config, projectDir, taskDir);
 
     let oldConnector: McpConnector | null = null;
     if (oldConnectorPromise) {
@@ -111,14 +116,16 @@ export class McpManager {
       return oldConnector;
     }
 
-    return this.createMcpConnector(serverName, config, projectDir).catch((error) => {
+    return this.createMcpConnector(serverName, config, projectDir, taskDir).catch((error) => {
       logger.error(`MCP Client creation failed for server during init: ${serverName}`, error);
       throw error;
     });
   }
 
-  settingsChanged(_: SettingsData, newSettings: SettingsData) {
-    void this.initMcpConnectors(newSettings.mcpServers);
+  settingsChanged(oldSettings: SettingsData, newSettings: SettingsData) {
+    if (JSON.stringify(oldSettings.mcpServers) !== JSON.stringify(newSettings.mcpServers)) {
+      void this.initMcpConnectors(newSettings.mcpServers);
+    }
   }
 
   async close(): Promise<void> {
@@ -136,11 +143,15 @@ export class McpManager {
     logger.debug('MCP clients closed and record cleared/updated.');
   }
 
-  private interpolateServerConfig(serverConfig: McpServerConfig, projectDir: string | null): McpServerConfig {
+  private interpolateServerConfig(serverConfig: McpServerConfig, projectDir: string | null, taskDir: string | null): McpServerConfig {
     const config = JSON.parse(JSON.stringify(serverConfig)) as McpServerConfig;
 
     const interpolateValue = (value: string): string => {
-      return value.replace(/\${projectDir}/g, projectDir || '.');
+      // Replace ${projectDir} with the project root directory
+      let result = value.replace(/\${projectDir}/g, projectDir || '.');
+      // Replace ${taskDir} with the task directory (worktree dir or project root)
+      result = result.replace(/\${taskDir}/g, taskDir || projectDir || '.');
+      return result;
     };
 
     if (config.env) {
@@ -164,7 +175,7 @@ export class McpManager {
     return config;
   }
 
-  private async createMcpConnector(serverName: string, config: McpServerConfig, projectDir: string | null): Promise<McpConnector> {
+  private async createMcpConnector(serverName: string, config: McpServerConfig, projectDir: string | null, taskDir: string | null): Promise<McpConnector> {
     logger.info(`Initializing MCP client for server: ${serverName}`);
     logger.debug(`Server configuration: ${JSON.stringify(config)}`);
 
@@ -230,7 +241,7 @@ export class McpManager {
         command,
         args,
         env,
-        cwd: projectDir || undefined,
+        cwd: taskDir || projectDir || undefined,
       });
 
       logger.debug(`Connecting to MCP server using STDIO: ${serverName}`);
@@ -288,7 +299,7 @@ export class McpManager {
   async getMcpServerTools(serverName: string, config?: McpServerConfig): Promise<McpTool[] | null> {
     if (config) {
       // reload the connector if config is provided
-      this.mcpConnectors[serverName] = this.initMcpConnector(this.currentProjectDir, serverName, config);
+      this.mcpConnectors[serverName] = this.initMcpConnector(this.currentProjectDir, this.currentTaskDir, serverName, config);
     }
 
     const connectorPromise = this.mcpConnectors[serverName];

@@ -23,6 +23,7 @@
 - added change state submenu to task sidebar for updating task states
 - properly setting the default value for max output tokens when not specified in Aider modes
 - added configurable symlink folders for worktrees to automatically link untracked dependencies
+- added support for ${taskDir} placeholder in MCP server config and updated value of ${projectDir} placeholder
 
 ## [0.47.0]
 

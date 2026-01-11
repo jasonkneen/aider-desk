@@ -61,11 +61,16 @@ For streamable http servers, you can also specify `url` and `headers`.
 
 You can also paste a "bare" configuration without the `mcpServers` wrapper.
 
-### Using Project Directory in Configuration
+### Using Directory Placeholders in Configuration
 
-You can use the `${projectDir}` placeholder in your server's `args` or `env` configuration. AiderDesk will automatically replace this with the absolute path to the current project's root directory.
+You can use placeholders in your server's `args` or `env` configuration:
 
-**Example:**
+- `${projectDir}` - Replaced with the absolute path to the project's root directory
+- `${taskDir}` - Replaced with the absolute path to the current task's working directory:
+  - When using worktree mode: points to the worktree directory
+  - When using local mode: points to the project root directory (same as `${projectDir}`)
+
+**Example using projectDir:**
 ```json
 {
   "mcpServers": {
@@ -80,6 +85,24 @@ You can use the `${projectDir}` placeholder in your server's `args` or `env` con
   }
 }
 ```
+
+**Example using taskDir (works with both worktree and local modes):**
+```json
+{
+  "mcpServers": {
+    "file-operations": {
+      "command": "node",
+      "args": [
+        "/path/to/file-tool.js",
+        "--working-dir",
+        "${taskDir}"
+      ]
+    }
+  }
+}
+```
+
+**Important:** The MCP server's working directory (`cwd`) is automatically set to `${taskDir}`, so tools that operate on files will work in the task's working directory by default. Use `${projectDir}` when you need to access the project root regardless of whether worktree mode is active.
 
 ## Enabling Servers and Tools in Agent Profiles
 
