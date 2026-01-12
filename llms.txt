@@ -114,6 +114,7 @@ src/
         gemini.ts
         gpustack.ts
         groq.ts
+        litellm.ts
         lm-studio.ts
         minimax.ts
         ollama.ts
@@ -347,6 +348,7 @@ src/
             GpustackParameters.tsx
             GroqParameters.tsx
             index.ts
+            LitellmParameters.tsx
             LmStudioParameters.tsx
             MinimaxParameters.tsx
             OllamaParameters.tsx
@@ -520,6 +522,7 @@ src/
         GpustackIcon.tsx
         GroqIcon.tsx
         index.ts
+        LitellmIcon.tsx
         LmStudioIcon.tsx
         MinimaxIcon.tsx
         OllamaIcon.tsx
@@ -1667,6 +1670,7 @@ File: src/common/locales/en.json
     "groq": "Groq",
     "gpustack": "GPUStack",
     "lmstudio": "LM Studio",
+    "litellm": "LiteLLM",
     "minimax": "MiniMax",
     "ollama": "Ollama",
     "openai": "OpenAI",
@@ -3117,6 +3121,7 @@ File: src/common/locales/zh.json
     "groq": "Groq",
     "gpustack": "GPUStack",
     "lmstudio": "LM Studio",
+    "litellm": "LiteLLM",
     "minimax": "Minimax",
     "ollama": "Ollama",
     "openai": "OpenAI",
@@ -4251,6 +4256,7 @@ export type LlmProviderName =
   | 'gemini'
   | 'gpustack'
   | 'groq'
+  | 'litellm'
   | 'lmstudio'
   | 'minimax'
   | 'ollama'
@@ -4386,6 +4392,13 @@ export interface OpenAiCompatibleProvider extends LlmProviderBase {
 }
 export const isOpenAiCompatibleProvider = (provider: LlmProviderBase): provider is OpenAiCompatibleProvider
 ⋮----
+export interface LitellmProvider extends LlmProviderBase {
+  name: 'litellm';
+  apiKey: string;
+  baseUrl: string;
+}
+export const isLitellmProvider = (provider: LlmProviderBase): provider is LitellmProvider
+⋮----
 export const isOllamaProvider = (provider: LlmProviderBase): provider is OllamaProvider
 ⋮----
 export interface GpustackProvider extends LlmProviderBase {
@@ -4458,6 +4471,7 @@ export type LlmProvider =
   | GpustackProvider
   | CerebrasProvider
   | OpenAiCompatibleProvider
+  | LitellmProvider
   | OllamaProvider
   | OpenCodeProvider
   | OpenRouterProvider
@@ -6617,12 +6631,14 @@ export class McpManager
 async initMcpConnectors(
     mcpServers: Record<string, McpServerConfig>,
     projectDir: string | null = this.currentProjectDir,
+    taskDir: string | null = this.currentTaskDir,
     forceReload = false,
     enabledServers?: string[],
 ): Promise<McpConnector[]>
 ⋮----
 private async initMcpConnector(
     projectDir: string | null,
+    taskDir: string | null,
     serverName: string,
     config: McpServerConfig,
     forceReload = false,
@@ -6631,15 +6647,19 @@ private async initMcpConnector(
 ⋮----
 oldConnector = null; // Clear the old client reference
 ⋮----
-settingsChanged(_: SettingsData, newSettings: SettingsData)
+settingsChanged(oldSettings: SettingsData, newSettings: SettingsData)
 ⋮----
 async close(): Promise<void>
 ⋮----
-private interpolateServerConfig(serverConfig: McpServerConfig, projectDir: string | null): McpServerConfig
+private interpolateServerConfig(serverConfig: McpServerConfig, projectDir: string | null, taskDir: string | null): McpServerConfig
 ⋮----
 const interpolateValue = (value: string): string =>
 ⋮----
-private async createMcpConnector(serverName: string, config: McpServerConfig, projectDir: string | null): Promise<McpConnector>
+// Replace ${projectDir} with the project root directory
+⋮----
+// Replace ${taskDir} with the task directory (worktree dir or project root)
+⋮----
+private async createMcpConnector(serverName: string, config: McpServerConfig, projectDir: string | null, taskDir: string | null): Promise<McpConnector>
 ⋮----
 // Handle npx command on Windows
 ⋮----
@@ -7883,6 +7903,83 @@ export const createGroqLlm = (profile: ProviderProfile, model: Model, settings: 
 // Model discovery functions
 
 ================
+File: src/main/models/providers/litellm.ts
+================
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { isLitellmProvider, LitellmProvider } from '@common/agent';
+import { Model, ProviderProfile, SettingsData } from '@common/types';
+⋮----
+import type { LanguageModelV2 } from '@ai-sdk/provider';
+⋮----
+import logger from '@/logger';
+import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
+import { getEffectiveEnvironmentVariable } from '@/utils';
+import { getDefaultUsageReport } from '@/models/providers/default';
+⋮----
+interface LiteLLMModelInfo {
+  model_name: string;
+  id?: string;
+  max_tokens?: number;
+  max_input_tokens?: number;
+  max_output_tokens?: number;
+  context_window?: number;
+  input_cost_per_token?: number;
+  output_cost_per_token?: number;
+  litellm_params?: {
+    max_tokens?: number;
+    max_input_tokens?: number;
+    max_output_tokens?: number;
+    context_window?: number;
+    input_cost_per_token?: number;
+    output_cost_per_token?: number;
+  };
+  model_info?: {
+    max_tokens?: number;
+    max_input_tokens?: number;
+    max_output_tokens?: number;
+    context_window?: number;
+    input_cost_per_token?: number;
+    output_cost_per_token?: number;
+  };
+}
+⋮----
+export const loadLitellmModels = async (profile: ProviderProfile, settings: SettingsData): Promise<LoadModelsResponse> =>
+⋮----
+// Fetch /model/info for detailed pricing and config
+// This is required for LiteLLM provider
+⋮----
+// Sometimes it might return a map directly
+⋮----
+// Group by model_name to handle load balancing
+⋮----
+// Helper to find value in multiple places for a single info object
+const getValue = (
+        info: LiteLLMModelInfo,
+        key: 'context_window' | 'max_input_tokens' | 'max_output_tokens' | 'max_tokens' | 'input_cost_per_token' | 'output_cost_per_token',
+) =>
+⋮----
+// Aggregate values across all backends for this model name
+// For limits (context window, max output), use MIN to be safe
+// For costs, use MAX to be safe/conservative
+⋮----
+export const hasLitellmEnvVars = (settings: SettingsData): boolean =>
+⋮----
+export const getLitellmAiderMapping = (provider: ProviderProfile, modelId: string): AiderModelMapping =>
+⋮----
+// Ensure no trailing slash to avoid double slashes if Aider appends paths
+⋮----
+// === LLM Creation Functions ===
+export const createLitellmLlm = (profile: ProviderProfile, model: Model, settings: SettingsData, projectDir: string): LanguageModelV2 =>
+⋮----
+apiKey = 'sk-dummy'; // Dummy key for OpenAI-compatible client which expects a key.
+⋮----
+// === Complete Strategy Implementation ===
+⋮----
+// Core LLM functions
+⋮----
+// Model discovery functions
+
+================
 File: src/main/models/providers/lm-studio.ts
 ================
 import { Model, ProviderProfile, SettingsData, UsageReportData } from '@common/types';
@@ -8562,6 +8659,7 @@ import { deepseekProviderStrategy } from './providers/deepseek';
 import { geminiProviderStrategy } from './providers/gemini';
 import { gpustackProviderStrategy } from './providers/gpustack';
 import { groqProviderStrategy } from './providers/groq';
+import { litellmProviderStrategy } from './providers/litellm';
 import { lmStudioProviderStrategy } from './providers/lm-studio';
 import { minimaxProviderStrategy } from './providers/minimax';
 import { ollamaProviderStrategy } from './providers/ollama';
@@ -12551,6 +12649,8 @@ async loadMcpServerTools(serverName: string, config?: McpServerConfig): Promise<
 async reloadMcpServers(mcpServers: Record<string, McpServerConfig>, force = false): Promise<void>
 ⋮----
 // Get the currently active project's base directory
+⋮----
+// taskDir defaults to projectDir when there's no task context
 ⋮----
 async createTerminal(baseDir: string, taskId: string, cols?: number, rows?: number): Promise<string>
 ⋮----
@@ -16639,6 +16739,27 @@ File: src/renderer/src/components/ModelLibrary/providers/index.ts
 // Model Overrides
 
 ================
+File: src/renderer/src/components/ModelLibrary/providers/LitellmParameters.tsx
+================
+import { ChangeEvent } from 'react';
+import { useTranslation } from 'react-i18next';
+import { LitellmProvider } from '@common/agent';
+⋮----
+import { Input } from '@/components/common/Input';
+import { useEffectiveEnvironmentVariable } from '@/hooks/useEffectiveEnvironmentVariable';
+⋮----
+type Props = {
+  provider: LitellmProvider;
+  onChange: (updated: LitellmProvider) => void;
+};
+⋮----
+const handleBaseUrlChange = (e: ChangeEvent<HTMLInputElement>) =>
+⋮----
+const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
+⋮----
+label=
+
+================
 File: src/renderer/src/components/ModelLibrary/providers/LmStudioParameters.tsx
 ================
 import { ChangeEvent } from 'react';
@@ -17540,6 +17661,7 @@ import {
   GeminiIcon,
   GpustackIcon,
   GroqIcon,
+  LitellmIcon,
   LmStudioIcon,
   MinimaxIcon,
   OllamaIcon,
@@ -17653,6 +17775,7 @@ import {
   GeminiParameters,
   GpustackParameters,
   GroqParameters,
+  LitellmParameters,
   LmStudioParameters,
   MinimaxParameters,
   OllamaParameters,
@@ -17737,6 +17860,7 @@ import {
   GeminiIcon,
   GpustackIcon,
   GroqIcon,
+  LitellmIcon,
   LmStudioIcon,
   MinimaxIcon,
   OllamaIcon,
@@ -18603,6 +18727,10 @@ const handleCopyTerminalOutput = (output: string) =>
 ⋮----
 const handleAutoApproveChanged = (autoApprove: boolean) =>
 ⋮----
+const handleAnswerQuestion = (answer: string) =>
+⋮----
+const handleInterruptResponse = () =>
+⋮----
 return <LoadingOverlay message=
 ⋮----
 <div className=
@@ -18613,8 +18741,6 @@ onToggleSidebar=
 ⋮----
 if (node?.container)
 setSearchContainer(node.container);
-⋮----
-answerQuestion=
 ⋮----
 {/* Expand/Collapse Button */}
 ⋮----
@@ -21006,9 +21132,9 @@ export interface TaskState {
 }
 ⋮----
 interface TaskEventSubscriberProps {
-  taskId: string;
   baseDir: string;
-  task: TaskData;
+  taskId: string;
+  state?: string;
   updateTaskState: (taskId: string, updates: Partial<TaskState>) => void;
   clearSession: (taskId: string, messagesOnly: boolean) => void;
   setQuestion: (taskId: string, question: QuestionData | null) => void;
@@ -21017,9 +21143,9 @@ interface TaskEventSubscriberProps {
 }
 ⋮----
 const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
-  taskId,
   baseDir,
-  task,
+  taskId,
+  state,
   updateTaskState,
   clearSession,
   setQuestion,
@@ -21700,6 +21826,31 @@ export const GroqIcon = ({ width = 64, height = 64, className }: Props) => (
 File: src/renderer/src/icons/index.ts
 ================
 
+
+================
+File: src/renderer/src/icons/LitellmIcon.tsx
+================
+type Props = {
+  width?: number;
+  height?: number;
+  className?: string;
+};
+⋮----
+export const LitellmIcon = ({ width = 64, height = 64, className }: Props) => (
+  <div
+    aria-label="LiteLLM"
+    className={`flex items-center justify-center rounded-md ${className || ''}`}
+    style={{
+      backgroundColor: '#181638',
+      boxShadow: 'rgba(0, 0, 0, 0.1) 0px 0px 0px 1px inset',
+      color: 'rgb(0, 0, 0)',
+      height: `${height}px`,
+      width: `${width}px`,
+    }}
+  >
+    <div style={{ fontSize: `${width * 0.6}px` }}>🚅</div>
+  </div>
+);
 
 ================
 File: src/renderer/src/icons/LmStudioIcon.tsx
@@ -24630,6 +24781,10 @@ File: src/renderer/index.html
 <!doctype html>
 <html>
   <head>
+<!--    <script-->
+<!--      crossOrigin="anonymous"-->
+<!--      src="https://unpkg.com/react-scan/dist/auto.global.js"-->
+<!--    ></script>-->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>AiderDesk</title>
