@@ -245,7 +245,7 @@ export const AgentSelector = ({ projectDir, task, isActive, showSettingsPage }: 
       </button>
 
       {selectorVisible && (
-        <div className="absolute bottom-full left-0 mb-1 bg-bg-primary-light border border-border-default-dark rounded-md shadow-lg z-10 min-w-[290px] max-w-[380px]">
+        <div className="absolute bottom-full left-0 mb-1 bg-bg-primary-light border border-border-default-dark rounded-md shadow-lg z-50 min-w-[290px] max-w-[380px] max-w-[calc(100vw-20px)]">
           {/* Profiles List */}
           <div className="py-2 border-b border-border-default-dark">
             <div className="flex items-center justify-between mb-2 pl-3 pr-2">

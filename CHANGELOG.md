@@ -1,5 +1,11 @@
 # Changelog
 
+## [UNRELEASED]
+
+- improved responsiveness for small screen devices with mobile-first layouts for task sidebar, task bar, and prompt field components
+- added full-screen task sidebar on mobile with toggle button
+- added flexible layout adjustments for model selectors and dropdowns to prevent overflow on small screens
+
 ## [0.48.1]
 
 - passing the model info properly to Aider in the connector

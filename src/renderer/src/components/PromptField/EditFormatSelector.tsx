@@ -76,7 +76,7 @@ export const EditFormatSelector = forwardRef<EditFormatSelectorRef, Props>(({ cu
         <MdKeyboardArrowUp className="w-3 h-3 ml-1 transform rotate-180" />
       </button>
       {visible && (
-        <div className="absolute top-full left-0 mt-1 bg-bg-primary-light border border-border-default-dark rounded-md shadow-lg z-10 flex flex-col w-60">
+        <div className="absolute top-full left-0 mt-1 bg-bg-primary-light border border-border-default-dark rounded-md shadow-lg z-50 flex flex-col w-60 max-w-[calc(100vw-20px)]">
           <div className="overflow-y-auto scrollbar-thin scrollbar-track-bg-secondary-light scrollbar-thumb-bg-bg-tertiary hover:scrollbar-thumb-bg-fourth max-h-48">
             {filteredFormats.map(renderFormatItem)}
           </div>

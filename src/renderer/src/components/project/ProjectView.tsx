@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { startTransition, useCallback, useEffect, useOptimistic, useRef, useState, useTransition } from 'react';
 import { useLocalStorage } from '@reactuses/core';
 import { useHotkeys } from 'react-hotkeys-hook';
+import { clsx } from 'clsx';
 
 import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
@@ -13,6 +14,7 @@ import { useApi } from '@/contexts/ApiContext';
 import { TaskProvider } from '@/contexts/TaskContext';
 import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
 import { getSortedVisibleTasks } from '@/utils/task-utils';
+import { useResponsive } from '@/hooks/useResponsive';
 
 type Props = {
   project: ProjectData;
@@ -26,6 +28,7 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
   const { projectSettings } = useProjectSettings();
   const api = useApi();
   const { TASK_HOTKEYS } = useConfiguredHotkeys();
+  const { isMobile } = useResponsive();
 
   const [inputHistory, setInputHistory] = useState<string[]>([]);
   const [starting, setStarting] = useState(true);
@@ -34,6 +37,7 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [optimisticTasks, setOptimisticTasks] = useOptimistic(tasks);
   const [isTaskBarCollapsed, setIsTaskBarCollapsed] = useLocalStorage(`task-sidebar-collapsed-${project.baseDir}`, false);
+  const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(false);
   const [shouldFocusNewTask, setShouldFocusNewTask] = useState(false);
   const taskViewRef = useRef<TaskViewRef>(null);
   const creatingTaskRef = useRef(false);
@@ -233,8 +237,12 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
         setActiveTaskId(taskId);
         setShouldFocusNewTask(false);
       });
+
+      if (isMobile) {
+        setIsTaskSidebarOpen(false);
+      }
     },
-    [activeTaskId, focusActiveTaskPrompt],
+    [activeTaskId, focusActiveTaskPrompt, isMobile],
   );
 
   const switchToTaskByIndex = useCallback(
@@ -274,6 +282,10 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
 
   const handleToggleCollapse = () => {
     setIsTaskBarCollapsed(!isTaskBarCollapsed);
+  };
+
+  const handleToggleTaskSidebar = () => {
+    setIsTaskSidebarOpen(!isTaskSidebarOpen);
   };
 
   const handleUpdateTask = useCallback(
@@ -392,26 +404,30 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
       <div className="h-full w-full bg-gradient-to-b from-bg-primary to-bg-primary-light relative">
         {starting && <LoadingOverlay message={t('common.startingUp')} />}
 
-        <TaskSidebar
-          loading={tasksLoading}
-          tasks={optimisticTasks}
-          activeTaskId={activeTaskId}
-          onTaskSelect={handleTaskSelect}
-          createNewTask={createNewTask}
-          className="h-full"
-          isCollapsed={!!isTaskBarCollapsed}
-          onToggleCollapse={handleToggleCollapse}
-          updateTask={handleUpdateTask}
-          deleteTask={handleDeleteTask}
-          onExportToMarkdown={handleExportTaskToMarkdown}
-          onExportToImage={handleExportTaskToImage}
-          onDuplicateTask={handleDuplicateTask}
-        />
+        {(isTaskSidebarOpen || !isMobile) && (
+          <TaskSidebar
+            loading={tasksLoading}
+            tasks={optimisticTasks}
+            activeTaskId={activeTaskId}
+            onTaskSelect={handleTaskSelect}
+            createNewTask={createNewTask}
+            className="h-full"
+            isCollapsed={!!isTaskBarCollapsed}
+            onToggleCollapse={handleToggleCollapse}
+            updateTask={handleUpdateTask}
+            deleteTask={handleDeleteTask}
+            onExportToMarkdown={handleExportTaskToMarkdown}
+            onExportToImage={handleExportTaskToImage}
+            onDuplicateTask={handleDuplicateTask}
+            isMobile={isMobile}
+            onClose={() => setIsTaskSidebarOpen(false)}
+          />
+        )}
 
         <div
-          className={`absolute top-0 ${isTaskBarCollapsed ? `left-${COLLAPSED_WIDTH}` : `left-${EXPANDED_WIDTH}`} right-0 h-full transition-left duration-300 ease-in-out`}
+          className={clsx('absolute top-0 h-full transition-all duration-300 ease-in-out', isMobile ? 'left-0 right-0' : 'right-0')}
           style={{
-            left: isTaskBarCollapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH,
+            left: isMobile ? 0 : isTaskBarCollapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH,
           }}
         >
           {isActiveTaskSwitching && <LoadingOverlay message={t('common.loadingTask')} />}
@@ -430,6 +446,7 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
               onArchiveTask={() => handleArchiveTask(activeTask.id)}
               onUnarchiveTask={() => handleUnarchiveTask(activeTask.id)}
               onDeleteTask={() => handleDeleteTask(activeTask.id)}
+              onToggleTaskSidebar={isMobile ? handleToggleTaskSidebar : undefined}
             />
           )}
         </div>

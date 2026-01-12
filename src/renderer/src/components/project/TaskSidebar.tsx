@@ -394,6 +394,8 @@ type Props = {
   onExportToMarkdown?: (taskId: string) => void;
   onExportToImage?: (taskId: string) => void;
   onDuplicateTask?: (taskId: string) => void;
+  isMobile?: boolean;
+  onClose?: () => void;
 };
 
 const TaskSidebarComponent = ({
@@ -410,6 +412,8 @@ const TaskSidebarComponent = ({
   onExportToMarkdown,
   onExportToImage,
   onDuplicateTask,
+  isMobile = false,
+  onClose,
 }: Props) => {
   const { t } = useTranslation();
   const [deleteConfirmTaskId, setDeleteConfirmTaskId] = useState<string | null>(null);
@@ -545,6 +549,9 @@ const TaskSidebarComponent = ({
   const handleCreateTask = () => {
     if (createNewTask) {
       createNewTask();
+      if (isMobile && onClose) {
+        onClose();
+      }
     }
   };
 
@@ -835,18 +842,134 @@ const TaskSidebarComponent = ({
   };
 
   return (
-    <motion.div
-      className={clsx('flex flex-col h-full border-r border-border-dark-light bg-bg-primary-light-strong', className)}
-      animate={{ width: isCollapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
-      transition={{ duration: 0.3, ease: 'easeInOut' }}
-    >
-      <StyledTooltip id="task-sidebar-tooltip" />
-      <div className="bg-bg-primary-light border-b border-border-dark-light">
-        <div className="flex items-center justify-between p-2 h-10">
-          <button className="p-1 rounded-md hover:bg-bg-tertiary transition-colors" onClick={onToggleCollapse}>
-            <RiMenuUnfold4Line className={clsx('w-5 h-5 text-text-primary transition-transform duration-300', isCollapsed && 'rotate-180')} />
-          </button>
+    <AnimatePresence>
+      <motion.div
+        initial={isMobile ? { x: '-100%', opacity: 0 } : undefined}
+        animate={isMobile ? { x: 0, opacity: 1 } : { width: isCollapsed ? COLLAPSED_WIDTH : EXPANDED_WIDTH }}
+        exit={isMobile ? { x: '-100%', opacity: 0 } : undefined}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
+        className={
+          isMobile
+            ? 'fixed inset-y-0 left-0 w-full h-full bg-bg-primary z-[1000] shadow-xl'
+            : clsx('flex flex-col h-full border-r border-border-dark-light bg-bg-primary-light-strong', className)
+        }
+      >
+        <StyledTooltip id="task-sidebar-tooltip" />
+        <div className="bg-bg-primary-light border-b border-border-dark-light">
+          <div className="flex items-center justify-between p-2 h-10">
+            <button className="p-1 rounded-md hover:bg-bg-tertiary transition-colors" onClick={isMobile && onClose ? onClose : onToggleCollapse}>
+              <RiMenuUnfold4Line className={clsx('w-5 h-5 text-text-primary transition-transform duration-300', isCollapsed && 'rotate-180')} />
+            </button>
 
+            <AnimatePresence>
+              {!isCollapsed && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  transition={{ duration: 0.2 }}
+                  className="flex items-center justify-between w-full ml-2"
+                >
+                  {isMultiselectMode ? (
+                    <>
+                      <h3 className="text-sm font-semibold uppercase h-5">{t('taskSidebar.title')}</h3>
+                      <div className="flex items-center gap-1">
+                        <span className="text-2xs text-text-muted mr-2">{t('taskSidebar.selectedCount', { count: selectedTasks.size })}</span>
+                        <button
+                          data-tooltip-id="task-sidebar-tooltip"
+                          data-tooltip-content={t('taskSidebar.closeMultiselect')}
+                          className="p-1 rounded-md hover:bg-bg-tertiary transition-colors"
+                          onClick={handleMultiselectClose}
+                        >
+                          <HiXMark className="w-5 h-5 text-text-primary" />
+                        </button>
+                        <MultiselectMenu
+                          hasArchived={Array.from(selectedTasks).some((taskId) => tasks.find((task) => task.id === taskId)?.archived)}
+                          onDelete={() => setBulkDeleteConfirm(true)}
+                          onArchive={() => setBulkArchiveConfirm(true)}
+                          onUnarchive={() => setBulkArchiveConfirm(true)}
+                          isOpen={isMultiselectMenuOpen}
+                          onToggle={() => setIsMultiselectMenuOpen(!isMultiselectMenuOpen)}
+                          menuRef={multiselectMenuRef}
+                          buttonRef={multiselectButtonRef}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <h3 className="text-sm font-semibold uppercase h-5">{t('taskSidebar.title')}</h3>
+                      <div className="flex items-center gap-1">
+                        <IconButton
+                          onClick={() => setShowArchived(!showArchived)}
+                          tooltip={showArchived ? t('taskSidebar.hideArchived') : t('taskSidebar.showArchived')}
+                          tooltipId="task-sidebar-tooltip"
+                          className="p-1.5 hover:bg-bg-tertiary rounded-md group"
+                          icon={
+                            showArchived ? (
+                              <BiArchiveIn className="w-4 h-4 text-text-primary" />
+                            ) : (
+                              <BiArchive className="w-4 h-4 text-text-dark group-hover:text-text-muted" />
+                            )
+                          }
+                        />
+                        <button
+                          data-tooltip-id="task-sidebar-tooltip"
+                          data-tooltip-content={t('taskSidebar.search')}
+                          className="p-1 rounded-md hover:bg-bg-tertiary transition-colors"
+                          onClick={handleSearchToggle}
+                        >
+                          <MdOutlineSearch className="w-5 h-5 text-text-primary" />
+                        </button>
+                        {createNewTask && (
+                          <button
+                            data-tooltip-id="task-sidebar-tooltip"
+                            data-tooltip-content={t('taskSidebar.createTask')}
+                            className="p-1 rounded-md hover:bg-bg-tertiary transition-colors"
+                            onClick={handleCreateTask}
+                          >
+                            <HiPlus className="w-5 h-5 text-text-primary" />
+                          </button>
+                        )}
+                      </div>
+                    </>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          <AnimatePresence>
+            {!isCollapsed && isSearchVisible && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.05 }}
+                className="px-2 pb-2"
+              >
+                <div className="relative">
+                  <Input
+                    ref={searchInputRef}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={t('taskSidebar.searchPlaceholder')}
+                    size="sm"
+                    className="pr-8"
+                    autoFocus={true}
+                  />
+                  <button
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-md hover:bg-bg-tertiary transition-colors"
+                    onClick={handleSearchClose}
+                  >
+                    <HiXMark className="w-4 h-4 text-text-muted hover:text-text-primary" />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-track-bg-primary-light-strong scrollbar-thumb-border-default bg-bg-primary-light-strong py-0.5">
           <AnimatePresence>
             {!isCollapsed && (
               <motion.div
@@ -854,189 +977,81 @@ const TaskSidebarComponent = ({
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.8 }}
                 transition={{ duration: 0.2 }}
-                className="flex items-center justify-between w-full ml-2"
+                className="h-full"
               >
-                {isMultiselectMode ? (
-                  <>
-                    <h3 className="text-sm font-semibold uppercase h-5">{t('taskSidebar.title')}</h3>
-                    <div className="flex items-center gap-1">
-                      <span className="text-2xs text-text-muted mr-2">{t('taskSidebar.selectedCount', { count: selectedTasks.size })}</span>
-                      <button
-                        data-tooltip-id="task-sidebar-tooltip"
-                        data-tooltip-content={t('taskSidebar.closeMultiselect')}
-                        className="p-1 rounded-md hover:bg-bg-tertiary transition-colors"
-                        onClick={handleMultiselectClose}
-                      >
-                        <HiXMark className="w-5 h-5 text-text-primary" />
-                      </button>
-                      <MultiselectMenu
-                        hasArchived={Array.from(selectedTasks).some((taskId) => tasks.find((task) => task.id === taskId)?.archived)}
-                        onDelete={() => setBulkDeleteConfirm(true)}
-                        onArchive={() => setBulkArchiveConfirm(true)}
-                        onUnarchive={() => setBulkArchiveConfirm(true)}
-                        isOpen={isMultiselectMenuOpen}
-                        onToggle={() => setIsMultiselectMenuOpen(!isMultiselectMenuOpen)}
-                        menuRef={multiselectMenuRef}
-                        buttonRef={multiselectButtonRef}
-                      />
+                {loading ? (
+                  <div className="flex items-center justify-center h-full">
+                    <CgSpinner className="animate-spin w-6 h-6 text-text-primary" />
+                  </div>
+                ) : tasks.length === 0 ? (
+                  <div className="flex items-center justify-center h-full p-4">
+                    <div className="text-center">
+                      <div className="text-sm text-text-secondary">{t('taskSidebar.noTasks')}</div>
                     </div>
-                  </>
+                  </div>
                 ) : (
-                  <>
-                    <h3 className="text-sm font-semibold uppercase h-5">{t('taskSidebar.title')}</h3>
-                    <div className="flex items-center gap-1">
-                      <IconButton
-                        onClick={() => setShowArchived(!showArchived)}
-                        tooltip={showArchived ? t('taskSidebar.hideArchived') : t('taskSidebar.showArchived')}
-                        tooltipId="task-sidebar-tooltip"
-                        className="p-1.5 hover:bg-bg-tertiary rounded-md group"
-                        icon={
-                          showArchived ? (
-                            <BiArchiveIn className="w-4 h-4 text-text-primary" />
-                          ) : (
-                            <BiArchive className="w-4 h-4 text-text-dark group-hover:text-text-muted" />
-                          )
-                        }
-                      />
-                      <button
-                        data-tooltip-id="task-sidebar-tooltip"
-                        data-tooltip-content={t('taskSidebar.search')}
-                        className="p-1 rounded-md hover:bg-bg-tertiary transition-colors"
-                        onClick={handleSearchToggle}
-                      >
-                        <MdOutlineSearch className="w-5 h-5 text-text-primary" />
-                      </button>
-                      {createNewTask && (
-                        <button
-                          data-tooltip-id="task-sidebar-tooltip"
-                          data-tooltip-content={t('taskSidebar.createTask')}
-                          className="p-1 rounded-md hover:bg-bg-tertiary transition-colors"
-                          onClick={handleCreateTask}
-                        >
-                          <HiPlus className="w-5 h-5 text-text-primary" />
-                        </button>
-                      )}
-                    </div>
-                  </>
+                  <div>
+                    {sortedTasks.map((task) => (
+                      <div key={task.id}>{renderExpandedTaskItem(task)}</div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <AnimatePresence>
+            {isCollapsed && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{ duration: 0.2 }}
+                className="h-full flex items-start justify-center py-1"
+              >
+                {createNewTask && (
+                  <button
+                    data-tooltip-id="task-sidebar-tooltip"
+                    data-tooltip-content={t('taskSidebar.createTask')}
+                    className="p-2 rounded-md hover:bg-bg-tertiary transition-colors"
+                    onClick={handleCreateTask}
+                  >
+                    <HiPlus className="w-5 h-5 text-text-primary" />
+                  </button>
                 )}
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        <AnimatePresence>
-          {!isCollapsed && isSearchVisible && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.05 }}
-              className="px-2 pb-2"
-            >
-              <div className="relative">
-                <Input
-                  ref={searchInputRef}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t('taskSidebar.searchPlaceholder')}
-                  size="sm"
-                  className="pr-8"
-                  autoFocus={true}
-                />
-                <button
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 p-1 rounded-md hover:bg-bg-tertiary transition-colors"
-                  onClick={handleSearchClose}
-                >
-                  <HiXMark className="w-4 h-4 text-text-muted hover:text-text-primary" />
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+        {/* Bulk Delete Confirmation */}
+        {bulkDeleteConfirm && (
+          <ConfirmDialog
+            title={t('taskSidebar.deleteSelected')}
+            onConfirm={handleBulkDelete}
+            onCancel={() => setBulkDeleteConfirm(false)}
+            confirmButtonClass="bg-error hover:bg-error/90"
+          >
+            <div className="text-sm text-text-primary">{t('taskSidebar.deleteSelectedConfirm', { count: selectedTasks.size })}</div>
+          </ConfirmDialog>
+        )}
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-track-bg-primary-light-strong scrollbar-thumb-border-default bg-bg-primary-light-strong py-0.5">
-        <AnimatePresence>
-          {!isCollapsed && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.2 }}
-              className="h-full"
-            >
-              {loading ? (
-                <div className="flex items-center justify-center h-full">
-                  <CgSpinner className="animate-spin w-6 h-6 text-text-primary" />
-                </div>
-              ) : tasks.length === 0 ? (
-                <div className="flex items-center justify-center h-full p-4">
-                  <div className="text-center">
-                    <div className="text-sm text-text-secondary">{t('taskSidebar.noTasks')}</div>
-                  </div>
-                </div>
-              ) : (
-                <div>
-                  {sortedTasks.map((task) => (
-                    <div key={task.id}>{renderExpandedTaskItem(task)}</div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <AnimatePresence>
-          {isCollapsed && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.2 }}
-              className="h-full flex items-start justify-center py-1"
-            >
-              {createNewTask && (
-                <button
-                  data-tooltip-id="task-sidebar-tooltip"
-                  data-tooltip-content={t('taskSidebar.createTask')}
-                  className="p-2 rounded-md hover:bg-bg-tertiary transition-colors"
-                  onClick={handleCreateTask}
-                >
-                  <HiPlus className="w-5 h-5 text-text-primary" />
-                </button>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Bulk Delete Confirmation */}
-      {bulkDeleteConfirm && (
-        <ConfirmDialog
-          title={t('taskSidebar.deleteSelected')}
-          onConfirm={handleBulkDelete}
-          onCancel={() => setBulkDeleteConfirm(false)}
-          confirmButtonClass="bg-error hover:bg-error/90"
-        >
-          <div className="text-sm text-text-primary">{t('taskSidebar.deleteSelectedConfirm', { count: selectedTasks.size })}</div>
-        </ConfirmDialog>
-      )}
-
-      {/* Bulk Archive Confirmation */}
-      {bulkArchiveConfirm && (
-        <ConfirmDialog
-          title={selectedArchived.length ? t('taskSidebar.unarchiveSelected') : t('taskSidebar.archiveSelected')}
-          onConfirm={handleBulkArchive}
-          onCancel={() => setBulkArchiveConfirm(false)}
-        >
-          <div className="text-sm text-text-primary">
-            {selectedArchived.length
-              ? t('taskSidebar.unarchiveSelectedConfirm', { count: selectedArchived.length })
-              : t('taskSidebar.archiveSelectedConfirm', { count: selectedTasks.size })}
-          </div>
-        </ConfirmDialog>
-      )}
-    </motion.div>
+        {/* Bulk Archive Confirmation */}
+        {bulkArchiveConfirm && (
+          <ConfirmDialog
+            title={selectedArchived.length ? t('taskSidebar.unarchiveSelected') : t('taskSidebar.archiveSelected')}
+            onConfirm={handleBulkArchive}
+            onCancel={() => setBulkArchiveConfirm(false)}
+          >
+            <div className="text-sm text-text-primary">
+              {selectedArchived.length
+                ? t('taskSidebar.unarchiveSelectedConfirm', { count: selectedArchived.length })
+                : t('taskSidebar.archiveSelectedConfirm', { count: selectedTasks.size })}
+            </div>
+          </ConfirmDialog>
+        )}
+      </motion.div>
+    </AnimatePresence>
   );
 };
 

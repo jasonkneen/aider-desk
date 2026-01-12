@@ -474,7 +474,7 @@ export const Home = () => {
           />
         )}
         {!releaseNotesContent && <TelemetryInfoDialog />}
-        <div className="flex-1 overflow-hidden relative">
+        <div className="flex-1 overflow-hidden relative z-10">
           {optimisticOpenProjects.length > 0 ? renderProjectPanels() : <NoProjectsOpen onOpenProject={() => setIsOpenProjectDialogVisible(true)} />}
         </div>
       </div>

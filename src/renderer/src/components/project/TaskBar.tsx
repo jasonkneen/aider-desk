@@ -5,9 +5,10 @@ import { CgTerminal } from 'react-icons/cg';
 import { GoProjectRoadmap } from 'react-icons/go';
 import { IoMdClose } from 'react-icons/io';
 import { VscLock, VscUnlock } from 'react-icons/vsc';
-import { RiRobot2Line } from 'react-icons/ri';
+import { RiRobot2Line, RiMenuUnfold4Line } from 'react-icons/ri';
 import { useTranslation } from 'react-i18next';
 import { getProviderModelId, AVAILABLE_PROVIDERS } from '@common/agent';
+import { clsx } from 'clsx';
 
 import { IconButton } from '@/components/common/IconButton';
 import { ModelSelector, ModelSelectorRef } from '@/components/ModelSelector';
@@ -35,11 +36,12 @@ type Props = {
   onModelsChange?: (modelsData: ModelsData | null) => void;
   runCommand: (command: string) => void;
   onToggleSidebar: () => void;
+  onToggleTaskSidebar?: () => void;
   updateTask: (updates: Partial<TaskData>, useOptimistic?: boolean) => void;
 };
 
 export const TaskBar = React.forwardRef<TaskBarRef, Props>(
-  ({ baseDir, task, modelsData, mode, onModelsChange, runCommand, onToggleSidebar, updateTask }, ref) => {
+  ({ baseDir, task, modelsData, mode, onModelsChange, runCommand, onToggleSidebar, onToggleTaskSidebar, updateTask }, ref) => {
     const { t } = useTranslation();
     const { settings, saveSettings } = useSettings();
     const { projectSettings } = useProjectSettings();
@@ -386,9 +388,9 @@ export const TaskBar = React.forwardRef<TaskBarRef, Props>(
     const isTwoRowLayout = mode === 'agent' && showAiderInfo;
     const renderAiderInfo = (showLabel = false) => {
       return (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-          {showLabel && <span className="text-2xs font-semibold text-text-primary uppercase">{t('projectBar.aider')}:</span>}
-          <div className="flex items-center space-x-1">
+        <div className={clsx('flex flex-wrap gap-x-2 flex-shrink-0', isMobile ? 'flex-col items-start gap-y-1' : 'flex-row items-center gap-y-0.5')}>
+          {showLabel && <span className="text-2xs font-semibold text-text-primary uppercase whitespace-nowrap">{t('projectBar.aider')}:</span>}
+          <div className="flex items-center space-x-1 flex-shrink-0">
             <CgTerminal className="w-4 h-4 text-text-primary mr-1" data-tooltip-id="main-model-tooltip" />
             <StyledTooltip id="main-model-tooltip" content={renderModelInfo(t('modelSelector.mainModel'), modelsData?.info)} />
             <ModelSelector
@@ -401,8 +403,8 @@ export const TaskBar = React.forwardRef<TaskBarRef, Props>(
               providers={providers}
             />
           </div>
-          <div className="h-3 w-px bg-bg-fourth"></div>
-          <div className="flex items-center space-x-1">
+          {!isMobile && <div className="h-3 w-px bg-bg-fourth flex-shrink-0"></div>}
+          <div className="flex items-center space-x-1 flex-shrink-0">
             <BsFilter className="w-4 h-4 text-text-primary mr-1" data-tooltip-id="weak-model-tooltip" data-tooltip-content={t('modelSelector.weakModel')} />
             <StyledTooltip id="weak-model-tooltip" />
             <ModelSelector
@@ -423,8 +425,8 @@ export const TaskBar = React.forwardRef<TaskBarRef, Props>(
           </div>
           {modelsData?.editFormat && (
             <>
-              <div className="h-3 w-px bg-bg-fourth"></div>
-              <div className="flex items-center space-x-1">
+              {!isMobile && <div className="h-3 w-px bg-bg-fourth flex-shrink-0"></div>}
+              <div className="flex items-center space-x-1 flex-shrink-0">
                 <BsCodeSlash className="w-4 h-4 text-text-primary mr-1" data-tooltip-id="edit-format-tooltip" />
                 <StyledTooltip id="edit-format-tooltip" content={t('projectBar.editFormatTooltip')} />
                 <EditFormatSelector currentFormat={modelsData.editFormat} onFormatChange={updateEditFormat} />
@@ -433,20 +435,20 @@ export const TaskBar = React.forwardRef<TaskBarRef, Props>(
           )}
           {modelsData?.reasoningEffort && modelsData.reasoningEffort !== 'none' && (
             <>
-              <div className="h-3 w-px bg-bg-fourth"></div>
-              <div className="flex items-center space-x-1 group/reasoning">
-                <span className="text-xs text-text-muted-light">{t('modelSelector.reasoning')}:</span>
-                <span className="text-text-primary text-xs">{modelsData.reasoningEffort}</span>
+              {!isMobile && <div className="h-3 w-px bg-bg-fourth flex-shrink-0"></div>}
+              <div className="flex items-center space-x-1 group/reasoning flex-shrink-0">
+                <span className="text-xs text-text-muted-light whitespace-nowrap">{t('modelSelector.reasoning')}:</span>
+                <span className="text-text-primary text-xs whitespace-nowrap">{modelsData.reasoningEffort}</span>
                 <IconButton icon={<IoMdClose className="w-3 h-3" />} onClick={() => runCommand('reasoning-effort none')} className="ml-0.5" />
               </div>
             </>
           )}
           {modelsData?.thinkingTokens && modelsData?.thinkingTokens !== '0' && (
             <>
-              <div className="h-3 w-px bg-bg-fourth"></div>
-              <div className="flex items-center space-x-1 group/thinking">
-                <span className="text-xs text-text-muted-light">{t('modelSelector.thinkingTokens')}:</span>
-                <span className="text-text-primary text-xs">{modelsData.thinkingTokens}</span>
+              {!isMobile && <div className="h-3 w-px bg-bg-fourth flex-shrink-0"></div>}
+              <div className="flex items-center space-x-1 group/thinking flex-shrink-0">
+                <span className="text-xs text-text-muted-light whitespace-nowrap">{t('modelSelector.thinkingTokens')}:</span>
+                <span className="text-text-primary text-xs whitespace-nowrap">{modelsData.thinkingTokens}</span>
                 <IconButton icon={<IoMdClose className="w-3 h-3" />} onClick={() => runCommand('think-tokens 0')} className="ml-0.5" />
               </div>
             </>
@@ -456,19 +458,23 @@ export const TaskBar = React.forwardRef<TaskBarRef, Props>(
     };
 
     return (
-      <div className="relative group px-4 py-2 pr-1 border-b border-border-dark-light bg-bg-primary-light min-h-10">
+      <div className="relative group px-2 py-2 pr-1 border-b border-border-dark-light bg-bg-primary-light">
         <div className="flex items-center h-full">
+          {/* Task sidebar toggle for mobile */}
+          {isMobile && onToggleTaskSidebar && (
+            <IconButton icon={<RiMenuUnfold4Line className="w-5 h-5" />} onClick={onToggleTaskSidebar} className="p-1 hover:bg-bg-tertiary rounded-md mr-3" />
+          )}
           <div className="flex-grow">
             {isTwoRowLayout ? (
               // Two-row layout for Agent mode with Aider tools
               <div className="flex flex-wrap gap-x-5 gap-y-2">
                 {/* Row 1: AGENT */}
-                <div className="flex items-center space-x-2">
-                  <div className="flex items-center space-x-1">
+                <div className="flex items-center space-x-2 flex-shrink-0">
+                  <div className="flex items-center space-x-1 flex-shrink-0">
                     <RiRobot2Line className="w-4 h-4 text-text-primary mr-1" data-tooltip-id="agent-tooltip" />
                     <StyledTooltip id="agent-tooltip" content={t('modelSelector.agentModel')} />
                     {!currentTaskModelId ? (
-                      <div className="text-xs text-text-muted-light">{t('modelSelector.noModelSelected')}</div>
+                      <div className="text-xs text-text-muted-light whitespace-nowrap">{t('modelSelector.noModelSelected')}</div>
                     ) : (
                       <ModelSelector
                         ref={agentModelSelectorRef}
@@ -488,14 +494,14 @@ export const TaskBar = React.forwardRef<TaskBarRef, Props>(
               </div>
             ) : (
               // Original horizontal layout for other modes
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-3 flex-wrap">
                 {mode === 'agent' ? (
                   <>
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center space-x-1 flex-shrink-0">
                       <RiRobot2Line className="w-4 h-4 text-text-primary mr-1" data-tooltip-id="agent-tooltip" />
                       <StyledTooltip id="agent-tooltip" content={t('modelSelector.agentModel')} />
                       {!currentTaskModelId ? (
-                        <div className="text-xs text-text-muted-light">{t('modelSelector.noModelSelected')}</div>
+                        <div className="text-xs text-text-muted-light whitespace-nowrap">{t('modelSelector.noModelSelected')}</div>
                       ) : (
                         <ModelSelector
                           ref={agentModelSelectorRef}
@@ -508,13 +514,13 @@ export const TaskBar = React.forwardRef<TaskBarRef, Props>(
                         />
                       )}
                     </div>
-                    {showAiderInfo && <div className="h-3 w-px bg-bg-fourth"></div>}
+                    {showAiderInfo && <div className="h-3 w-px bg-bg-fourth flex-shrink-0"></div>}
                   </>
                 ) : (
                   <>
                     {mode === 'architect' && (
                       <>
-                        <div className="flex items-center space-x-1">
+                        <div className="flex items-center space-x-1 flex-shrink-0">
                           <GoProjectRoadmap
                             className="w-4 h-4 text-text-primary mr-1"
                             data-tooltip-id="architect-model-tooltip"

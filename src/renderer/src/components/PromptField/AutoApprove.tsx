@@ -9,9 +9,10 @@ type Props = {
   locked: boolean;
   onChange?: (enabled: boolean) => void;
   onLockChange?: (locked: boolean) => void;
+  showLabel?: boolean;
 };
 
-export const AutoApprove = ({ enabled, locked, onChange, onLockChange }: Props) => {
+export const AutoApprove = ({ enabled, locked, onChange, onLockChange, showLabel = true }: Props) => {
   const { t } = useTranslation();
 
   const handleClick = () => {
@@ -34,9 +35,11 @@ export const AutoApprove = ({ enabled, locked, onChange, onLockChange }: Props) 
         data-tooltip-delay-show={800}
       >
         <IconButton icon={<MdDoneAll className={`w-3.5 h-3.5 ${enabled ? 'text-agent-auto-approve' : 'text-text-muted group-hover:text-text-tertiary'}`} />} />
-        <div className={`cursor-pointer text-2xs focus:outline-none ${enabled ? 'text-text-primary' : 'text-text-muted group-hover:text-text-tertiary'}`}>
-          {t('promptField.autoApprove')}
-        </div>
+        {showLabel && (
+          <div className={`cursor-pointer text-2xs focus:outline-none ${enabled ? 'text-text-primary' : 'text-text-muted group-hover:text-text-tertiary'}`}>
+            {t('promptField.autoApprove')}
+          </div>
+        )}
       </div>
       {enabled && (
         <IconButton

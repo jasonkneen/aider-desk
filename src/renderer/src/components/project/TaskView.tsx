@@ -12,7 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useSidebarWidth } from './useSidebarWidth';
 
 import { StyledTooltip } from '@/components/common/StyledTooltip';
-import { isLogMessage, isResponseMessage, isToolMessage, isUserMessage, Message, TaskInfoMessage } from '@/types/message';
+import { isLogMessage, isUserMessage, Message, TaskInfoMessage } from '@/types/message';
 import { Messages, MessagesRef } from '@/components/message/Messages';
 import { VirtualizedMessages, VirtualizedMessagesRef } from '@/components/message/VirtualizedMessages';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -61,6 +61,7 @@ type Props = {
   onArchiveTask?: () => void;
   onUnarchiveTask?: () => void;
   onDeleteTask?: () => void;
+  onToggleTaskSidebar?: () => void;
 };
 
 export const TaskView = forwardRef<TaskViewRef, Props>(
@@ -77,6 +78,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       onArchiveTask,
       onUnarchiveTask,
       onDeleteTask,
+      onToggleTaskSidebar,
     },
     ref,
   ) => {
@@ -322,11 +324,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     };
 
     const handleRemoveMessage = (messageToRemove: Message) => {
-      const isLastMessage = displayedMessages[displayedMessages.length - 1] === messageToRemove;
-
-      if (isLastMessage && (isToolMessage(messageToRemove) || isUserMessage(messageToRemove) || isResponseMessage(messageToRemove))) {
-        api.removeLastMessage(project.baseDir, task.id);
-      }
+      api.removeMessage(project.baseDir, task.id, messageToRemove.id);
 
       setMessages(task.id, (prevMessages) => prevMessages.filter((msg) => msg.id !== messageToRemove.id));
     };
@@ -442,6 +440,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
             onModelsChange={handleModelChange}
             runCommand={runCommand}
             onToggleSidebar={() => setShowSidebar(!showSidebar)}
+            onToggleTaskSidebar={onToggleTaskSidebar}
             updateTask={updateTask}
           />
           <div className="flex-grow overflow-y-hidden relative flex flex-col">

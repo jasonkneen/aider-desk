@@ -194,7 +194,7 @@ export const ModelSelector = forwardRef<ModelSelectorRef, Props>(
           <MdKeyboardArrowUp className={`w-3 h-3 ml-1 transform rotate-180 ${!optimisticSelectedModelId ? 'text-text-muted' : ''}`} />
         </button>
         {visible && (
-          <div className="absolute top-full left-0 mt-1 bg-bg-primary-light border border-border-default-dark rounded-md shadow-lg z-10 flex flex-col w-[500px]">
+          <div className="absolute top-full left-0 mt-1 bg-bg-primary-light border border-border-default-dark rounded-md shadow-lg z-50 flex flex-col w-[500px] max-w-[calc(100vw-20px)]">
             <div className="sticky top-0 p-2 border-b border-border-default-dark bg-bg-primary-light rounded-md z-10 flex items-center space-x-2">
               <input
                 type="text"

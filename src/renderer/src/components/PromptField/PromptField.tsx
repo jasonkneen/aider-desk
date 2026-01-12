@@ -35,6 +35,7 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { AudioAnalyzer } from '@/components/PromptField/AudioAnalyzer';
 import { AutoApprove } from '@/components/PromptField/AutoApprove';
+import { useResponsive } from '@/hooks/useResponsive';
 
 const External = Annotation.define<boolean>();
 
@@ -172,6 +173,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
     ref,
   ) => {
     const { t } = useTranslation();
+    const { isMobile } = useResponsive();
     const [text, setText] = useState('');
     const debouncedText = useDebounce(text, 100);
     const { setText: setSavedText } = usePromptFieldText(baseDir, taskId, (text) => {
@@ -210,15 +212,18 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
     } = useAudioRecorder();
     const [textBeforeRecording, setTextBeforeRecording] = useState('');
 
-    const setTextWithDispatch = (newText: string) => {
-      const view = editorRef.current?.view;
-      view?.dispatch({
-        changes: { from: 0, to: view.state.doc.toString().length, insert: newText },
-        annotations: [External.of(true)],
-      });
-      setText(newText);
-      setSavedText(newText);
-    };
+    const setTextWithDispatch = useCallback(
+      (newText: string) => {
+        const view = editorRef.current?.view;
+        view?.dispatch({
+          changes: { from: 0, to: view.state.doc.toString().length, insert: newText },
+          annotations: [External.of(true)],
+        });
+        setText(newText);
+        setSavedText(newText);
+      },
+      [setText, setSavedText],
+    );
 
     useEffect(() => {
       if (voiceError) {
@@ -365,7 +370,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
     const prepareForNextPrompt = useCallback(() => {
       setTextWithDispatch('');
       setPendingCommand(null);
-    }, []);
+    }, [setTextWithDispatch]);
 
     const executeCommand = useCallback(
       (command: string, args?: string): void => {
@@ -489,6 +494,8 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
         t,
         clearLogMessages,
         runCommand,
+        showTaskInfo,
+        setTextWithDispatch,
       ],
     );
 
@@ -1042,15 +1049,21 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
               </div>
             )}
           </div>
-          <div className="relative w-full flex items-center gap-1.5">
-            <ModeSelector mode={mode} onModeChange={onModeChanged} />
-            {mode === 'agent' && <AgentSelector projectDir={baseDir} task={task} isActive={isActive} showSettingsPage={showSettingsPage} />}
-            <AutoApprove
-              enabled={!!task?.autoApprove}
-              locked={projectSettings?.autoApproveLocked ?? false}
-              onChange={onAutoApproveChanged}
-              onLockChange={handleAutoApproveLockChanged}
-            />
+          <div className={clsx('relative w-full flex gap-1.5 flex-wrap', isMobile ? 'items-start' : 'items-center')}>
+            <div className={clsx('flex gap-1.5', isMobile && mode === 'agent' ? 'flex-col items-start' : 'items-center')}>
+              <ModeSelector mode={mode} onModeChange={onModeChanged} />
+              <div className="flex gap-2">
+                {mode === 'agent' && <AgentSelector projectDir={baseDir} task={task} isActive={isActive} showSettingsPage={showSettingsPage} />}
+                <AutoApprove
+                  enabled={!!task?.autoApprove}
+                  locked={projectSettings?.autoApproveLocked ?? false}
+                  onChange={onAutoApproveChanged}
+                  onLockChange={handleAutoApproveLockChanged}
+                  showLabel={!isMobile}
+                />
+              </div>
+            </div>
+
             <div className="flex-grow" />
             {toggleTerminal && (
               <Button
