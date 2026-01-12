@@ -7,12 +7,14 @@ import { TaskView } from '../TaskView';
 import { useApi } from '@/contexts/ApiContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
-import { TaskState, useTask } from '@/contexts/TaskContext';
+import { useTask } from '@/contexts/TaskContext';
+import { useTaskState, useTaskMessages } from '@/stores/taskStore';
 import { useModelProviders } from '@/contexts/ModelProviderContext';
 import { useAgents } from '@/contexts/AgentsContext';
 import { useResponsive } from '@/hooks/useResponsive';
 import { createMockApi } from '@/__tests__/mocks/api';
 import { createMockTaskContext, createMockModelProviderContext, createMockAgentsContext, createMockResponsive } from '@/__tests__/mocks/contexts';
+import { Message } from '@/types/message';
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
@@ -36,6 +38,11 @@ vi.mock('@/contexts/ProjectSettingsContext', () => ({
 
 vi.mock('@/contexts/TaskContext', () => ({
   useTask: vi.fn(),
+}));
+
+vi.mock('@/stores/taskStore', () => ({
+  useTaskState: vi.fn(),
+  useTaskMessages: vi.fn(),
 }));
 
 vi.mock('@/contexts/ModelProviderContext', () => ({
@@ -117,7 +124,6 @@ describe('TaskView', () => {
     loading: false,
     loaded: true,
     processing: false,
-    messages: [{ id: '1', content: 'hello', type: 'user' }],
     tokensInfo: null,
     question: null,
     todoItems: [],
@@ -126,11 +132,10 @@ describe('TaskView', () => {
     aiderTotalCost: 0,
     contextFiles: [],
     aiderModelsData: { baseDir: '/mock/project', taskId: 'task-1', mainModel: 'gpt-4' },
-  } as TaskState;
+  };
 
-  const mockTaskContext = createMockTaskContext({
-    getTaskState: vi.fn(() => mockTaskState),
-  });
+  const mockTaskContext = createMockTaskContext();
+  const mockMessages: Message[] = [{ id: '1', content: 'hello', type: 'user' }];
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -138,19 +143,11 @@ describe('TaskView', () => {
     vi.mocked(useSettings).mockReturnValue({ settings: { virtualizedRendering: false, renderMarkdown: true } } as ReturnType<typeof useSettings>);
     vi.mocked(useProjectSettings).mockReturnValue({ projectSettings: { agentProfileId: 'default' } } as ReturnType<typeof useProjectSettings>);
     vi.mocked(useTask).mockReturnValue(mockTaskContext as ReturnType<typeof useTask>);
+    vi.mocked(useTaskState).mockReturnValue(mockTaskState);
+    vi.mocked(useTaskMessages).mockReturnValue(mockMessages);
     vi.mocked(useModelProviders).mockReturnValue(createMockModelProviderContext());
     vi.mocked(useAgents).mockReturnValue(createMockAgentsContext());
     vi.mocked(useResponsive).mockReturnValue(createMockResponsive());
-  });
-
-  it('renders loading state when task state is missing', () => {
-    vi.mocked(useTask).mockReturnValue(
-      createMockTaskContext({
-        getTaskState: vi.fn(() => null),
-      }),
-    );
-    render(<TaskView project={mockProject} task={mockTask} updateTask={mockUpdateTask} inputHistory={[]} />);
-    expect(screen.getByText('common.loadingTask')).toBeInTheDocument();
   });
 
   it('renders core components when loaded', () => {

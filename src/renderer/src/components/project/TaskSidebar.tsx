@@ -15,7 +15,6 @@ import { BiDuplicate, BiArchive, BiArchiveIn } from 'react-icons/bi';
 import { HiXMark } from 'react-icons/hi2';
 import { useDebounce, useLongPress } from '@reactuses/core';
 
-import { useTask } from '@/contexts/TaskContext';
 import { getSortedVisibleTasks } from '@/utils/task-utils';
 import { Input } from '@/components/common/Input';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
@@ -25,9 +24,20 @@ import { useClickOutside } from '@/hooks/useClickOutside';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { LoadingText } from '@/components/common/LoadingText';
 import { getTaskStateLabel, TaskStateChip } from '@/components/common/TaskStateChip';
+import { useTaskState } from '@/stores/taskStore';
 
 export const COLLAPSED_WIDTH = 44;
 export const EXPANDED_WIDTH = 256;
+
+const TaskStatusIcon = ({ taskId, state, isCollapsed }: { taskId: string; state?: string; isCollapsed?: boolean }) => {
+  const taskState = useTaskState(taskId);
+  const iconSize = isCollapsed ? 'w-3.5 h-3.5' : 'w-4 h-4';
+
+  if (taskState?.question) {
+    return <span className={clsx('text-text-primary', isCollapsed ? 'text-xs' : 'text-sm')}>?</span>;
+  }
+  return state === DefaultTaskState.InProgress ? <CgSpinner className={clsx('animate-spin', iconSize, 'text-text-primary')} /> : null;
+};
 
 type TaskMenuButtonProps = {
   task: TaskData;
@@ -402,7 +412,6 @@ const TaskSidebarComponent = ({
   onDuplicateTask,
 }: Props) => {
   const { t } = useTranslation();
-  const { getTaskState } = useTask();
   const [deleteConfirmTaskId, setDeleteConfirmTaskId] = useState<string | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [editTaskName, setEditTaskName] = useState<string>('');
@@ -703,16 +712,6 @@ const TaskSidebarComponent = ({
     }
   };
 
-  const renderTaskStateIcon = (task: TaskData, isCollapsed: boolean = false) => {
-    const taskState = getTaskState(task.id, false);
-    const iconSize = isCollapsed ? 'w-3.5 h-3.5' : 'w-4 h-4';
-
-    if (taskState?.question) {
-      return <span className={clsx('text-text-primary', isCollapsed ? 'text-xs' : 'text-sm')}>?</span>;
-    }
-    return task?.state === DefaultTaskState.InProgress ? <CgSpinner className={clsx('animate-spin', iconSize, 'text-text-primary')} /> : null;
-  };
-
   const renderExpandedTaskItem = (task: TaskData) => {
     const isGeneratingName = task.name === '<<generating>>';
 
@@ -774,7 +773,9 @@ const TaskSidebarComponent = ({
             </div>
           </div>
 
-          <div className="flex items-center pl-2">{renderTaskStateIcon(task, false)}</div>
+          <div className="flex items-center pl-2">
+            <TaskStatusIcon taskId={task.id} state={task.state} isCollapsed={false} />
+          </div>
 
           {!isMultiselectMode && (
             <TaskMenuButton

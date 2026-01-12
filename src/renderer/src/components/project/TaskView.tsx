@@ -36,6 +36,7 @@ import { useTask } from '@/contexts/TaskContext';
 import { useAgents } from '@/contexts/AgentsContext';
 import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
 import { LoadingOverlay } from '@/components/common/LoadingOverlay';
+import { useTaskState, useTaskMessages } from '@/stores/taskStore';
 
 type AddFileDialogOptions = {
   readOnly: boolean;
@@ -86,11 +87,18 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     const { isMobile } = useResponsive();
     const api = useApi();
     const { models } = useModelProviders();
-    const { getTaskState, clearSession, resetTask, setMessages, setTodoItems, setAiderModelsData, answerQuestion, interruptResponse, refreshAllFiles } =
-      useTask();
+    const { loadTask, clearSession, resetTask, setMessages, setTodoItems, setAiderModelsData, answerQuestion, interruptResponse, refreshAllFiles } = useTask();
     const { getProfiles } = useAgents();
 
-    const taskState = getTaskState(task.id, isActive);
+    const taskState = useTaskState(task.id);
+    const messages = useTaskMessages(task.id);
+
+    useEffect(() => {
+      if (isActive && !taskState.loaded && !taskState.loading) {
+        loadTask(task.id);
+      }
+    }, [isActive, loadTask, task.id, taskState.loaded, taskState.loading]);
+
     const aiderModelsData = taskState?.aiderModelsData || null;
     const currentMode = task.currentMode || 'agent';
 
@@ -157,9 +165,9 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
 
     useEffect(() => {
       startMessagesTransition(() => {
-        setTransitionMessages(taskState?.messages || []);
+        setTransitionMessages(messages);
       });
-    }, [taskState?.messages]);
+    }, [messages]);
 
     const todoListVisible = useMemo(() => {
       return currentMode === 'agent' && activeAgentProfile?.useTodoTools;
@@ -181,7 +189,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       return <LoadingOverlay message={t('common.loadingTask')} />;
     }
 
-    const { loading, loaded, allFiles, contextFiles, autocompletionWords, aiderTotalCost, tokensInfo, question, todoItems, messages } = taskState;
+    const { loading, loaded, allFiles, contextFiles, autocompletionWords, aiderTotalCost, tokensInfo, question, todoItems } = taskState;
 
     const displayedMessages = messages;
 
@@ -381,7 +389,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
         type: 'task-info',
         content: '',
         task: JSON.parse(JSON.stringify(task)) as TaskData,
-        messageCount: taskState?.messages.length || 0,
+        messageCount: messages.length || 0,
       };
       setMessages(task.id, (prevMessages) => [...prevMessages, taskInfo]);
     };

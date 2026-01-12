@@ -6,6 +6,7 @@ import { TaskData } from '@common/types';
 import { TaskSidebar } from '../TaskSidebar';
 
 import { useTask } from '@/contexts/TaskContext';
+import { useTaskState, EMPTY_TASK_STATE } from '@/stores/taskStore';
 import { createMockTaskContext } from '@/__tests__/mocks/contexts';
 
 // Mock react-i18next
@@ -18,6 +19,23 @@ vi.mock('react-i18next', () => ({
 // Mock useTask context
 vi.mock('@/contexts/TaskContext', () => ({
   useTask: vi.fn(),
+}));
+
+// Mock useTaskState from taskStore
+vi.mock('@/stores/taskStore', () => ({
+  useTaskState: vi.fn(),
+  EMPTY_TASK_STATE: {
+    loading: false,
+    loaded: false,
+    tokensInfo: null,
+    question: null,
+    todoItems: [],
+    allFiles: [],
+    autocompletionWords: [],
+    aiderTotalCost: 0,
+    contextFiles: [],
+    aiderModelsData: null,
+  },
 }));
 
 interface IconButtonProps {
@@ -43,6 +61,7 @@ describe('TaskSidebar', () => {
 
   beforeEach(() => {
     vi.mocked(useTask).mockReturnValue(createMockTaskContext());
+    vi.mocked(useTaskState).mockReturnValue(EMPTY_TASK_STATE);
   });
 
   it('renders a list of tasks', () => {

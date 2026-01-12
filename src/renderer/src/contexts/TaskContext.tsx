@@ -1,10 +1,9 @@
-import React, { createContext, ReactNode, startTransition, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, ReactNode, useCallback, useContext, useEffect } from 'react';
 import { usePrevious } from '@reactuses/core';
 import {
   AutocompletionData,
   ClearTaskData,
   CommandOutputData,
-  ContextFile,
   ContextFilesUpdatedData,
   DefaultTaskState,
   LogData,
@@ -35,34 +34,7 @@ import {
   UserMessage,
 } from '@/types/message';
 import { useApi } from '@/contexts/ApiContext';
-
-export interface TaskState {
-  loading: boolean;
-  loaded: boolean;
-  messages: Message[];
-  tokensInfo: TokensInfoData | null;
-  question: QuestionData | null;
-  todoItems: TodoItem[];
-  allFiles: string[];
-  autocompletionWords: string[];
-  aiderTotalCost: number;
-  contextFiles: ContextFile[];
-  aiderModelsData: ModelsData | null;
-}
-
-const EMPTY_TASK_STATE: TaskState = {
-  loading: false,
-  loaded: false,
-  messages: [],
-  tokensInfo: null,
-  question: null,
-  todoItems: [],
-  allFiles: [],
-  autocompletionWords: [],
-  aiderTotalCost: 0,
-  contextFiles: [],
-  aiderModelsData: null,
-};
+import { useTaskStore } from '@/stores/taskStore';
 
 const processingResponseMessageMap = new Map<string, ResponseMessage>();
 
@@ -70,26 +42,24 @@ interface TaskEventSubscriberProps {
   baseDir: string;
   taskId: string;
   state?: string;
-  updateTaskState: (taskId: string, updates: Partial<TaskState>) => void;
-  clearSession: (taskId: string, messagesOnly: boolean) => void;
-  setQuestion: (taskId: string, question: QuestionData | null) => void;
-  setTodoItems: (taskId: string, updateTodoItems: (prev: TodoItem[]) => TodoItem[]) => void;
-  setMessages: (taskId: string, updateMessages: (prevState: Message[]) => Message[]) => void;
 }
 
-const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
-  baseDir,
-  taskId,
-  state,
-  updateTaskState,
-  clearSession,
-  setQuestion,
-  setTodoItems,
-  setMessages,
-}) => {
+const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({ baseDir, taskId, state }) => {
   const api = useApi();
   const { t } = useTranslation();
   const previousState = usePrevious(state);
+  const {
+    updateTaskState,
+    clearSession,
+    setQuestion,
+    setTodoItems,
+    setMessages,
+    setAllFiles,
+    setAutocompletionWords,
+    setTokensInfo,
+    setAiderTotalCost,
+    setAiderModelsData,
+  } = useTaskStore();
 
   useEffect(() => {
     if (previousState === DefaultTaskState.InProgress && state !== DefaultTaskState.InProgress) {
@@ -98,20 +68,20 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
   }, [previousState, setMessages, state, taskId]);
 
   useEffect(() => {
-    const setAiderTotalCost = (aiderTotalCost: number) => {
-      updateTaskState(taskId, { aiderTotalCost });
+    const handleSetAiderTotalCost = (aiderTotalCost: number) => {
+      setAiderTotalCost(taskId, aiderTotalCost);
     };
 
-    const setAllFiles = (allFiles: string[]) => {
-      updateTaskState(taskId, { allFiles });
+    const handleSetAllFiles = (allFiles: string[]) => {
+      setAllFiles(taskId, allFiles);
     };
 
-    const setAutocompletionWords = (autocompletionWords: string[]) => {
-      updateTaskState(taskId, { autocompletionWords });
+    const handleSetAutocompletionWords = (autocompletionWords: string[]) => {
+      setAutocompletionWords(taskId, autocompletionWords);
     };
 
-    const setTokensInfo = (tokensInfo: TokensInfoData | null) => {
-      updateTaskState(taskId, { tokensInfo });
+    const handleSetTokensInfo = (tokensInfo: TokensInfoData | null) => {
+      setTokensInfo(taskId, tokensInfo);
     };
 
     const handleResponseChunk = ({ messageId, chunk, reflectedMessage, promptContext }: ResponseChunkData) => {
@@ -234,7 +204,7 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
 
       if (usageReport) {
         if (usageReport.aiderTotalCost !== undefined) {
-          setAiderTotalCost(usageReport.aiderTotalCost);
+          handleSetAiderTotalCost(usageReport.aiderTotalCost);
         }
       }
 
@@ -310,7 +280,7 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
         handleTodoTool(toolName, args as Record<string, unknown>, response);
 
         if (usageReport?.aiderTotalCost !== undefined) {
-          setAiderTotalCost(usageReport.aiderTotalCost);
+          handleSetAiderTotalCost(usageReport.aiderTotalCost);
         }
         return;
       }
@@ -353,7 +323,7 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
       });
 
       if (usageReport?.aiderTotalCost !== undefined) {
-        setAiderTotalCost(usageReport.aiderTotalCost);
+        handleSetAiderTotalCost(usageReport.aiderTotalCost);
       }
     };
 
@@ -426,15 +396,15 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
 
     const handleUpdateAutocompletion = ({ allFiles, words }: AutocompletionData) => {
       if (allFiles) {
-        setAllFiles(allFiles);
+        handleSetAllFiles(allFiles);
       }
       if (words) {
-        setAutocompletionWords(words);
+        handleSetAutocompletionWords(words);
       }
     };
 
     const handleTokensInfo = (data: TokensInfoData) => {
-      setTokensInfo(data);
+      handleSetTokensInfo(data);
     };
 
     const handleQuestion = (data: QuestionData) => {
@@ -473,7 +443,7 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
     };
 
     const handleUpdateAiderModels = (data: ModelsData) => {
-      updateTaskState(taskId, { aiderModelsData: data });
+      setAiderModelsData(taskId, data);
       if (data.error) {
         // eslint-disable-next-line no-console
         console.error('Models data error:', data.error);
@@ -509,13 +479,28 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({
       removeContextFilesListener();
       removeUpdateAiderModelsListener();
     };
-  }, [api, baseDir, taskId, updateTaskState, clearSession, setQuestion, setTodoItems, setMessages, t]);
+  }, [
+    api,
+    baseDir,
+    taskId,
+    updateTaskState,
+    clearSession,
+    setQuestion,
+    setTodoItems,
+    setMessages,
+    setAllFiles,
+    setAutocompletionWords,
+    setTokensInfo,
+    setAiderTotalCost,
+    setAiderModelsData,
+    t,
+  ]);
 
   return null;
 };
 
 export interface TaskContextType {
-  getTaskState: (taskId: string, loadIfNotLoaded?: boolean) => TaskState | null;
+  loadTask: (taskId: string) => void;
   clearSession: (taskId: string, messagesOnly: boolean) => void;
   resetTask: (taskId: string) => void;
   setMessages: (taskId: string, updateMessages: (prevState: Message[]) => Message[]) => void;
@@ -535,22 +520,13 @@ export const TaskProvider: React.FC<{
   children: ReactNode;
 }> = ({ baseDir, tasks, children }) => {
   const api = useApi();
-  const [taskStateMap, setTaskStateMap] = useState<Map<string, TaskState>>(new Map());
-
-  const updateTaskState = useCallback((taskId: string, updates: Partial<TaskState>) => {
-    startTransition(() => {
-      setTaskStateMap((prev) => {
-        const newMap = new Map(prev);
-        const current = newMap.get(taskId) || EMPTY_TASK_STATE;
-        newMap.set(taskId, { ...current, ...updates });
-        return newMap;
-      });
-    });
-  }, []);
+  const { updateTaskState, clearSession, setMessages, setTodoItems, setAiderModelsData, setAllFiles } = useTaskStore();
 
   const loadTask = useCallback(
     async (taskId: string) => {
       try {
+        updateTaskState(taskId, { loading: true });
+
         const { messages: stateMessages, files, todoItems, question } = await api.loadTask(baseDir, taskId);
 
         const messages: Message[] = stateMessages.reduce((messages, message) => {
@@ -603,81 +579,20 @@ export const TaskProvider: React.FC<{
           return messages;
         }, [] as Message[]);
 
-        setTaskStateMap((prev) => {
-          const newMap = new Map(prev);
-          const prevTask = newMap.get(taskId);
-          newMap.set(taskId, {
-            ...EMPTY_TASK_STATE,
-            ...prevTask,
-            loading: false,
-            loaded: true,
-            messages: [...messages, ...(prevTask?.messages || [])],
-            contextFiles: files,
-            todoItems: todoItems || [],
-            question,
-          });
-          return newMap;
+        setMessages(taskId, (existingMessages) => [...messages, ...existingMessages]);
+        updateTaskState(taskId, {
+          loading: false,
+          loaded: true,
+          contextFiles: files,
+          todoItems: todoItems || [],
+          question,
         });
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Failed to load task:', error);
       }
     },
-    [api, baseDir],
-  );
-
-  const getTaskState = useCallback(
-    (taskId: string, loadIfNotLoaded = true): TaskState | null => {
-      const taskState = taskStateMap.get(taskId);
-      if (!taskState) {
-        return null;
-      }
-
-      if (!taskState.loaded && !taskState.loading && loadIfNotLoaded) {
-        void loadTask(taskId);
-        updateTaskState(taskId, { loading: true });
-
-        return {
-          ...taskState,
-          loading: true,
-        };
-      }
-
-      return taskState;
-    },
-    [taskStateMap, loadTask, updateTaskState],
-  );
-
-  const setMessages = useCallback((taskId: string, updateMessages: (prevState: Message[]) => Message[]) => {
-    setTaskStateMap((prev) => {
-      const newMap = new Map(prev);
-      const current = newMap.get(taskId) || EMPTY_TASK_STATE;
-      newMap.set(taskId, {
-        ...current,
-        messages: updateMessages(current.messages),
-      });
-      return newMap;
-    });
-  }, []);
-
-  const clearSession = useCallback(
-    (taskId: string, messagesOnly: boolean) => {
-      const update: Partial<TaskState> = {
-        messages: [],
-      };
-
-      processingResponseMessageMap.delete(taskId);
-
-      if (!messagesOnly) {
-        update.aiderTotalCost = 0;
-        update.tokensInfo = null;
-        update.question = null;
-        // setEditingMessageIndex(null);
-      }
-
-      updateTaskState(taskId, update);
-    },
-    [updateTaskState],
+    [api, baseDir, updateTaskState, setMessages],
   );
 
   const resetTask = useCallback(
@@ -686,32 +601,6 @@ export const TaskProvider: React.FC<{
       clearSession(taskId, false);
     },
     [api, baseDir, clearSession],
-  );
-
-  const setTodoItems = useCallback((taskId: string, updateTodoItems: (prev: TodoItem[]) => TodoItem[]) => {
-    setTaskStateMap((prev) => {
-      const newMap = new Map(prev);
-      const current = newMap.get(taskId) || EMPTY_TASK_STATE;
-      newMap.set(taskId, {
-        ...current,
-        todoItems: updateTodoItems(current.todoItems),
-      });
-      return newMap;
-    });
-  }, []);
-
-  const setAiderModelsData = useCallback(
-    (taskId: string, modelsData: ModelsData | null) => {
-      updateTaskState(taskId, { aiderModelsData: modelsData });
-    },
-    [updateTaskState],
-  );
-
-  const setQuestion = useCallback(
-    (taskId: string, question: QuestionData | null) => {
-      updateTaskState(taskId, { question });
-    },
-    [updateTaskState],
   );
 
   const answerQuestion = useCallback(
@@ -746,36 +635,15 @@ export const TaskProvider: React.FC<{
   const refreshAllFiles = useCallback(
     async (taskId: string, useGit = true) => {
       const refreshedFiles = await api.getAllFiles(baseDir, taskId, useGit);
-      setTaskStateMap((prev) => {
-        const newMap = new Map(prev);
-        const current = newMap.get(taskId) || EMPTY_TASK_STATE;
-        newMap.set(taskId, {
-          ...current,
-          allFiles: refreshedFiles,
-        });
-        return newMap;
-      });
+      setAllFiles(taskId, refreshedFiles);
     },
-    [api, baseDir],
+    [api, baseDir, setAllFiles],
   );
-
-  useEffect(() => {
-    tasks.forEach((task) => {
-      setTaskStateMap((prev) => {
-        if (prev.has(task.id)) {
-          return prev;
-        }
-        const newMap = new Map(prev);
-        newMap.set(task.id, EMPTY_TASK_STATE);
-        return newMap;
-      });
-    });
-  }, [baseDir, tasks]);
 
   return (
     <TaskContext.Provider
       value={{
-        getTaskState,
+        loadTask,
         clearSession,
         resetTask,
         setTodoItems,
@@ -788,17 +656,7 @@ export const TaskProvider: React.FC<{
       }}
     >
       {tasks.map((task) => (
-        <TaskEventSubscriber
-          key={task.id}
-          baseDir={baseDir}
-          taskId={task.id}
-          state={task.state}
-          updateTaskState={updateTaskState}
-          clearSession={clearSession}
-          setQuestion={setQuestion}
-          setTodoItems={setTodoItems}
-          setMessages={setMessages}
-        />
+        <TaskEventSubscriber key={task.id} baseDir={baseDir} taskId={task.id} state={task.state} />
       ))}
       {children}
     </TaskContext.Provider>

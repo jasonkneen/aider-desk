@@ -10,24 +10,8 @@ import { AgentsContextType } from '@/contexts/AgentsContext';
  * Provides default implementations for all TaskContextType methods and allows overrides
  */
 export const createMockTaskContext = (overrides: Partial<TaskContextType> = {}) => {
-  const mockTaskState = {
-    loading: false,
-    loaded: true,
-    processing: false,
-    messages: [],
-    tokensInfo: null,
-    question: null,
-    todoItems: [],
-    allFiles: [],
-    autocompletionWords: [],
-    aiderTotalCost: 0,
-    contextFiles: [],
-    aiderModelsData: null,
-    finishAcknowledged: true,
-  };
-
   const defaultMock = {
-    getTaskState: vi.fn(() => mockTaskState),
+    loadTask: vi.fn(),
     clearSession: vi.fn(),
     resetTask: vi.fn(),
     setMessages: vi.fn(),

@@ -73,6 +73,7 @@ import { HookManager } from '@/hooks/hook-manager';
 import { PromptsManager } from '@/prompts';
 
 export const INTERNAL_TASK_ID = 'internal';
+export const RESPONSE_CHUNK_FLUSH_INTERVAL_MS = 10;
 
 export class Task {
   private initialized = false;
@@ -81,13 +82,13 @@ export class Task {
   private currentQuestion: QuestionData | null = null;
   private currentQuestionResolves: ((answer: [string, string | undefined]) => void)[] = [];
   private storedQuestionAnswers: Map<string, 'y' | 'n'> = new Map();
-  private currentResponseMessageId: string | null = null;
   private currentPromptContext: PromptContext | null = null;
   private currentPromptResponses: ResponseCompletedData[] = [];
   private runPromptResolves: ((value: ResponseCompletedData[]) => void)[] = [];
   private autocompletionAllFiles: string[] | null = null;
   private agentRunResolves: (() => void)[] = [];
   private git: SimpleGit | null = null;
+  private responseChunkMap: Map<string, { buffer: string; interval: NodeJS.Timeout }> = new Map();
 
   private readonly taskDataPath: string;
   private readonly contextManager: ContextManager;
@@ -507,6 +508,13 @@ export class Task {
     return normalizedPath;
   }
 
+  private cleanupChunkBuffers() {
+    for (const entry of this.responseChunkMap.values()) {
+      clearInterval(entry.interval);
+    }
+    this.responseChunkMap.clear();
+  }
+
   public async close(clearContext = false, cleanupEmptyTask = true) {
     if (!this.initialized) {
       return;
@@ -522,6 +530,7 @@ export class Task {
     }
     this.interruptResponse();
     this.resolveAgentRunPromises();
+    this.cleanupChunkBuffers();
 
     await this.aiderManager.kill();
     if (cleanupEmptyTask) {
@@ -928,7 +937,6 @@ export class Task {
     options?: AiderRunOptions,
   ): Promise<ResponseCompletedData[]> {
     this.currentPromptResponses = [];
-    this.currentResponseMessageId = null;
     this.currentPromptContext = promptContext;
 
     const architectModel = this.aiderManager.getArchitectModel();
@@ -954,17 +962,6 @@ export class Task {
       return;
     }
 
-    if (this.currentResponseMessageId) {
-      this.eventManager.sendResponseCompleted({
-        type: 'response-completed',
-        messageId: this.currentResponseMessageId,
-        baseDir: this.project.baseDir,
-        taskId: this.taskId,
-        content: '',
-      });
-      this.currentResponseMessageId = null;
-    }
-
     // Notify waiting prompts with collected responses
     const responses = [...this.currentPromptResponses];
     this.currentPromptResponses = [];
@@ -986,17 +983,54 @@ export class Task {
     }
 
     if (!message.finished) {
-      logger.debug(`Sending response chunk to ${this.project.baseDir}`);
-      const data: ResponseChunkData = {
-        messageId: message.id,
-        baseDir: this.project.baseDir,
-        taskId: this.taskId,
-        chunk: message.content,
-        reflectedMessage: message.reflectedMessage,
-        promptContext: message.promptContext,
+      const sendResponseChunk = (chunk: string) => {
+        const data: ResponseChunkData = {
+          messageId: message.id,
+          baseDir: this.project.baseDir,
+          taskId: this.taskId,
+          chunk,
+          reflectedMessage: message.reflectedMessage,
+          promptContext: message.promptContext,
+        };
+        try {
+          this.eventManager.sendResponseChunk(data);
+        } catch (error) {
+          logger.error('Failed to send response chunk', {
+            messageId: message.id,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
       };
-      this.eventManager.sendResponseChunk(data);
+
+      if (!this.responseChunkMap.has(message.id)) {
+        // First chunk: send immediately and create interval
+        sendResponseChunk(message.content);
+
+        const messageId = message.id;
+        const interval = setInterval(() => {
+          const entry = this.responseChunkMap.get(messageId);
+          if (entry && entry.buffer.length > 0) {
+            sendResponseChunk(entry.buffer);
+            entry.buffer = '';
+          } else {
+            // No buffered chunk, stop interval
+            clearInterval(interval);
+            this.responseChunkMap.delete(messageId);
+          }
+        }, RESPONSE_CHUNK_FLUSH_INTERVAL_MS);
+        this.responseChunkMap.set(messageId, { buffer: '', interval });
+      } else {
+        // Subsequent chunks: append to buffer
+        const entry = this.responseChunkMap.get(message.id)!;
+        entry.buffer += message.content;
+      }
     } else {
+      const entry = this.responseChunkMap.get(message.id);
+      if (entry) {
+        clearInterval(entry.interval);
+        this.responseChunkMap.delete(message.id);
+      }
+
       logger.info(`Sending response completed to ${this.project.baseDir}`);
       logger.debug(`Message data: ${JSON.stringify(message)}`);
 
@@ -1031,7 +1065,6 @@ export class Task {
       };
 
       this.sendResponseCompleted(data);
-      this.currentResponseMessageId = null;
       this.closeCommandOutput();
 
       // Collect the completed response
@@ -1837,6 +1870,7 @@ export class Task {
     this.findMessageConnectors('interrupt-response').forEach((connector) => connector.sendInterruptResponseMessage());
     this.agent.interrupt();
     this.promptFinished();
+    this.cleanupChunkBuffers();
 
     if (this.initialized && this.task.state === DefaultTaskState.InProgress) {
       void this.saveTask({
