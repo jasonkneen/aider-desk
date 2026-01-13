@@ -45,7 +45,7 @@ export const FileEditToolMessage = ({ message, onRemove, compact = false }: Prop
       </div>
       <div className="text-xs text-text-primary flex flex-wrap gap-1">
         <span>{t('toolMessage.power.fileEdit.title')}</span>
-        <span>
+        <span data-tooltip-id="global-tooltip-md" data-tooltip-content={filePath} data-tooltip-delay-show={500}>
           <CodeInline className="bg-bg-primary-light">{filePath.split(/[/\\]/).pop()}</CodeInline>
         </span>
       </div>
