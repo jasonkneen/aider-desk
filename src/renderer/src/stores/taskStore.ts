@@ -15,6 +15,7 @@ export interface TaskState {
   aiderTotalCost: number;
   contextFiles: ContextFile[];
   aiderModelsData: ModelsData | null;
+  lastActiveAt: Date | null;
 }
 
 export const EMPTY_TASK_STATE: TaskState = {
@@ -28,6 +29,7 @@ export const EMPTY_TASK_STATE: TaskState = {
   aiderTotalCost: 0,
   contextFiles: [],
   aiderModelsData: null,
+  lastActiveAt: null,
 };
 
 export const EMPTY_MESSAGES: Message[] = [];
