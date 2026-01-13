@@ -38,7 +38,6 @@ type Props = {
   onArchiveTask?: () => void;
   onUnarchiveTask?: () => void;
   onDeleteTask?: () => void;
-  isRemoving?: boolean;
 };
 
 export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
@@ -59,7 +58,6 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
       onArchiveTask,
       onUnarchiveTask,
       onDeleteTask,
-      isRemoving,
     },
     ref,
   ) => {
@@ -154,7 +152,6 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
                       remove={inProgress ? undefined : removeMessage}
                       redo={inProgress ? undefined : redoLastUserPrompt}
                       edit={editLastUserMessage}
-                      isRemoving={isRemoving}
                     />
                   ) : (
                     <MessageBlock
@@ -166,7 +163,6 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
                       remove={inProgress ? undefined : () => removeMessage(message)}
                       redo={virtualRow.index === lastUserMessageIndex && !inProgress ? redoLastUserPrompt : undefined}
                       edit={virtualRow.index === lastUserMessageIndex ? editLastUserMessage : undefined}
-                      isRemoving={isRemoving}
                     />
                   )}
                 </div>

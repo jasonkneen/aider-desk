@@ -20,10 +20,9 @@ type Props = {
   remove?: (message: Message) => void;
   redo?: () => void;
   edit?: (content: string) => void;
-  isRemoving?: boolean;
 };
 
-const GroupMessageBlockComponent = ({ baseDir, taskId, message, allFiles, renderMarkdown, remove, redo, edit, isRemoving }: Props) => {
+const GroupMessageBlockComponent = ({ baseDir, taskId, message, allFiles, renderMarkdown, remove, redo, edit }: Props) => {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -150,7 +149,7 @@ const GroupMessageBlockComponent = ({ baseDir, taskId, message, allFiles, render
         )}
       </AnimatePresence>
       <div className="px-3 pb-3">
-        <MessageBar className="mt-0" usageReport={aggregatedUsage} isRemoving={isRemoving} />
+        <MessageBar className="mt-0" usageReport={aggregatedUsage} />
       </div>
     </div>
   );

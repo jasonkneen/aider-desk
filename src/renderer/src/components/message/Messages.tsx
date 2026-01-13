@@ -38,7 +38,6 @@ type Props = {
   onArchiveTask?: () => void;
   onUnarchiveTask?: () => void;
   onDeleteTask?: () => void;
-  isRemovingMessage?: boolean;
 };
 
 export const Messages = forwardRef<MessagesRef, Props>(
@@ -59,7 +58,6 @@ export const Messages = forwardRef<MessagesRef, Props>(
       onArchiveTask,
       onUnarchiveTask,
       onDeleteTask,
-      isRemovingMessage,
     },
     ref,
   ) => {
@@ -174,7 +172,6 @@ export const Messages = forwardRef<MessagesRef, Props>(
               remove={inProgress ? undefined : () => removeMessage(message)}
               redo={index === lastUserMessageIndex && !inProgress ? redoLastUserPrompt : undefined}
               edit={index === lastUserMessageIndex ? editLastUserMessage : undefined}
-              isRemoving={isRemovingMessage}
             />
           );
         })}

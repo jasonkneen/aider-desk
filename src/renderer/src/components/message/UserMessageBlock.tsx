@@ -15,10 +15,9 @@ type Props = {
   onRemove?: () => void;
   onRedo?: () => void;
   onEdit?: (content: string) => void;
-  isRemoving?: boolean;
 };
 
-export const UserMessageBlock = ({ baseDir, message, allFiles, renderMarkdown, compact = false, onRemove, onRedo, onEdit, isRemoving }: Props) => {
+export const UserMessageBlock = ({ baseDir, message, allFiles, renderMarkdown, compact = false, onRemove, onRedo, onEdit }: Props) => {
   const baseClasses =
     'rounded-md p-3 mb-2 max-w-full text-xs bg-bg-secondary border border-border-dark-light text-text-primary border-l-4 border-l-border-accent';
   const parsedContent = useParsedContent(baseDir, message.content, allFiles, renderMarkdown);
@@ -37,7 +36,7 @@ export const UserMessageBlock = ({ baseDir, message, allFiles, renderMarkdown, c
         </div>
         <div className="flex-grow-1 w-full overflow-hidden">{parsedContent}</div>
       </div>
-      {!compact && <MessageBar content={message.content} remove={onRemove} redo={onRedo} edit={onEdit ? handleEdit : undefined} isRemoving={isRemoving} />}
+      {!compact && <MessageBar content={message.content} remove={onRemove} redo={onRedo} edit={onEdit ? handleEdit : undefined} />}
     </div>
   );
 };
