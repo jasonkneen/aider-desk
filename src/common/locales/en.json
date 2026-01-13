@@ -39,7 +39,9 @@
     "expand": "Expand",
     "enabled": "Enabled",
     "noFiles": "No files",
-    "clickToRefresh": "Click to refresh"
+    "clickToRefresh": "Click to refresh",
+    "closeTasks": "Close Tasks",
+    "toggleTasks": "Toggle Tasks"
   },
   "search": {
     "placeholder": "Search...",
@@ -787,11 +789,13 @@
     "proceed": "Proceed",
     "archive": "Archive",
     "unarchive": "Unarchive",
-    "confirmDelete": "Confirm Delete"
+    "confirmDelete": "Confirm Delete",
+    "remove": "Remove message"
   },
   "errors": {
     "frozenTitle": "AIDER FROZEN?",
-    "frozenMessage": "Aider process seems to be frozen. Would you like to restart the task?"
+    "frozenMessage": "Aider process seems to be frozen. Would you like to restart the task?",
+    "removeMessageFailed": "Failed to remove message - please try again"
   },
   "dialogs": {
     "confirm": "Confirm",

@@ -175,6 +175,11 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     void eventsHandler.removeLastMessage(baseDir, taskId);
   });
 
+  ipcMain.handle('remove-message', async (_, baseDir: string, taskId: string, messageId: string) => {
+    await eventsHandler.removeMessage(baseDir, taskId, messageId);
+    return { message: 'Message removed' };
+  });
+
   ipcMain.on('redo-last-user-prompt', (_, baseDir: string, taskId: string, mode: Mode, updatedPrompt?: string) => {
     void eventsHandler.redoLastUserPrompt(baseDir, taskId, mode, updatedPrompt);
   });

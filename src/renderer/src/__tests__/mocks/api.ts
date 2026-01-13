@@ -124,6 +124,7 @@ export const createMockApi = (overrides: Partial<ApplicationAPI> = {}): MockedOb
     applyEdits: vi.fn((): void => undefined),
     clearContext: vi.fn((): void => undefined),
     removeLastMessage: vi.fn((): void => undefined),
+    removeMessage: vi.fn((): Promise<void> => Promise.resolve()),
     compactConversation: vi.fn((): void => undefined),
 
     // UI operations
@@ -178,6 +179,7 @@ export const createMockApi = (overrides: Partial<ApplicationAPI> = {}): MockedOb
     addTerminalExitListener: vi.fn(() => vi.fn()),
     addContextMenuListener: vi.fn(() => vi.fn()),
     addOpenSettingsListener: vi.fn(() => vi.fn()),
+    addMessageRemovedListener: vi.fn(() => vi.fn()),
 
     // Task lifecycle event listeners
     addTaskCreatedListener: vi.fn(() => vi.fn()),

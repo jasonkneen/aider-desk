@@ -46,6 +46,7 @@ import {
   BranchInfo,
   WorktreeIntegrationStatus,
   MemoryEmbeddingProgress,
+  MessageRemovedData,
 } from '@common/types';
 
 export interface ApplicationAPI {
@@ -119,6 +120,7 @@ export interface ApplicationAPI {
   applyEdits: (baseDir: string, taskId: string, edits: FileEdit[]) => void;
   clearContext: (baseDir: string, taskId: string) => void;
   removeLastMessage: (baseDir: string, taskId: string) => void;
+  removeMessage: (baseDir: string, taskId: string, messageId: string) => Promise<void>;
   compactConversation: (baseDir: string, taskId: string, mode: Mode, customInstructions?: string) => void;
   setZoomLevel: (level: number) => Promise<void>;
 
@@ -157,6 +159,7 @@ export interface ApplicationAPI {
   addUserMessageListener: (baseDir: string, taskId: string, callback: (data: UserMessageData) => void) => () => void;
   addInputHistoryUpdatedListener: (baseDir: string, callback: (data: InputHistoryData) => void) => () => void;
   addClearTaskListener: (baseDir: string, taskId: string, callback: (data: ClearTaskData) => void) => () => void;
+  addMessageRemovedListener: (baseDir: string, taskId: string, callback: (data: MessageRemovedData) => void) => () => void;
   addProjectStartedListener: (baseDir: string, callback: (data: ProjectStartedData) => void) => () => void;
   addVersionsInfoUpdatedListener: (callback: (data: VersionsInfo) => void) => () => void;
   addProviderModelsUpdatedListener: (callback: (data: ProviderModelsData) => void) => () => void;

@@ -1,7 +1,7 @@
 import { MdKeyboardDoubleArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { TaskData } from '@common/types';
+import { DefaultTaskState, TaskData } from '@common/types';
 import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef } from 'react';
 import { TaskStateActions } from 'src/renderer/src/components/message/TaskStateActions';
 
@@ -38,6 +38,7 @@ type Props = {
   onArchiveTask?: () => void;
   onUnarchiveTask?: () => void;
   onDeleteTask?: () => void;
+  isRemoving?: boolean;
 };
 
 export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
@@ -58,6 +59,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
       onArchiveTask,
       onUnarchiveTask,
       onDeleteTask,
+      isRemoving,
     },
     ref,
   ) => {
@@ -68,6 +70,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
     // Group messages by promptContext.group.id
     const processedMessages = useMemo(() => groupMessagesByPromptContext(messages), [messages]);
     const lastUserMessageIndex = processedMessages.findLastIndex(isUserMessage);
+    const inProgress = task.state === DefaultTaskState.InProgress;
 
     // Create virtualizer for dynamic sized items
     const virtualizer = useVirtualizer({
@@ -148,9 +151,10 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
                       message={message}
                       allFiles={allFiles}
                       renderMarkdown={renderMarkdown}
-                      remove={(msg: Message) => removeMessage(msg)}
-                      redo={resumeTask}
+                      remove={inProgress ? undefined : removeMessage}
+                      redo={inProgress ? undefined : redoLastUserPrompt}
                       edit={editLastUserMessage}
+                      isRemoving={isRemoving}
                     />
                   ) : (
                     <MessageBlock
@@ -159,9 +163,10 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
                       message={message}
                       allFiles={allFiles}
                       renderMarkdown={renderMarkdown}
-                      remove={virtualRow.index === messages.length - 1 ? () => removeMessage(message) : undefined}
-                      redo={virtualRow.index === lastUserMessageIndex ? redoLastUserPrompt : undefined}
+                      remove={inProgress ? undefined : () => removeMessage(message)}
+                      redo={virtualRow.index === lastUserMessageIndex && !inProgress ? redoLastUserPrompt : undefined}
                       edit={virtualRow.index === lastUserMessageIndex ? editLastUserMessage : undefined}
+                      isRemoving={isRemoving}
                     />
                   )}
                 </div>

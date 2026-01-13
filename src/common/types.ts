@@ -688,6 +688,12 @@ export interface UserMessageData {
   promptContext?: PromptContext;
 }
 
+export interface MessageRemovedData {
+  baseDir: string;
+  taskId: string;
+  messageIds: string[];
+}
+
 export interface FileEdit {
   path: string;
   original: string;

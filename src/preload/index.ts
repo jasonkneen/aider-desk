@@ -8,6 +8,7 @@ import {
   InputHistoryData,
   LogData,
   McpServerConfig,
+  MessageRemovedData,
   ModelsData,
   OS,
   ProjectSettings,
@@ -106,6 +107,7 @@ const api: ApplicationAPI = {
   applyEdits: (baseDir, taskId, edits: FileEdit[]) => ipcRenderer.send('apply-edits', baseDir, taskId, edits),
   clearContext: (baseDir, taskId) => ipcRenderer.send('clear-context', baseDir, taskId),
   removeLastMessage: (baseDir, taskId) => ipcRenderer.send('remove-last-message', baseDir, taskId),
+  removeMessage: (baseDir, taskId, messageId) => ipcRenderer.invoke('remove-message', baseDir, taskId, messageId),
   compactConversation: (baseDir, taskId, mode, customInstructions) => ipcRenderer.invoke('compact-conversation', baseDir, taskId, mode, customInstructions),
   setZoomLevel: (level) => ipcRenderer.invoke('set-zoom-level', level),
   getVersions: (forceRefresh = false) => ipcRenderer.invoke('get-versions', forceRefresh),
@@ -327,6 +329,19 @@ const api: ApplicationAPI = {
     ipcRenderer.on('clear-task', listener);
     return () => {
       ipcRenderer.removeListener('clear-task', listener);
+    };
+  },
+
+  addMessageRemovedListener: (baseDir, taskId, callback) => {
+    const listener = (_: Electron.IpcRendererEvent, data: MessageRemovedData) => {
+      if (!compareBaseDirs(data.baseDir, baseDir) || data.taskId !== taskId) {
+        return;
+      }
+      callback(data);
+    };
+    ipcRenderer.on('message-removed', listener);
+    return () => {
+      ipcRenderer.removeListener('message-removed', listener);
     };
   },
 

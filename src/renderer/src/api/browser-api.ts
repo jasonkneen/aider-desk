@@ -14,6 +14,7 @@ import {
   LogData,
   McpServerConfig,
   McpTool,
+  MessageRemovedData,
   Mode,
   Model,
   ModelsData,
@@ -82,6 +83,7 @@ type EventDataMap = {
   'task-started': TaskData;
   'task-completed': TaskData;
   'task-cancelled': TaskData;
+  'message-removed': MessageRemovedData;
 };
 
 type EventCallback<T> = (data: T) => void;
@@ -145,6 +147,7 @@ export class BrowserApi implements ApplicationAPI {
       'task-completed': new Map(),
       'task-cancelled': new Map(),
       'agent-profiles-updated': new Map(),
+      'message-removed': new Map(),
     };
     this.apiClient = axios.create({
       baseURL: `${baseUrl}/api`,
@@ -238,6 +241,11 @@ export class BrowserApi implements ApplicationAPI {
 
   private async delete<T>(endpoint: string, params?: Record<string, unknown>): Promise<T> {
     const response = await this.apiClient.delete<T>(endpoint, { params });
+    return response.data;
+  }
+
+  private async deleteWithBody<B, T>(endpoint: string, body: B): Promise<T> {
+    const response = await this.apiClient.delete<T>(endpoint, { data: body });
     return response.data;
   }
 
@@ -509,6 +517,10 @@ export class BrowserApi implements ApplicationAPI {
   removeLastMessage(baseDir: string, taskId: string): void {
     this.post('/project/remove-last-message', { projectDir: baseDir, taskId });
   }
+
+  async removeMessage(baseDir: string, taskId: string, messageId: string): Promise<void> {
+    await this.deleteWithBody('/project/remove-message', { projectDir: baseDir, taskId, messageId });
+  }
   compactConversation(baseDir: string, taskId: string, mode: Mode, customInstructions?: string): void {
     this.post('/project/compact-conversation', {
       projectDir: baseDir,
@@ -618,6 +630,10 @@ export class BrowserApi implements ApplicationAPI {
   }
   addClearTaskListener(baseDir: string, taskId: string, callback: (data: ClearTaskData) => void): () => void {
     return this.addListener('clear-task', callback, baseDir, taskId);
+  }
+
+  addMessageRemovedListener(baseDir: string, taskId: string, callback: (data: MessageRemovedData) => void): () => void {
+    return this.addListener('message-removed', callback, baseDir, taskId);
   }
   addProjectStartedListener(baseDir: string, callback: (data: ProjectStartedData) => void): () => void {
     return this.addListener('project-started', callback, baseDir);

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { UsageReportData } from '@common/types';
 import { MdDeleteForever, MdRedo, MdEdit } from 'react-icons/md';
 import { FaEllipsisVertical } from 'react-icons/fa6';
+import { CgSpinner } from 'react-icons/cg';
 import { twMerge } from 'tailwind-merge';
 
 import { IconButton } from '../common/IconButton';
@@ -19,9 +20,10 @@ type Props = {
   remove?: () => void;
   redo?: () => void;
   edit?: () => void;
+  isRemoving?: boolean;
 };
 
-export const MessageBar = ({ className, content, usageReport, remove, redo, edit }: Props) => {
+export const MessageBar = ({ className, content, usageReport, remove, redo, edit, isRemoving }: Props) => {
   const { t } = useTranslation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -50,6 +52,7 @@ export const MessageBar = ({ className, content, usageReport, remove, redo, edit
     <div className={twMerge('mt-3 pt-3 h-[30px] flex items-center justify-end gap-3 border-t border-border-dark-light px-1 relative', className)}>
       {usageReport && <UsageInfo usageReport={usageReport} className="mt-[4px]" />}
       {content && <CopyMessageButton content={content} className="transition-colors text-text-dark hover:text-text-primary" alwaysShow={true} />}
+      {isRemoving && <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light" />}
       {(remove || redo || edit) && (
         <div ref={buttonRef}>
           <IconButton
@@ -60,10 +63,7 @@ export const MessageBar = ({ className, content, usageReport, remove, redo, edit
         </div>
       )}
       {isMenuOpen && (remove || redo || edit) && (
-        <div
-          ref={menuRef}
-          className="absolute right-0 bottom-full mb-1 w-[120px] bg-bg-secondary-light border border-border-default-dark rounded shadow-lg z-10"
-        >
+        <div ref={menuRef} className="absolute right-0 bottom-4 mb-1 w-[120px] bg-bg-secondary-light border border-border-default-dark rounded shadow-lg z-10">
           <ul>
             {edit && (
               <li
@@ -85,8 +85,9 @@ export const MessageBar = ({ className, content, usageReport, remove, redo, edit
             )}
             {remove && (
               <li
-                className="flex items-center gap-1 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
-                onClick={handleRemoveClick}
+                className={`flex items-center gap-1 px-2 py-1 text-2xs text-text-primary transition-colors ${isRemoving ? 'opacity-50 cursor-not-allowed' : 'hover:bg-bg-tertiary cursor-pointer'}`}
+                onClick={isRemoving ? undefined : handleRemoveClick}
+                title={t('messages.remove')}
               >
                 <MdDeleteForever className="w-4 h-4" />
                 <span className="whitespace-nowrap">{t('messages.delete')}</span>

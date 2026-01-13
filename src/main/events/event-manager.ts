@@ -15,6 +15,7 @@ import {
   ToolData,
   TokensInfoData,
   UserMessageData,
+  MessageRemovedData,
   VersionsInfo,
   AutocompletionData,
   ProviderModelsData,
@@ -298,6 +299,16 @@ export class EventManager {
   sendTaskDeleted(task: TaskData): void {
     this.sendToMainWindow('task-deleted', task);
     this.broadcastToEventConnectors('task-deleted', task);
+  }
+
+  sendTaskMessageRemoved(baseDir: string, taskId: string, messageIds: string[]): void {
+    const data: MessageRemovedData = {
+      baseDir,
+      taskId,
+      messageIds,
+    };
+    this.sendToMainWindow('message-removed', data);
+    this.broadcastToEventConnectors('message-removed', data);
   }
 
   subscribe(socket: Socket, config: EventsConnectorConfig): void {

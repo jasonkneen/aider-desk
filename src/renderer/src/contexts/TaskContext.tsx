@@ -7,6 +7,7 @@ import {
   ContextFilesUpdatedData,
   DefaultTaskState,
   LogData,
+  MessageRemovedData,
   ModelsData,
   QuestionData,
   ResponseChunkData,
@@ -450,6 +451,10 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({ baseDir, task
       }
     };
 
+    const handleMessageRemoved = (data: MessageRemovedData) => {
+      setMessages(taskId, (prevMessages) => prevMessages.filter((message) => !data.messageIds.includes(message.id)));
+    };
+
     const removeAutocompletionListener = api.addUpdateAutocompletionListener(baseDir, taskId, handleUpdateAutocompletion);
     const removeCommandOutputListener = api.addCommandOutputListener(baseDir, taskId, handleCommandOutput);
     const removeResponseChunkListener = api.addResponseChunkListener(baseDir, taskId, handleResponseChunk);
@@ -463,6 +468,7 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({ baseDir, task
     const removeClearProjectListener = api.addClearTaskListener(baseDir, taskId, handleClearProject);
     const removeContextFilesListener = api.addContextFilesUpdatedListener(baseDir, taskId, handleContextFilesUpdated);
     const removeUpdateAiderModelsListener = api.addUpdateAiderModelsListener(baseDir, taskId, handleUpdateAiderModels);
+    const removeMessageRemovedListener = api.addMessageRemovedListener(baseDir, taskId, handleMessageRemoved);
 
     return () => {
       removeAutocompletionListener();
@@ -478,6 +484,7 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({ baseDir, task
       removeClearProjectListener();
       removeContextFilesListener();
       removeUpdateAiderModelsListener();
+      removeMessageRemovedListener();
     };
   }, [
     api,

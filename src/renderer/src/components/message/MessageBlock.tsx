@@ -85,9 +85,10 @@ type Props = {
   remove?: () => void;
   redo?: () => void;
   edit?: (content: string) => void;
+  isRemoving?: boolean;
 };
 
-const MessageBlockComponent = ({ baseDir, taskId, message, allFiles, renderMarkdown, compact = false, remove, redo, edit }: Props) => {
+const MessageBlockComponent = ({ baseDir, taskId, message, allFiles, renderMarkdown, compact = false, remove, redo, edit, isRemoving }: Props) => {
   const { t } = useTranslation();
 
   if (isLoadingMessage(message)) {
@@ -121,12 +122,23 @@ const MessageBlockComponent = ({ baseDir, taskId, message, allFiles, renderMarkd
         onRedo={redo}
         onEdit={edit}
         compact={compact}
+        isRemoving={isRemoving}
       />
     );
   }
 
   if (isResponseMessage(message)) {
-    return <ResponseMessageBlock baseDir={baseDir} message={message} allFiles={allFiles} renderMarkdown={renderMarkdown} onRemove={remove} compact={compact} />;
+    return (
+      <ResponseMessageBlock
+        baseDir={baseDir}
+        message={message}
+        allFiles={allFiles}
+        renderMarkdown={renderMarkdown}
+        onRemove={remove}
+        compact={compact}
+        isRemoving={isRemoving}
+      />
+    );
   }
 
   if (isToolMessage(message)) {

@@ -2,7 +2,7 @@ import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'rea
 import { toPng } from 'html-to-image';
 import { MdKeyboardDoubleArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
-import { TaskData } from '@common/types';
+import { DefaultTaskState, TaskData } from '@common/types';
 import { TaskStateActions } from 'src/renderer/src/components/message/TaskStateActions';
 
 import { MessageBlock } from './MessageBlock';
@@ -38,6 +38,7 @@ type Props = {
   onArchiveTask?: () => void;
   onUnarchiveTask?: () => void;
   onDeleteTask?: () => void;
+  isRemovingMessage?: boolean;
 };
 
 export const Messages = forwardRef<MessagesRef, Props>(
@@ -58,6 +59,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
       onArchiveTask,
       onUnarchiveTask,
       onDeleteTask,
+      isRemovingMessage,
     },
     ref,
   ) => {
@@ -69,6 +71,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
     // Group messages by promptContext.group.id
     const processedMessages = groupMessagesByPromptContext(messages);
     const lastUserMessageIndex = processedMessages.findLastIndex(isUserMessage);
+    const inProgress = task.state === DefaultTaskState.InProgress;
 
     const { scrollingPaused, setScrollingPaused, scrollToBottom, eventHandlers } = useScrollingPaused({
       onAutoScroll: () => messagesEndRef.current?.scrollIntoView(),
@@ -154,8 +157,8 @@ export const Messages = forwardRef<MessagesRef, Props>(
                 message={message}
                 allFiles={allFiles}
                 renderMarkdown={renderMarkdown}
-                remove={(msg: Message) => removeMessage(msg)}
-                redo={resumeTask}
+                remove={inProgress ? undefined : removeMessage}
+                redo={inProgress ? undefined : redoLastUserPrompt}
                 edit={editLastUserMessage}
               />
             );
@@ -168,9 +171,10 @@ export const Messages = forwardRef<MessagesRef, Props>(
               message={message}
               allFiles={allFiles}
               renderMarkdown={renderMarkdown}
-              remove={index === messages.length - 1 ? () => removeMessage(message) : undefined}
-              redo={index === lastUserMessageIndex ? redoLastUserPrompt : undefined}
+              remove={inProgress ? undefined : () => removeMessage(message)}
+              redo={index === lastUserMessageIndex && !inProgress ? redoLastUserPrompt : undefined}
               edit={index === lastUserMessageIndex ? editLastUserMessage : undefined}
+              isRemoving={isRemovingMessage}
             />
           );
         })}

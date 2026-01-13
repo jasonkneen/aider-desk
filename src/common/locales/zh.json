@@ -39,7 +39,9 @@
     "expand": "展开",
     "enabled": "已启用",
     "noFiles": "没有找到文件",
-    "clickToRefresh": "点击刷新"
+    "clickToRefresh": "点击刷新",
+    "closeTasks": "关闭任务",
+    "toggleTasks": "切换任务"
   },
   "search": {
     "placeholder": "查找...",
@@ -744,11 +746,13 @@
     "proceed": "继续",
     "archive": "归档",
     "unarchive": "取消归档",
-    "confirmDelete": "确认删除"
+    "confirmDelete": "确认删除",
+    "remove": "移除消息"
   },
   "errors": {
     "frozenTitle": "AIDER冻结了?",
-    "frozenMessage": "Aider进程似乎已冻结。您想重启任务吗?"
+    "frozenMessage": "Aider进程似乎已冻结。您想重启任务吗?",
+    "removeMessageFailed": "删除消息失败 - 请重试"
   },
   "dialogs": {
     "confirm": "确认",

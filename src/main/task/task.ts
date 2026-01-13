@@ -1823,20 +1823,6 @@ export class Task {
       usageReport: data.usageReport,
       promptContext: data.promptContext,
     });
-
-    if (data.response && data.usageReport) {
-      this.dataManager.saveMessage(data.id, 'tool', this.project.baseDir, data.usageReport.model, data.usageReport, {
-        toolName: data.toolName,
-        args: data.args,
-        response: data.response,
-      });
-    }
-
-    // Update total costs when adding the tool message
-    if (data.usageReport) {
-      this.updateTotalCosts(data.usageReport);
-    }
-
     this.eventManager.sendTool(data);
   }
 
@@ -1977,6 +1963,14 @@ export class Task {
     await this.reloadConnectorMessages();
 
     await this.updateContextInfo();
+  }
+
+  public async removeMessage(messageId: string): Promise<string[]> {
+    const removedIds = this.contextManager.removeMessageById(messageId);
+    await this.reloadConnectorMessages();
+
+    await this.updateContextInfo();
+    return removedIds;
   }
 
   public async redoLastUserPrompt(mode: Mode, updatedPrompt?: string) {

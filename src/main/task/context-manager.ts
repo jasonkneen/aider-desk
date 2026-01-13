@@ -238,6 +238,160 @@ export class ContextManager {
     }
   }
 
+  removeMessageById(messageId: string): string[] {
+    // First, try to find a message with the exact ID
+    const messageIndex = this.messages.findIndex((msg) => msg.id === messageId);
+
+    if (messageIndex !== -1) {
+      const message = this.messages[messageIndex];
+
+      // If it's an assistant message with array content
+      if (message.role === 'assistant' && Array.isArray(message.content)) {
+        // Check if it has mixed content (text/reasoning + tool calls)
+        const hasTextOrReasoning = message.content.some((part) => part.type === 'text' || part.type === 'reasoning');
+        const hasToolCalls = message.content.some((part) => part.type === 'tool-call');
+
+        if (hasTextOrReasoning && hasToolCalls) {
+          // Remove only text and reasoning parts, keep the message with tool calls
+          message.content = message.content.filter((part) => part.type !== 'text' && part.type !== 'reasoning');
+          logger.debug(`Task ${this.taskId}: Removed text and reasoning parts from assistant message (ID: ${messageId}). Kept tool calls.`);
+          this.autosave();
+          return [messageId];
+        }
+      }
+
+      // Otherwise, remove the whole message
+      return this.removeMessageByIndex(messageIndex, messageId);
+    }
+
+    // If not found by ID, try to find by tool call ID
+    return this.removeByToolCallId(messageId);
+  }
+
+  private removeMessageByIndex(index: number, messageId: string): string[] {
+    const removedIds: string[] = [];
+    removedIds.push(messageId);
+
+    const messageToRemove = this.messages[index];
+    logger.debug(`Task ${this.taskId}: Removing message (ID: ${messageId}, Role: ${messageToRemove.role})`);
+
+    if (
+      messageToRemove.role === 'tool' &&
+      Array.isArray(messageToRemove.content) &&
+      messageToRemove.content.length > 0 &&
+      messageToRemove.content[0].type === 'tool-result'
+    ) {
+      const toolCallIdToRemove = messageToRemove.content[0].toolCallId;
+      this.messages.splice(index, 1);
+      logger.debug(
+        `Task ${this.taskId}: Removed tool message (ID: ${messageId}, Tool Call ID: ${toolCallIdToRemove}). Total messages: ${this.messages.length}`,
+      );
+
+      for (let i = this.messages.length - 1; i >= 0; i--) {
+        const potentialAssistantMessage = this.messages[i];
+
+        if (potentialAssistantMessage.role === 'assistant' && Array.isArray(potentialAssistantMessage.content)) {
+          const toolCallIndex = potentialAssistantMessage.content.findIndex((part) => part.type === 'tool-call' && part.toolCallId === toolCallIdToRemove);
+
+          if (toolCallIndex !== -1) {
+            potentialAssistantMessage.content.splice(toolCallIndex, 1);
+            logger.debug(`Task ${this.taskId}: Removed tool-call part (ID: ${toolCallIdToRemove}) from assistant message at index ${i}.`);
+
+            const isEmpty = potentialAssistantMessage.content.length === 0;
+
+            if (isEmpty) {
+              this.messages.splice(i, 1);
+              removedIds.push(potentialAssistantMessage.id);
+              logger.debug(
+                `Task ${this.taskId}: Removed empty assistant message at index ${i} after removing tool-call. Total messages: ${this.messages.length}`,
+              );
+            }
+            break;
+          }
+        }
+      }
+    } else {
+      this.messages.splice(index, 1);
+      logger.debug(`Task ${this.taskId}: Removed non-tool message (ID: ${messageId}). Total messages: ${this.messages.length}`);
+    }
+
+    this.autosave();
+    return removedIds;
+  }
+
+  private removeByToolCallId(toolCallId: string): string[] {
+    const removedIds: string[] = [];
+
+    // Find tool message with matching toolCallId
+    let toolMessageIndex = -1;
+    let toolMessageContentIndex = -1;
+
+    for (let i = 0; i < this.messages.length; i++) {
+      const message = this.messages[i];
+      if (message.role === 'tool' && Array.isArray(message.content)) {
+        const toolResultIndex = message.content.findIndex((part) => part.type === 'tool-result' && part.toolCallId === toolCallId);
+        if (toolResultIndex !== -1) {
+          toolMessageIndex = i;
+          toolMessageContentIndex = toolResultIndex;
+          break;
+        }
+      }
+    }
+
+    if (toolMessageIndex === -1) {
+      const error = new Error(`Message or tool call not found: ${toolCallId}`);
+      logger.error('Failed to remove by tool call ID', {
+        taskId: this.taskId,
+        toolCallId,
+      });
+      throw error;
+    }
+
+    const toolMessage = this.messages[toolMessageIndex];
+
+    // Remove only the tool-result part from the tool message
+    if (Array.isArray(toolMessage.content)) {
+      toolMessage.content.splice(toolMessageContentIndex, 1);
+      logger.debug(`Task ${this.taskId}: Removed tool-result part (Tool Call ID: ${toolCallId}) from tool message at index ${toolMessageIndex}.`);
+    }
+
+    // If tool message is now empty, remove the whole message
+    if (Array.isArray(toolMessage.content) && toolMessage.content.length === 0) {
+      this.messages.splice(toolMessageIndex, 1);
+      removedIds.push(toolMessage.id);
+      logger.debug(
+        `Task ${this.taskId}: Removed empty tool message at index ${toolMessageIndex} after removing tool-result. Total messages: ${this.messages.length}`,
+      );
+    }
+
+    // Search backwards for assistant message with matching tool-call
+    for (let i = this.messages.length - 1; i >= 0; i--) {
+      const assistantMessage = this.messages[i];
+
+      if (assistantMessage.role === 'assistant' && Array.isArray(assistantMessage.content)) {
+        const toolCallIndex = assistantMessage.content.findIndex((part) => part.type === 'tool-call' && part.toolCallId === toolCallId);
+
+        if (toolCallIndex !== -1) {
+          assistantMessage.content.splice(toolCallIndex, 1);
+          logger.debug(`Task ${this.taskId}: Removed tool-call part (Tool Call ID: ${toolCallId}) from assistant message at index ${i}.`);
+
+          // If assistant message is now empty, remove the whole message
+          if (assistantMessage.content.length === 0) {
+            this.messages.splice(i, 1);
+            removedIds.push(assistantMessage.id);
+            logger.debug(
+              `Task ${this.taskId}: Removed empty assistant message at index ${i} after removing tool-call. Total messages: ${this.messages.length}`,
+            );
+          }
+          break;
+        }
+      }
+    }
+
+    this.autosave();
+    return removedIds;
+  }
+
   removeLastMessage(): void {
     if (this.messages.length === 0) {
       logger.warn('Attempted to remove last message from task, but message list is empty.', {
@@ -322,12 +476,12 @@ export class ContextManager {
           for (const part of message.content) {
             if (part.type === 'tool-call') {
               const [serverName, toolName] = extractServerNameToolName(part.toolName);
-              // @ts-expect-error part.input contains the prompt in this case
+              // @ts-expect-error part.input type is complex, 'prompt' check is safe in this context
               if (serverName === AIDER_TOOL_GROUP_NAME && toolName === AIDER_TOOL_RUN_PROMPT && part.input && 'prompt' in part.input) {
                 aiderPrompt = part.input.prompt as string;
                 break;
               }
-              // @ts-expect-error part.input contains the prompt in this case
+              // @ts-expect-error part.input type is complex, 'prompt' check is safe in this context
               if (serverName === SUBAGENTS_TOOL_GROUP_NAME && toolName === SUBAGENTS_TOOL_RUN_TASK && part.input && 'prompt' in part.input) {
                 subAgentsPrompt = part.input.prompt as string;
                 break;
@@ -363,7 +517,7 @@ export class ContextManager {
                 content: part.output.value,
               });
             } else if (part.output?.type === 'json') {
-              // @ts-expect-error part.output.responses is expected to be in the output
+              // @ts-expect-error part.output.value.responses type is complex, safe in this context
               const responses: ResponseCompletedData[] = part.output.value.responses;
               if (responses) {
                 responses.forEach((response: ResponseCompletedData) => {
@@ -715,7 +869,7 @@ export class ContextManager {
 
             // Handle aider tool responses - create ResponseCompletedData for each response
             if (serverName === AIDER_TOOL_GROUP_NAME && toolName === AIDER_TOOL_RUN_PROMPT) {
-              // @ts-expect-error value is expected to have responses
+              // @ts-expect-error part.output.value.responses type is complex, safe in this context
               const responses = part.output?.value.responses;
               if (Array.isArray(responses)) {
                 responses.forEach((response: ResponseCompletedData) => {
@@ -740,7 +894,7 @@ export class ContextManager {
 
             // Handle agent tool results - process all messages from subagent
             if (serverName === SUBAGENTS_TOOL_GROUP_NAME && toolName === SUBAGENTS_TOOL_RUN_TASK) {
-              // @ts-expect-error value is expected to have messages
+              // @ts-expect-error part.output.value.messages type is complex, safe in this context
               const messages = part.output?.value.messages;
               if (Array.isArray(messages)) {
                 messages.forEach((subMessage: ContextMessage) => {

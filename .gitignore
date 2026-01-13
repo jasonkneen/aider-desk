@@ -30,3 +30,7 @@ start-docker.sh
 .claude-trace
 repomix-output.txt
 .eslintcache
+
+# bmad
+_bmad
+_bmad-output

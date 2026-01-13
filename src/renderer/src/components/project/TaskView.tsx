@@ -8,6 +8,7 @@ import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { useLocalStorage } from '@reactuses/core';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { v4 as uuidv4 } from 'uuid';
+import { toast } from 'react-toastify';
 
 import { useSidebarWidth } from './useSidebarWidth';
 
@@ -110,6 +111,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     const [showSidebar, setShowSidebar] = useState(isMobile);
     const { width: sidebarWidth, setWidth: setSidebarWidth } = useSidebarWidth(project.baseDir, task.id);
     const [isFilesSidebarCollapsed, setIsFilesSidebarCollapsed] = useLocalStorage(`files-sidebar-collapsed-${project.baseDir}-${task.id}`, false);
+    const [isMessageRemoving, setIsMessageRemoving] = useState(false);
 
     const promptFieldRef = useRef<PromptFieldRef>(null);
     const projectTopBarRef = useRef<TaskBarRef>(null);
@@ -323,10 +325,22 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       onDeleteTask?.();
     };
 
-    const handleRemoveMessage = (messageToRemove: Message) => {
-      api.removeMessage(project.baseDir, task.id, messageToRemove.id);
+    const handleRemoveMessage = async (messageToRemove: Message) => {
+      const originalMessages = messages;
 
       setMessages(task.id, (prevMessages) => prevMessages.filter((msg) => msg.id !== messageToRemove.id));
+      setIsMessageRemoving(true);
+
+      try {
+        await api.removeMessage(project.baseDir, task.id, messageToRemove.id);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to remove message:', error);
+        setMessages(task.id, () => originalMessages);
+        toast.error(t('errors.removeMessageFailed'));
+      } finally {
+        setIsMessageRemoving(false);
+      }
     };
 
     const handleAddTodo = async (name: string) => {
@@ -483,6 +497,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                       onArchiveTask={handleArchiveTask}
                       onUnarchiveTask={handleUnarchiveTask}
                       onDeleteTask={handleDeleteTask}
+                      isRemoving={isMessageRemoving}
                     />
                   ) : (
                     <Messages
@@ -507,6 +522,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                       onArchiveTask={handleArchiveTask}
                       onUnarchiveTask={handleUnarchiveTask}
                       onDeleteTask={handleDeleteTask}
+                      isRemovingMessage={isMessageRemoving}
                     />
                   )}
                 </>
