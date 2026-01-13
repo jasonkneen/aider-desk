@@ -66,33 +66,36 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
     [focusActiveTaskPrompt, updateTaskState],
   );
 
-  const createNewTask = useCallback(async () => {
-    if (creatingTaskRef.current || starting || tasksLoading) {
-      return;
-    }
-
-    creatingTaskRef.current = true;
-
-    try {
-      const existingNewTask = tasks.find((task) => !task.createdAt);
-      if (existingNewTask) {
-        if (activeTaskId === existingNewTask.id) {
-          focusActiveTaskPrompt();
-          return;
-        }
-        activateTask(existingNewTask.id);
+  const createNewTask = useCallback(
+    async (parentId?: string) => {
+      if (creatingTaskRef.current || starting || tasksLoading) {
         return;
       }
 
-      const newTask = await api.createNewTask(project.baseDir);
-      activateTask(newTask.id, false, true);
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to create new task:', error);
-    } finally {
-      creatingTaskRef.current = false;
-    }
-  }, [starting, tasksLoading, tasks, api, project.baseDir, activateTask, activeTaskId, focusActiveTaskPrompt]);
+      creatingTaskRef.current = true;
+
+      try {
+        const existingNewTask = tasks.find((task) => !task.createdAt && task.parentId === (parentId || null));
+        if (existingNewTask) {
+          if (activeTaskId === existingNewTask.id) {
+            focusActiveTaskPrompt();
+            return;
+          }
+          activateTask(existingNewTask.id);
+          return;
+        }
+
+        const newTask = await api.createNewTask(project.baseDir, parentId ? { parentId } : undefined);
+        activateTask(newTask.id, false, true);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to create new task:', error);
+      } finally {
+        creatingTaskRef.current = false;
+      }
+    },
+    [starting, tasksLoading, tasks, api, project.baseDir, activateTask, activeTaskId, focusActiveTaskPrompt],
+  );
 
   useHotkeys(
     TASK_HOTKEYS.NEW_TASK,

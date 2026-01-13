@@ -1,7 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-import { CustomCommand, ProjectSettings, SettingsData, TaskData } from '@common/types';
+import { CustomCommand, ProjectSettings, SettingsData, TaskData, CreateTaskParams } from '@common/types';
 import { fileExists } from '@common/utils';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -60,20 +60,61 @@ export class Project {
     this.eventManager.sendProjectStarted(this.baseDir);
   }
 
-  public async createNewTask() {
-    const mostRecentTask = this.getMostRecentTask();
+  public async createNewTask(params?: CreateTaskParams) {
+    const normalizedParams = {
+      ...params,
+      parentId: params?.parentId || null,
+      name: params?.name || (params?.parentId ? '' : ''),
+    };
+
+    let parentTask: Task | null = null;
+    if (normalizedParams.parentId) {
+      parentTask = this.getTask(normalizedParams.parentId);
+      if (!parentTask) {
+        throw new Error(`Parent task with id ${normalizedParams.parentId} not found`);
+      }
+
+      // Story 1.4: Prevent duplicate empty subtasks
+      // We look for an existing subtask of the same parent that is "empty"
+      // "Empty" means it has no messages in its context and has a default name
+      const tasks = Array.from(this.tasks.values());
+      for (const t of tasks) {
+        if (t.task.parentId === normalizedParams.parentId && !t.task.archived) {
+          const isDefaultName = t.task.name === '' || t.task.name === '[Untitled]';
+          if (isDefaultName) {
+            const messages = await t.getContextMessages();
+            if (messages.length === 0) {
+              logger.info('Found existing empty subtask, focusing it instead of creating a new one', {
+                taskId: t.taskId,
+                parentId: normalizedParams.parentId,
+              });
+              return t.task;
+            }
+          }
+        }
+      }
+    }
+
+    const sourceTask = parentTask || this.getMostRecentTask();
     let initialTaskData: Partial<TaskData>;
 
-    if (mostRecentTask) {
+    if (sourceTask) {
       initialTaskData = {
-        mainModel: mostRecentTask.task.mainModel,
-        weakModel: mostRecentTask.task.weakModel,
-        architectModel: mostRecentTask.task.architectModel,
-        reasoningEffort: mostRecentTask.task.reasoningEffort,
-        thinkingTokens: mostRecentTask.task.thinkingTokens,
-        currentMode: mostRecentTask.task.currentMode,
-        contextCompactingThreshold: mostRecentTask.task.contextCompactingThreshold,
-        weakModelLocked: mostRecentTask.task.weakModelLocked,
+        mainModel: sourceTask.task.mainModel,
+        weakModel: sourceTask.task.weakModel,
+        architectModel: sourceTask.task.architectModel,
+        reasoningEffort: sourceTask.task.reasoningEffort,
+        thinkingTokens: sourceTask.task.thinkingTokens,
+        currentMode: sourceTask.task.currentMode,
+        contextCompactingThreshold: sourceTask.task.contextCompactingThreshold,
+        weakModelLocked: sourceTask.task.weakModelLocked,
+        ...(parentTask
+          ? {
+              workingMode: parentTask.task.workingMode,
+              worktree: parentTask.task.worktree,
+            }
+          : {}),
+        ...normalizedParams,
       };
     } else {
       const providerModels = await this.modelManager.getProviderModels();
@@ -81,6 +122,7 @@ export class Project {
         mainModel: determineMainModel(this.store.getSettings(), this.store.getProviders(), providerModels.models || [], this.baseDir),
         weakModel: determineWeakModel(this.baseDir),
         currentMode: 'agent',
+        ...normalizedParams,
       };
     }
 
@@ -90,7 +132,6 @@ export class Project {
       autoApprove: projectSettings.autoApproveLocked ? true : initialTaskData?.autoApprove,
     });
     this.eventManager.sendTaskCreated(task.task);
-    await task.init();
 
     const internalTask = this.getTask(INTERNAL_TASK_ID);
     if (internalTask) {

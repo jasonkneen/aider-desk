@@ -123,6 +123,7 @@ export class Task {
       currentMode: 'agent',
       contextCompactingThreshold: 0,
       weakModelLocked: false,
+      parentId: null,
       ...initialTaskData,
       id: taskId,
       baseDir: project.baseDir,
@@ -379,6 +380,13 @@ export class Task {
     if (workingMode === 'worktree') {
       if (existingWorktree) {
         this.task.worktree = existingWorktree;
+      } else if (this.task.worktree) {
+        // Worktree is already set (e.g. inherited from parent)
+        logger.info('Using inherited worktree for task', {
+          baseDir: this.project.baseDir,
+          taskId: this.taskId,
+          worktreePath: this.task.worktree.path,
+        });
       } else {
         // Create a default worktree for this task
         const branchName = this.generateBranchName();
