@@ -141,6 +141,7 @@ describe('TaskView', () => {
     question: null,
     todoItems: [],
     aiderModelsData: null,
+    lastActiveAt: null,
   };
   const mockMessages: Message[] = [];
 
