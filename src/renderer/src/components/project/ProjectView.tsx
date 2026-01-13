@@ -1,6 +1,6 @@
 import { InputHistoryData, ProjectData, ProjectStartMode, TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { startTransition, useCallback, useEffect, useOptimistic, useRef, useState, useTransition } from 'react';
+import { Activity, startTransition, useCallback, useEffect, useOptimistic, useRef, useState, useTransition } from 'react';
 import { useLocalStorage } from '@reactuses/core';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { clsx } from 'clsx';
@@ -15,6 +15,7 @@ import { TaskProvider } from '@/contexts/TaskContext';
 import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
 import { getSortedVisibleTasks } from '@/utils/task-utils';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useTaskStore } from '@/stores/taskStore';
 
 type Props = {
   project: ProjectData;
@@ -43,6 +44,7 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
   const creatingTaskRef = useRef(false);
   const activeTask = activeTaskId ? optimisticTasks.find((task) => task.id === activeTaskId) : null;
   const [isActiveTaskSwitching, startActiveTaskTransition] = useTransition();
+  const taskStateMap = useTaskStore((state) => state.taskStateMap);
 
   const focusActiveTaskPrompt = useCallback(() => {
     taskViewRef.current?.focusPromptField();
@@ -399,6 +401,8 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
     return <LoadingOverlay message={t('common.loadingProjectSettings')} />;
   }
 
+  const renderedTasks = optimisticTasks.filter((task) => task.id === activeTaskId || taskStateMap.get(task.id)?.loaded || taskStateMap.get(task.id)?.loading);
+
   return (
     <TaskProvider baseDir={project.baseDir} tasks={tasks}>
       <div className="h-full w-full bg-gradient-to-b from-bg-primary to-bg-primary-light relative">
@@ -431,24 +435,25 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
           }}
         >
           {isActiveTaskSwitching && <LoadingOverlay message={t('common.loadingTask')} />}
-          {activeTask && (
-            <TaskView
-              key={activeTask.id}
-              ref={taskViewRef}
-              project={project}
-              task={activeTask}
-              updateTask={(updates, useOptimistic) => handleUpdateTask(activeTask.id, updates, useOptimistic)}
-              inputHistory={inputHistory}
-              isActive={isActive}
-              shouldFocusPrompt={shouldFocusNewTask}
-              showSettingsPage={showSettingsPage}
-              onProceed={handleProceed}
-              onArchiveTask={() => handleArchiveTask(activeTask.id)}
-              onUnarchiveTask={() => handleUnarchiveTask(activeTask.id)}
-              onDeleteTask={() => handleDeleteTask(activeTask.id)}
-              onToggleTaskSidebar={isMobile ? handleToggleTaskSidebar : undefined}
-            />
-          )}
+          {renderedTasks.map((task) => (
+            <Activity mode={task.id === activeTaskId ? 'visible' : 'hidden'} key={task.id}>
+              <TaskView
+                ref={task.id === activeTaskId ? taskViewRef : undefined}
+                project={project}
+                task={task}
+                updateTask={(updates, useOptimistic) => handleUpdateTask(task.id, updates, useOptimistic)}
+                inputHistory={inputHistory}
+                isActive={isActive && activeTaskId === task.id}
+                shouldFocusPrompt={shouldFocusNewTask}
+                showSettingsPage={showSettingsPage}
+                onProceed={handleProceed}
+                onArchiveTask={() => handleArchiveTask(task.id)}
+                onUnarchiveTask={() => handleUnarchiveTask(task.id)}
+                onDeleteTask={() => handleDeleteTask(task.id)}
+                onToggleTaskSidebar={isMobile ? handleToggleTaskSidebar : undefined}
+              />
+            </Activity>
+          ))}
         </div>
       </div>
     </TaskProvider>
