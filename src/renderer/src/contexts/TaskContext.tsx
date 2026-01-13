@@ -418,7 +418,7 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({ baseDir, task
 
     const handleUserMessage = (data: UserMessageData) => {
       const userMessage: UserMessage = {
-        id: uuidv4(),
+        id: data.id,
         type: 'user',
         content: data.content,
         promptContext: data.promptContext,
