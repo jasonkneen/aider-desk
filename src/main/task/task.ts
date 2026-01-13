@@ -357,6 +357,7 @@ export class Task {
       this.eventManager.sendTaskInitialized(this.task);
       this.aiderManager.sendUpdateAiderModels();
       await this.updateAutocompletionData(undefined, true);
+      await this.updateContextInfo();
       return;
     }
 
@@ -1004,6 +1005,11 @@ export class Task {
 
       if (!this.responseChunkMap.has(message.id)) {
         // First chunk: send immediately and create interval
+        logger.debug('Sending first chunk', {
+          baseDir: this.project.baseDir,
+          taskId: this.taskId,
+          messageId: message.id,
+        });
         sendResponseChunk(message.content);
 
         const messageId = message.id;
@@ -1011,15 +1017,36 @@ export class Task {
           const entry = this.responseChunkMap.get(messageId);
           if (entry && entry.buffer.length > 0) {
             sendResponseChunk(entry.buffer);
+            logger.debug('Sending buffered chunk', {
+              baseDir: this.project.baseDir,
+              taskId: this.taskId,
+              messageId: message.id,
+              chunk: entry.buffer,
+            });
             entry.buffer = '';
           } else {
+            logger.debug('No buffered chunk, stopping interval', {
+              baseDir: this.project.baseDir,
+              taskId: this.taskId,
+              messageId: message.id,
+            });
             // No buffered chunk, stop interval
             clearInterval(interval);
             this.responseChunkMap.delete(messageId);
           }
         }, RESPONSE_CHUNK_FLUSH_INTERVAL_MS);
+        logger.debug('Created interval for message', {
+          baseDir: this.project.baseDir,
+          taskId: this.taskId,
+          messageId: message.id,
+        });
         this.responseChunkMap.set(messageId, { buffer: '', interval });
       } else {
+        logger.debug('Appending to buffer', {
+          baseDir: this.project.baseDir,
+          taskId: this.taskId,
+          messageId: message.id,
+        });
         // Subsequent chunks: append to buffer
         const entry = this.responseChunkMap.get(message.id)!;
         entry.buffer += message.content;
