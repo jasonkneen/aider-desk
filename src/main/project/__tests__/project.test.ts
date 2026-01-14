@@ -392,3 +392,212 @@ describe('Project - createNewTask', () => {
     });
   });
 });
+
+describe('Project - deleteTask', () => {
+  let project: Project;
+  let mockStore: Store;
+  let mockEventManager: EventManager;
+  let mockMcpManager: McpManager;
+  let mockAgentProfileManager: AgentProfileManager;
+  let mockTelemetryManager: TelemetryManager;
+  let mockDataManager: DataManager;
+  let mockModelManager: ModelManager;
+  let mockWorktreeManager: WorktreeManager;
+  let mockMemoryManager: MemoryManager;
+  let mockHookManager: HookManager;
+  let mockPromptsManager: PromptsManager;
+
+  beforeEach(async () => {
+    mockMcpManager = {} as unknown as McpManager;
+    mockTelemetryManager = {} as unknown as TelemetryManager;
+    mockDataManager = {} as unknown as DataManager;
+    mockMemoryManager = {} as unknown as MemoryManager;
+
+    mockStore = {
+      get: vi.fn(),
+      set: vi.fn(),
+      getProviders: vi.fn(() => []),
+      getSettings: vi.fn(
+        () =>
+          ({
+            language: 'en',
+            renderMarkdown: true,
+            virtualizedRendering: true,
+            aiderDeskAutoUpdate: true,
+            promptBehavior: {
+              suggestionMode: 'automatically',
+              suggestionDelay: 0,
+              requireCommandConfirmation: {
+                add: false,
+                readOnly: false,
+                model: false,
+                modeSwitching: false,
+              },
+              useVimBindings: false,
+            },
+            server: {
+              enabled: false,
+              basicAuth: {
+                enabled: false,
+                username: '',
+                password: '',
+              },
+            },
+            memory: {
+              enabled: false,
+              provider: 'sentence-transformers',
+              model: '',
+              maxDistance: 0,
+            },
+            taskSettings: {
+              smartTaskState: true,
+              autoGenerateTaskName: true,
+              showTaskStateActions: true,
+              worktreeSymlinkFolders: [],
+            },
+            aider: {
+              options: '',
+              environmentVariables: '',
+              addRuleFiles: false,
+              autoCommits: true,
+              cachingEnabled: true,
+              watchFiles: true,
+              confirmBeforeEdit: false,
+            },
+            preferredModels: [],
+            mcpServers: {},
+            llmProviders: {},
+            telemetryEnabled: true,
+          }) as SettingsData,
+      ),
+      getProjectSettings: vi.fn(
+        () =>
+          ({
+            mainModel: 'default-model',
+            agentProfileId: 'default-profile',
+            modelEditFormats: {},
+            currentMode: 'agent' as Mode,
+            autoApproveLocked: false,
+          }) as ProjectSettings,
+      ),
+    } as unknown as Store;
+
+    mockEventManager = {
+      sendTaskCreated: vi.fn(),
+      sendTaskUpdated: vi.fn(),
+      sendTaskDeleted: vi.fn(),
+      sendProjectStarted: vi.fn(),
+      sendContextFilesUpdated: vi.fn(),
+      sendInputHistoryUpdated: vi.fn(),
+    } as unknown as EventManager;
+
+    mockModelManager = {
+      getProviderModels: vi.fn(() => Promise.resolve({ models: [] })),
+      getAiderModelMapping: vi.fn(() => ({
+        modelName: 'default-model',
+        environmentVariables: {},
+      })),
+    } as unknown as ModelManager;
+
+    mockWorktreeManager = {
+      close: vi.fn(() => Promise.resolve()),
+      getTaskWorktree: vi.fn(() => Promise.resolve(null)),
+      createWorktree: vi.fn(() => Promise.resolve({ path: '/test/worktree' })),
+      removeWorktree: vi.fn(() => Promise.resolve()),
+    } as unknown as WorktreeManager;
+
+    mockAgentProfileManager = {
+      initializeForProject: vi.fn(() => Promise.resolve()),
+      removeProject: vi.fn(),
+    } as unknown as AgentProfileManager;
+
+    mockHookManager = {
+      trigger: vi.fn((_hookName, event) => Promise.resolve({ event, blocked: false })) as any,
+      stopWatchingProject: vi.fn(() => Promise.resolve()),
+    } as unknown as HookManager;
+
+    mockPromptsManager = {
+      watchProject: vi.fn(() => Promise.resolve()),
+      unwatchProject: vi.fn(() => Promise.resolve()),
+      dispose: vi.fn(),
+    } as unknown as PromptsManager;
+    (mockPromptsManager as any).start = vi.fn(() => Promise.resolve());
+
+    vi.mocked(determineMainModel).mockReturnValue('default-model');
+    vi.mocked(determineWeakModel).mockReturnValue(null as any);
+    vi.mocked(fs.readdir).mockResolvedValue([] as any);
+    vi.mocked(fs.rm).mockResolvedValue(undefined);
+    vi.mocked(fs.stat).mockRejectedValue(new Error('File not found'));
+    vi.mocked(fs.readFile).mockResolvedValue('');
+    vi.mocked(migrateSessionsToTasks).mockResolvedValue(undefined);
+
+    // Keep all the mocks that were properly set up above
+    // (remove the reassignments that were overwriting the mocks with empty objects)
+
+    project = new Project(
+      '/test/project',
+      mockStore,
+      mockMcpManager,
+      mockTelemetryManager,
+      mockDataManager,
+      mockEventManager,
+      mockModelManager,
+      mockWorktreeManager,
+      mockAgentProfileManager,
+      mockMemoryManager,
+      mockHookManager,
+      mockPromptsManager,
+    );
+
+    await (project as any).tasksLoadingPromise;
+  });
+
+  it('should delete a task without subtasks', async () => {
+    const task = await project.createNewTask({ name: 'Test Task' });
+    await project.deleteTask(task.id);
+
+    const tasks = await project.getTasks();
+    expect(tasks.find((t) => t.id === task.id)).toBeUndefined();
+    expect(mockEventManager.sendTaskDeleted).toHaveBeenCalledWith(task);
+  });
+
+  it('should cascade delete parent task with subtasks', async () => {
+    const parentTask = await project.createNewTask({ name: 'Parent Task' });
+    const subtask1 = await project.createNewTask({ parentId: parentTask.id, name: 'Subtask 1' });
+    const subtask2 = await project.createNewTask({ parentId: parentTask.id, name: 'Subtask 2' });
+
+    await project.deleteTask(parentTask.id);
+
+    const tasks = await project.getTasks();
+    expect(tasks.find((t) => t.id === parentTask.id)).toBeUndefined();
+    expect(tasks.find((t) => t.id === subtask1.id)).toBeUndefined();
+    expect(tasks.find((t) => t.id === subtask2.id)).toBeUndefined();
+
+    expect(mockEventManager.sendTaskDeleted).toHaveBeenCalledTimes(3);
+  });
+
+  it('should delete subtasks when deleting parent task', async () => {
+    const parentTask = await project.createNewTask({ name: 'Parent Task' });
+    await project.createNewTask({ parentId: parentTask.id, name: 'Subtask' });
+
+    await project.deleteTask(parentTask.id);
+
+    const tasks = await project.getTasks();
+    expect(tasks.length).toBe(0);
+  });
+
+  it('should emit taskDeleted events for all deleted tasks', async () => {
+    const parentTask = await project.createNewTask({ name: 'Parent Task' });
+    const subtask1 = await project.createNewTask({ parentId: parentTask.id, name: 'Subtask 1' });
+    const subtask2 = await project.createNewTask({ parentId: parentTask.id, name: 'Subtask 2' });
+
+    await project.deleteTask(parentTask.id);
+
+    expect(mockEventManager.sendTaskDeleted).toHaveBeenCalledTimes(3);
+    const deletedTasks = (mockEventManager.sendTaskDeleted as unknown as Mock).mock.calls;
+    const deletedIds = deletedTasks.map((call) => call[0].id);
+    expect(deletedIds).toContain(parentTask.id);
+    expect(deletedIds).toContain(subtask1.id);
+    expect(deletedIds).toContain(subtask2.id);
+  });
+});

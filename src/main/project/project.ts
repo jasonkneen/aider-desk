@@ -344,24 +344,43 @@ export class Project {
     this.eventManager.sendCustomCommandsUpdated(this.baseDir, INTERNAL_TASK_ID, commands);
   }
 
-  public async deleteTask(taskId: string): Promise<void> {
+  private async deleteTaskInternal(taskId: string): Promise<void> {
     const taskDir = path.join(this.baseDir, '.aider-desk', 'tasks', taskId);
 
+    // Close the task if it's loaded
+    const task = this.tasks.get(taskId);
+    if (task) {
+      await task.close();
+      this.tasks.delete(taskId);
+      this.eventManager.sendTaskDeleted(task.task);
+    }
+
+    // Delete the task directory
+    await fs.rm(taskDir, { recursive: true, force: true });
+  }
+
+  public async deleteTask(taskId: string): Promise<void> {
     try {
-      // Close the task if it's loaded
-      const task = this.tasks.get(taskId);
-      if (task) {
-        await task.close();
-        this.tasks.delete(taskId);
-        this.eventManager.sendTaskDeleted(task.task);
+      // First, find and delete all subtasks recursively
+      const allTasks = await this.getTasks();
+      const subtasks = allTasks.filter((t) => t.parentId === taskId);
+
+      for (const subtask of subtasks) {
+        await this.deleteTaskInternal(subtask.id);
+        logger.info('Successfully deleted subtask', {
+          baseDir: this.baseDir,
+          parentTaskId: taskId,
+          subtaskId: subtask.id,
+        });
       }
 
-      // Delete the task directory
-      await fs.rm(taskDir, { recursive: true, force: true });
+      // Then delete the parent task
+      await this.deleteTaskInternal(taskId);
 
-      logger.info('Successfully deleted task', {
+      logger.info('Successfully deleted task with subtasks', {
         baseDir: this.baseDir,
         taskId,
+        subtaskCount: subtasks.length,
       });
     } catch (error) {
       logger.error('Failed to delete task:', {
