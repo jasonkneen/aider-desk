@@ -759,7 +759,7 @@ const TaskSidebarComponent = ({
         <div
           {...longPressProps}
           className={clsx(
-            'group relative flex items-center justify-between py-1 pl-1 cursor-pointer transition-colors border select-none',
+            'group relative flex items-center justify-between py-1 pl-2 px-1 cursor-pointer transition-colors border select-none',
             isSubtask && 'ml-2',
             optimisticActiveTaskId === task.id && !isMultiselectMode
               ? 'bg-bg-secondary border-border-dark-light'
@@ -770,7 +770,7 @@ const TaskSidebarComponent = ({
           onClick={(e) => handleTaskClick(e, task.id)}
           data-task-id={task.id}
         >
-          {isSubtask && <div className="absolute left-[-4px] top-[-1px] bottom-[-1px] w-px bg-bg-secondary" />}
+          {isSubtask && <div className="absolute left-[-1px] top-[-1px] bottom-[-1px] w-px bg-bg-secondary" />}
 
           <div className="flex items-center min-w-0 flex-1">
             {isMultiselectMode && (
