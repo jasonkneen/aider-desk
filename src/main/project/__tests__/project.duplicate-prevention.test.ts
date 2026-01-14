@@ -93,41 +93,6 @@ describe('Project Duplicate Subtask Prevention', () => {
     });
   });
 
-  it('should return existing empty subtask instead of creating a new one', async () => {
-    const parentId = 'parent-123';
-    const parentTask = {
-      task: {
-        id: parentId,
-        mainModel: 'test-model',
-      } as TaskData,
-    };
-
-    // Add parent task to project
-    (project as any).tasks.set(parentId, parentTask);
-
-    // Create an existing empty subtask
-    const existingSubtaskId = 'existing-subtask-id';
-    const existingSubtask = {
-      taskId: existingSubtaskId,
-      task: {
-        id: existingSubtaskId,
-        parentId: parentId,
-        name: '', // Default name
-        archived: false,
-      } as TaskData,
-      getContextMessages: vi.fn().mockResolvedValue([]), // Empty
-    };
-    (project as any).tasks.set(existingSubtaskId, existingSubtask);
-
-    // Mock prepareTask (should not be called if duplicate prevention works)
-    const prepareTaskSpy = vi.spyOn(project as any, 'prepareTask');
-
-    const result = await project.createNewTask({ parentId });
-
-    expect(result.id).toBe(existingSubtaskId);
-    expect(prepareTaskSpy).not.toHaveBeenCalled();
-  });
-
   it('should create a new subtask if existing one has a name', async () => {
     const parentId = 'parent-123';
     const parentTask = {

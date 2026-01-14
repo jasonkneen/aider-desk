@@ -672,9 +672,6 @@ export class Task {
       id: uuidv4(),
     };
 
-    // Add user message to context
-    this.addUserMessage(promptContext.id, prompt);
-
     // Add to context manager
     this.contextManager.addContextMessage({
       id: promptContext.id,
@@ -682,6 +679,9 @@ export class Task {
       content: prompt,
       promptContext,
     });
+
+    // Add user message to context
+    this.addUserMessage(promptContext.id, prompt);
 
     await this.saveTask({
       name: this.task.name || this.getTaskNameFromPrompt(prompt),

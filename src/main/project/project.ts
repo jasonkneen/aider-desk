@@ -64,7 +64,7 @@ export class Project {
     const normalizedParams = {
       ...params,
       parentId: params?.parentId || null,
-      name: params?.name || (params?.parentId ? '' : ''),
+      name: params?.name || '',
     };
 
     let parentTask: Task | null = null;
@@ -72,26 +72,6 @@ export class Project {
       parentTask = this.getTask(normalizedParams.parentId);
       if (!parentTask) {
         throw new Error(`Parent task with id ${normalizedParams.parentId} not found`);
-      }
-
-      // Story 1.4: Prevent duplicate empty subtasks
-      // We look for an existing subtask of the same parent that is "empty"
-      // "Empty" means it has no messages in its context and has a default name
-      const tasks = Array.from(this.tasks.values());
-      for (const t of tasks) {
-        if (t.task.parentId === normalizedParams.parentId && !t.task.archived) {
-          const isDefaultName = t.task.name === '' || t.task.name === '[Untitled]';
-          if (isDefaultName) {
-            const messages = await t.getContextMessages();
-            if (messages.length === 0) {
-              logger.info('Found existing empty subtask, focusing it instead of creating a new one', {
-                taskId: t.taskId,
-                parentId: normalizedParams.parentId,
-              });
-              return t.task;
-            }
-          }
-        }
       }
     }
 
@@ -135,6 +115,7 @@ export class Project {
 
     const internalTask = this.getTask(INTERNAL_TASK_ID);
     if (internalTask) {
+      // adding files from internal task that keeps track of files to new task
       const contextFiles = await internalTask.getContextFiles();
       contextFiles.forEach((file) => {
         task.addFile(file);
