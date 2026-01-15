@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { ProjectSettingsSchema, TaskDataSchema } from '@common/types';
+import { CreateTaskParams, ProjectSettingsSchema, TaskDataSchema } from '@common/types';
 
 import { BaseApi } from './base-api';
 
@@ -148,6 +148,8 @@ const InitProjectRulesFileSchema = z.object({
 
 const CreateNewTaskSchema = z.object({
   projectDir: z.string().min(1, 'Project directory is required'),
+  parentId: z.string().nullable().optional(),
+  name: z.string().optional(),
 });
 
 const UpdateTaskSchema = z.object({
@@ -434,8 +436,9 @@ export class ProjectApi extends BaseApi {
           return;
         }
 
-        const { projectDir } = parsed;
-        const task = await this.eventsHandler.createNewTask(projectDir);
+        const { projectDir, parentId, name } = parsed;
+        const params: CreateTaskParams = { parentId, name };
+        const task = await this.eventsHandler.createNewTask(projectDir, params);
         res.status(200).json(task);
       }),
     );
