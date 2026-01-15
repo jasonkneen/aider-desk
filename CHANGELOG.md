@@ -9,6 +9,7 @@
 - added tooltip to read and edit file power tools to show the file path on hover
 - added support for subtasks with worktree inheritance
 - updated task tools with the subtask capabilities
+- added missing scrollbar to task sidebar on mobile devices
 
 ## [0.48.1]
 

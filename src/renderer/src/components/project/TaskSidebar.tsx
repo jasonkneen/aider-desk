@@ -931,7 +931,7 @@ const TaskSidebarComponent = ({
         transition={{ duration: 0.3, ease: 'easeInOut' }}
         className={
           isMobile
-            ? 'fixed inset-y-0 left-0 w-full h-full bg-bg-primary z-[1000] shadow-xl'
+            ? 'fixed inset-y-0 left-0 w-full h-full bg-bg-primary z-[1000] shadow-xl flex flex-col'
             : clsx('flex flex-col h-full border-r border-border-dark-light bg-bg-primary-light-strong', className)
         }
       >
