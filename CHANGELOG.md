@@ -10,6 +10,7 @@
 - added support for subtasks with worktree inheritance
 - updated task tools with the subtask capabilities
 - added missing scrollbar to task sidebar on mobile devices
+- added Select all action into menu
 
 ## [0.48.1]
 
