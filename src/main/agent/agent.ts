@@ -1064,7 +1064,13 @@ export class Agent {
     return messages;
   }
 
-  async generateText(agentProfile: AgentProfile, systemPrompt: string, prompt: string): Promise<string> {
+  async generateText(
+    agentProfile: AgentProfile,
+    systemPrompt: string,
+    prompt: string,
+    abortable = true,
+    abortSignal?: AbortSignal,
+  ): Promise<string | undefined> {
     const providers = this.store.getProviders();
     const provider = providers.find((p) => p.id === agentProfile.provider);
     if (!provider) {
@@ -1076,6 +1082,13 @@ export class Agent {
     const providerOptions = this.modelManager.getProviderOptions(provider, agentProfile.model);
     const providerParameters = this.modelManager.getProviderParameters(provider, agentProfile.model);
 
+    const controllerId = uuidv4();
+    const newController = abortable ? new AbortController() : null;
+    if (newController) {
+      this.abortControllers.set(controllerId, newController);
+    }
+    const effectiveAbortSignal = abortSignal || newController?.signal;
+
     logger.info('Generating text:', {
       providerId: provider.id,
       providerName: provider.provider.name,
@@ -1083,15 +1096,31 @@ export class Agent {
       systemPrompt: systemPrompt.substring(0, 100),
       prompt: prompt.substring(0, 100),
     });
-    const result = await generateText({
-      model,
-      system: systemPrompt,
-      messages: [{ role: 'user', content: prompt }],
-      providerOptions,
-      ...providerParameters,
-    });
 
-    return result.text;
+    try {
+      const result = await generateText({
+        model,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: prompt }],
+        abortSignal: effectiveAbortSignal,
+        providerOptions,
+        ...providerParameters,
+      });
+
+      return result.text;
+    } catch (error) {
+      if (effectiveAbortSignal?.aborted) {
+        logger.info('Generating text aborted by user');
+        return undefined;
+      }
+      logger.error('Error generating text:', error);
+      throw error;
+    } finally {
+      if (newController) {
+        logger.debug('Cleaned up abort controller', { controllerId });
+        this.abortControllers.delete(controllerId);
+      }
+    }
   }
 
   async estimateTokens(task: Task, profile: AgentProfile): Promise<number> {

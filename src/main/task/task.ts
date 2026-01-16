@@ -89,6 +89,7 @@ export class Task {
   private agentRunResolves: (() => void)[] = [];
   private git: SimpleGit | null = null;
   private responseChunkMap: Map<string, { buffer: string; interval: NodeJS.Timeout }> = new Map();
+  private isDeterminingTaskState = false;
 
   private readonly taskDataPath: string;
   private readonly contextManager: ContextManager;
@@ -846,40 +847,47 @@ export class Task {
         agentProfile,
         this.promptsManager.getGenerateTaskNamePrompt(this),
         `Generate a concise task name for this request:\n\n${prompt.length > maxPromptLength ? prompt.substring(0, maxPromptLength) + '...' : prompt}\n\nOnly answer with the task name, nothing else.`,
+        false,
       );
-      logger.info('Generated task name:', { taskName });
-      return taskName.trim();
+      if (taskName) {
+        logger.info('Generated task name:', { taskName });
+        return taskName.trim();
+      } else {
+        logger.warn('Generate task name interrupted');
+      }
     }
 
     return null;
   }
 
   private async determineTaskState(resultMessages: ContextMessage[]): Promise<string | null> {
-    // Find the last assistant message from result messages
-    const lastAssistantMessage = [...resultMessages].reverse().find((msg) => msg.role === MessageRole.Assistant) as ContextAssistantMessage | undefined;
-
-    if (!lastAssistantMessage) {
-      logger.debug('No assistant message found for task state determination');
-      return null;
-    }
-
-    // Extract reasoning and text from the last assistant message
-    const reasoningText = Array.isArray(lastAssistantMessage.content) && lastAssistantMessage.content.find((part) => part.type === 'reasoning')?.text;
-    const contentText = extractTextContent(lastAssistantMessage.content);
-
-    if (!contentText && !reasoningText) {
-      logger.debug('No content found in last assistant message for task state determination');
-      return null;
-    }
-
-    // Create a user message wrapping the last assistant message information
-    let wrappedMessage = "Based on the agent's last response, determine the appropriate task state.\n\n";
-    if (reasoningText) {
-      wrappedMessage += `<agent-reasoning>\n${reasoningText}</agent-reasoning>\n\n`;
-    }
-    wrappedMessage += `<agent-response>\n${contentText}</agent-response>`;
+    this.isDeterminingTaskState = true;
 
     try {
+      // Find the last assistant message from result messages
+      const lastAssistantMessage = [...resultMessages].reverse().find((msg) => msg.role === MessageRole.Assistant) as ContextAssistantMessage | undefined;
+
+      if (!lastAssistantMessage) {
+        logger.debug('No assistant message found for task state determination');
+        return null;
+      }
+
+      // Extract reasoning and text from the last assistant message
+      const reasoningText = Array.isArray(lastAssistantMessage.content) && lastAssistantMessage.content.find((part) => part.type === 'reasoning')?.text;
+      const contentText = extractTextContent(lastAssistantMessage.content);
+
+      if (!contentText && !reasoningText) {
+        logger.debug('No content found in last assistant message for task state determination');
+        return null;
+      }
+
+      // Create a user message wrapping the last assistant message information
+      let wrappedMessage = "Based on the agent's last response, determine the appropriate task state.\n\n";
+      if (reasoningText) {
+        wrappedMessage += `<agent-reasoning>\n${reasoningText}</agent-reasoning>\n\n`;
+      }
+      wrappedMessage += `<agent-response>\n${contentText}</agent-response>`;
+
       const agentProfile = await this.getTaskAgentProfile();
       if (!agentProfile) {
         logger.debug('No agent profile found for task state determination');
@@ -889,6 +897,10 @@ export class Task {
       this.addLogMessage('loading', 'Updating task state...');
 
       const answer = await this.agent.generateText(agentProfile, this.promptsManager.getUpdateTaskStatePrompt(this), wrappedMessage);
+      if (!answer) {
+        logger.warn('Task state determination interrupted');
+        return null;
+      }
 
       logger.info('Determining task state:', {
         baseDir: this.project.baseDir,
@@ -909,6 +921,8 @@ export class Task {
       }
     } catch (error) {
       logger.error('Error determining task state:', error);
+    } finally {
+      this.isDeterminingTaskState = false;
     }
 
     return null;
@@ -1894,10 +1908,17 @@ export class Task {
     this.cleanupChunkBuffers();
 
     if (this.initialized && this.task.state === DefaultTaskState.InProgress) {
-      void this.saveTask({
-        state: DefaultTaskState.Interrupted,
-        interruptedAt: new Date().toISOString(),
-      });
+      if (this.isDeterminingTaskState) {
+        void this.saveTask({
+          state: DefaultTaskState.ReadyForReview,
+          completedAt: new Date().toISOString(),
+        });
+      } else {
+        void this.saveTask({
+          state: DefaultTaskState.Interrupted,
+          interruptedAt: new Date().toISOString(),
+        });
+      }
     }
   }
 
@@ -2745,6 +2766,7 @@ ${error.stderr}`,
                 agentProfile,
                 this.promptsManager.getGenerateCommitMessagePrompt(this),
                 `Generate a concise conventional commit message for these changes:\n\n${changesDiff}\n\nOnly answer with the commit message, nothing else.`,
+                false,
               );
               logger.info('Generated commit message:', {
                 commitMessage: effectiveCommitMessage,
@@ -2756,11 +2778,7 @@ ${error.stderr}`,
             }
           } else {
             logger.warn('No active agent profile found, using task name for commit message');
-            effectiveCommitMessage = this.task.name || `Task ${this.taskId} changes`;
           }
-        } else {
-          // No commits to merge, use default message
-          effectiveCommitMessage = this.task.name || `Task ${this.taskId} changes`;
         }
       }
 
@@ -2769,7 +2787,7 @@ ${error.stderr}`,
         this.task.id,
         this.task.worktree.path,
         squash,
-        effectiveCommitMessage,
+        effectiveCommitMessage || this.task.name || `Task ${this.taskId} changes`,
         targetBranch,
       );
 

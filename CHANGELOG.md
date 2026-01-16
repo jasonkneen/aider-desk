@@ -15,6 +15,7 @@
 - added optimistic updates to redo user message and interrupt response
 - setting max width for the autocompletion popup in prompt field
 - added task search tools for searching within tasks and parent tasks using semantic search
+- properly interrupting determine task state action after agent completion
 
 ## [0.48.1]
 
