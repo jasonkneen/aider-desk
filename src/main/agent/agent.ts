@@ -1267,7 +1267,7 @@ export class Agent {
     }
 
     // Check for context compacting
-    const totalTokens = usageReport.sentTokens + usageReport.receivedTokens;
+    const totalTokens = usageReport.sentTokens + usageReport.receivedTokens + (usageReport.cacheReadTokens ?? 0);
     if (maxTokens && totalTokens > (maxTokens * contextCompactingThreshold) / 100) {
       logger.info(`Token usage ${totalTokens} exceeds threshold of ${contextCompactingThreshold}%. Compacting conversation.`);
       task.addLogMessage('info', 'Token usage exceeds threshold. Compacting conversation...', false, promptContext);
