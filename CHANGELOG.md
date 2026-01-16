@@ -11,6 +11,9 @@
 - updated task tools with the subtask capabilities
 - added missing scrollbar to task sidebar on mobile devices
 - added Select all action into menu
+- ensuring to include usage in for LiteLLM models when streaming
+- added optimistic updates to redo user message and interrupt response
+- setting max width for the autocompletion popup in prompt field
 
 ## [0.48.1]
 
