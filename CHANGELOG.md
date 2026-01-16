@@ -14,6 +14,7 @@
 - ensuring to include usage in for LiteLLM models when streaming
 - added optimistic updates to redo user message and interrupt response
 - setting max width for the autocompletion popup in prompt field
+- added task search tools for searching within tasks and parent tasks using semantic search
 
 ## [0.48.1]
 

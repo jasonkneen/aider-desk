@@ -841,6 +841,7 @@ export interface Model {
   providerId: string;
   maxInputTokens?: number;
   maxOutputTokens?: number;
+  maxOutputTokensLimit?: number;
   temperature?: number;
   inputCostPerToken?: number;
   outputCostPerToken?: number;

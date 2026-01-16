@@ -37,11 +37,11 @@ import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.j
 // @ts-expect-error istextorbinary is not typed properly
 import { isBinary } from 'istextorbinary';
 import { fileTypeFromBuffer } from 'file-type';
-import { HELPERS_TOOL_GROUP_NAME, TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
+import { HELPERS_TOOL_GROUP_NAME, TASKS_TOOL_GROUP_NAME, TASKS_TOOL_SEARCH_PARENT_TASK, TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 
 import { createPowerToolset } from './tools/power';
 import { createTodoToolset } from './tools/todo';
-import { createTasksToolset } from './tools/tasks';
+import { createSearchParentTaskTool, createTasksToolset } from './tools/tasks';
 import { createAiderToolset } from './tools/aider';
 import { createHelpersToolset } from './tools/helpers';
 import { createMemoryToolset } from './tools/memory';
@@ -351,6 +351,11 @@ export class Agent {
     if (profile.useTaskTools) {
       const taskTools = createTasksToolset(this.store.getSettings(), task, profile, promptContext);
       Object.assign(toolSet, taskTools);
+    }
+
+    // Add search parent task tool for subtasks
+    if (task.task.parentId !== null) {
+      toolSet[`${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_SEARCH_PARENT_TASK}`] = createSearchParentTaskTool(task, promptContext);
     }
 
     if (profile.useMemoryTools) {

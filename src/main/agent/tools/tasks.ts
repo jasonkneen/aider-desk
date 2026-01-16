@@ -1,4 +1,6 @@
-import { tool, type ToolSet } from 'ai';
+import path from 'path';
+
+import { type Tool, tool, type ToolSet } from 'ai';
 import { z } from 'zod';
 import {
   TASKS_TOOL_CREATE_TASK,
@@ -8,12 +10,19 @@ import {
   TASKS_TOOL_GET_TASK_MESSAGE,
   TASKS_TOOL_GROUP_NAME,
   TASKS_TOOL_LIST_TASKS,
+  TASKS_TOOL_SEARCH_PARENT_TASK,
+  TASKS_TOOL_SEARCH_TASK,
   TOOL_GROUP_NAME_SEPARATOR,
 } from '@common/tools';
 import { AgentProfile, PromptContext, SettingsData, TaskData, ToolApprovalState } from '@common/types';
+import { search } from '@probelabs/probe';
+import { fileExists } from '@common/utils';
 
 import { ApprovalManager } from './approval-manager';
 
+import { AIDER_DESK_TASKS_DIR, PROBE_BINARY_PATH } from '@/constants';
+import logger from '@/logger';
+import { isAbortError } from '@/utils/errors';
 import { Task } from '@/task';
 
 export const createTasksToolset = (settings: SettingsData, task: Task, profile: AgentProfile, promptContext?: PromptContext): ToolSet => {
@@ -111,7 +120,10 @@ export const createTasksToolset = (settings: SettingsData, task: Task, profile: 
           name: targetTask.task.name,
           createdAt: targetTask.task.createdAt,
           updatedAt: targetTask.task.updatedAt,
-          contextFiles: contextFiles.map((f) => ({ path: f.path, readOnly: f.readOnly })),
+          contextFiles: contextFiles.map((f) => ({
+            path: f.path,
+            readOnly: f.readOnly,
+          })),
           contextMessagesCount: contextMessages.length,
           agentProfileId: targetTask.task.agentProfileId,
           provider: targetTask.task.provider,
@@ -283,7 +295,10 @@ export const createTasksToolset = (settings: SettingsData, task: Task, profile: 
           id: newTask.id,
           name: newTask.name,
           result: shouldExecute ? 'Task created and executed successfully' : 'Task created successfully',
-          ...(shouldExecute && contextMessages.length > 0 && { lastMessage: contextMessages[contextMessages.length - 1] }),
+          ...(shouldExecute &&
+            contextMessages.length > 0 && {
+              lastMessage: contextMessages[contextMessages.length - 1],
+            }),
         };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
@@ -324,12 +339,83 @@ export const createTasksToolset = (settings: SettingsData, task: Task, profile: 
     },
   });
 
+  const searchTaskTool = tool({
+    description: TASKS_TOOL_DESCRIPTIONS[TASKS_TOOL_SEARCH_TASK],
+    inputSchema: z.object({
+      taskId: z.string().describe('The ID of the task to search within'),
+      query: z.string().describe('Search query with Elasticsearch syntax. Use + for important terms.'),
+      maxTokens: z.number().optional().default(10000).describe('Maximum number of tokens to return in the search results. Default: 10000'),
+    }),
+    execute: async ({ taskId, query, maxTokens }, { toolCallId }) => {
+      task.addToolMessage(toolCallId, TASKS_TOOL_GROUP_NAME, TASKS_TOOL_SEARCH_TASK, { taskId, query, maxTokens }, undefined, undefined, promptContext);
+
+      const questionKey = `${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_SEARCH_TASK}`;
+      const questionText = `Approve searching in task ${taskId}?`;
+      const questionSubject = `Query: ${query}\nTask ID: ${taskId}`;
+
+      const [isApproved, userInput] = await approvalManager.handleApproval(questionKey, questionText, questionSubject);
+
+      if (!isApproved) {
+        return `Task search denied by user. Reason: ${userInput}`;
+      }
+
+      try {
+        const targetTask = task.getProject().getTask(taskId);
+
+        if (!targetTask) {
+          return `Task with ID ${taskId} not found`;
+        }
+
+        const contextFilePath = path.join(targetTask.project.baseDir, AIDER_DESK_TASKS_DIR, taskId, 'context.json');
+
+        const exists = await fileExists(contextFilePath);
+        if (!exists) {
+          return `Task context file not found at ${contextFilePath}`;
+        }
+
+        logger.debug(`Searching in task context file: ${contextFilePath}`, {
+          query,
+          maxTokens,
+        });
+
+        const effectiveMaxTokens = maxTokens || 10000;
+
+        // @ts-expect-error probe is not typed properly
+        const results = await search({
+          query,
+          path: contextFilePath,
+          json: false,
+          maxTokens: effectiveMaxTokens,
+          binaryOptions: {
+            path: PROBE_BINARY_PATH,
+          },
+        });
+
+        logger.debug(`Task search results: ${JSON.stringify(results)}`);
+
+        return results;
+      } catch (error: unknown) {
+        if (isAbortError(error)) {
+          return 'Operation was cancelled by user.';
+        }
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error('Error executing task search command:', error);
+        task.addLogMessage(
+          'error',
+          `Task search failed with error:\n\n${errorMessage}\n\nPlease, consider reporting an issue at https://github.com/hotovo/aider-desk/issues. Thank you.`,
+        );
+        return errorMessage;
+      }
+    },
+  });
+
   const allTools = {
     [`${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_LIST_TASKS}`]: listTasksTool,
     [`${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_GET_TASK}`]: getTaskTool,
     [`${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_GET_TASK_MESSAGE}`]: getTaskMessageTool,
     [`${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_CREATE_TASK}`]: createTaskTool,
     [`${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_DELETE_TASK}`]: deleteTaskTool,
+    [`${TASKS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${TASKS_TOOL_SEARCH_TASK}`]: searchTaskTool,
   };
 
   const filteredTools: ToolSet = {};
@@ -340,4 +426,84 @@ export const createTasksToolset = (settings: SettingsData, task: Task, profile: 
   }
 
   return filteredTools;
+};
+
+/**
+ * Creates the search parent task tool for subtasks.
+ * This tool is not included in the default toolset and should be added
+ * directly in agent.ts's getAvailableTools method when task is a subtask.
+ */
+export const createSearchParentTaskTool = (task: Task, promptContext?: PromptContext): Tool => {
+  return tool({
+    description: TASKS_TOOL_DESCRIPTIONS[TASKS_TOOL_SEARCH_PARENT_TASK],
+    inputSchema: z.object({
+      query: z.string().describe('Search query with Elasticsearch syntax. Use + for important terms.'),
+      maxTokens: z.number().optional().default(10000).describe('Maximum number of tokens to return in the search results. Default: 10000'),
+    }),
+    execute: async ({ query, maxTokens }, { toolCallId }) => {
+      // Always use parent task ID
+      const parentTaskId = task.task.parentId;
+
+      if (!parentTaskId) {
+        return 'This tool is only available for subtasks. Current task has no parent.';
+      }
+
+      task.addToolMessage(
+        toolCallId,
+        TASKS_TOOL_GROUP_NAME,
+        TASKS_TOOL_SEARCH_PARENT_TASK,
+        { query, maxTokens, parentTaskId },
+        undefined,
+        undefined,
+        promptContext,
+      );
+
+      // No approval required for parent task search
+
+      try {
+        const parentTask = task.getProject().getTask(parentTaskId);
+
+        if (!parentTask) {
+          return `Parent task with ID ${parentTaskId} not found`;
+        }
+
+        const contextFilePath = path.join(parentTask.project.baseDir, AIDER_DESK_TASKS_DIR, parentTaskId, 'context.json');
+
+        const exists = await fileExists(contextFilePath);
+        if (!exists) {
+          return `Parent task context file not found at ${contextFilePath}`;
+        }
+
+        logger.debug(`Searching in parent task context file: ${contextFilePath}`, { query, maxTokens, parentTaskId });
+
+        const effectiveMaxTokens = maxTokens || 10000;
+
+        // @ts-expect-error probe is not typed properly
+        const results = await search({
+          query,
+          path: contextFilePath,
+          json: false,
+          maxTokens: effectiveMaxTokens,
+          binaryOptions: {
+            path: PROBE_BINARY_PATH,
+          },
+        });
+
+        logger.debug(`Parent task search results: ${JSON.stringify(results)}`);
+
+        return results;
+      } catch (error: unknown) {
+        if (isAbortError(error)) {
+          return 'Operation was cancelled by user.';
+        }
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error('Error executing parent task search command:', error);
+        task.addLogMessage(
+          'error',
+          `Parent task search failed with error:\n\n${errorMessage}\n\nPlease, consider reporting an issue at https://github.com/hotovo/aider-desk/issues. Thank you.`,
+        );
+        return errorMessage;
+      }
+    },
+  });
 };
