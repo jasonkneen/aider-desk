@@ -127,6 +127,7 @@ describe('TaskView', () => {
   } as unknown as TaskData;
 
   const mockUpdateTask = vi.fn();
+  const mockUpdateOptimisticTaskState = vi.fn();
   const mockApi = createMockApi();
 
   const mockTaskContext = createMockTaskContext();
@@ -159,34 +160,74 @@ describe('TaskView', () => {
   });
 
   it('renders core components when loaded', () => {
-    render(<TaskView project={mockProject} task={mockTask} updateTask={mockUpdateTask} inputHistory={[]} />);
+    render(
+      <TaskView
+        project={mockProject}
+        task={mockTask}
+        updateTask={mockUpdateTask}
+        updateOptimisticTaskState={mockUpdateOptimisticTaskState}
+        inputHistory={[]}
+      />,
+    );
 
     expect(screen.getByTestId('task-bar')).toBeInTheDocument();
   });
 
   it('calls updateTask when mode is changed in TaskBar', () => {
-    render(<TaskView project={mockProject} task={mockTask} updateTask={mockUpdateTask} inputHistory={[]} />);
+    render(
+      <TaskView
+        project={mockProject}
+        task={mockTask}
+        updateTask={mockUpdateTask}
+        updateOptimisticTaskState={mockUpdateOptimisticTaskState}
+        inputHistory={[]}
+      />,
+    );
 
     fireEvent.click(screen.getByText('Change Mode'));
     expect(mockUpdateTask).toHaveBeenCalledWith({ currentMode: 'architect' });
   });
 
   it('calls setAiderModelsData when model is changed in TaskBar', () => {
-    render(<TaskView project={mockProject} task={mockTask} updateTask={mockUpdateTask} inputHistory={[]} />);
+    render(
+      <TaskView
+        project={mockProject}
+        task={mockTask}
+        updateTask={mockUpdateTask}
+        updateOptimisticTaskState={mockUpdateOptimisticTaskState}
+        inputHistory={[]}
+      />,
+    );
 
     fireEvent.click(screen.getByText('Change Model'));
     expect(mockTaskContext.setAiderModelsData).toHaveBeenCalledWith(mockTask.id, { mainModel: 'new-model' });
   });
 
   it('calls api.runPrompt when prompt is submitted', () => {
-    render(<TaskView project={mockProject} task={mockTask} updateTask={mockUpdateTask} inputHistory={[]} />);
+    render(
+      <TaskView
+        project={mockProject}
+        task={mockTask}
+        updateTask={mockUpdateTask}
+        updateOptimisticTaskState={mockUpdateOptimisticTaskState}
+        inputHistory={[]}
+      />,
+    );
 
     fireEvent.click(screen.getByText('Run Prompt'));
     expect(mockApi.runPrompt).toHaveBeenCalledWith(mockProject.baseDir, mockTask.id, 'hello', 'code');
   });
 
   it('calls api.addFile when files are added', () => {
-    render(<TaskView project={mockProject} task={mockTask} updateTask={mockUpdateTask} inputHistory={[]} />);
+    render(
+      <TaskView
+        project={mockProject}
+        task={mockTask}
+        updateTask={mockUpdateTask}
+        updateOptimisticTaskState={mockUpdateOptimisticTaskState}
+        inputHistory={[]}
+      />,
+    );
 
     fireEvent.click(screen.getByText('Add File'));
     expect(mockApi.addFile).toHaveBeenCalledWith(mockProject.baseDir, mockTask.id, 'file1.ts', false);
@@ -203,7 +244,15 @@ describe('TaskView', () => {
 
         vi.mocked(useTaskMessages).mockReturnValue(testMessages);
 
-        render(<TaskView project={mockProject} task={mockTask} updateTask={mockUpdateTask} inputHistory={[]} />);
+        render(
+          <TaskView
+            project={mockProject}
+            task={mockTask}
+            updateTask={mockUpdateTask}
+            updateOptimisticTaskState={mockUpdateOptimisticTaskState}
+            inputHistory={[]}
+          />,
+        );
 
         // All messages should be present initially
         expect(screen.queryByText('First message')).toBeInTheDocument();
@@ -220,7 +269,15 @@ describe('TaskView', () => {
 
         vi.mocked(useTaskMessages).mockReturnValue(testMessages);
 
-        render(<TaskView project={mockProject} task={mockTask} updateTask={mockUpdateTask} inputHistory={[]} />);
+        render(
+          <TaskView
+            project={mockProject}
+            task={mockTask}
+            updateTask={mockUpdateTask}
+            updateOptimisticTaskState={mockUpdateOptimisticTaskState}
+            inputHistory={[]}
+          />,
+        );
 
         // Verify that API function is available and properly typed
         expect(mockApi.removeMessage).toBeDefined();
@@ -232,7 +289,15 @@ describe('TaskView', () => {
 
         vi.mocked(useTaskMessages).mockReturnValue(testMessages);
 
-        render(<TaskView project={mockProject} task={mockTask} updateTask={mockUpdateTask} inputHistory={[]} />);
+        render(
+          <TaskView
+            project={mockProject}
+            task={mockTask}
+            updateTask={mockUpdateTask}
+            updateOptimisticTaskState={mockUpdateOptimisticTaskState}
+            inputHistory={[]}
+          />,
+        );
 
         // The component should have loading state capability
         // This is verified by presence of isRemoving state in the component
@@ -246,7 +311,15 @@ describe('TaskView', () => {
 
         vi.mocked(useTaskMessages).mockReturnValue(testMessages);
 
-        render(<TaskView project={mockProject} task={mockTask} updateTask={mockUpdateTask} inputHistory={[]} />);
+        render(
+          <TaskView
+            project={mockProject}
+            task={mockTask}
+            updateTask={mockUpdateTask}
+            updateOptimisticTaskState={mockUpdateOptimisticTaskState}
+            inputHistory={[]}
+          />,
+        );
 
         // Verify that toast notification is available for error handling
         expect(toast.error).toBeDefined();
@@ -259,7 +332,15 @@ describe('TaskView', () => {
 
         vi.mocked(useTaskMessages).mockReturnValue(testMessages);
 
-        render(<TaskView project={mockProject} task={mockTask} updateTask={mockUpdateTask} inputHistory={[]} />);
+        render(
+          <TaskView
+            project={mockProject}
+            task={mockTask}
+            updateTask={mockUpdateTask}
+            updateOptimisticTaskState={mockUpdateOptimisticTaskState}
+            inputHistory={[]}
+          />,
+        );
 
         // Verify that taskStore setMessages function is available
         expect(mockTaskContext.setMessages).toBeDefined();
@@ -273,7 +354,15 @@ describe('TaskView', () => {
 
         vi.mocked(useTaskMessages).mockReturnValue(testMessages);
 
-        render(<TaskView project={mockProject} task={mockTask} updateTask={mockUpdateTask} inputHistory={[]} />);
+        render(
+          <TaskView
+            project={mockProject}
+            task={mockTask}
+            updateTask={mockUpdateTask}
+            updateOptimisticTaskState={mockUpdateOptimisticTaskState}
+            inputHistory={[]}
+          />,
+        );
 
         // Verify component has isRemoving state management
         // React state updates are synchronous and complete within milliseconds

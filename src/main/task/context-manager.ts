@@ -439,29 +439,20 @@ export class ContextManager {
     this.autosave();
   }
 
-  removeLastUserMessage(): string | null {
-    let lastUserMessageContent: string | null = null;
-
-    while (this.messages.length > 0) {
-      const lastMessage = this.messages.pop();
-      if (!lastMessage) {
-        break;
-      }
-
-      logger.debug(`Task ${this.taskId}: Removing message during user message search: ${lastMessage.role}`);
-
-      if (lastMessage.role === MessageRole.User) {
-        lastUserMessageContent = extractTextContent(lastMessage.content);
-        logger.debug(`Task ${this.taskId}: Found and removed last user message. Content: ${lastUserMessageContent}`);
-        break;
-      }
+  removeMessagesUpToLastUserMessage(): ContextMessage[] {
+    const lastUserMessageIndex = this.messages.findLastIndex((msg) => msg.role === MessageRole.User);
+    if (lastUserMessageIndex === -1) {
+      logger.warn('No user message found to remove up to.', {
+        taskId: this.taskId,
+      });
+      return [];
     }
 
-    if (lastUserMessageContent !== null) {
-      this.autosave();
-    }
+    const removedMessages = this.messages.splice(lastUserMessageIndex);
+    logger.debug(`Task ${this.taskId}: Removed ${removedMessages.length} messages up to last user message. Total messages: ${this.messages.length}`);
+    this.autosave();
 
-    return lastUserMessageContent;
+    return removedMessages;
   }
 
   toConnectorMessages(contextMessages: ContextMessage[] = this.messages): { role: MessageRole; content: string }[] {

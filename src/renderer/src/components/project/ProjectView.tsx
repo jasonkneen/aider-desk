@@ -411,6 +411,24 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
     [api, project.baseDir, handleTaskSelect],
   );
 
+  const handleUpdateOptimisticTaskState = useCallback(
+    (taskId: string, taskState: string) => {
+      startTransition(() => {
+        setOptimisticTasks((prev) =>
+          prev.map((task) =>
+            task.id === taskId
+              ? {
+                  ...task,
+                  state: taskState,
+                }
+              : task,
+          ),
+        );
+      });
+    },
+    [setOptimisticTasks],
+  );
+
   if (!projectSettings || !settings) {
     return <LoadingOverlay message={t('common.loadingProjectSettings')} />;
   }
@@ -453,6 +471,7 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
               project={project}
               task={activeTask}
               updateTask={handleUpdateTask}
+              updateOptimisticTaskState={handleUpdateOptimisticTaskState}
               inputHistory={inputHistory}
               isActive={isActive && activeTaskId === activeTask.id}
               shouldFocusPrompt={shouldFocusNewTask}

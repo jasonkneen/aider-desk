@@ -606,7 +606,7 @@ export class Task {
     }
   }
 
-  public async runPrompt(prompt: string, mode: Mode = 'code', addToInputHistory = true): Promise<ResponseCompletedData[]> {
+  public async runPrompt(prompt: string, mode: Mode = 'code', addToInputHistory = true, userMessageId = uuidv4()): Promise<ResponseCompletedData[]> {
     if (this.currentQuestion) {
       if (this.answerQuestion('n', prompt)) {
         logger.debug('Processed by the answerQuestion function.');
@@ -635,10 +635,10 @@ export class Task {
     }
 
     const promptContext: PromptContext = {
-      id: uuidv4(),
+      id: userMessageId,
     };
 
-    this.addUserMessage(promptContext.id, prompt);
+    this.addUserMessage(userMessageId, prompt);
     this.addLogMessage('loading');
 
     this.telemetryManager.captureRunPrompt(mode);
@@ -2015,18 +2015,30 @@ export class Task {
       hasUpdatedPrompt: !!updatedPrompt,
     });
 
-    const originalLastUserMessageContent = this.contextManager.removeLastUserMessage();
-    const promptToRun = updatedPrompt ?? originalLastUserMessageContent;
+    const removedMessages = this.contextManager.removeMessagesUpToLastUserMessage();
+    const originalLastUserMessage = removedMessages.findLast((msg) => msg.role === MessageRole.User);
+    if (!originalLastUserMessage) {
+      logger.warn('Could not find original last user message content to redo.');
+      return;
+    }
+
+    const promptToRun = updatedPrompt ?? (originalLastUserMessage.content as string);
 
     if (promptToRun) {
       logger.info('Found message content to run, reloading and re-running prompt.', {
         remainingMessagesCount: (await this.contextManager.getContextMessages()).length,
       });
-      await this.contextManager.loadMessages(await this.contextManager.getContextMessages());
+
+      this.eventManager.sendTaskMessageRemoved(
+        this.project.baseDir,
+        this.taskId,
+        removedMessages.slice(0, -1).map((msg) => msg.id),
+      );
+
       await this.updateContextInfo();
 
       // No need to await runPrompt here, let it run in the background
-      void this.runPrompt(promptToRun, mode);
+      void this.runPrompt(promptToRun, mode, false, originalLastUserMessage.id);
     } else {
       logger.warn('Could not find a previous user message to redo or an updated prompt to run.');
     }

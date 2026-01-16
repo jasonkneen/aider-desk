@@ -426,7 +426,7 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({ baseDir, task
 
       setMessages(taskId, (prevMessages) => {
         const loadingMessages = prevMessages.filter(isLoadingMessage);
-        const nonLoadingMessages = prevMessages.filter((message) => !isLoadingMessage(message));
+        const nonLoadingMessages = prevMessages.filter((message) => !isLoadingMessage(message) && message.id !== data.id);
         return [...nonLoadingMessages, userMessage, ...loadingMessages];
       });
     };

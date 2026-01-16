@@ -54,6 +54,7 @@ type Props = {
   project: ProjectData;
   task: TaskData;
   updateTask: (taskId: string, updates: Partial<TaskData>, useOptimistic?: boolean) => void;
+  updateOptimisticTaskState: (taskId: string, taskState: string) => void;
   inputHistory: string[];
   isActive?: boolean;
   showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
@@ -75,6 +76,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       isActive = false,
       showSettingsPage,
       shouldFocusPrompt = false,
+      updateOptimisticTaskState,
       onProceed,
       onArchiveTask,
       onUnarchiveTask,
@@ -257,11 +259,23 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     };
 
     const runPrompt = (prompt: string) => {
+      updateOptimisticTaskState(task.id, DefaultTaskState.InProgress);
       if (editingMessageIndex !== null) {
         // This submission is an edit of a previous message
         setEditingMessageIndex(null); // Clear editing state
         setMessages(task.id, (prevMessages) => {
-          return prevMessages.slice(0, editingMessageIndex);
+          return prevMessages
+            .filter((_, index) => index <= editingMessageIndex)
+            .map((message, index) => {
+              if (index === editingMessageIndex) {
+                return {
+                  ...message,
+                  content: prompt,
+                };
+              } else {
+                return message;
+              }
+            });
         });
         api.redoLastUserPrompt(project.baseDir, task.id, currentMode, prompt);
       } else {
@@ -306,6 +320,11 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     };
 
     const handleRedoLastUserPrompt = () => {
+      const lastUserMessageIndex = displayedMessages.findLastIndex(isUserMessage);
+      setMessages(task.id, (prevMessages) => {
+        return prevMessages.filter((_, index) => index <= lastUserMessageIndex);
+      });
+      updateOptimisticTaskState(task.id, DefaultTaskState.InProgress);
       api.redoLastUserPrompt(project.baseDir, task.id, currentMode);
     };
 
@@ -435,6 +454,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
 
     const handleInterruptResponse = () => {
       interruptResponse(task.id);
+      updateOptimisticTaskState(task.id, DefaultTaskState.Interrupted);
     };
 
     if (!projectSettings || !settings) {
