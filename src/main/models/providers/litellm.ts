@@ -119,7 +119,7 @@ export const loadLitellmModels = async (profile: ProviderProfile, settings: Sett
       const outputCosts = infos.map((i) => getValue(i, 'output_cost_per_token')).filter((v) => typeof v === 'number');
 
       const maxInputTokens = contextWindows.length > 0 ? Math.min(...contextWindows) : undefined;
-      const maxOutputTokens = maxOutputs.length > 0 ? Math.min(...maxOutputs) : undefined;
+      const maxOutputTokensLimit = maxOutputs.length > 0 ? Math.min(...maxOutputs) : undefined;
       const inputCostPerToken = inputCosts.length > 0 ? Math.max(...inputCosts) : undefined;
       const outputCostPerToken = outputCosts.length > 0 ? Math.max(...outputCosts) : undefined;
 
@@ -127,7 +127,7 @@ export const loadLitellmModels = async (profile: ProviderProfile, settings: Sett
         id: name,
         providerId: profile.id,
         maxInputTokens,
-        maxOutputTokens,
+        maxOutputTokensLimit,
         inputCostPerToken,
         outputCostPerToken,
       } satisfies Model;

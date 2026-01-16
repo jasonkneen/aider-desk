@@ -221,6 +221,7 @@
     "modelIdPlaceholder": "例如 custom-gpt-4-turbo",
     "maxInputTokens": "上下文窗口",
     "maxOutputTokens": "最大输出令牌数",
+    "limit": "限制",
     "temperature": "温度",
     "temperatureTooltip": "控制模型响应的随机性。较低的值（0.0-0.3）产生更专注和确定性的输出，而较高的值（0.7-1.0）生成更有创意和多样化的响应。当未设置时，使用模型的默认温度。",
     "cacheWrites": "缓存写入",

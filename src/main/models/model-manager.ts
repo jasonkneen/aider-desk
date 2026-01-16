@@ -322,7 +322,7 @@ export class ModelManager {
           logger.debug(`Enriching model ${model.id} with info`, modelInfo);
 
           model.maxInputTokens = model.maxInputTokens ?? modelInfo.maxInputTokens;
-          model.maxOutputTokens = model.maxOutputTokens ?? modelInfo.maxOutputTokens;
+          model.maxOutputTokensLimit = model.maxOutputTokensLimit ?? modelInfo.maxOutputTokens;
           model.inputCostPerToken = model.inputCostPerToken ?? modelInfo.inputCostPerToken;
           model.outputCostPerToken = model.outputCostPerToken ?? modelInfo.outputCostPerToken;
           model.cacheWriteInputTokenCost = model.cacheWriteInputTokenCost ?? modelInfo.cacheWriteInputTokenCost;
@@ -356,6 +356,9 @@ export class ModelManager {
         enrichedModels[existingIndex] = {
           ...enrichedModels[existingIndex],
           ...cleanedOverride,
+          // maxOutputTokens and temperature should be also overridden by undefined values
+          maxOutputTokens: cleanedOverride.maxOutputTokens,
+          temperature: cleanedOverride.temperature,
           isCustom: false,
           hasModelOverrides: Object.keys(cleanedOverride).length > 0,
         };

@@ -228,6 +228,7 @@
     "modelIdPlaceholder": "e.g. custom-gpt-4-turbo",
     "maxInputTokens": "Context Window",
     "maxOutputTokens": "Max Output Tokens",
+    "limit": "Limit",
     "temperature": "Temperature",
     "temperatureTooltip": "Controls the randomness of model responses. Lower values (0.0-0.3) produce more focused and deterministic outputs, while higher values (0.7-1.0) generate more creative and varied responses.",
     "cacheWrites": "Cache Writes",
