@@ -912,12 +912,6 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
             <CodeMirror
               ref={(instance) => {
                 editorRef.current = instance;
-                // if (instance?.view && !initialTextRefSet.current && savedText) {
-                //   setTimeout(() => {
-                //     setTextWithDispatch(savedText);
-                //   }, 0);
-                //   initialTextRefSet.current = true;
-                // }
               }}
               onChange={onChange}
               placeholder={question ? t('promptField.questionPlaceholder') : t(`promptField.placeholders.${placeholderIndex}`)}
@@ -968,6 +962,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
                   aboveCursor: true,
                   icons: false,
                   selectOnOpen: false,
+                  tooltipClass: () => (isMobile ? '' : 'max-w-[60vw]'),
                   addToOptions: [
                     {
                       render: (completion) => {
@@ -977,7 +972,9 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
                         }
 
                         const element = document.createElement('span');
-                        element.className = showInChip ? 'cm-tooltip-autocomplete-chip' : 'cm-tooltip-autocomplete-detail';
+                        element.className = showInChip
+                          ? 'cm-tooltip-autocomplete-chip whitespace-pre-wrap text-right'
+                          : 'cm-tooltip-autocomplete-detail whitespace-pre-wrap text-right';
                         element.innerText = detail;
                         return element;
                       },
