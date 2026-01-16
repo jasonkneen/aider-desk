@@ -448,11 +448,13 @@ export const createSearchParentTaskTool = (task: Task, promptContext?: PromptCon
         return 'This tool is only available for subtasks. Current task has no parent.';
       }
 
+      const effectiveMaxTokens = maxTokens || 10000;
+
       task.addToolMessage(
         toolCallId,
         TASKS_TOOL_GROUP_NAME,
         TASKS_TOOL_SEARCH_PARENT_TASK,
-        { query, maxTokens, parentTaskId },
+        { query, maxTokens: effectiveMaxTokens, parentTaskId },
         undefined,
         undefined,
         promptContext,
@@ -474,9 +476,7 @@ export const createSearchParentTaskTool = (task: Task, promptContext?: PromptCon
           return `Parent task context file not found at ${contextFilePath}`;
         }
 
-        logger.debug(`Searching in parent task context file: ${contextFilePath}`, { query, maxTokens, parentTaskId });
-
-        const effectiveMaxTokens = maxTokens || 10000;
+        logger.debug(`Searching in parent task context file: ${contextFilePath}`, { query, maxTokens: effectiveMaxTokens, parentTaskId });
 
         // @ts-expect-error probe is not typed properly
         const results = await search({
