@@ -319,6 +319,8 @@ src/
           ReflectedMessageBlock.tsx
           ResponseMessageBlock.tsx
           RetrieveMemoryToolMessage.tsx
+          SearchParentTaskToolMessage.tsx
+          SearchTaskToolMessage.tsx
           SemanticSearchToolMessage.tsx
           StoreMemoryToolMessage.tsx
           SubagentToolMessage.tsx
@@ -1523,6 +1525,7 @@ File: src/common/locales/en.json
     "modelIdPlaceholder": "e.g. custom-gpt-4-turbo",
     "maxInputTokens": "Context Window",
     "maxOutputTokens": "Max Output Tokens",
+    "limit": "Limit",
     "temperature": "Temperature",
     "temperatureTooltip": "Controls the randomness of model responses. Lower values (0.0-0.3) produce more focused and deterministic outputs, while higher values (0.7-1.0) generate more creative and varied responses.",
     "cacheWrites": "Cache Writes",
@@ -2272,6 +2275,12 @@ File: src/common/locales/en.json
       "getTaskMessage": "Get task message",
       "createTask": "Create task",
       "deleteTask": "Delete task",
+      "searchTask": "Search task:",
+      "inTask": "in",
+      "searchTaskNoMatches": "No matches found.",
+      "searchParentTask": "Search parent task:",
+      "inParentTask": "in",
+      "searchParentTaskNoMatches": "No matches found.",
       "name": "Name",
       "parentTaskId": "Parent Task ID",
       "execute": "Execute",
@@ -2979,6 +2988,7 @@ File: src/common/locales/zh.json
     "modelIdPlaceholder": "例如 custom-gpt-4-turbo",
     "maxInputTokens": "上下文窗口",
     "maxOutputTokens": "最大输出令牌数",
+    "limit": "限制",
     "temperature": "温度",
     "temperatureTooltip": "控制模型响应的随机性。较低的值（0.0-0.3）产生更专注和确定性的输出，而较高的值（0.7-1.0）生成更有创意和多样化的响应。当未设置时，使用模型的默认温度。",
     "cacheWrites": "缓存写入",
@@ -3711,6 +3721,12 @@ File: src/common/locales/zh.json
       "getTaskMessage": "获取任务消息",
       "createTask": "创建任务",
       "deleteTask": "删除任务",
+      "searchTask": "搜索任务:",
+      "inTask": "在",
+      "searchTaskNoMatches": "未找到匹配项。",
+      "searchParentTask": "搜索父任务:",
+      "inParentTask": "在",
+      "searchParentTaskNoMatches": "未找到匹配项。",
       "name": "名称",
       "parentTaskId": "父任务ID",
       "execute": "执行",
@@ -5527,6 +5543,7 @@ export interface Model {
   providerId: string;
   maxInputTokens?: number;
   maxOutputTokens?: number;
+  maxOutputTokensLimit?: number;
   temperature?: number;
   inputCostPerToken?: number;
   outputCostPerToken?: number;
@@ -6052,7 +6069,9 @@ const findMessagesForToolCallId = (toolCallId: string) =>
 ================
 File: src/main/agent/tools/tasks.ts
 ================
-import { tool, type ToolSet } from 'ai';
+import path from 'path';
+⋮----
+import { type Tool, tool, type ToolSet } from 'ai';
 import { z } from 'zod';
 import {
   TASKS_TOOL_CREATE_TASK,
@@ -6062,12 +6081,19 @@ import {
   TASKS_TOOL_GET_TASK_MESSAGE,
   TASKS_TOOL_GROUP_NAME,
   TASKS_TOOL_LIST_TASKS,
+  TASKS_TOOL_SEARCH_PARENT_TASK,
+  TASKS_TOOL_SEARCH_TASK,
   TOOL_GROUP_NAME_SEPARATOR,
 } from '@common/tools';
 import { AgentProfile, PromptContext, SettingsData, TaskData, ToolApprovalState } from '@common/types';
+import { search } from '@probelabs/probe';
+import { fileExists } from '@common/utils';
 ⋮----
 import { ApprovalManager } from './approval-manager';
 ⋮----
+import { AIDER_DESK_TASKS_DIR, PROBE_BINARY_PATH } from '@/constants';
+import logger from '@/logger';
+import { isAbortError } from '@/utils/errors';
 import { Task } from '@/task';
 ⋮----
 export const createTasksToolset = (settings: SettingsData, task: Task, profile: AgentProfile, promptContext?: PromptContext): ToolSet =>
@@ -6092,6 +6118,21 @@ actualIndex = contextMessages.length + messageIndex; // e.g., -1 becomes length-
 // We need to get the actual Task instance to call methods on it
 ⋮----
 // Prevent deleting the current task
+⋮----
+// @ts-expect-error probe is not typed properly
+⋮----
+/**
+ * Creates the search parent task tool for subtasks.
+ * This tool is not included in the default toolset and should be added
+ * directly in agent.ts's getAvailableTools method when task is a subtask.
+ */
+export const createSearchParentTaskTool = (task: Task, promptContext?: PromptContext): Tool =>
+⋮----
+// Always use parent task ID
+⋮----
+// No approval required for parent task search
+⋮----
+// @ts-expect-error probe is not typed properly
 
 ================
 File: src/main/agent/tools/todo.ts
@@ -6387,11 +6428,11 @@ import { Client as McpSdkClient } from '@modelcontextprotocol/sdk/client/index.j
 // @ts-expect-error istextorbinary is not typed properly
 import { isBinary } from 'istextorbinary';
 import { fileTypeFromBuffer } from 'file-type';
-import { HELPERS_TOOL_GROUP_NAME, TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
+import { HELPERS_TOOL_GROUP_NAME, TASKS_TOOL_GROUP_NAME, TASKS_TOOL_SEARCH_PARENT_TASK, TOOL_GROUP_NAME_SEPARATOR } from '@common/tools';
 ⋮----
 import { createPowerToolset } from './tools/power';
 import { createTodoToolset } from './tools/todo';
-import { createTasksToolset } from './tools/tasks';
+import { createSearchParentTaskTool, createTasksToolset } from './tools/tasks';
 import { createAiderToolset } from './tools/aider';
 import { createHelpersToolset } from './tools/helpers';
 import { createMemoryToolset } from './tools/memory';
@@ -6467,6 +6508,8 @@ private async getAvailableTools(
 // Skip tools marked as 'Never' approved
 ⋮----
 return; // Do not add the tool if it's never approved
+⋮----
+// Add search parent task tool for subtasks
 ⋮----
 // Add helper tools
 ⋮----
@@ -6575,7 +6618,13 @@ private async prepareMessages(task: Task, profile: AgentProfile, contextMessages
 ⋮----
 // Add message history
 ⋮----
-async generateText(agentProfile: AgentProfile, systemPrompt: string, prompt: string): Promise<string>
+async generateText(
+    agentProfile: AgentProfile,
+    systemPrompt: string,
+    prompt: string,
+    abortable = true,
+    abortSignal?: AbortSignal,
+): Promise<string | undefined>
 ⋮----
 async estimateTokens(task: Task, profile: AgentProfile): Promise<number>
 ⋮----
@@ -8799,6 +8848,8 @@ private enrichWithModelInfo(models: Model[], profile: ProviderProfile, strategy:
 ⋮----
 private enrichWithOverrides(models: Model[], providerId: string): Model[]
 ⋮----
+// maxOutputTokens and temperature should be also overridden by undefined values
+⋮----
 /**
    * Detect and add automatic providers from environment variables
    */
@@ -9639,7 +9690,7 @@ File: src/main/server/rest-api/project-api.ts
 ================
 import { Router } from 'express';
 import { z } from 'zod';
-import { ProjectSettingsSchema, TaskDataSchema } from '@common/types';
+import { CreateTaskParams, ProjectSettingsSchema, TaskDataSchema } from '@common/types';
 ⋮----
 import { BaseApi } from './base-api';
 ⋮----
@@ -10613,7 +10664,7 @@ private removeByToolCallId(toolCallId: string): string[]
 ⋮----
 removeLastMessage(): void
 ⋮----
-removeLastUserMessage(): string | null
+removeMessagesUpToLastUserMessage(): ContextMessage[]
 ⋮----
 toConnectorMessages(contextMessages: ContextMessage[] = this.messages):
 ⋮----
@@ -10886,7 +10937,7 @@ private async waitForCurrentAgentToFinish()
 ⋮----
 private resolveAgentRunPromises()
 ⋮----
-public async runPrompt(prompt: string, mode: Mode = 'code', addToInputHistory = true): Promise<ResponseCompletedData[]>
+public async runPrompt(prompt: string, mode: Mode = 'code', addToInputHistory = true, userMessageId = uuidv4()): Promise<ResponseCompletedData[]>
 ⋮----
 // Generate promptContext for this run
 ⋮----
@@ -11302,8 +11353,6 @@ public async mergeWorktreeToMain(squash: boolean, targetBranch?: string, commitM
 // Try to generate commit message using AI
 ⋮----
 // Fallback to task name if AI generation fails
-⋮----
-// No commits to merge, use default message
 ⋮----
 // Store merge state for potential revert
 ⋮----
@@ -15819,6 +15868,8 @@ import {
   TASKS_TOOL_GET_TASK_MESSAGE,
   TASKS_TOOL_CREATE_TASK,
   TASKS_TOOL_DELETE_TASK,
+  TASKS_TOOL_SEARCH_TASK,
+  TASKS_TOOL_SEARCH_PARENT_TASK,
 } from '@common/tools';
 ⋮----
 import { CommandOutputMessageBlock } from './CommandOutputMessageBlock';
@@ -15842,6 +15893,8 @@ import { GetTaskToolMessage } from './GetTaskToolMessage';
 import { GetTaskMessageToolMessage } from './GetTaskMessageToolMessage';
 import { CreateTaskToolMessage } from './CreateTaskToolMessage';
 import { DeleteTaskToolMessage } from './DeleteTaskToolMessage';
+import { SearchTaskToolMessage } from './SearchTaskToolMessage';
+import { SearchParentTaskToolMessage } from './SearchParentTaskToolMessage';
 import { StoreMemoryToolMessage } from './StoreMemoryToolMessage';
 import { RetrieveMemoryToolMessage } from './RetrieveMemoryToolMessage';
 import { DeleteMemoryToolMessage } from './DeleteMemoryToolMessage';
@@ -16019,6 +16072,48 @@ onClick=
 title=
 ⋮----
 confirmButtonText=
+
+================
+File: src/renderer/src/components/message/SearchParentTaskToolMessage.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { RiCheckboxCircleFill, RiCloseCircleFill, RiErrorWarningFill } from 'react-icons/ri';
+import { CgSpinner } from 'react-icons/cg';
+import { MdOutlineContentPasteSearch } from 'react-icons/md';
+⋮----
+import { ToolMessage } from '@/types/message';
+import { CodeInline } from '@/components/common/CodeInline';
+import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+⋮----
+type Props = {
+  message: ToolMessage;
+  onRemove?: () => void;
+  compact?: boolean;
+};
+⋮----
+return <ExpandableMessageBlock title=
+
+================
+File: src/renderer/src/components/message/SearchTaskToolMessage.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { RiCheckboxCircleFill, RiCloseCircleFill, RiErrorWarningFill } from 'react-icons/ri';
+import { CgSpinner } from 'react-icons/cg';
+import { MdOutlineContentPasteSearch } from 'react-icons/md';
+⋮----
+import { ToolMessage } from '@/types/message';
+import { CodeInline } from '@/components/common/CodeInline';
+import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+⋮----
+type Props = {
+  message: ToolMessage;
+  onRemove?: () => void;
+  compact?: boolean;
+};
+⋮----
+return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/SemanticSearchToolMessage.tsx
@@ -18750,6 +18845,7 @@ type Props = {
   project: ProjectData;
   task: TaskData;
   updateTask: (taskId: string, updates: Partial<TaskData>, useOptimistic?: boolean) => void;
+  updateOptimisticTaskState: (taskId: string, taskState: string) => void;
   inputHistory: string[];
   isActive?: boolean;
   showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
@@ -18798,12 +18894,6 @@ const handleResetTask = () =>
 ⋮----
 const handleRedoLastUserPrompt = () =>
 ⋮----
-const handleResumeTask = () =>
-⋮----
-const handleProceed = () =>
-⋮----
-const handleArchiveTask = () =>
-⋮----
 const handleUnarchiveTask = () =>
 ⋮----
 const handleDeleteTask = () =>
@@ -18823,8 +18913,6 @@ const handleRemoveMessage = async (messageToRemove: Message) =>
 // eslint-disable-next-line no-console
 ⋮----
 // eslint-disable-next-line no-console
-⋮----
-const handleSidebarResize = async (_, data: ResizeCallbackData) =>
 ⋮----
 const handleToggleFilesSidebarCollapse = () =>
 ⋮----
@@ -19400,13 +19488,6 @@ const toggleVoice = () =>
 ⋮----
 onClick=
 ⋮----
-// if (instance?.view && !initialTextRefSet.current && savedText) {
-//   setTimeout(() => {
-//     setTextWithDispatch(savedText);
-//   }, 0);
-//   initialTextRefSet.current = true;
-// }
-⋮----
 className=
 ⋮----
 paste(event)
@@ -19570,6 +19651,7 @@ import {
   TASKS_TOOL_GET_TASK_MESSAGE,
   TASKS_TOOL_GROUP_NAME,
   TASKS_TOOL_LIST_TASKS,
+  TASKS_TOOL_SEARCH_TASK,
   MEMORY_TOOL_DELETE,
   MEMORY_TOOL_DESCRIPTIONS,
   MEMORY_TOOL_GROUP_NAME,
@@ -24646,6 +24728,8 @@ async startSession(config: VoiceSessionConfig): Promise<VoiceSession>
 // Setup audio processing once and keep it alive
 ⋮----
 private async createGeminiSession(config: VoiceSessionConfig): Promise<VoiceSession>
+⋮----
+// eslint-disable-next-line no-console
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
