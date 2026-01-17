@@ -1,5 +1,19 @@
 import { TaskData } from '@common/types';
 
+const getMostRecentUpdatedAt = (task: TaskData, allTasks: TaskData[]): string | undefined => {
+  let mostRecent = task.updatedAt;
+
+  const subtasks = allTasks.filter((t) => t.parentId === task.id);
+  for (const subtask of subtasks) {
+    const subtaskMostRecent = getMostRecentUpdatedAt(subtask, allTasks);
+    if (subtaskMostRecent && (!mostRecent || subtaskMostRecent > mostRecent)) {
+      mostRecent = subtaskMostRecent;
+    }
+  }
+
+  return mostRecent;
+};
+
 export const getSortedVisibleTasks = (tasks: TaskData[], showArchived: boolean = false, searchQuery: string = ''): TaskData[] => {
   const filteredTasks = tasks
     .filter((task) => showArchived || !task.archived)
@@ -12,7 +26,7 @@ export const getSortedVisibleTasks = (tasks: TaskData[], showArchived: boolean =
     });
 
   const topLevelTasks = filteredTasks.filter((t) => !t.parentId || !filteredTasks.some((p) => p.id === t.parentId));
-  const subtasks = filteredTasks.filter((t) => t.parentId && filteredTasks.some((p) => p.id === t.parentId));
+  const subtasks = filteredTasks.filter((t) => t.parentId);
 
   const sortFn = (a: TaskData, b: TaskData) => {
     // Pinned tasks come first
@@ -22,26 +36,30 @@ export const getSortedVisibleTasks = (tasks: TaskData[], showArchived: boolean =
     if (!a.pinned && b.pinned) {
       return 1;
     }
-    // Then sort by updatedAt (descending)
-    if (a.updatedAt && !b.updatedAt) {
-      return 1;
-    } else if (!a.updatedAt && b.updatedAt) {
+    // Then sort by most recent updatedAt (including subtasks, descending)
+    const aMostRecent = getMostRecentUpdatedAt(a, filteredTasks);
+    const bMostRecent = getMostRecentUpdatedAt(b, filteredTasks);
+    if (aMostRecent && !bMostRecent) {
       return -1;
-    } else if (!a.updatedAt && !b.updatedAt) {
+    } else if (!aMostRecent && bMostRecent) {
+      return 1;
+    } else if (!aMostRecent && !bMostRecent) {
       return 0;
     } else {
-      return b.updatedAt!.localeCompare(a.updatedAt!);
+      return bMostRecent!.localeCompare(aMostRecent!);
     }
   };
 
   const sortedTopLevel = [...topLevelTasks].sort(sortFn);
 
+  const addTaskWithChildren = (task: TaskData) => {
+    result.push(task);
+    const children = subtasks.filter((t) => t.parentId === task.id).sort(sortFn);
+    children.forEach(addTaskWithChildren);
+  };
+
   const result: TaskData[] = [];
-  sortedTopLevel.forEach((parent) => {
-    result.push(parent);
-    const children = subtasks.filter((t) => t.parentId === parent.id).sort(sortFn);
-    result.push(...children);
-  });
+  sortedTopLevel.forEach(addTaskWithChildren);
 
   return result;
 };

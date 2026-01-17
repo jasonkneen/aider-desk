@@ -35,5 +35,41 @@ describe('task-utils', () => {
       const sorted = getSortedVisibleTasks(tasks as TaskData[]);
       expect(sorted.map((t) => t.id)).toEqual(['3', '2', '1']);
     });
+
+    it('should sort parent tasks based on their most recent updatedAt including subtasks', () => {
+      const tasks: Partial<TaskData>[] = [
+        { id: '1', name: 'Parent A', updatedAt: '2026-01-14T10:00:00Z', pinned: false, parentId: null },
+        { id: '2', name: 'Subtask A1', updatedAt: '2026-01-14T12:00:00Z', pinned: false, parentId: '1' },
+        { id: '3', name: 'Parent B', updatedAt: '2026-01-14T11:00:00Z', pinned: false, parentId: null },
+        { id: '4', name: 'Subtask B1', updatedAt: '2026-01-14T10:30:00Z', pinned: false, parentId: '3' },
+      ];
+      const sorted = getSortedVisibleTasks(tasks as TaskData[]);
+      // Parent A should be first because its subtask A1 (12:00) is newer than Parent B (11:00)
+      expect(sorted.map((t) => t.id)).toEqual(['1', '2', '3', '4']);
+    });
+
+    it('should handle deep nesting when calculating most recent updatedAt', () => {
+      const tasks: Partial<TaskData>[] = [
+        { id: '1', name: 'Parent A', updatedAt: '2026-01-14T08:00:00Z', pinned: false, parentId: null },
+        { id: '2', name: 'Subtask A1', updatedAt: '2026-01-14T09:00:00Z', pinned: false, parentId: '1' },
+        { id: '3', name: 'Subtask A1.1', updatedAt: '2026-01-14T13:00:00Z', pinned: false, parentId: '2' },
+        { id: '4', name: 'Parent B', updatedAt: '2026-01-14T12:00:00Z', pinned: false, parentId: null },
+        { id: '5', name: 'Subtask B1', updatedAt: '2026-01-14T11:00:00Z', pinned: false, parentId: '4' },
+      ];
+      const sorted = getSortedVisibleTasks(tasks as TaskData[]);
+      // Parent A should be first because its nested subtask A1.1 (13:00) is newer than Parent B (12:00)
+      expect(sorted.map((t) => t.id)).toEqual(['1', '2', '3', '4', '5']);
+    });
+
+    it('should handle tasks without updatedAt when considering subtasks', () => {
+      const tasks: Partial<TaskData>[] = [
+        { id: '1', name: 'Parent A', pinned: false, parentId: null },
+        { id: '2', name: 'Subtask A1', updatedAt: '2026-01-14T11:00:00Z', pinned: false, parentId: '1' },
+        { id: '3', name: 'Parent B', updatedAt: '2026-01-14T10:00:00Z', pinned: false, parentId: null },
+      ];
+      const sorted = getSortedVisibleTasks(tasks as TaskData[]);
+      // Parent A should be first because its subtask (11:00) is newer than Parent B (10:00)
+      expect(sorted.map((t) => t.id)).toEqual(['1', '2', '3']);
+    });
   });
 });
