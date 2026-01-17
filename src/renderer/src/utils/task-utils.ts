@@ -40,9 +40,9 @@ export const getSortedVisibleTasks = (tasks: TaskData[], showArchived: boolean =
     const aMostRecent = getMostRecentUpdatedAt(a, filteredTasks);
     const bMostRecent = getMostRecentUpdatedAt(b, filteredTasks);
     if (aMostRecent && !bMostRecent) {
-      return -1;
-    } else if (!aMostRecent && bMostRecent) {
       return 1;
+    } else if (!aMostRecent && bMostRecent) {
+      return -1;
     } else if (!aMostRecent && !bMostRecent) {
       return 0;
     } else {
