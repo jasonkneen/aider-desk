@@ -264,7 +264,6 @@ AiderDesk extracts the fix pattern and creates a focused task for applying it ac
 -   **Tasks**: Handoff creates new tasks with proper context. See [Task Management](./tasks.md)
 -   **Subtasks**: For hierarchical task organization. See [Task Management - Subtasks](./tasks.md#subtasks)
 -   **Custom Prompts**: Customize the handoff prompt template. See [Custom Prompts](../advanced/custom-prompts.md)
--   **Context Files**: Handoff transfers all context files. See [Context Management](./)
 -   **Git Worktrees**: Worktree mode is maintained across handoff. See [Git Worktrees](./git-worktrees.md)
 -   **Compact**: Compare handoff with compaction. See [Compact Conversation](./compact.md)
 
