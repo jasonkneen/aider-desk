@@ -774,6 +774,7 @@ export type WorkingMode = z.infer<typeof WorkingModeSchema>;
 export const TaskDataSchema = z.object({
   id: z.string(),
   baseDir: z.string(),
+  parentId: z.string().nullable().optional(),
   name: z.string(),
   state: z.string().optional(),
   archived: z.boolean().optional(),
@@ -800,7 +801,7 @@ export const TaskDataSchema = z.object({
   currentMode: z.enum(['code', 'ask', 'architect', 'context', 'agent']).optional(),
   contextCompactingThreshold: z.number().optional(),
   weakModelLocked: z.boolean().optional(),
-  parentId: z.string().nullable().optional(),
+  handoff: z.boolean().optional(),
 });
 
 export type TaskData = z.infer<typeof TaskDataSchema>;
@@ -808,6 +809,17 @@ export type TaskData = z.infer<typeof TaskDataSchema>;
 export interface CreateTaskParams {
   parentId?: string | null;
   name?: string;
+  autoApprove?: boolean;
+  activate?: boolean;
+  handoff?: boolean;
+  sendEvent?: boolean;
+}
+
+export interface TaskCreatedData {
+  baseDir: string;
+  task: TaskData;
+  activate?: boolean;
+  editLast?: boolean;
 }
 
 export enum DefaultTaskState {

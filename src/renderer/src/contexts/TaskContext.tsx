@@ -362,6 +362,7 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({ baseDir, task
             type: 'loading',
             content: message || t('messages.thinking'),
             promptContext,
+            actionIds,
           };
 
           setMessages(taskId, (prevMessages) => {

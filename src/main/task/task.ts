@@ -36,7 +36,7 @@ import {
   ModelInfo,
 } from '@common/types';
 import { extractTextContent, fileExists, parseUsageReport } from '@common/utils';
-import { COMPACT_CONVERSATION_AGENT_PROFILE, CONFLICT_RESOLUTION_PROFILE, INIT_PROJECT_AGENTS_PROFILE } from '@common/agent';
+import { COMPACT_CONVERSATION_AGENT_PROFILE, CONFLICT_RESOLUTION_PROFILE, HANDOFF_AGENT_PROFILE, INIT_PROJECT_AGENTS_PROFILE } from '@common/agent';
 import { v4 as uuidv4 } from 'uuid';
 import debounce from 'lodash/debounce';
 import { isEqual } from 'lodash';
@@ -847,6 +847,7 @@ export class Task {
         agentProfile,
         this.promptsManager.getGenerateTaskNamePrompt(this),
         `Generate a concise task name for this request:\n\n${prompt.length > maxPromptLength ? prompt.substring(0, maxPromptLength) + '...' : prompt}\n\nOnly answer with the task name, nothing else.`,
+        undefined,
         false,
       );
       if (taskName) {
@@ -2238,6 +2239,83 @@ export class Task {
     }
   }
 
+  public async handoffConversation(mode: Mode, focus: string = ''): Promise<void> {
+    // Get context messages
+    const contextMessages = await this.contextManager.getContextMessages();
+
+    const userMessage = contextMessages[0];
+
+    if (!userMessage) {
+      throw new Error('No conversation to handoff. Please send at least one message before using /handoff.');
+    }
+
+    const loadingMessage = 'Preparing handoff...';
+    this.addLogMessage('loading', loadingMessage, false, undefined, ['interrupt']);
+
+    // Get context files to transfer
+    const contextFiles = await this.getContextFiles();
+
+    // Generate the handoff prompt using agent.generateText
+    const handoffPrompt = await this.promptsManager.getHandoffPrompt(this, focus.trim().length ? focus.trim() : undefined);
+    let generatedPrompt: string | undefined;
+
+    if (mode === 'agent') {
+      // Agent mode logic
+      const profile = await this.getTaskAgentProfile();
+      if (!profile) {
+        throw new Error('No active Agent profile found');
+      }
+
+      const handoffAgentProfile: AgentProfile = {
+        ...HANDOFF_AGENT_PROFILE,
+        provider: profile.provider,
+        model: profile.model,
+      };
+
+      await this.waitForCurrentAgentToFinish();
+      generatedPrompt = await this.agent.generateText(handoffAgentProfile, '', handoffPrompt, await this.contextManager.getContextMessages(), true);
+    } else {
+      // Other modes (ask, edit)
+      const responses = await this.sendPromptToAider(handoffPrompt, undefined, 'ask');
+
+      if (responses.length > 0 && responses[0].content) {
+        generatedPrompt = extractTextContent(responses[0].content);
+      }
+    }
+
+    this.addLogMessage('loading', '', true);
+
+    if (!generatedPrompt) {
+      logger.info('Handoff prompt generation cancelled or failed.');
+      return;
+    }
+
+    // Create new task without sending event (sendEvent flag defaults to true)
+    const newTaskData = await this.project.createNewTask({
+      parentId: this.task.parentId || this.taskId,
+      sendEvent: false,
+      activate: true,
+      handoff: true,
+    });
+
+    // Get the newly created Task instance
+    const newTask = this.project.getTask(newTaskData.id);
+    if (!newTask) {
+      throw new Error('Failed to get newly created task');
+    }
+
+    // Add prompt to new task
+    await newTask.savePromptOnly(generatedPrompt, false);
+
+    // Transfer context files
+    for (const file of contextFiles) {
+      await newTask.addFile(file);
+    }
+
+    // Send task-created event to trigger activation and handoff
+    this.eventManager.sendTaskCreated(newTask.task, true);
+  }
+
   public async generateContextMarkdown(): Promise<string | null> {
     logger.info('Exporting context to Markdown:', {
       baseDir: this.project.baseDir,
@@ -2766,6 +2844,7 @@ ${error.stderr}`,
                 agentProfile,
                 this.promptsManager.getGenerateCommitMessagePrompt(this),
                 `Generate a concise conventional commit message for these changes:\n\n${changesDiff}\n\nOnly answer with the commit message, nothing else.`,
+                undefined,
                 false,
               );
               logger.info('Generated commit message:', {

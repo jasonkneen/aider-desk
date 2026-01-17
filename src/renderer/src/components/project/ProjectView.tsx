@@ -1,4 +1,4 @@
-import { InputHistoryData, ProjectData, ProjectStartMode, TaskData } from '@common/types';
+import { InputHistoryData, ProjectData, ProjectStartMode, TaskCreatedData, TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
 import { startTransition, useCallback, useEffect, useOptimistic, useRef, useState, useTransition } from 'react';
 import { useLocalStorage } from '@reactuses/core';
@@ -155,8 +155,12 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
       setStarting(false);
     };
 
-    const handleTaskCreated = (taskData: TaskData) => {
-      setTasks((prev) => [...prev, taskData]);
+    const handleTaskCreated = ({ task, activate }: TaskCreatedData) => {
+      setTasks((prev) => [...prev, task]);
+
+      if (activate) {
+        activateTask(task.id);
+      }
     };
 
     const handleTaskInitialized = (taskData: TaskData) => {

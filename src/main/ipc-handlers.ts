@@ -193,6 +193,10 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     return await eventsHandler.compactConversation(baseDir, taskId, mode, customInstructions);
   });
 
+  ipcMain.handle('handoff-conversation', async (_event, baseDir: string, taskId: string, focus?: string) => {
+    return await eventsHandler.handoffConversation(baseDir, taskId, focus);
+  });
+
   ipcMain.handle('scrape-web', async (_, baseDir: string, taskId: string, url: string, filePath?: string) => {
     await eventsHandler.scrapeWeb(baseDir, taskId, url, filePath);
   });

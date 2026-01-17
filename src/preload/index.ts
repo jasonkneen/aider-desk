@@ -29,6 +29,7 @@ import {
   UserMessageData,
   VersionsInfo,
   WorktreeIntegrationStatusUpdatedData,
+  TaskCreatedData,
 } from '@common/types';
 import { electronAPI } from '@electron-toolkit/preload';
 import { contextBridge, ipcRenderer, webUtils } from 'electron';
@@ -110,6 +111,7 @@ const api: ApplicationAPI = {
   removeLastMessage: (baseDir, taskId) => ipcRenderer.send('remove-last-message', baseDir, taskId),
   removeMessage: (baseDir, taskId, messageId) => ipcRenderer.invoke('remove-message', baseDir, taskId, messageId),
   compactConversation: (baseDir, taskId, mode, customInstructions) => ipcRenderer.invoke('compact-conversation', baseDir, taskId, mode, customInstructions),
+  handoffConversation: (baseDir, taskId, focus) => ipcRenderer.invoke('handoff-conversation', baseDir, taskId, focus),
   setZoomLevel: (level) => ipcRenderer.invoke('set-zoom-level', level),
   getVersions: (forceRefresh = false) => ipcRenderer.invoke('get-versions', forceRefresh),
   downloadLatestAiderDesk: () => ipcRenderer.invoke('download-latest-aiderdesk'),
@@ -404,7 +406,7 @@ const api: ApplicationAPI = {
 
   // Task lifecycle event listeners
   addTaskCreatedListener: (baseDir, callback) => {
-    const listener = (_: Electron.IpcRendererEvent, data: TaskData) => {
+    const listener = (_: Electron.IpcRendererEvent, data: TaskCreatedData) => {
       if (!compareBaseDirs(data.baseDir, baseDir)) {
         return;
       }

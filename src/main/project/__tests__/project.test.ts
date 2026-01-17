@@ -222,7 +222,7 @@ describe('Project - createNewTask', () => {
 
       // Assert: New task should have the correct parentId
       expect(newTask.parentId).toBe(parentTask.id);
-      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(newTask);
+      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(newTask, undefined);
     });
 
     it('should allow creating subtasks from a parent that itself has a parent (nested subtasks)', async () => {
@@ -246,7 +246,7 @@ describe('Project - createNewTask', () => {
 
       // Assert: Task should have parentId as null (top-level task)
       expect(task.parentId).toBeNull();
-      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(task);
+      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(task, undefined);
     });
 
     it('should create a task with parentId: null when parentId is explicitly null', async () => {
@@ -258,7 +258,7 @@ describe('Project - createNewTask', () => {
 
       // Assert: Task should have parentId as null
       expect(task.parentId).toBeNull();
-      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(task);
+      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(task, undefined);
     });
   });
 

@@ -30,6 +30,7 @@ export interface LogMessage extends Message {
 
 export interface LoadingMessage extends Message {
   type: 'loading';
+  actionIds?: string[];
 }
 
 export interface CommandOutputMessage extends Message {

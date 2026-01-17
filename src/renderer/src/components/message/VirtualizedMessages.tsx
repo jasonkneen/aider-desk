@@ -8,7 +8,7 @@ import { TaskStateActions } from 'src/renderer/src/components/message/TaskStateA
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
 
-import { isGroupMessage, isUserMessage, Message } from '@/types/message';
+import { isGroupMessage, isLoadingMessage, isUserMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
@@ -38,6 +38,7 @@ type Props = {
   onArchiveTask?: () => void;
   onUnarchiveTask?: () => void;
   onDeleteTask?: () => void;
+  onInterrupt?: () => void;
 };
 
 export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
@@ -58,6 +59,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
       onArchiveTask,
       onUnarchiveTask,
       onDeleteTask,
+      onInterrupt,
     },
     ref,
   ) => {
@@ -68,6 +70,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
     // Group messages by promptContext.group.id
     const processedMessages = useMemo(() => groupMessagesByPromptContext(messages), [messages]);
     const lastUserMessageIndex = processedMessages.findLastIndex(isUserMessage);
+    const isLastLoadingMessage = processedMessages.length > 0 && isLoadingMessage(processedMessages[processedMessages.length - 1]);
     const inProgress = task.state === DefaultTaskState.InProgress;
 
     // Create virtualizer for dynamic sized items
@@ -152,6 +155,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
                       remove={inProgress ? undefined : removeMessage}
                       redo={inProgress ? undefined : redoLastUserPrompt}
                       edit={editLastUserMessage}
+                      onInterrupt={onInterrupt}
                     />
                   ) : (
                     <MessageBlock
@@ -163,6 +167,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
                       remove={inProgress ? undefined : () => removeMessage(message)}
                       redo={virtualRow.index === lastUserMessageIndex && !inProgress ? redoLastUserPrompt : undefined}
                       edit={virtualRow.index === lastUserMessageIndex ? editLastUserMessage : undefined}
+                      onInterrupt={onInterrupt}
                     />
                   )}
                 </div>
@@ -182,7 +187,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
             />
           </div>
         )}
-        {settings?.taskSettings?.showTaskStateActions && (
+        {settings?.taskSettings?.showTaskStateActions && !inProgress && !isLastLoadingMessage && (
           <TaskStateActions
             task={task}
             onResumeTask={resumeTask}

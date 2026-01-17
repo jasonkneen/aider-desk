@@ -111,7 +111,9 @@ export class Project {
       ...initialTaskData,
       autoApprove: projectSettings.autoApproveLocked ? true : initialTaskData?.autoApprove,
     });
-    this.eventManager.sendTaskCreated(task.task);
+    if (params?.sendEvent !== false) {
+      this.eventManager.sendTaskCreated(task.task, params?.activate);
+    }
 
     const internalTask = this.getTask(INTERNAL_TASK_ID);
     if (internalTask) {

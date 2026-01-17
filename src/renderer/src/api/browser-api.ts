@@ -47,6 +47,7 @@ import {
   MemoryEmbeddingProgress,
   WorktreeIntegrationStatus,
   WorktreeIntegrationStatusUpdatedData,
+  TaskCreatedData,
 } from '@common/types';
 import { ApplicationAPI } from '@common/api';
 import axios, { type AxiosInstance } from 'axios';
@@ -77,7 +78,7 @@ type EventDataMap = {
   'project-settings-updated': { baseDir: string; settings: ProjectSettings };
   'worktree-integration-status-updated': WorktreeIntegrationStatusUpdatedData;
   'agent-profiles-updated': AgentProfilesUpdatedData;
-  'task-created': TaskData;
+  'task-created': TaskCreatedData;
   'task-initialized': TaskData;
   'task-updated': TaskData;
   'task-deleted': TaskData;
@@ -530,6 +531,15 @@ export class BrowserApi implements ApplicationAPI {
       customInstructions,
     });
   }
+
+  async handoffConversation(baseDir: string, taskId: string, focus?: string): Promise<void> {
+    await this.post('/project/handoff-conversation', {
+      projectDir: baseDir,
+      taskId,
+      focus,
+    });
+  }
+
   setZoomLevel(level: number): Promise<void> {
     void level;
     // eslint-disable-next-line no-console
@@ -665,7 +675,7 @@ export class BrowserApi implements ApplicationAPI {
   }
 
   // Task lifecycle event listeners
-  addTaskCreatedListener(baseDir: string, callback: (data: TaskData) => void): () => void {
+  addTaskCreatedListener(baseDir: string, callback: (data: TaskCreatedData) => void): () => void {
     return this.addListener('task-created', callback, baseDir);
   }
 

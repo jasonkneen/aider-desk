@@ -228,6 +228,7 @@ export const createMockApi = (overrides: Partial<ApplicationAPI> = {}): MockedOb
     deleteProjectMemories: vi.fn((): Promise<number> => Promise.resolve(0)),
     writeToClipboard: vi.fn((): Promise<void> => Promise.resolve()),
     openPath: vi.fn((): Promise<boolean> => Promise.resolve(true)),
+    handoffConversation: vi.fn((): Promise<void> => Promise.resolve()),
   };
 
   return vi.mocked<ApplicationAPI>({ ...defaultMock, ...overrides });

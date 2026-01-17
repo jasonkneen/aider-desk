@@ -89,17 +89,18 @@ type Props = {
   remove?: () => void;
   redo?: () => void;
   edit?: (content: string) => void;
+  onInterrupt?: () => void;
 };
 
-const MessageBlockComponent = ({ baseDir, taskId, message, allFiles, renderMarkdown, compact = false, remove, redo, edit }: Props) => {
+const MessageBlockComponent = ({ baseDir, taskId, message, allFiles, renderMarkdown, compact = false, remove, redo, edit, onInterrupt }: Props) => {
   const { t } = useTranslation();
 
   if (isLoadingMessage(message)) {
-    return <LoadingMessageBlock key={message.content} message={message} />;
+    return <LoadingMessageBlock key={message.content} message={message} baseDir={baseDir} taskId={taskId} onInterrupt={onInterrupt} />;
   }
 
   if (isLogMessage(message)) {
-    return <LogMessageBlock baseDir={baseDir} taskId={taskId} message={message} onRemove={remove} compact={compact} />;
+    return <LogMessageBlock baseDir={baseDir} taskId={taskId} message={message} onRemove={remove} compact={compact} onInterrupt={onInterrupt} />;
   }
 
   if (isReflectedMessage(message)) {
@@ -230,7 +231,7 @@ const MessageBlockComponent = ({ baseDir, taskId, message, allFiles, renderMarkd
           id: toolMessage.id,
           content: logMessageContent,
         };
-        return <LogMessageBlock baseDir={baseDir} taskId={taskId} message={logMessage} onRemove={remove} compact={compact} />;
+        return <LogMessageBlock baseDir={baseDir} taskId={taskId} message={logMessage} onRemove={remove} compact={compact} onInterrupt={onInterrupt} />;
       }
       default:
         break;

@@ -255,7 +255,7 @@ describe('Project - createNewTask', () => {
       expect(task.baseDir).toBe(baseDir);
 
       // Assert: Event manager should be called with the created task
-      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(task);
+      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(task, undefined);
       expect(mockEventManager.sendTaskCreated).toHaveBeenCalledTimes(1);
 
       // Assert: Task should be added to the tasks Map
@@ -273,7 +273,7 @@ describe('Project - createNewTask', () => {
       expect(task.parentId).toBeNull();
 
       // Assert: Event manager should be called
-      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(task);
+      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(task, undefined);
 
       // Assert: Task should be in the tasks Map
       expect((project as any).tasks.has(task.id)).toBe(true);
@@ -301,7 +301,7 @@ describe('Project - createNewTask', () => {
       expect((project as any).tasks.size).toBe(initialTaskCount + 1);
 
       // Assert: Event manager should be called with the created task
-      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(newTask);
+      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(newTask, undefined);
       expect(mockEventManager.sendTaskCreated).toHaveBeenCalledTimes(2); // parent + child
 
       // Assert: New task should be added to the tasks Map
@@ -522,7 +522,7 @@ describe('Project - createNewTask', () => {
       expect(mockEventManager.sendTaskCreated).toHaveBeenCalledTimes(1);
 
       // Assert: sendTaskCreated should be called with the task data
-      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(task);
+      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(task, undefined);
 
       // Assert: The passed task should have correct properties
       const calledWith = (mockEventManager.sendTaskCreated as unknown as Mock).mock.calls[0][0];
@@ -544,7 +544,7 @@ describe('Project - createNewTask', () => {
       expect(mockEventManager.sendTaskCreated).toHaveBeenCalledTimes(1);
 
       // Assert: sendTaskCreated should be called with the task data
-      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(subtask);
+      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(subtask, undefined);
 
       // Assert: The passed task should have correct properties including parentId
       const calledWith = (mockEventManager.sendTaskCreated as unknown as Mock).mock.calls[0][0];
@@ -577,7 +577,7 @@ describe('Project - createNewTask', () => {
       const preparedTaskData = preparedTaskWrapper.task;
 
       // Assert: sendTaskCreated should be called with the exact same task data
-      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(preparedTaskData);
+      expect(mockEventManager.sendTaskCreated).toHaveBeenCalledWith(preparedTaskData, undefined);
 
       // The returned task should match the task sent to event manager
       expect(task).toEqual(preparedTaskData);

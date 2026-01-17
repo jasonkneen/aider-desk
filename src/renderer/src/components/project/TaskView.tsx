@@ -12,7 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useSidebarWidth } from './useSidebarWidth';
 
 import { StyledTooltip } from '@/components/common/StyledTooltip';
-import { isLogMessage, isUserMessage, Message, TaskInfoMessage } from '@/types/message';
+import { isLogMessage, isTaskInfoMessage, isUserMessage, Message, TaskInfoMessage } from '@/types/message';
 import { Messages, MessagesRef } from '@/components/message/Messages';
 import { VirtualizedMessages, VirtualizedMessagesRef } from '@/components/message/VirtualizedMessages';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -195,10 +195,6 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       messagesRef.current?.scrollToBottom();
     }, []);
 
-    if (!taskState) {
-      return <LoadingOverlay message={t('common.loadingTask')} />;
-    }
-
     const { loading, loaded, allFiles, contextFiles, autocompletionWords, aiderTotalCost, tokensInfo, question, todoItems } = taskState;
 
     const displayedMessages = messages;
@@ -287,32 +283,46 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       await api.savePrompt(project.baseDir, task.id, prompt);
     };
 
-    const handleEditLastUserMessage = (content?: string) => {
-      let contentToEdit = content;
-      const messageIndex = displayedMessages.findLastIndex(isUserMessage);
+    const handleEditLastUserMessage = useCallback(
+      (content?: string) => {
+        let contentToEdit = content;
+        const messageIndex = displayedMessages.findLastIndex(isUserMessage);
 
-      if (messageIndex === -1) {
-        // eslint-disable-next-line no-console
-        console.warn('No user message found to edit.');
-        return;
-      }
+        if (messageIndex === -1) {
+          // eslint-disable-next-line no-console
+          console.warn('No user message found to edit.');
+          return;
+        }
 
-      if (contentToEdit === undefined) {
-        const lastUserMessage = displayedMessages[messageIndex];
-        contentToEdit = lastUserMessage.content;
-      }
-      if (contentToEdit === undefined) {
-        // eslint-disable-next-line no-console
-        console.warn('Could not determine content to edit.');
-        return;
-      }
+        if (contentToEdit === undefined) {
+          const lastUserMessage = displayedMessages[messageIndex];
+          contentToEdit = lastUserMessage.content;
+        }
+        if (contentToEdit === undefined) {
+          // eslint-disable-next-line no-console
+          console.warn('Could not determine content to edit.');
+          return;
+        }
 
-      setEditingMessageIndex(messageIndex);
-      setTimeout(() => {
-        promptFieldRef.current?.setText(contentToEdit);
-        promptFieldRef.current?.focus();
-      }, 0);
-    };
+        setEditingMessageIndex(messageIndex);
+        setTimeout(() => {
+          promptFieldRef.current?.setText(contentToEdit);
+          promptFieldRef.current?.focus();
+        }, 0);
+      },
+      [displayedMessages],
+    );
+
+    useEffect(() => {
+      if (task.handoff && displayedMessages.length > 0) {
+        setTimeout(() => {
+          handleEditLastUserMessage();
+        }, 0);
+
+        updateTask(task.id, { handoff: false });
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [task.handoff, task.id, displayedMessages]);
 
     const handleResetTask = () => {
       resetTask(task.id);
@@ -352,6 +362,10 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       const originalMessages = messages;
 
       setMessages(task.id, (prevMessages) => prevMessages.filter((msg) => msg.id !== messageToRemove.id));
+
+      if (isTaskInfoMessage(messageToRemove) || isLogMessage(messageToRemove)) {
+        return;
+      }
 
       try {
         await api.removeMessage(project.baseDir, task.id, messageToRemove.id);
@@ -457,6 +471,14 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       updateOptimisticTaskState(task.id, DefaultTaskState.Interrupted);
     };
 
+    const handleHandoff = async (focus?: string) => {
+      try {
+        await api.handoffConversation(project.baseDir, task.id, focus);
+      } catch (error) {
+        showErrorNotification(error instanceof Error ? error.message : String(error));
+      }
+    };
+
     if (!projectSettings || !settings) {
       return <LoadingOverlay message={t('common.loadingProjectSettings')} />;
     }
@@ -518,6 +540,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                       onArchiveTask={handleArchiveTask}
                       onUnarchiveTask={handleUnarchiveTask}
                       onDeleteTask={handleDeleteTask}
+                      onInterrupt={handleInterruptResponse}
                     />
                   ) : (
                     <Messages
@@ -542,6 +565,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                       onArchiveTask={handleArchiveTask}
                       onUnarchiveTask={handleUnarchiveTask}
                       onDeleteTask={handleDeleteTask}
+                      onInterrupt={handleInterruptResponse}
                     />
                   )}
                 </>
@@ -620,6 +644,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                 onAutoApproveChanged={handleAutoApproveChanged}
                 showSettingsPage={showSettingsPage}
                 showTaskInfo={handleShowTaskInfo}
+                handoffConversation={handleHandoff}
               />
             </div>
           </div>

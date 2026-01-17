@@ -205,6 +205,12 @@ const CompactConversationSchema = z.object({
   customInstructions: z.string().optional(),
 });
 
+const HandoffConversationSchema = z.object({
+  projectDir: z.string().min(1, 'Project directory is required'),
+  taskId: z.string().min(1, 'Task id is required'),
+  focus: z.string().optional(),
+});
+
 const ScrapeWebSchema = z.object({
   projectDir: z.string().min(1, 'Project directory is required'),
   taskId: z.string().min(1, 'Task id is required'),
@@ -614,6 +620,21 @@ export class ProjectApi extends BaseApi {
         const { projectDir, taskId, mode, customInstructions } = parsed;
         await this.eventsHandler.compactConversation(projectDir, taskId, mode, customInstructions);
         res.status(200).json({ message: 'Conversation compacted' });
+      }),
+    );
+
+    // Handoff conversation
+    router.post(
+      '/project/handoff-conversation',
+      this.handleRequest(async (req, res) => {
+        const parsed = this.validateRequest(HandoffConversationSchema, req.body, res);
+        if (!parsed) {
+          return;
+        }
+
+        const { projectDir, taskId, focus } = parsed;
+        await this.eventsHandler.handoffConversation(projectDir, taskId, focus);
+        res.status(200).json({ message: 'Conversation handed off' });
       }),
     );
 

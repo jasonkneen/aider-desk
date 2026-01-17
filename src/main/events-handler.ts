@@ -239,6 +239,15 @@ export class EventsHandler {
     }
   }
 
+  async handoffConversation(baseDir: string, taskId: string, focus?: string): Promise<void> {
+    const task = this.projectManager.getProject(baseDir).getTask(taskId);
+    if (!task) {
+      throw new Error('Task not found');
+    }
+    const mode = this.store.getProjectSettings(baseDir).currentMode || 'agent';
+    await task.handoffConversation(mode, focus);
+  }
+
   async loadInputHistory(baseDir: string): Promise<string[]> {
     return await this.projectManager.getProject(baseDir).loadInputHistory();
   }

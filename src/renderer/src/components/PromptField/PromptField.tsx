@@ -66,6 +66,7 @@ const COMMANDS = [
   '/edit-last',
   '/compact',
   '/commit',
+  '/handoff',
   '/init',
   '/clear-logs',
 ];
@@ -130,6 +131,7 @@ type Props = {
   onAutoApproveChanged?: (autoApprove: boolean) => void;
   showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
   showTaskInfo?: () => void;
+  handoffConversation?: (focus?: string) => Promise<void>;
 };
 
 export const PromptField = forwardRef<PromptFieldRef, Props>(
@@ -169,6 +171,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
       onAutoApproveChanged,
       showSettingsPage,
       showTaskInfo,
+      handoffConversation,
     }: Props,
     ref,
   ) => {
@@ -449,6 +452,14 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
             prepareForNextPrompt();
             api.compactConversation(baseDir, taskId, mode, args);
             break;
+          case '/handoff': {
+            const focus = args || '';
+            if (handoffConversation) {
+              handoffConversation(focus);
+            }
+            prepareForNextPrompt();
+            break;
+          }
           case '/test': {
             runTests(args);
             break;
@@ -496,6 +507,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
         runCommand,
         showTaskInfo,
         setTextWithDispatch,
+        handoffConversation,
       ],
     );
 

@@ -8,7 +8,7 @@ import { TaskStateActions } from 'src/renderer/src/components/message/TaskStateA
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
 
-import { isGroupMessage, isUserMessage, Message } from '@/types/message';
+import { isGroupMessage, isLoadingMessage, isUserMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
@@ -38,6 +38,7 @@ type Props = {
   onArchiveTask?: () => void;
   onUnarchiveTask?: () => void;
   onDeleteTask?: () => void;
+  onInterrupt?: () => void;
 };
 
 export const Messages = forwardRef<MessagesRef, Props>(
@@ -58,6 +59,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
       onArchiveTask,
       onUnarchiveTask,
       onDeleteTask,
+      onInterrupt,
     },
     ref,
   ) => {
@@ -69,6 +71,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
     // Group messages by promptContext.group.id
     const processedMessages = groupMessagesByPromptContext(messages);
     const lastUserMessageIndex = processedMessages.findLastIndex(isUserMessage);
+    const isLastLoadingMessage = processedMessages.length > 0 && isLoadingMessage(processedMessages[processedMessages.length - 1]);
     const inProgress = task.state === DefaultTaskState.InProgress;
 
     const { scrollingPaused, setScrollingPaused, scrollToBottom, eventHandlers } = useScrollingPaused({
@@ -158,6 +161,7 @@ export const Messages = forwardRef<MessagesRef, Props>(
                 remove={inProgress ? undefined : removeMessage}
                 redo={inProgress ? undefined : redoLastUserPrompt}
                 edit={editLastUserMessage}
+                onInterrupt={onInterrupt}
               />
             );
           }
@@ -172,11 +176,12 @@ export const Messages = forwardRef<MessagesRef, Props>(
               remove={inProgress ? undefined : () => removeMessage(message)}
               redo={index === lastUserMessageIndex && !inProgress ? redoLastUserPrompt : undefined}
               edit={index === lastUserMessageIndex ? editLastUserMessage : undefined}
+              onInterrupt={onInterrupt}
             />
           );
         })}
         <div ref={messagesEndRef} />
-        {settings?.taskSettings?.showTaskStateActions && (
+        {settings?.taskSettings?.showTaskStateActions && !inProgress && !isLastLoadingMessage && (
           <TaskStateActions
             task={task}
             onResumeTask={resumeTask}

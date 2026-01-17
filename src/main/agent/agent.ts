@@ -772,7 +772,7 @@ export class Agent {
             }),
           }),
           system: systemPrompt,
-          messages: optimizeMessages(task, profile, projectProfiles, initialUserRequestMessageIndex, messages, cacheControl),
+          messages: optimizeMessages(messages, cacheControl, task, profile, projectProfiles, initialUserRequestMessageIndex),
           tools: toolSet,
           abortSignal: effectiveAbortSignal,
           maxOutputTokens: effectiveMaxOutputTokens,
@@ -1068,6 +1068,7 @@ export class Agent {
     agentProfile: AgentProfile,
     systemPrompt: string,
     prompt: string,
+    messages: ContextMessage[] = [],
     abortable = true,
     abortSignal?: AbortSignal,
   ): Promise<string | undefined> {
@@ -1097,11 +1098,17 @@ export class Agent {
       prompt: prompt.substring(0, 100),
     });
 
+    messages.push({
+      id: uuidv4(),
+      role: 'user',
+      content: prompt,
+    });
+
     try {
       const result = await generateText({
         model,
         system: systemPrompt,
-        messages: [{ role: 'user', content: prompt }],
+        messages: optimizeMessages(messages),
         abortSignal: effectiveAbortSignal,
         providerOptions,
         ...providerParameters,
@@ -1142,12 +1149,12 @@ export class Agent {
       const userRequestMessageIndex = lastUserIndex >= 0 ? lastUserIndex : 0;
 
       const optimizedMessages = optimizeMessages(
+        messages,
+        cacheControl,
         task,
         profile,
         this.agentProfileManager.getProjectProfiles(task.getProjectDir()),
         userRequestMessageIndex,
-        messages,
-        cacheControl,
       );
 
       // Format tools for the prompt

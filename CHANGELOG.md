@@ -17,6 +17,7 @@
 - added task search tools for searching within tasks and parent tasks using semantic search
 - properly interrupting determine task state action after agent completion
 - max output tokens for models is now undefined by default
+- added handoff feature to create a new task with focus from current conversation
 
 ## [0.48.1]
 

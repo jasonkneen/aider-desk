@@ -508,6 +508,29 @@ export const COMPACT_CONVERSATION_AGENT_PROFILE: AgentProfile = {
   },
 };
 
+export const HANDOFF_AGENT_PROFILE: AgentProfile = {
+  ...DEFAULT_AGENT_PROFILE,
+  id: 'handoff',
+  maxIterations: 5,
+  includeRepoMap: false,
+  includeContextFiles: false,
+  usePowerTools: false,
+  useAiderTools: false,
+  useTodoTools: false,
+  useSubagents: false,
+  useTaskTools: false,
+  useMemoryTools: false,
+  useSkillsTools: false,
+  isSubagent: true,
+  toolApprovals: {
+    ...DEFAULT_AGENT_PROFILE.toolApprovals,
+    [`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_FILE_EDIT}`]: ToolApprovalState.Never,
+    [`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_FILE_WRITE}`]: ToolApprovalState.Never,
+    [`${POWER_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${POWER_TOOL_BASH}`]: ToolApprovalState.Never,
+    [`${SUBAGENTS_TOOL_GROUP_NAME}${TOOL_GROUP_NAME_SEPARATOR}${SUBAGENTS_TOOL_RUN_TASK}`]: ToolApprovalState.Never,
+  },
+};
+
 export const getDefaultProviderParams = <T extends LlmProvider>(providerName: LlmProviderName): T => {
   let provider: LlmProvider;
 
