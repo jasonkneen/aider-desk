@@ -210,6 +210,7 @@ const extToLang: Record<string, string> = {
   // Markdown/Docs
   md: 'markdown',
   markdown: 'markdown',
+  mdx: 'markdown',
   tex: 'latex',
 
   // Swift/Objective-C

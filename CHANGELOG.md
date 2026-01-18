@@ -18,6 +18,7 @@
 - properly interrupting determine task state action after agent completion
 - max output tokens for models is now undefined by default
 - added handoff feature to create a new task with focus from current conversation
+- changes made in mdx files are now properly showing up in diff viewer
 
 ## [0.48.1]
 
