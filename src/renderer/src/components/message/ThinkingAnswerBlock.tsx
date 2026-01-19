@@ -1,5 +1,5 @@
 import { MouseEvent, useState } from 'react';
-import { FaChevronDown, FaChevronRight } from 'react-icons/fa';
+import { FaChevronRight } from 'react-icons/fa';
 import { TfiThought } from 'react-icons/tfi';
 import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
@@ -57,9 +57,9 @@ export const ThinkingAnswerBlock = ({ thinking, answer, baseDir = '', allFiles =
               <div className="font-medium text-text-secondary flex-1">{t('thinkingAnswer.thinking')}</div>
             </div>
             {thinking && <CopyMessageButton content={thinking} className="text-text-muted-dark hover:text-text-tertiary" />}
-            <motion.div initial={false} animate={{ rotate: isThinkingExpanded ? 0 : -90 }} transition={{ duration: 0.2 }} className="text-text-secondary">
-              {isThinkingExpanded ? <FaChevronDown className="w-3 h-3" /> : <FaChevronRight className="w-3 h-3" />}
-            </motion.div>
+            <div className={clsx('text-text-secondary transition-transform', isThinkingExpanded ? 'rotate-90' : '')}>
+              <FaChevronRight className="w-3 h-3" />
+            </div>
           </div>
 
           <AnimatePresence initial={false}>

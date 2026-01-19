@@ -187,7 +187,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
       });
       setText(text);
     });
-    const [placeholderIndex, setPlaceholderIndex] = useState(() => Math.floor(Math.random() * PLACEHOLDER_COUNT));
+    const [placeholderIndex, setPlaceholderIndex] = useState(1);
     const [historyMenuVisible, setHistoryMenuVisible] = useState(false);
     const [highlightedHistoryItemIndex, setHighlightedHistoryItemIndex] = useState(0);
     const [historyLimit, setHistoryLimit] = useState(HISTORY_MENU_CHUNK_SIZE);
@@ -364,11 +364,14 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
       },
     }));
 
-    const handleAutoApproveLockChanged = (locked: boolean) => {
-      void saveProjectSettings({
-        autoApproveLocked: locked,
-      });
-    };
+    const handleAutoApproveLockChanged = useCallback(
+      (locked: boolean) => {
+        void saveProjectSettings({
+          autoApproveLocked: locked,
+        });
+      },
+      [saveProjectSettings],
+    );
 
     const prepareForNextPrompt = useCallback(() => {
       setTextWithDispatch('');

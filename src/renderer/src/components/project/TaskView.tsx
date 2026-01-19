@@ -1,5 +1,5 @@
 import { DefaultTaskState, Mode, Model, ModelsData, ProjectData, TaskData, TodoItem } from '@common/types';
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition } from 'react';
+import { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ResizableBox, ResizeCallbackData } from 'react-resizable';
 import { clsx } from 'clsx';
@@ -118,8 +118,6 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     const projectTopBarRef = useRef<TaskBarRef>(null);
     const messagesRef = useRef<MessagesRef | VirtualizedMessagesRef>(null);
     const terminalViewRef = useRef<TerminalViewRef | null>(null);
-    const [messagesPending, startMessagesTransition] = useTransition();
-    const [transitionMessages, setTransitionMessages] = useState<Message[]>([]);
     const [searchContainer, setSearchContainer] = useState<HTMLElement | null>(null);
     const activeAgentProfile = useMemo(() => {
       return resolveAgentProfile(task, projectSettings?.agentProfileId, getProfiles(project.baseDir));
@@ -173,12 +171,6 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     }, [currentMode, activeAgentProfile, models, aiderModelsData?.mainModel]);
     const maxInputTokens = currentModel?.maxInputTokens || 0;
 
-    useEffect(() => {
-      startMessagesTransition(() => {
-        setTransitionMessages(messages);
-      });
-    }, [messages]);
-
     const todoListVisible = useMemo(() => {
       return currentMode === 'agent' && activeAgentProfile?.useTodoTools;
     }, [currentMode, activeAgentProfile?.useTodoTools]);
@@ -197,91 +189,116 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
 
     const { loading, loaded, allFiles, contextFiles, autocompletionWords, aiderTotalCost, tokensInfo, question, todoItems } = taskState;
 
-    const displayedMessages = messages;
+    const displayedMessages = useDeferredValue(messages, []);
+    const messagesPending = messages.length !== displayedMessages.length;
 
-    const handleAddFiles = (filePaths: string[], readOnly = false) => {
-      for (const filePath of filePaths) {
-        api.addFile(project.baseDir, task.id, filePath, readOnly);
-      }
-      setAddFileDialogOptions(null);
-      promptFieldRef.current?.focus();
-    };
+    const handleAddFiles = useCallback(
+      (filePaths: string[], readOnly = false) => {
+        for (const filePath of filePaths) {
+          api.addFile(project.baseDir, task.id, filePath, readOnly);
+        }
+        setAddFileDialogOptions(null);
+        promptFieldRef.current?.focus();
+      },
+      [api, project.baseDir, task.id],
+    );
 
-    const showFileDialog = (readOnly: boolean) => {
+    const showFileDialog = useCallback((readOnly: boolean) => {
       setAddFileDialogOptions({
         readOnly,
       });
-    };
+    }, []);
 
-    const clearMessages = (clearContext = true) => {
-      clearSession(task.id, true);
+    const clearMessages = useCallback(
+      (clearContext = true) => {
+        clearSession(task.id, true);
 
-      if (clearContext) {
-        api.clearContext(project.baseDir, task.id);
-      }
-    };
+        if (clearContext) {
+          api.clearContext(project.baseDir, task.id);
+        }
+      },
+      [clearSession, task.id, api, project.baseDir],
+    );
 
-    const toggleTerminal = () => {
+    const toggleTerminal = useCallback(() => {
       setTerminalVisible(!terminalVisible);
-    };
+    }, [terminalVisible]);
 
-    const clearLogMessages = () => {
+    const clearLogMessages = useCallback(() => {
       setMessages(task.id, (prevMessages) => prevMessages.filter((message) => !isLogMessage(message)));
-    };
+    }, [setMessages, task.id]);
 
-    const runCommand = (command: string) => {
-      api.runCommand(project.baseDir, task.id, command);
-    };
+    const runCommand = useCallback(
+      (command: string) => {
+        api.runCommand(project.baseDir, task.id, command);
+      },
+      [api, project.baseDir, task.id],
+    );
 
-    const runTests = (testCmd?: string) => {
-      runCommand(`test ${testCmd || ''}`);
-    };
+    const runTests = useCallback(
+      (testCmd?: string) => {
+        runCommand(`test ${testCmd || ''}`);
+      },
+      [runCommand],
+    );
 
-    const scrapeWeb = async (url: string, filePath?: string) => {
-      await api.scrapeWeb(project.baseDir, task.id, url, filePath);
-    };
+    const scrapeWeb = useCallback(
+      async (url: string, filePath?: string) => {
+        await api.scrapeWeb(project.baseDir, task.id, url, filePath);
+      },
+      [api, project.baseDir, task.id],
+    );
 
     const handleModelChange = (modelsData: ModelsData | null) => {
       setAiderModelsData(task.id, modelsData);
       promptFieldRef.current?.focus();
     };
 
-    const handleModeChange = (mode: Mode) => {
-      updateTask(task.id, { currentMode: mode });
-    };
+    const handleModeChange = useCallback(
+      (mode: Mode) => {
+        updateTask(task.id, { currentMode: mode });
+      },
+      [updateTask, task.id],
+    );
 
     const handleMarkAsDone = () => {
       updateTask(task.id, { state: DefaultTaskState.Done });
     };
 
-    const runPrompt = (prompt: string) => {
-      updateOptimisticTaskState(task.id, DefaultTaskState.InProgress);
-      if (editingMessageIndex !== null) {
-        // This submission is an edit of a previous message
-        setEditingMessageIndex(null); // Clear editing state
-        setMessages(task.id, (prevMessages) => {
-          return prevMessages
-            .filter((_, index) => index <= editingMessageIndex)
-            .map((message, index) => {
-              if (index === editingMessageIndex) {
-                return {
-                  ...message,
-                  content: prompt,
-                };
-              } else {
-                return message;
-              }
-            });
-        });
-        api.redoLastUserPrompt(project.baseDir, task.id, currentMode, prompt);
-      } else {
-        api.runPrompt(project.baseDir, task.id, prompt, currentMode);
-      }
-    };
+    const runPrompt = useCallback(
+      (prompt: string) => {
+        updateOptimisticTaskState(task.id, DefaultTaskState.InProgress);
+        if (editingMessageIndex !== null) {
+          // This submission is an edit of a previous message
+          setEditingMessageIndex(null); // Clear editing state
+          setMessages(task.id, (prevMessages) => {
+            return prevMessages
+              .filter((_, index) => index <= editingMessageIndex)
+              .map((message, index) => {
+                if (index === editingMessageIndex) {
+                  return {
+                    ...message,
+                    content: prompt,
+                  };
+                } else {
+                  return message;
+                }
+              });
+          });
+          api.redoLastUserPrompt(project.baseDir, task.id, currentMode, prompt);
+        } else {
+          api.runPrompt(project.baseDir, task.id, prompt, currentMode);
+        }
+      },
+      [updateOptimisticTaskState, task.id, editingMessageIndex, api, project.baseDir, currentMode, setMessages],
+    );
 
-    const handleSavePrompt = async (prompt: string) => {
-      await api.savePrompt(project.baseDir, task.id, prompt);
-    };
+    const handleSavePrompt = useCallback(
+      async (prompt: string) => {
+        await api.savePrompt(project.baseDir, task.id, prompt);
+      },
+      [api, project.baseDir, task.id],
+    );
 
     const handleEditLastUserMessage = useCallback(
       (content?: string) => {
@@ -329,14 +346,14 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       setAiderModelsData(task.id, null);
     };
 
-    const handleRedoLastUserPrompt = () => {
+    const handleRedoLastUserPrompt = useCallback(() => {
       const lastUserMessageIndex = displayedMessages.findLastIndex(isUserMessage);
       setMessages(task.id, (prevMessages) => {
         return prevMessages.filter((_, index) => index <= lastUserMessageIndex);
       });
       updateOptimisticTaskState(task.id, DefaultTaskState.InProgress);
       api.redoLastUserPrompt(project.baseDir, task.id, currentMode);
-    };
+    }, [displayedMessages, setMessages, task.id, updateOptimisticTaskState, api, project.baseDir, currentMode]);
 
     const handleResumeTask = () => {
       api.resumeTask(project.baseDir, task.id);
@@ -429,7 +446,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       }
     };
 
-    const handleShowTaskInfo = () => {
+    const handleShowTaskInfo = useCallback(() => {
       const taskInfo: TaskInfoMessage = {
         id: uuidv4(),
         type: 'task-info',
@@ -438,7 +455,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
         messageCount: messages.length || 0,
       };
       setMessages(task.id, (prevMessages) => [...prevMessages, taskInfo]);
-    };
+    }, [task, messages, setMessages]);
 
     const handleTerminalViewResize = () => {
       terminalViewRef.current?.resize();
@@ -456,28 +473,45 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       promptFieldRef.current?.appendText(output);
     };
 
-    const handleAutoApproveChanged = (autoApprove: boolean) => {
-      updateTask(task.id, {
-        autoApprove,
-      });
-    };
+    const handleAutoApproveChanged = useCallback(
+      (autoApprove: boolean) => {
+        updateTask(task.id, {
+          autoApprove,
+        });
+      },
+      [updateTask, task.id],
+    );
 
-    const handleAnswerQuestion = (answer: string) => {
-      answerQuestion(task.id, answer);
-    };
+    const handleAnswerQuestion = useCallback(
+      (answer: string) => {
+        answerQuestion(task.id, answer);
+      },
+      [answerQuestion, task.id],
+    );
 
-    const handleInterruptResponse = () => {
+    const handleInterruptResponse = useCallback(() => {
       interruptResponse(task.id);
       updateOptimisticTaskState(task.id, DefaultTaskState.Interrupted);
-    };
+    }, [interruptResponse, task.id, updateOptimisticTaskState]);
 
-    const handleHandoff = async (focus?: string) => {
-      try {
-        await api.handoffConversation(project.baseDir, task.id, focus);
-      } catch (error) {
-        showErrorNotification(error instanceof Error ? error.message : String(error));
-      }
-    };
+    const handleHandoff = useCallback(
+      async (focus?: string) => {
+        try {
+          await api.handoffConversation(project.baseDir, task.id, focus);
+        } catch (error) {
+          showErrorNotification(error instanceof Error ? error.message : String(error));
+        }
+      },
+      [api, project.baseDir, task.id],
+    );
+
+    const handleShowFileDialog = useCallback(() => {
+      setAddFileDialogOptions({
+        readOnly: false,
+      });
+    }, []);
+
+    const handleRefreshAllFiles = useCallback((useGit?: boolean) => refreshAllFiles(task.id, useGit), [refreshAllFiles, task.id]);
 
     if (!projectSettings || !settings) {
       return <LoadingOverlay message={t('common.loadingProjectSettings')} />;
@@ -486,7 +520,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     return (
       <div className={clsx('h-full bg-gradient-to-b from-bg-primary to-bg-primary-light relative', isMobile ? 'flex flex-col' : 'flex')}>
         {!loaded && <LoadingOverlay message={t('common.loadingTask')} />}
-        {messagesPending && transitionMessages.length === 0 && <LoadingOverlay message={t('common.loadingMessages')} />}
+        {messagesPending && displayedMessages.length === 0 && <LoadingOverlay message={t('common.loadingMessages')} />}
         <div className="flex flex-col flex-grow overflow-hidden">
           <TaskBar
             ref={projectTopBarRef}
@@ -696,14 +730,10 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                     runCommand={runCommand}
                     resetTask={handleResetTask}
                     mode={currentMode}
-                    showFileDialog={() =>
-                      setAddFileDialogOptions({
-                        readOnly: false,
-                      })
-                    }
+                    showFileDialog={handleShowFileDialog}
                     task={task}
                     updateTask={updateTask}
-                    refreshAllFiles={(useGit) => refreshAllFiles(task.id, useGit)}
+                    refreshAllFiles={handleRefreshAllFiles}
                   />
                 </div>
               </ResizableBox>

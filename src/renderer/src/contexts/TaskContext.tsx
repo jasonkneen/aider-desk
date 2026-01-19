@@ -21,6 +21,8 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { TODO_TOOL_CLEAR_ITEMS, TODO_TOOL_GET_ITEMS, TODO_TOOL_GROUP_NAME, TODO_TOOL_SET_ITEMS, TODO_TOOL_UPDATE_ITEM_COMPLETION } from '@common/tools';
 import { useTranslation } from 'react-i18next';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/vanilla/shallow';
 
 import {
   CommandOutputMessage,
@@ -49,18 +51,16 @@ const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = ({ baseDir, task
   const api = useApi();
   const { t } = useTranslation();
   const previousState = usePrevious(state);
-  const {
-    updateTaskState,
-    clearSession,
-    setQuestion,
-    setTodoItems,
-    setMessages,
-    setAllFiles,
-    setAutocompletionWords,
-    setTokensInfo,
-    setAiderTotalCost,
-    setAiderModelsData,
-  } = useTaskStore();
+  const updateTaskState = useStoreWithEqualityFn(useTaskStore, (storeState) => storeState.updateTaskState, shallow);
+  const clearSession = useStoreWithEqualityFn(useTaskStore, (storeState) => storeState.clearSession, shallow);
+  const setQuestion = useStoreWithEqualityFn(useTaskStore, (storeState) => storeState.setQuestion, shallow);
+  const setTodoItems = useStoreWithEqualityFn(useTaskStore, (storeState) => storeState.setTodoItems, shallow);
+  const setMessages = useStoreWithEqualityFn(useTaskStore, (storeState) => storeState.setMessages, shallow);
+  const setAllFiles = useStoreWithEqualityFn(useTaskStore, (storeState) => storeState.setAllFiles, shallow);
+  const setAutocompletionWords = useStoreWithEqualityFn(useTaskStore, (storeState) => storeState.setAutocompletionWords, shallow);
+  const setTokensInfo = useStoreWithEqualityFn(useTaskStore, (storeState) => storeState.setTokensInfo, shallow);
+  const setAiderTotalCost = useStoreWithEqualityFn(useTaskStore, (storeState) => storeState.setAiderTotalCost, shallow);
+  const setAiderModelsData = useStoreWithEqualityFn(useTaskStore, (storeState) => storeState.setAiderModelsData, shallow);
 
   useEffect(() => {
     if (previousState === DefaultTaskState.InProgress && state !== DefaultTaskState.InProgress) {
@@ -528,7 +528,12 @@ export const TaskProvider: React.FC<{
   children: ReactNode;
 }> = ({ baseDir, tasks, children }) => {
   const api = useApi();
-  const { updateTaskState, clearSession, setMessages, setTodoItems, setAiderModelsData, setAllFiles } = useTaskStore();
+  const updateTaskState = useStoreWithEqualityFn(useTaskStore, (storeState) => storeState.updateTaskState, shallow);
+  const clearSession = useStoreWithEqualityFn(useTaskStore, (storeState) => storeState.clearSession, shallow);
+  const setMessages = useStoreWithEqualityFn(useTaskStore, (storeState) => storeState.setMessages, shallow);
+  const setTodoItems = useStoreWithEqualityFn(useTaskStore, (storeState) => storeState.setTodoItems, shallow);
+  const setAiderModelsData = useStoreWithEqualityFn(useTaskStore, (storeState) => storeState.setAiderModelsData, shallow);
+  const setAllFiles = useStoreWithEqualityFn(useTaskStore, (storeState) => storeState.setAllFiles, shallow);
 
   const loadTask = useCallback(
     async (taskId: string) => {

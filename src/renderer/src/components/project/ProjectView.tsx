@@ -5,16 +5,18 @@ import { useLocalStorage } from '@reactuses/core';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { clsx } from 'clsx';
 
+import { COLLAPSED_WIDTH, EXPANDED_WIDTH, TaskSidebar } from './TaskSidebar/TaskSidebar';
+
 import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
 import { LoadingOverlay } from '@/components/common/LoadingOverlay';
 import { TaskView, TaskViewRef } from '@/components/project/TaskView';
-import { COLLAPSED_WIDTH, EXPANDED_WIDTH, TaskSidebar } from '@/components/project/TaskSidebar';
 import { useApi } from '@/contexts/ApiContext';
 import { TaskProvider } from '@/contexts/TaskContext';
 import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
 import { getSortedVisibleTasks } from '@/utils/task-utils';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useBooleanState } from '@/hooks/useBooleanState';
 
 type Props = {
   project: ProjectData;
@@ -37,7 +39,7 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [optimisticTasks, setOptimisticTasks] = useOptimistic(tasks);
   const [isTaskBarCollapsed, setIsTaskBarCollapsed] = useLocalStorage(`task-sidebar-collapsed-${project.baseDir}`, false);
-  const [isTaskSidebarOpen, setIsTaskSidebarOpen] = useState(false);
+  const [isTaskSidebarOpen, , hideTaskSidebar, toggleTaskSidebar] = useBooleanState();
   const [shouldFocusNewTask, setShouldFocusNewTask] = useState(false);
   const taskViewRef = useRef<TaskViewRef>(null);
   const creatingTaskRef = useRef(false);
@@ -249,10 +251,10 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
       activateTask(taskId, false);
 
       if (isMobile) {
-        setIsTaskSidebarOpen(false);
+        hideTaskSidebar();
       }
     },
-    [activateTask, activeTaskId, focusActiveTaskPrompt, isMobile],
+    [activateTask, activeTaskId, focusActiveTaskPrompt, hideTaskSidebar, isMobile],
   );
 
   const switchToTaskByIndex = useCallback(
@@ -295,13 +297,9 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
     [optimisticTasks, activeTaskId, handleTaskSelect, switchToTaskByIndex],
   );
 
-  const handleToggleCollapse = () => {
+  const handleToggleCollapse = useCallback(() => {
     setIsTaskBarCollapsed(!isTaskBarCollapsed);
-  };
-
-  const handleToggleTaskSidebar = () => {
-    setIsTaskSidebarOpen(!isTaskSidebarOpen);
-  };
+  }, [isTaskBarCollapsed, setIsTaskBarCollapsed]);
 
   const handleUpdateTask = useCallback(
     async (taskId: string, updates: Partial<TaskData>, useOptimistic = true) => {
@@ -458,7 +456,7 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
             onExportToImage={handleExportTaskToImage}
             onDuplicateTask={handleDuplicateTask}
             isMobile={isMobile}
-            onClose={() => setIsTaskSidebarOpen(false)}
+            onClose={hideTaskSidebar}
           />
         )}
 
@@ -484,7 +482,7 @@ export const ProjectView = ({ project, isActive = false, showSettingsPage }: Pro
               onArchiveTask={() => handleArchiveTask(activeTask.id)}
               onUnarchiveTask={() => handleUnarchiveTask(activeTask.id)}
               onDeleteTask={() => handleDeleteTask(activeTask.id)}
-              onToggleTaskSidebar={isMobile ? handleToggleTaskSidebar : undefined}
+              onToggleTaskSidebar={isMobile ? toggleTaskSidebar : undefined}
             />
           )}
         </div>

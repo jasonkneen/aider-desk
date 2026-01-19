@@ -20,6 +20,8 @@ const ALL_FENCES = [
   ['<sourcecode>', '</sourcecode>'],
 ] as const;
 
+const remarkPlugins = [remarkGfm];
+
 export const parseMessageContent = (baseDir: string, content: string, allFiles: string[], renderMarkdown = false, renderThinking = true) => {
   // First check if the content matches the thinking/answer format
   const thinkingAnswerContent = parseThinkingAnswerFormat(content, baseDir, allFiles, renderMarkdown, renderThinking);
@@ -43,7 +45,7 @@ export const parseMessageContent = (baseDir: string, content: string, allFiles: 
         parts.push(
           <ReactMarkdown
             key={parts.length}
-            remarkPlugins={[remarkGfm]}
+            remarkPlugins={remarkPlugins}
             components={{
               h1: (props) => <h1 className="text-2xl font-bold my-4 first:mt-0 last:mb-0" {...props} />,
               h2: (props) => <h2 className="text-xl font-bold my-3 first:mt-0 last:mb-0" {...props} />,
