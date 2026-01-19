@@ -265,7 +265,7 @@ export class EventsHandler {
   }
 
   async addFile(baseDir: string, taskId: string, filePath: string, readOnly = false): Promise<void> {
-    void this.projectManager.getProject(baseDir).getTask(taskId)?.addFile({ path: filePath, readOnly });
+    void this.projectManager.getProject(baseDir).getTask(taskId)?.addFiles({ path: filePath, readOnly });
   }
 
   dropFile(baseDir: string, taskId: string, filePath: string): void {
@@ -310,7 +310,7 @@ export class EventsHandler {
 
       await fs.writeFile(absoluteImagePath, imageBuffer);
 
-      await task.addFile({ path: imagePath, readOnly: true });
+      await task.addFiles({ path: imagePath, readOnly: true });
     } catch (error) {
       logger.error('Error pasting image:', error);
       task.addLogMessage('error', `Failed to paste image: ${error instanceof Error ? error.message : String(error)}`);
@@ -579,7 +579,7 @@ export class EventsHandler {
       }
 
       await fs.writeFile(targetFilePath, `Scraped content of ${url}:\n\n${content}`);
-      await task.addFile({
+      await task.addFiles({
         path: path.relative(baseDir, targetFilePath),
         readOnly: true,
       });

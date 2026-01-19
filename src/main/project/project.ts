@@ -119,9 +119,7 @@ export class Project {
     if (internalTask) {
       // adding files from internal task that keeps track of files to new task
       const contextFiles = await internalTask.getContextFiles();
-      contextFiles.forEach((file) => {
-        task.addFile(file);
-      });
+      await task.addFiles(...contextFiles);
     }
 
     return task.task;

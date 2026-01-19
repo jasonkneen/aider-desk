@@ -96,34 +96,36 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     const { getProfiles } = useAgents();
 
     const taskState = useTaskState(task.id);
+    const { loading, loaded, allFiles, contextFiles, autocompletionWords, aiderTotalCost, tokensInfo, question, todoItems, aiderModelsData } = taskState;
+
     const messages = useTaskMessages(task.id);
+    const displayedMessages = useDeferredValue(messages, []);
+    const messagesPending = messages.length !== displayedMessages.length;
+
+    const currentMode = task.currentMode || 'agent';
+
+    const [addFileDialogOptions, setAddFileDialogOptions] = useState<AddFileDialogOptions | null>(null);
+    const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
+    const [searchContainer, setSearchContainer] = useState<HTMLElement | null>(null);
+    const [terminalVisible, setTerminalVisible] = useState(false);
+    const [showSidebar, setShowSidebar] = useState(isMobile);
+    const { width: sidebarWidth, setWidth: setSidebarWidth } = useSidebarWidth(project.baseDir, task.id);
+    const [isFilesSidebarCollapsed, setIsFilesSidebarCollapsed] = useLocalStorage(`files-sidebar-collapsed-${project.baseDir}-${task.id}`, false);
+    const { renderSearchInput } = useSearchText(searchContainer, 'absolute top-1 left-1');
+
+    const promptFieldRef = useRef<PromptFieldRef>(null);
+    const projectTopBarRef = useRef<TaskBarRef>(null);
+    const messagesRef = useRef<MessagesRef | VirtualizedMessagesRef>(null);
+    const terminalViewRef = useRef<TerminalViewRef | null>(null);
+    const activeAgentProfile = useMemo(() => {
+      return resolveAgentProfile(task, projectSettings?.agentProfileId, getProfiles(project.baseDir));
+    }, [task, projectSettings?.agentProfileId, getProfiles, project.baseDir]);
 
     useEffect(() => {
       if (isActive && !taskState.loaded && !taskState.loading) {
         loadTask(task.id);
       }
     }, [isActive, loadTask, task.id, taskState.loaded, taskState.loading]);
-
-    const aiderModelsData = taskState?.aiderModelsData || null;
-    const currentMode = task.currentMode || 'agent';
-
-    const [addFileDialogOptions, setAddFileDialogOptions] = useState<AddFileDialogOptions | null>(null);
-    const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
-    const [terminalVisible, setTerminalVisible] = useState(false);
-    const [showSidebar, setShowSidebar] = useState(isMobile);
-    const { width: sidebarWidth, setWidth: setSidebarWidth } = useSidebarWidth(project.baseDir, task.id);
-    const [isFilesSidebarCollapsed, setIsFilesSidebarCollapsed] = useLocalStorage(`files-sidebar-collapsed-${project.baseDir}-${task.id}`, false);
-
-    const promptFieldRef = useRef<PromptFieldRef>(null);
-    const projectTopBarRef = useRef<TaskBarRef>(null);
-    const messagesRef = useRef<MessagesRef | VirtualizedMessagesRef>(null);
-    const terminalViewRef = useRef<TerminalViewRef | null>(null);
-    const [searchContainer, setSearchContainer] = useState<HTMLElement | null>(null);
-    const activeAgentProfile = useMemo(() => {
-      return resolveAgentProfile(task, projectSettings?.agentProfileId, getProfiles(project.baseDir));
-    }, [task, projectSettings?.agentProfileId, getProfiles, project.baseDir]);
-
-    const { renderSearchInput } = useSearchText(searchContainer, 'absolute top-1 left-1');
 
     useImperativeHandle(ref, () => ({
       exportMessagesToImage: () => {
@@ -186,11 +188,6 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     const handleScrollToBottom = useCallback(() => {
       messagesRef.current?.scrollToBottom();
     }, []);
-
-    const { loading, loaded, allFiles, contextFiles, autocompletionWords, aiderTotalCost, tokensInfo, question, todoItems } = taskState;
-
-    const displayedMessages = useDeferredValue(messages, []);
-    const messagesPending = messages.length !== displayedMessages.length;
 
     const handleAddFiles = useCallback(
       (filePaths: string[], readOnly = false) => {

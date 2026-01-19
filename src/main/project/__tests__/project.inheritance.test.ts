@@ -81,7 +81,7 @@ describe('Project Inheritance', () => {
     (project as any).prepareTask = vi.fn((id, data) => ({
       task: { id: id || 'test-task-id', ...data },
       hookManager: { trigger: vi.fn().mockResolvedValue({}) },
-      addFile: vi.fn(),
+      addFiles: vi.fn(),
     }));
 
     // Mock INTERNAL_TASK_ID

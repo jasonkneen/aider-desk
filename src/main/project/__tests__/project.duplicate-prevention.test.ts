@@ -122,7 +122,7 @@ describe('Project Duplicate Subtask Prevention', () => {
     vi.spyOn(project as any, 'prepareTask').mockReturnValue({
       task: { id: newSubtaskId, parentId },
       hookManager: { trigger: vi.fn().mockResolvedValue({}) },
-      addFile: vi.fn(),
+      addFiles: vi.fn(),
     });
 
     const result = await project.createNewTask({ parentId });
@@ -158,7 +158,7 @@ describe('Project Duplicate Subtask Prevention', () => {
     vi.spyOn(project as any, 'prepareTask').mockReturnValue({
       task: { id: newSubtaskId, parentId },
       hookManager: { trigger: vi.fn().mockResolvedValue({}) },
-      addFile: vi.fn(),
+      addFiles: vi.fn(),
     });
 
     const result = await project.createNewTask({ parentId });
@@ -194,7 +194,7 @@ describe('Project Duplicate Subtask Prevention', () => {
     vi.spyOn(project as any, 'prepareTask').mockReturnValue({
       task: { id: newSubtaskId, parentId },
       hookManager: { trigger: vi.fn().mockResolvedValue({}) },
-      addFile: vi.fn(),
+      addFiles: vi.fn(),
     });
 
     const result = await project.createNewTask({ parentId });
