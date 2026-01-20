@@ -345,6 +345,7 @@ export class Task {
     logger.info('Saved task data', {
       baseDir: this.project.baseDir,
       taskId: this.taskId,
+      task: this.task,
     });
 
     return this.task;
@@ -1095,7 +1096,7 @@ export class Task {
       }
 
       if (usageReport) {
-        logger.debug(`Usage report: ${JSON.stringify(usageReport)}`);
+        logger.info(`Usage report: ${JSON.stringify(usageReport)}`);
         this.updateTotalCosts(usageReport);
       }
       const data: ResponseCompletedData = {
