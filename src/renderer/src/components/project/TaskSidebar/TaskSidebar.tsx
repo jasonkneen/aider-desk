@@ -1,6 +1,6 @@
 import { TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { MouseEvent, useState, useRef, useEffect, useOptimistic, startTransition, Activity, memo } from 'react';
+import { MouseEvent, useState, useRef, useEffect, useOptimistic, startTransition, Activity, memo, useDeferredValue } from 'react';
 import { HiPlus } from 'react-icons/hi';
 import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { CgSpinner } from 'react-icons/cg';
@@ -108,6 +108,7 @@ const TaskSidebarComponent = ({
   });
 
   const sortedTasks = getSortedVisibleTasks(tasks, showArchived, debouncedSearchQuery);
+  const deferredTasks = useDeferredValue(sortedTasks);
 
   const handleTaskClick = (e: MouseEvent, taskId: string) => {
     if (e.ctrlKey || e.metaKey) {
@@ -483,8 +484,8 @@ const TaskSidebarComponent = ({
                   </div>
                 ) : (
                   <div>
-                    {sortedTasks
-                      .filter((task) => !task.parentId || !sortedTasks.some((t) => t.id === task.parentId))
+                    {deferredTasks
+                      .filter((task) => !task.parentId || !deferredTasks.some((t) => t.id === task.parentId))
                       .map((task) => (
                         <TaskItem
                           key={task.id}
