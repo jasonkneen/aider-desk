@@ -42,6 +42,7 @@ export const TaskMenuButton = memo(
     isPinned,
   }: Props) => {
     const { t } = useTranslation();
+    const isNewTask = !task.createdAt;
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isStateSubmenuOpen, setIsStateSubmenuOpen] = useState(false);
     const [submenuPosition, setSubmenuPosition] = useState<{ top: number; left: number } | null>(null);
@@ -158,7 +159,7 @@ export const TaskMenuButton = memo(
                 <HiOutlinePencil className="w-4 h-4" />
                 <span className="whitespace-nowrap">{t('taskSidebar.rename')}</span>
               </li>
-              {onTogglePin && (
+              {onTogglePin && !isNewTask && (
                 <li
                   className="flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"
                   onClick={handlePinClick}
@@ -194,7 +195,7 @@ export const TaskMenuButton = memo(
                   <span className="whitespace-nowrap">{t('taskSidebar.duplicateTask')}</span>
                 </li>
               )}
-              {task.state !== DefaultTaskState.InProgress && (
+              {task.state !== DefaultTaskState.InProgress && !isNewTask && (
                 <li
                   ref={stateSubmenuItemRef}
                   className="relative flex items-center gap-2 px-2 py-1 text-2xs text-text-primary hover:bg-bg-tertiary cursor-pointer transition-colors"

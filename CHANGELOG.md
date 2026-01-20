@@ -5,6 +5,7 @@
 - further improvement to the rendering performance
 - properly showing the Aider cost
 - added option to disable thinking for Z.AI Coding Plan provider models
+- hidden pin and state change actions for new tasks
 
 ## [0.49.0]
 
