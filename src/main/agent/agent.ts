@@ -25,6 +25,7 @@ import {
   NoSuchToolError,
   type StepResult,
   streamText,
+  smoothStream,
   type Tool,
   type ToolCallOptions,
   type ToolSet,
@@ -851,6 +852,10 @@ export class Agent {
           logger.debug('Streaming enabled, using streamText');
           const result = streamText({
             ...getBaseModelCallParams(),
+            experimental_transform: smoothStream({
+              delayInMs: 20,
+              chunking: 'line',
+            }),
             onError: ({ error }) => {
               if (effectiveAbortSignal?.aborted) {
                 return;
