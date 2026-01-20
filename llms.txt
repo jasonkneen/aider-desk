@@ -392,6 +392,12 @@ src/
           OnboardingProviderSetup.tsx
           OnboardingStepper.tsx
         project/
+          TaskSidebar/
+            TaskItem.tsx
+            TaskMenuButton.tsx
+            TaskSidebar.tsx
+            TaskSidebarMultiSelectMenu.tsx
+            TaskStatusIcon.tsx
           AddFileDialog.tsx
           FileFinder.tsx
           FilesContextInfoContent.tsx
@@ -401,7 +407,6 @@ src/
           ProjectTabs.tsx
           ProjectView.tsx
           TaskBar.tsx
-          TaskSidebar.tsx
           TaskView.tsx
           TodoListItem.tsx
           TodoWindow.tsx
@@ -11067,7 +11072,7 @@ public answerQuestion(answer: string, userInput?: string): boolean
 ⋮----
 // Send question-answered event
 ⋮----
-public async addFile(contextFile: ContextFile)
+public async addFiles(...contextFiles: ContextFile[])
 ⋮----
 // Send add file message for each added file
 ⋮----
@@ -13979,7 +13984,7 @@ updateAgentProfilesOrder(agentProfiles: AgentProfile[]): Promise<void>
 ================
 File: src/renderer/src/components/AgentSelector/AgentSelector.tsx
 ================
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MdCheck, MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdPsychology, MdSave } from 'react-icons/md';
 import { RiToolsFill } from 'react-icons/ri';
@@ -16325,7 +16330,7 @@ const renderSection = (icon: ReactNode, text: string, actions: ReactNode) =>
 File: src/renderer/src/components/message/ThinkingAnswerBlock.tsx
 ================
 import { MouseEvent, useState } from 'react';
-import { FaChevronDown, FaChevronRight } from 'react-icons/fa';
+import { FaChevronRight } from 'react-icons/fa';
 import { TfiThought } from 'react-icons/tfi';
 import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
@@ -16353,6 +16358,8 @@ type Props = {
 const handleToggleThinking = (e: MouseEvent<HTMLDivElement>) =>
 ⋮----
 {/* Thinking section */}
+⋮----
+<div className=
 ⋮----
 className=
 ⋮----
@@ -18205,6 +18212,327 @@ className=
 {/* Connector Line */}
 
 ================
+File: src/renderer/src/components/project/TaskSidebar/TaskItem.tsx
+================
+import { TaskData, DefaultTaskState } from '@common/types';
+import { useTranslation } from 'react-i18next';
+import { KeyboardEvent, MouseEvent, useEffect, memo, useState } from 'react';
+import { HiPlus, HiCheck, HiSparkles } from 'react-icons/hi';
+import { IoGitBranch } from 'react-icons/io5';
+import { MdPushPin, MdChevronRight } from 'react-icons/md';
+import { clsx } from 'clsx';
+import { useLocalStorage, useLongPress } from '@reactuses/core';
+import { AnimatePresence, motion } from 'framer-motion';
+⋮----
+import { TaskStatusIcon } from './TaskStatusIcon';
+import { TaskMenuButton } from './TaskMenuButton';
+⋮----
+import { getSortedVisibleTasks } from '@/utils/task-utils';
+import { Input } from '@/components/common/Input';
+import { Button } from '@/components/common/Button';
+import { LoadingText } from '@/components/common/LoadingText';
+import { TaskStateChip } from '@/components/common/TaskStateChip';
+⋮----
+type Props = {
+  task: TaskData;
+  tasks: TaskData[];
+  level: number;
+  selectedTasks: Set<string>;
+  deleteConfirmTaskId: string | null;
+  showArchived: boolean;
+  searchQuery: string;
+  isMultiselectMode: boolean;
+  setIsMultiselectMode: (value: boolean) => void;
+  activeTaskId: string | null;
+  onTaskClick: (e: MouseEvent, taskId: string) => void;
+  createNewTask?: (parentId?: string) => void;
+  editingTaskId: string | null;
+  onEditClick: (taskId: string) => void;
+  onEditConfirm: (taskId: string, newName: string) => Promise<void>;
+  onEditCancel: () => void;
+  onDeleteClick: (taskId: string) => void;
+  onArchiveTask: (taskId: string) => Promise<void>;
+  onUnarchiveTask: (taskId: string) => Promise<void>;
+  onTogglePin: (taskId: string) => Promise<void>;
+  onChangeState: (taskId: string, newState: string) => Promise<void>;
+  onExportToMarkdown?: (taskId: string) => void;
+  onExportToImage?: (taskId: string) => void;
+  onDuplicateTask?: (taskId: string) => void;
+  updateTask?: (taskId: string, updates: Partial<TaskData>) => Promise<void>;
+  deleteTask?: (taskId: string) => Promise<void>;
+  handleConfirmDelete: (taskId: string) => Promise<void>;
+  handleCancelDelete: () => void;
+};
+⋮----
+// Auto-expand if this task contains the active task as a subtask (recursively)
+⋮----
+const hasActiveSubtask = (taskId: string): boolean =>
+⋮----
+// eslint-disable-next-line react-hooks/exhaustive-deps
+⋮----
+const toggleExpand = (e: MouseEvent) =>
+⋮----
+const handleCreateSubtask = (e: MouseEvent) =>
+⋮----
+const handleEditKeyDown = (e: KeyboardEvent<HTMLInputElement>) =>
+⋮----
+const handleOnEdit = () =>
+⋮----
+className=
+⋮----
+label=
+⋮----
+onDelete=
+⋮----
+onTogglePin=
+onChangeState=
+
+================
+File: src/renderer/src/components/project/TaskSidebar/TaskMenuButton.tsx
+================
+import { DefaultTaskState, TaskData } from '@common/types';
+import { useTranslation } from 'react-i18next';
+import { MouseEvent, useRef, useState, useEffect, memo } from 'react';
+import { HiOutlinePencil, HiOutlineTrash } from 'react-icons/hi';
+import { FaEllipsisVertical } from 'react-icons/fa6';
+import { IoLogoMarkdown } from 'react-icons/io';
+import { RiFlag2Line } from 'react-icons/ri';
+import { MdImage, MdPushPin, MdChevronRight } from 'react-icons/md';
+import { BiDuplicate, BiArchive, BiArchiveIn } from 'react-icons/bi';
+import { createPortal } from 'react-dom';
+import { clsx } from 'clsx';
+⋮----
+import { useClickOutside } from '@/hooks/useClickOutside';
+import { getTaskStateLabel } from '@/components/common/TaskStateChip';
+⋮----
+type Props = {
+  task: TaskData;
+  onEdit: () => void;
+  onDelete?: () => void;
+  onExportToMarkdown?: () => void;
+  onExportToImage?: () => void;
+  onDuplicateTask?: () => void;
+  onArchiveTask?: () => void;
+  onUnarchiveTask?: () => void;
+  onTogglePin?: () => void;
+  onChangeState?: (newState: string) => void;
+  isPinned?: boolean;
+};
+⋮----
+const handleMenuClick = () =>
+⋮----
+const handleEditClick = (e: MouseEvent) =>
+⋮----
+const handleDeleteClick = (e: MouseEvent) =>
+⋮----
+const handleExportToMarkdownClick = (e: MouseEvent) =>
+⋮----
+const handleExportToImageClick = (e: MouseEvent) =>
+⋮----
+const handleDuplicateTaskClick = (e: MouseEvent) =>
+⋮----
+const handleArchiveTaskClick = (e: MouseEvent) =>
+⋮----
+const handleUnarchiveTaskClick = (e: MouseEvent) =>
+⋮----
+const handlePinClick = (e: MouseEvent) =>
+⋮----
+const handleStateSubmenuToggle = () =>
+⋮----
+const handleStateChange = (e: MouseEvent, state: string) =>
+⋮----
+<div className=
+⋮----
+className={clsx(
+              'transition-opacity p-1.5 rounded-md hover:bg-bg-tertiary text-text-muted hover:text-text-primary',
+              !isMenuOpen && 'opacity-0 group-hover:opacity-100',
+            )}
+onClick=
+⋮----
+e.stopPropagation();
+handleStateSubmenuToggle();
+
+================
+File: src/renderer/src/components/project/TaskSidebar/TaskSidebar.tsx
+================
+import { TaskData } from '@common/types';
+import { useTranslation } from 'react-i18next';
+import { MouseEvent, useState, useRef, useEffect, useOptimistic, startTransition, Activity, memo } from 'react';
+import { HiPlus } from 'react-icons/hi';
+import { RiMenuUnfold4Line } from 'react-icons/ri';
+import { CgSpinner } from 'react-icons/cg';
+import { MdOutlineSearch } from 'react-icons/md';
+import { clsx } from 'clsx';
+import { AnimatePresence, motion } from 'framer-motion';
+import { BiArchive, BiArchiveIn } from 'react-icons/bi';
+import { HiXMark } from 'react-icons/hi2';
+import { useDebounce } from '@reactuses/core';
+⋮----
+import { TaskSidebarMultiSelectMenu } from './TaskSidebarMultiSelectMenu';
+import { TaskItem } from './TaskItem';
+⋮----
+import { getSortedVisibleTasks } from '@/utils/task-utils';
+import { Input } from '@/components/common/Input';
+import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { IconButton } from '@/components/common/IconButton';
+import { useClickOutside } from '@/hooks/useClickOutside';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+⋮----
+type Props = {
+  loading: boolean;
+  tasks: TaskData[];
+  activeTaskId: string | null;
+  onTaskSelect: (taskId: string) => void;
+  createNewTask?: (parentId?: string) => void;
+  className?: string;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
+  updateTask?: (taskId: string, updates: Partial<TaskData>) => Promise<void>;
+  deleteTask?: (taskId: string) => Promise<void>;
+  onExportToMarkdown?: (taskId: string) => void;
+  onExportToImage?: (taskId: string) => void;
+  onDuplicateTask?: (taskId: string) => void;
+  isMobile?: boolean;
+  onClose?: () => void;
+};
+⋮----
+// Multiselect state
+⋮----
+const handleMultiselectClose = () =>
+⋮----
+// Handle ESC key to exit multiselect mode
+⋮----
+const handleKeyDown = (e: globalThis.KeyboardEvent) =>
+⋮----
+// Handle click outside for multiselect menu
+⋮----
+const handleTaskClick = (e: MouseEvent, taskId: string) =>
+⋮----
+const handleDeleteClick = (taskId: string) =>
+⋮----
+const handleConfirmDelete = async (taskId: string) =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+const handleCancelDelete = () =>
+⋮----
+const handleEditClick = (taskId: string) =>
+⋮----
+const handleEditConfirm = async (taskId: string, newName: string) =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+const handleEditCancel = () =>
+⋮----
+const handleCreateTask = () =>
+⋮----
+const handleSearchToggle = () =>
+⋮----
+const handleSearchClose = () =>
+⋮----
+const handleArchiveTask = async (taskId: string) =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+const handleUnarchiveTask = async (taskId: string) =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+const handleTogglePin = async (taskId: string) =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+const handleChangeState = async (taskId: string, newState: string) =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// Multiselect handlers
+const handleTaskCtrlClick = (e: MouseEvent, taskId: string) =>
+⋮----
+const handleTaskClickInMultiselect = (e: MouseEvent, taskId: string) =>
+⋮----
+const handleTaskShiftClick = (taskId: string) =>
+⋮----
+const handleBulkDelete = async () =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+const handleBulkArchive = async () =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+<h3 className="text-sm font-semibold uppercase h-5">
+⋮----
+onArchive=
+onUnarchive=
+⋮----
+onClick=
+⋮----
+{/* Bulk Delete Confirmation */}
+⋮----
+title=
+⋮----
+{/* Bulk Archive Confirmation */}
+⋮----
+// Custom comparison function for React.memo
+const arePropsEqual = (prevProps: Props, nextProps: Props): boolean =>
+⋮----
+// Compare primitive props
+⋮----
+// Compare function props
+⋮----
+// Compare tasks array - shallow check first, then deep check for task properties
+⋮----
+// Check if tasks have changed in meaningful ways
+⋮----
+// Only check properties that affect rendering
+
+================
+File: src/renderer/src/components/project/TaskSidebar/TaskSidebarMultiSelectMenu.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { HiOutlineTrash } from 'react-icons/hi';
+import { FaEllipsisVertical } from 'react-icons/fa6';
+import { BiArchive, BiArchiveIn } from 'react-icons/bi';
+⋮----
+type Props = {
+  hasArchived: boolean;
+  onDelete: () => void;
+  onArchive: () => void;
+  onUnarchive: () => void;
+  isOpen: boolean;
+  onToggle: () => void;
+  menuRef: React.RefObject<HTMLDivElement | null>;
+  buttonRef: React.RefObject<HTMLDivElement | null>;
+};
+⋮----
+e.stopPropagation();
+onDelete();
+⋮----
+onArchive();
+⋮----
+onUnarchive();
+
+================
+File: src/renderer/src/components/project/TaskSidebar/TaskStatusIcon.tsx
+================
+import { DefaultTaskState } from '@common/types';
+import { CgSpinner } from 'react-icons/cg';
+import { clsx } from 'clsx';
+⋮----
+import { useTaskState } from '@/stores/taskStore';
+⋮----
+type Props = {
+  taskId: string;
+  state?: string;
+  isCollapsed?: boolean;
+};
+⋮----
+export const TaskStatusIcon = (
+⋮----
+return <span className=
+
+================
 File: src/renderer/src/components/project/AddFileDialog.tsx
 ================
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -18522,16 +18850,18 @@ import { useLocalStorage } from '@reactuses/core';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { clsx } from 'clsx';
 ⋮----
+import { COLLAPSED_WIDTH, EXPANDED_WIDTH, TaskSidebar } from './TaskSidebar/TaskSidebar';
+⋮----
 import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
 import { LoadingOverlay } from '@/components/common/LoadingOverlay';
 import { TaskView, TaskViewRef } from '@/components/project/TaskView';
-import { COLLAPSED_WIDTH, EXPANDED_WIDTH, TaskSidebar } from '@/components/project/TaskSidebar';
 import { useApi } from '@/contexts/ApiContext';
 import { TaskProvider } from '@/contexts/TaskContext';
 import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
 import { getSortedVisibleTasks } from '@/utils/task-utils';
 import { useResponsive } from '@/hooks/useResponsive';
+import { useBooleanState } from '@/hooks/useBooleanState';
 ⋮----
 type Props = {
   project: ProjectData;
@@ -18574,10 +18904,6 @@ const initProject = async () =>
 // eslint-disable-next-line no-console
 ⋮----
 // Switch to specific task tabs (Ctrl + 1-9)
-⋮----
-const handleToggleCollapse = () =>
-⋮----
-const handleToggleTaskSidebar = () =>
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
@@ -18683,181 +19009,10 @@ data-tooltip-content=
 onSquash=
 
 ================
-File: src/renderer/src/components/project/TaskSidebar.tsx
-================
-import { DefaultTaskState, TaskData } from '@common/types';
-import { useTranslation } from 'react-i18next';
-import { KeyboardEvent, MouseEvent, useState, memo, useRef, useEffect, useOptimistic, startTransition } from 'react';
-import { createPortal } from 'react-dom';
-import { HiOutlinePencil, HiOutlineTrash, HiPlus, HiCheck, HiSparkles } from 'react-icons/hi';
-import { RiMenuUnfold4Line, RiFlag2Line } from 'react-icons/ri';
-import { FaEllipsisVertical } from 'react-icons/fa6';
-import { IoLogoMarkdown } from 'react-icons/io';
-import { IoGitBranch } from 'react-icons/io5';
-import { CgSpinner } from 'react-icons/cg';
-import { MdImage, MdOutlineSearch, MdPushPin, MdChevronRight } from 'react-icons/md';
-import { clsx } from 'clsx';
-import { AnimatePresence, motion } from 'framer-motion';
-import { BiDuplicate, BiArchive, BiArchiveIn } from 'react-icons/bi';
-import { HiXMark } from 'react-icons/hi2';
-import { useDebounce, useLocalStorage, useLongPress } from '@reactuses/core';
-⋮----
-import { getSortedVisibleTasks } from '@/utils/task-utils';
-import { Input } from '@/components/common/Input';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
-import { Button } from '@/components/common/Button';
-import { IconButton } from '@/components/common/IconButton';
-import { useClickOutside } from '@/hooks/useClickOutside';
-import { ConfirmDialog } from '@/components/common/ConfirmDialog';
-import { LoadingText } from '@/components/common/LoadingText';
-import { getTaskStateLabel, TaskStateChip } from '@/components/common/TaskStateChip';
-import { useTaskState } from '@/stores/taskStore';
-⋮----
-return <span className=
-⋮----
-const handleDeleteClick = (e: MouseEvent) =>
-⋮----
-const handleExportToMarkdownClick = (e: MouseEvent) =>
-⋮----
-const handleExportToImageClick = (e: MouseEvent) =>
-⋮----
-const handleDuplicateTaskClick = (e: MouseEvent) =>
-⋮----
-const handleArchiveTaskClick = (e: MouseEvent) =>
-⋮----
-const handleUnarchiveTaskClick = (e: MouseEvent) =>
-⋮----
-const handlePinClick = (e: MouseEvent) =>
-⋮----
-const handleStateSubmenuToggle = () =>
-⋮----
-<div className=
-⋮----
-className={clsx(
-            'transition-opacity p-1.5 rounded-md hover:bg-bg-tertiary text-text-muted hover:text-text-primary',
-            !isMenuOpen && 'opacity-0 group-hover:opacity-100',
-          )}
-onClick=
-⋮----
-e.stopPropagation();
-handleStateSubmenuToggle();
-⋮----
-// Multiselect Menu Component
-⋮----
-onDelete();
-⋮----
-onArchive();
-⋮----
-onUnarchive();
-⋮----
-// Multiselect state
-⋮----
-const handleMultiselectClose = () =>
-⋮----
-// Handle ESC key to exit multiselect mode
-⋮----
-const handleKeyDown = (e: globalThis.KeyboardEvent) =>
-⋮----
-// Handle click outside for multiselect menu
-⋮----
-// Automatically expand parent when activeTaskId is a subtask
-⋮----
-// eslint-disable-next-line react-hooks/exhaustive-deps
-⋮----
-const handleTaskClick = (e: MouseEvent, taskId: string) =>
-⋮----
-const handleConfirmDelete = async (taskId: string) =>
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-const handleCancelDelete = () =>
-⋮----
-const handleEditClick = (taskId: string, taskName: string) =>
-⋮----
-const handleConfirmEdit = async (taskId: string) =>
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-const handleCancelEdit = () =>
-⋮----
-const handleEditKeyDown = (e: KeyboardEvent<HTMLInputElement>) =>
-⋮----
-const handleCreateTask = () =>
-⋮----
-const handleSearchToggle = () =>
-⋮----
-const handleSearchClose = () =>
-⋮----
-const handleArchiveTask = async (taskId: string) =>
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-const handleUnarchiveTask = async (taskId: string) =>
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-const handleTogglePin = async (taskId: string) =>
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-const handleChangeState = async (taskId: string, newState: string) =>
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-// Multiselect handlers
-const handleTaskCtrlClick = (e: MouseEvent, taskId: string) =>
-⋮----
-const handleTaskClickInMultiselect = (e: MouseEvent, taskId: string) =>
-⋮----
-const handleTaskShiftClick = (taskId: string) =>
-⋮----
-const handleBulkDelete = async () =>
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-const handleBulkArchive = async () =>
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-const toggleExpand = (e: MouseEvent) =>
-⋮----
-const handleCreateSubtask = (e: MouseEvent) =>
-⋮----
-label=
-⋮----
-onChangeState=
-⋮----
-<h3 className="text-sm font-semibold uppercase h-5">
-⋮----
-onArchive=
-onUnarchive=
-⋮----
-onClick=
-⋮----
-{/* Bulk Delete Confirmation */}
-⋮----
-title=
-⋮----
-{/* Bulk Archive Confirmation */}
-⋮----
-// Custom comparison function for React.memo
-const arePropsEqual = (prevProps: Props, nextProps: Props): boolean =>
-⋮----
-// Compare primitive props
-⋮----
-// Compare function props
-⋮----
-// Compare tasks array - shallow check first, then deep check for task properties
-⋮----
-// Check if tasks have changed in meaningful ways
-⋮----
-// Only check properties that affect rendering
-
-================
 File: src/renderer/src/components/project/TaskView.tsx
 ================
 import { DefaultTaskState, Mode, Model, ModelsData, ProjectData, TaskData, TodoItem } from '@common/types';
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, useTransition } from 'react';
+import { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ResizableBox, ResizeCallbackData } from 'react-resizable';
 import { clsx } from 'clsx';
@@ -18924,34 +19079,12 @@ type Props = {
 ⋮----
 // Focus prompt field
 ⋮----
-const handleAddFiles = (filePaths: string[], readOnly = false) =>
-⋮----
-const showFileDialog = (readOnly: boolean) =>
-⋮----
-const clearMessages = (clearContext = true) =>
-⋮----
-const toggleTerminal = () =>
-⋮----
-const clearLogMessages = () =>
-⋮----
-const runCommand = (command: string) =>
-⋮----
-const runTests = (testCmd?: string) =>
-⋮----
-const scrapeWeb = async (url: string, filePath?: string) =>
-⋮----
 const handleModelChange = (modelsData: ModelsData | null) =>
-⋮----
-const handleModeChange = (mode: Mode) =>
 ⋮----
 const handleMarkAsDone = () =>
 ⋮----
-const runPrompt = (prompt: string) =>
-⋮----
 // This submission is an edit of a previous message
 setEditingMessageIndex(null); // Clear editing state
-⋮----
-const handleSavePrompt = async (prompt: string) =>
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
@@ -18960,8 +19093,6 @@ const handleSavePrompt = async (prompt: string) =>
 // eslint-disable-next-line react-hooks/exhaustive-deps
 ⋮----
 const handleResetTask = () =>
-⋮----
-const handleRedoLastUserPrompt = () =>
 ⋮----
 const handleResumeTask = () =>
 ⋮----
@@ -18997,8 +19128,6 @@ const handleClearAllTodos = async () =>
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
-const handleShowTaskInfo = () =>
-⋮----
 const handleTerminalViewResize = () =>
 ⋮----
 const handleSidebarResize = async (_, data: ResizeCallbackData) =>
@@ -19006,14 +19135,6 @@ const handleSidebarResize = async (_, data: ResizeCallbackData) =>
 const handleToggleFilesSidebarCollapse = () =>
 ⋮----
 const handleCopyTerminalOutput = (output: string) =>
-⋮----
-const handleAutoApproveChanged = (autoApprove: boolean) =>
-⋮----
-const handleAnswerQuestion = (answer: string) =>
-⋮----
-const handleInterruptResponse = () =>
-⋮----
-const handleHandoff = async (focus?: string) =>
 ⋮----
 <div className=
 ⋮----
@@ -19029,8 +19150,6 @@ setSearchContainer(node.container);
 data-tooltip-content=
 ⋮----
 {/* Resizable wrapper for expanded state */}
-⋮----
-showFileDialog=
 ⋮----
 refreshAllFiles=
 
@@ -19332,6 +19451,7 @@ const draw = () =>
 ================
 File: src/renderer/src/components/PromptField/AutoApprove.tsx
 ================
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MdDoneAll } from 'react-icons/md';
 import { VscLock, VscUnlock } from 'react-icons/vsc';
@@ -19428,6 +19548,7 @@ const handleScroll = () =>
 ================
 File: src/renderer/src/components/PromptField/ModeSelector.tsx
 ================
+import { memo } from 'react';
 import { CgTerminal } from 'react-icons/cg';
 import { FaRegQuestionCircle } from 'react-icons/fa';
 import { AiOutlineFileSearch } from 'react-icons/ai';
@@ -19441,8 +19562,6 @@ type Props = {
   mode: Mode;
   onModeChange: (mode: Mode) => void;
 };
-⋮----
-export const ModeSelector = (
 
 ================
 File: src/renderer/src/components/PromptField/PromptField.tsx
@@ -19551,8 +19670,6 @@ const completionSource = async (context: CompletionContext): Promise<CompletionR
 // Ensure cursor is at the end after setting text
 ⋮----
 // Ensure cursor is at the end after appending text
-⋮----
-const handleAutoApproveLockChanged = (locked: boolean) =>
 ⋮----
 url = commandArgs; // Only URL provided
 ⋮----
@@ -21381,6 +21498,8 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { TODO_TOOL_CLEAR_ITEMS, TODO_TOOL_GET_ITEMS, TODO_TOOL_GROUP_NAME, TODO_TOOL_SET_ITEMS, TODO_TOOL_UPDATE_ITEM_COMPLETION } from '@common/tools';
 import { useTranslation } from 'react-i18next';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/vanilla/shallow';
 ⋮----
 import {
   CommandOutputMessage,
@@ -22678,9 +22797,10 @@ toggleExpand(item.id);
 ================
 File: src/renderer/src/stores/taskStore.ts
 ================
-import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { ContextFile, ModelsData, QuestionData, TodoItem, TokensInfoData } from '@common/types';
+import { createWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/vanilla/shallow';
 ⋮----
 import { Message } from '@/types/message';
 ⋮----
@@ -24779,7 +24899,36 @@ export const getPathBasename = (inputPath: string): string =>
 ================
 File: src/renderer/src/utils/routes.ts
 ================
-
+// URL parameter utilities for direct project/task navigation
+⋮----
+/**
+ * Encodes a baseDir for use in URL parameters
+ * @param baseDir - The project base directory path
+ * @returns URL-encoded baseDir
+ */
+export const encodeBaseDir = (baseDir: string): string =>
+⋮----
+/**
+ * Decodes a baseDir from URL parameters
+ * @param encodedBaseDir - The URL-encoded baseDir
+ * @returns Decoded baseDir path
+ */
+export const decodeBaseDir = (encodedBaseDir: string): string =>
+⋮----
+/**
+ * Builds a home URL with optional project and task parameters
+ * @param projectBaseDir - Optional project base directory to include
+ * @param taskId - Optional task ID to include
+ * @returns URL hash string
+ */
+export const buildHomeUrl = (projectBaseDir?: string, taskId?: string): string =>
+⋮----
+/**
+ * Parses URL parameters from the current location
+ * @param location - React Router location object
+ * @returns Object containing decoded project and task parameters
+ */
+export const parseUrlParams = (location: Location):
 
 ================
 File: src/renderer/src/utils/string-utils.ts
@@ -25089,10 +25238,10 @@ File: src/renderer/index.html
 <!doctype html>
 <html>
   <head>
-<!--    <script-->
-<!--      crossOrigin="anonymous"-->
-<!--      src="https://unpkg.com/react-scan/dist/auto.global.js"-->
-<!--    ></script>-->
+    <script
+      crossOrigin="anonymous"
+      src="https://unpkg.com/react-scan/dist/auto.global.js"
+    ></script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>AiderDesk</title>
@@ -25334,7 +25483,7 @@ File: package.json
 ================
 {
   "name": "aider-desk",
-  "version": "0.49.0-dev",
+  "version": "0.50.0-dev",
   "description": "Aider desktop application wrapper",
   "main": "./out/main/index.js",
   "author": "Hotovo",
@@ -25499,6 +25648,7 @@ File: package.json
     "turndown": "^7.2.1",
     "unidiff": "^1.0.4",
     "unist-util-map": "^4.0.0",
+    "use-sync-external-store": "^1.6.0",
     "uuid": "^11.0.2",
     "vite-plugin-prismjs": "^0.0.11",
     "winston": "^3.17.0",
