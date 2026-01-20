@@ -75,6 +75,20 @@ import { PromptsManager } from '@/prompts';
 export const INTERNAL_TASK_ID = 'internal';
 export const RESPONSE_CHUNK_FLUSH_INTERVAL_MS = 10;
 
+export const EMPTY_TASK_DATA: TaskData = {
+  id: '',
+  baseDir: '',
+  name: '',
+  archived: false,
+  aiderTotalCost: 0,
+  agentTotalCost: 0,
+  mainModel: '',
+  currentMode: 'agent',
+  contextCompactingThreshold: 0,
+  weakModelLocked: false,
+  parentId: null,
+};
+
 export class Task {
   private initialized = false;
   private initPromise: Promise<void> | null = null;
@@ -116,15 +130,7 @@ export class Task {
     initialTaskData?: Partial<TaskData>,
   ) {
     this.task = {
-      name: '',
-      archived: false,
-      aiderTotalCost: 0,
-      agentTotalCost: 0,
-      mainModel: '',
-      currentMode: 'agent',
-      contextCompactingThreshold: 0,
-      weakModelLocked: false,
-      parentId: null,
+      ...EMPTY_TASK_DATA,
       ...initialTaskData,
       id: taskId,
       baseDir: project.baseDir,
@@ -1997,7 +2003,8 @@ export class Task {
       });
     }
     if (usageReport.aiderTotalCost) {
-      this.task.aiderTotalCost = usageReport.aiderTotalCost;
+      this.task.aiderTotalCost += usageReport.messageCost;
+      this.eventManager.sendTaskUpdated(this.task);
     }
   }
 

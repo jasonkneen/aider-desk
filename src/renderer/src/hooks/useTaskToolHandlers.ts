@@ -1,9 +1,9 @@
 import { useCallback, useEffect } from 'react';
-import { TODO_TOOL_GROUP_NAME, TODO_TOOL_SET_ITEMS, TODO_TOOL_GET_ITEMS, TODO_TOOL_UPDATE_ITEM_COMPLETION, TODO_TOOL_CLEAR_ITEMS } from '@common/tools';
+import { TODO_TOOL_CLEAR_ITEMS, TODO_TOOL_GET_ITEMS, TODO_TOOL_GROUP_NAME, TODO_TOOL_SET_ITEMS, TODO_TOOL_UPDATE_ITEM_COMPLETION } from '@common/tools';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/vanilla/shallow';
 
-import type { ToolData, TodoItem } from '@common/types';
+import type { TodoItem, ToolData } from '@common/types';
 import type { ToolMessage } from '@/types/message';
 
 import { useApi } from '@/contexts/ApiContext';
@@ -11,11 +11,10 @@ import { useTaskStore } from '@/stores/taskStore';
 
 export const useTaskToolHandlers = (baseDir: string, taskId: string) => {
   const api = useApi();
-  const { setMessages, setAiderTotalCost, setTodoItems } = useStoreWithEqualityFn(
+  const { setMessages, setTodoItems } = useStoreWithEqualityFn(
     useTaskStore,
     (storeState) => ({
       setMessages: storeState.setMessages,
-      setAiderTotalCost: storeState.setAiderTotalCost,
       setTodoItems: storeState.setTodoItems,
     }),
     shallow,
@@ -69,15 +68,11 @@ export const useTaskToolHandlers = (baseDir: string, taskId: string) => {
     ({ id, serverName, toolName, args, response, usageReport, promptContext, finished }: ToolData) => {
       if (serverName === TODO_TOOL_GROUP_NAME) {
         handleTodoTool(toolName, args as Record<string, unknown>, response);
-
-        if (usageReport?.aiderTotalCost !== undefined) {
-          setAiderTotalCost(taskId, usageReport.aiderTotalCost);
-        }
         return;
       }
 
       const createNewToolMessage = (): ToolMessage => {
-        const toolMessage: ToolMessage = {
+        return {
           id,
           type: 'tool',
           serverName,
@@ -88,7 +83,6 @@ export const useTaskToolHandlers = (baseDir: string, taskId: string) => {
           promptContext,
           finished,
         };
-        return toolMessage;
       };
 
       setMessages(taskId, (prevMessages) => {
@@ -112,12 +106,8 @@ export const useTaskToolHandlers = (baseDir: string, taskId: string) => {
           return [...nonLoadingMessages, createNewToolMessage(), ...loadingMessages];
         }
       });
-
-      if (usageReport?.aiderTotalCost !== undefined) {
-        setAiderTotalCost(taskId, usageReport.aiderTotalCost);
-      }
     },
-    [taskId, setMessages, setAiderTotalCost, handleTodoTool],
+    [taskId, setMessages, handleTodoTool],
   );
 
   useEffect(() => {

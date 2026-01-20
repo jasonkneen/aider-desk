@@ -96,7 +96,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     const { getProfiles } = useAgents();
 
     const taskState = useTaskState(task.id);
-    const { loading, loaded, allFiles, contextFiles, autocompletionWords, aiderTotalCost, tokensInfo, question, todoItems, aiderModelsData } = taskState;
+    const { loading, loaded, allFiles, contextFiles, autocompletionWords, tokensInfo, question, todoItems, aiderModelsData } = taskState;
 
     const messages = useTaskMessages(task.id);
     const displayedMessages = useDeferredValue(messages, []);
@@ -745,7 +745,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                     allFiles={allFiles}
                     contextFiles={contextFiles}
                     tokensInfo={tokensInfo}
-                    aiderTotalCost={aiderTotalCost}
+                    aiderTotalCost={task.aiderTotalCost}
                     maxInputTokens={currentModel?.maxInputTokens || 0}
                     clearMessages={clearMessages}
                     runCommand={runCommand}
@@ -783,7 +783,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
             allFiles={allFiles}
             contextFiles={contextFiles}
             tokensInfo={tokensInfo}
-            aiderTotalCost={aiderTotalCost}
+            aiderTotalCost={task.aiderTotalCost}
             maxInputTokens={maxInputTokens}
             clearMessages={clearMessages}
             runCommand={runCommand}

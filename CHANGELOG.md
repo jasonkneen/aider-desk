@@ -3,6 +3,7 @@
 ## [UNRELEASED]
 
 - further improvement to the rendering performance
+- properly showing the Aider cost
 
 ## [0.49.0]
 

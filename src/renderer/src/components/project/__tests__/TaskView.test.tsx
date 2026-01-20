@@ -121,10 +121,13 @@ describe('TaskView', () => {
   const mockTask: TaskData = {
     id: 'task-1',
     name: 'Test Task',
+    baseDir: '/test/project',
     state: 'in-progress',
     currentMode: 'code',
     mainModel: 'gpt-4',
-  } as unknown as TaskData;
+    agentTotalCost: 0,
+    aiderTotalCost: 0,
+  };
 
   const mockUpdateTask = vi.fn();
   const mockUpdateOptimisticTaskState = vi.fn();
@@ -137,7 +140,6 @@ describe('TaskView', () => {
     allFiles: [],
     contextFiles: [],
     autocompletionWords: [],
-    aiderTotalCost: 0,
     tokensInfo: null,
     question: null,
     todoItems: [],

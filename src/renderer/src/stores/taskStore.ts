@@ -13,7 +13,6 @@ export interface TaskState {
   todoItems: TodoItem[];
   allFiles: string[];
   autocompletionWords: string[];
-  aiderTotalCost: number;
   contextFiles: ContextFile[];
   aiderModelsData: ModelsData | null;
   lastActiveAt: Date | null;
@@ -27,7 +26,6 @@ export const EMPTY_TASK_STATE: TaskState = {
   todoItems: [],
   allFiles: [],
   autocompletionWords: [],
-  aiderTotalCost: 0,
   contextFiles: [],
   aiderModelsData: null,
   lastActiveAt: null,
@@ -49,7 +47,6 @@ interface TaskStore {
   setTokensInfo: (taskId: string, tokensInfo: TokensInfoData | null) => void;
   setQuestion: (taskId: string, question: QuestionData | null) => void;
   setAiderModelsData: (taskId: string, modelsData: ModelsData | null) => void;
-  setAiderTotalCost: (taskId: string, cost: number) => void;
   clearSession: (taskId: string, messagesOnly: boolean) => void;
 }
 
@@ -139,14 +136,6 @@ export const useTaskStore = createWithEqualityFn<TaskStore>(
         return { taskStateMap: newMap };
       }),
 
-    setAiderTotalCost: (taskId, cost) =>
-      set((state) => {
-        const newMap = new Map(state.taskStateMap);
-        const current = newMap.get(taskId) || EMPTY_TASK_STATE;
-        newMap.set(taskId, { ...current, aiderTotalCost: cost });
-        return { taskStateMap: newMap };
-      }),
-
     clearSession: (taskId, messagesOnly) =>
       set((state) => {
         const newStateMap = new Map(state.taskStateMap);
@@ -154,7 +143,6 @@ export const useTaskStore = createWithEqualityFn<TaskStore>(
         const current = newStateMap.get(taskId) || EMPTY_TASK_STATE;
         const update: Partial<TaskState> = {};
         if (!messagesOnly) {
-          update.aiderTotalCost = 0;
           update.tokensInfo = null;
           update.question = null;
         }
