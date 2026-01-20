@@ -304,7 +304,9 @@
       "add": "添加",
       "adding": "添加中...",
       "configured": "已配置"
-    }
+    },
+    "thinkingEnabled": "启用思考",
+    "thinkingEnabledTooltip": "启用时，模型将使用思考模式进行更深入的推理（默认）。对于简单任务，可以禁用以获得更快的响应速度。"
   },
   "anthropic": {
     "apiKey": "API 密钥"

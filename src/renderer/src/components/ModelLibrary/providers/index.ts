@@ -34,3 +34,7 @@ export * from './GeminiModelOverrides';
 export * from './OpenCodeModelOverrides';
 export * from './VertexAiModelOverrides';
 export * from './RequestyModelOverrides';
+export * from './ZaiPlanModelOverrides';
+
+// Utility Components
+export * from './ZaiPlanThinkingSetting';

@@ -251,6 +251,7 @@ export const isOpenCodeProvider = (provider: LlmProviderBase): provider is OpenC
 export interface ZaiPlanProvider extends LlmProviderBase {
   name: 'zai-plan';
   apiKey: string;
+  thinkingEnabled?: boolean;
 }
 export const isZaiPlanProvider = (provider: LlmProviderBase): provider is ZaiPlanProvider => provider.name === 'zai-plan';
 

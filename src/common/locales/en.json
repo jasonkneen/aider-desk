@@ -357,7 +357,9 @@
       "add": "Add",
       "adding": "Adding...",
       "configured": "Configured"
-    }
+    },
+    "thinkingEnabled": "Enable Thinking",
+    "thinkingEnabledTooltip": "When enabled, the model will use thinking mode for deeper reasoning (default). Disable for faster responses on simple tasks."
   },
   "azure": {
     "apiKey": "API Key",
