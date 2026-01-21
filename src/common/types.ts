@@ -832,6 +832,16 @@ export enum DefaultTaskState {
   Done = 'DONE',
 }
 
+export const TaskStateEmoji: Record<DefaultTaskState, string> = {
+  [DefaultTaskState.Todo]: '📋',
+  [DefaultTaskState.ReadyForImplementation]: '🚀',
+  [DefaultTaskState.InProgress]: '⚙️',
+  [DefaultTaskState.Interrupted]: '⏸️',
+  [DefaultTaskState.MoreInfoNeeded]: '💬',
+  [DefaultTaskState.ReadyForReview]: '👀',
+  [DefaultTaskState.Done]: '✅',
+};
+
 export interface TodoItem {
   name: string;
   completed: boolean;

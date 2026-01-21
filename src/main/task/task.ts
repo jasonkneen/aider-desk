@@ -34,6 +34,7 @@ import {
   UserMessageData,
   WorkingMode,
   ModelInfo,
+  TaskStateEmoji,
 } from '@common/types';
 import { extractTextContent, fileExists, parseUsageReport } from '@common/utils';
 import { COMPACT_CONVERSATION_AGENT_PROFILE, CONFLICT_RESOLUTION_PROFILE, HANDOFF_AGENT_PROFILE, INIT_PROJECT_AGENTS_PROFILE } from '@common/agent';
@@ -87,6 +88,18 @@ export const EMPTY_TASK_DATA: TaskData = {
   contextCompactingThreshold: 0,
   weakModelLocked: false,
   parentId: null,
+};
+
+const getTaskFinishedNotificationText = (task: TaskData) => {
+  return `📋 ${task.name}${
+    task.state
+      ? `\n${TaskStateEmoji[task.state] || ''} ${task.state
+          .toLowerCase()
+          .split('_')
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ')}`
+      : ''
+  }`;
 };
 
 export class Task {
@@ -752,7 +765,7 @@ export class Task {
 
     void this.sendRequestContextInfo();
     void this.sendWorktreeIntegrationStatusUpdated();
-    this.notifyIfEnabled('Prompt finished', 'Your Aider task has finished.');
+    this.notifyIfEnabled('Task finished', getTaskFinishedNotificationText(this.task));
 
     await this.hookManager.trigger('onAiderPromptFinished', { responses }, this, this.project);
     await this.hookManager.trigger('onPromptFinished', { responses }, this, this.project);
@@ -818,7 +831,7 @@ export class Task {
 
     void this.sendRequestContextInfo();
     void this.sendWorktreeIntegrationStatusUpdated();
-    this.notifyIfEnabled('Prompt finished', 'Your Agent has finished the task.');
+    this.notifyIfEnabled('Task finished', getTaskFinishedNotificationText(this.task));
 
     return [];
   }
