@@ -86,6 +86,8 @@ type EventDataMap = {
   'task-completed': TaskData;
   'task-cancelled': TaskData;
   'message-removed': MessageRemovedData;
+  'terminal-data': TerminalData;
+  'terminal-exit': TerminalExitData;
 };
 
 type EventCallback<T> = (data: T) => void;
@@ -150,6 +152,8 @@ export class BrowserApi implements ApplicationAPI {
       'task-cancelled': new Map(),
       'agent-profiles-updated': new Map(),
       'message-removed': new Map(),
+      'terminal-data': new Map(),
+      'terminal-exit': new Map(),
     };
     this.apiClient = axios.create({
       baseURL: `${baseUrl}/api`,
@@ -703,14 +707,10 @@ export class BrowserApi implements ApplicationAPI {
     return this.addListener('task-deleted', callback, baseDir);
   }
   addTerminalDataListener(baseDir: string, callback: (data: TerminalData) => void): () => void {
-    void baseDir;
-    void callback;
-    return () => {};
+    return this.addListener('terminal-data', callback, baseDir);
   }
   addTerminalExitListener(baseDir: string, callback: (data: TerminalExitData) => void): () => void {
-    void baseDir;
-    void callback;
-    return () => {};
+    return this.addListener('terminal-exit', callback, baseDir);
   }
   addContextMenuListener(callback: (params: Electron.ContextMenuParams) => void): () => void {
     void callback;
@@ -733,37 +733,45 @@ export class BrowserApi implements ApplicationAPI {
     });
   }
   isTerminalSupported(): boolean {
-    return false;
+    return true;
   }
-  createTerminal(baseDir: string, taskId: string, cols?: number, rows?: number): Promise<string> {
-    void baseDir;
-    void taskId;
-    void cols;
-    void rows;
-    throw new UnsupportedError('createTerminal not supported yet.');
+  async createTerminal(baseDir: string, taskId: string, cols?: number, rows?: number): Promise<string> {
+    const response = await this.apiClient.post('/terminal/create', {
+      baseDir,
+      taskId,
+      cols,
+      rows,
+    });
+    return response.data.terminalId;
   }
-  writeToTerminal(terminalId: string, data: string): Promise<boolean> {
-    void terminalId;
-    void data;
-    throw new UnsupportedError('writeToTerminal not supported yet.');
+  async writeToTerminal(terminalId: string, data: string): Promise<boolean> {
+    await this.apiClient.post('/terminal/write', {
+      terminalId,
+      data,
+    });
+    return true;
   }
-  resizeTerminal(terminalId: string, cols: number, rows: number): Promise<boolean> {
-    void terminalId;
-    void cols;
-    void rows;
-    throw new UnsupportedError('resizeTerminal not supported yet.');
+  async resizeTerminal(terminalId: string, cols: number, rows: number): Promise<boolean> {
+    await this.apiClient.post('/terminal/resize', {
+      terminalId,
+      cols,
+      rows,
+    });
+    return true;
   }
-  closeTerminal(terminalId: string): Promise<boolean> {
-    void terminalId;
-    throw new UnsupportedError('closeTerminal not supported yet.');
+  async closeTerminal(terminalId: string): Promise<boolean> {
+    await this.apiClient.post('/terminal/close', {
+      terminalId,
+    });
+    return true;
   }
-  getTerminalForTask(taskId: string): Promise<string | null> {
-    void taskId;
-    throw new UnsupportedError('getTerminalForTask not supported yet.');
+  async getTerminalForTask(taskId: string): Promise<string | null> {
+    const response = await this.apiClient.get(`/terminal/${taskId}`);
+    return response.data.terminalId || null;
   }
-  getAllTerminalsForTask(taskId: string): Promise<Array<{ id: string; taskId: string; cols: number; rows: number }>> {
-    void taskId;
-    throw new UnsupportedError('getAllTerminalsForTask not supported yet.');
+  async getAllTerminalsForTask(taskId: string): Promise<Array<{ id: string; taskId: string; cols: number; rows: number; baseDir: string }>> {
+    const response = await this.apiClient.get(`/terminal/${taskId}/all`);
+    return response.data.terminals || [];
   }
   isManageServerSupported(): boolean {
     return false;

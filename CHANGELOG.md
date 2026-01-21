@@ -9,6 +9,7 @@
 - search field for messages (CTRL+F) properly showing only for active project
 - added optimistic user message on prompt submission for better user experience
 - updated notification messages to include task name and state
+- added support for terminals in the browser
 
 ## [0.49.0]
 
