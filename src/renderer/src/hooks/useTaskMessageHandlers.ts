@@ -23,7 +23,9 @@ export const useTaskMessageHandlers = (baseDir: string, taskId: string) => {
 
       setMessages(taskId, (prevMessages) => {
         const loadingMessages = prevMessages.filter((message) => message.type === 'loading');
-        const nonLoadingMessages = prevMessages.filter((message) => message.type !== 'loading' && message.id !== data.id);
+        const nonLoadingMessages = prevMessages.filter(
+          (message) => message.type !== 'loading' && message.id !== data.id && !(message.type === 'user' && (message as UserMessage).isOptimistic),
+        );
         return [...nonLoadingMessages, userMessage, ...loadingMessages];
       });
     },

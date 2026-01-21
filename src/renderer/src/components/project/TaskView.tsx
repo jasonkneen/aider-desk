@@ -12,7 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useSidebarWidth } from './useSidebarWidth';
 
 import { StyledTooltip } from '@/components/common/StyledTooltip';
-import { isLogMessage, isTaskInfoMessage, isUserMessage, Message, TaskInfoMessage } from '@/types/message';
+import { isLogMessage, isTaskInfoMessage, isUserMessage, Message, TaskInfoMessage, UserMessage } from '@/types/message';
 import { Messages, MessagesRef } from '@/components/message/Messages';
 import { VirtualizedMessages, VirtualizedMessagesRef } from '@/components/message/VirtualizedMessages';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -287,6 +287,16 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
           });
           api.redoLastUserPrompt(projectDir, task.id, currentMode, prompt);
         } else {
+          // OPTIMISTIC: Add user message immediately before backend response
+          setMessages(task.id, (prevMessages) => [
+            ...prevMessages,
+            {
+              id: uuidv4(),
+              type: 'user',
+              content: prompt,
+              isOptimistic: true,
+            } satisfies UserMessage,
+          ]);
           api.runPrompt(projectDir, task.id, prompt, currentMode);
         }
       },

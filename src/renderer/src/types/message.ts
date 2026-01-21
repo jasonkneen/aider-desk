@@ -10,6 +10,7 @@ export interface Message {
 
 export interface UserMessage extends Message {
   type: 'user';
+  isOptimistic?: boolean;
 }
 
 export interface ResponseMessage extends Message {
