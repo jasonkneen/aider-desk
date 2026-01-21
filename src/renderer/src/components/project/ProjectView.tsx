@@ -7,6 +7,7 @@ import { clsx } from 'clsx';
 
 import { COLLAPSED_WIDTH, EXPANDED_WIDTH, TaskSidebar } from './TaskSidebar/TaskSidebar';
 
+import { useProjectTasks, useProjectStore } from '@/stores/projectStore';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
 import { LoadingOverlay } from '@/components/common/LoadingOverlay';
@@ -32,12 +33,13 @@ export const ProjectView = ({ projectDir, isProjectActive = false, showSettingsP
   const { TASK_HOTKEYS } = useConfiguredHotkeys();
   const { isMobile } = useResponsive();
 
+  const { setProjectTasks, updateProjectTask, addProjectTask, removeProjectTask, clearProjectTasks } = useProjectStore();
+  const tasks = useProjectTasks(projectDir);
+  const [optimisticTasks, setOptimisticTasks] = useOptimistic(tasks);
   const [inputHistory, setInputHistory] = useState<string[]>([]);
   const [starting, setStarting] = useState(true);
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [tasksLoading, setTasksLoading] = useState(true);
-  const [tasks, setTasks] = useState<TaskData[]>([]);
-  const [optimisticTasks, setOptimisticTasks] = useOptimistic(tasks);
   const [isTaskBarCollapsed, setIsTaskBarCollapsed] = useLocalStorage(`task-sidebar-collapsed-${projectDir}`, false);
   const [isTaskSidebarOpen, , hideTaskSidebar, toggleTaskSidebar] = useBooleanState();
   const [shouldFocusNewTask, setShouldFocusNewTask] = useState(false);
@@ -158,7 +160,7 @@ export const ProjectView = ({ projectDir, isProjectActive = false, showSettingsP
     };
 
     const handleTaskCreated = ({ task, activate }: TaskCreatedData) => {
-      setTasks((prev) => [...prev, task]);
+      addProjectTask(projectDir, task);
 
       if (activate) {
         activateTask(task.id);
@@ -166,27 +168,27 @@ export const ProjectView = ({ projectDir, isProjectActive = false, showSettingsP
     };
 
     const handleTaskInitialized = (taskData: TaskData) => {
-      setTasks((prev) => prev.map((task) => (task.id === taskData.id ? taskData : task)));
+      updateProjectTask(projectDir, taskData);
     };
 
     const handleTaskUpdated = (taskData: TaskData) => {
-      setTasks((prev) => prev.map((task) => (task.id === taskData.id ? taskData : task)));
+      updateProjectTask(projectDir, taskData);
     };
 
     const handleTaskStarted = (taskData: TaskData) => {
-      setTasks((prev) => prev.map((task) => (task.id === taskData.id ? taskData : task)));
+      updateProjectTask(projectDir, taskData);
     };
 
     const handleTaskCompleted = (taskData: TaskData) => {
-      setTasks((prev) => prev.map((task) => (task.id === taskData.id ? taskData : task)));
+      updateProjectTask(projectDir, taskData);
     };
 
     const handleTaskCancelled = (taskData: TaskData) => {
-      setTasks((prev) => prev.map((task) => (task.id === taskData.id ? taskData : task)));
+      updateProjectTask(projectDir, taskData);
     };
 
     const handleTaskDeleted = (taskData: TaskData) => {
-      setTasks((prev) => prev.filter((task) => task.id !== taskData.id));
+      removeProjectTask(projectDir, taskData.id);
     };
 
     const handleInputHistoryUpdate = (data: InputHistoryData) => {
@@ -215,7 +217,7 @@ export const ProjectView = ({ projectDir, isProjectActive = false, showSettingsP
         // Load tasks
         setTasksLoading(true);
         const tasks = await api.getTasks(projectDir);
-        setTasks(tasks);
+        setProjectTasks(projectDir, tasks);
         setTasksLoading(false);
 
         // Handle startup mode
@@ -238,8 +240,9 @@ export const ProjectView = ({ projectDir, isProjectActive = false, showSettingsP
       removeTaskCancelledListener();
       removeTaskDeletedListener();
       removeInputHistoryListener();
+      clearProjectTasks(projectDir);
     };
-  }, [activateTask, api, projectDir, settings?.startupMode]);
+  }, [activateTask, api, projectDir, settings?.startupMode, clearProjectTasks, setProjectTasks, updateProjectTask, addProjectTask, removeProjectTask]);
 
   const handleTaskSelect = useCallback(
     (taskId: string) => {

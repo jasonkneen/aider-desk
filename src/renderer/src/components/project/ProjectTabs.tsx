@@ -3,6 +3,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Tab, TabGroup, TabList } from '@headlessui/react';
 import { clsx } from 'clsx';
+import { CgSpinner } from 'react-icons/cg';
 import { MdAdd, MdClose, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, arrayMove, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable';
@@ -11,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import type { DragEndEvent } from '@dnd-kit/core';
 
 import { MenuOption, useContextMenu } from '@/contexts/ContextMenuContext';
+import { useProjectProcessingState } from '@/stores/projectStore';
 
 type Props = {
   openProjects: ProjectData[];
@@ -180,6 +182,7 @@ const SortableTabItem = ({ project, isActive, onCloseProject, onCloseOtherProjec
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.baseDir });
   const { showMenu } = useContextMenu();
   const { t } = useTranslation();
+  const isProcessing = useProjectProcessingState(project.baseDir);
 
   const handleRightClick = (event: MouseEvent) => {
     event.preventDefault();
@@ -236,14 +239,24 @@ const SortableTabItem = ({ project, isActive, onCloseProject, onCloseOtherProjec
           className={clsx(
             'flex items-center justify-center rounded-full p-1 transition-colors duration-200 z-10',
             isActive ? 'hover:bg-bg-fourth' : 'hover:bg-bg-tertiary-strong',
+            isProcessing ? 'cursor-default' : '',
           )}
           onClick={(e) => {
+            if (isProcessing) {
+              e.preventDefault();
+              e.stopPropagation();
+              return;
+            }
             e.preventDefault();
             e.stopPropagation(); // Prevent tab selection/drag initiation
             onCloseProject(project.baseDir);
           }}
         >
-          <MdClose className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 transition-opacity duration-200" />
+          {isProcessing ? (
+            <CgSpinner className="h-3.5 w-3.5 animate-spin text-text-primary" />
+          ) : (
+            <MdClose className="h-3.5 w-3.5 opacity-60 group-hover:opacity-100 transition-opacity duration-200" />
+          )}
         </div>
       </Tab>
     </div>

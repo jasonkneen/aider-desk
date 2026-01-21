@@ -10,6 +10,7 @@
 - added optimistic user message on prompt submission for better user experience
 - updated notification messages to include task name and state
 - added support for terminals in the browser
+- added visual indicator to project tab when that project is in progress
 
 ## [0.49.0]
 
