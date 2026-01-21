@@ -1,5 +1,6 @@
 import { ProjectData } from '@common/types';
-import { Activity, startTransition, useCallback, useEffect, useOptimistic, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Activity, startTransition, useCallback, useDeferredValue, useEffect, useOptimistic, useState, useTransition } from 'react';
 import { MdBarChart, MdSettings, MdUpload } from 'react-icons/md';
 import { PiNotebookFill } from 'react-icons/pi';
 import { useTranslation } from 'react-i18next';
@@ -8,6 +9,7 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
 import { UsageDashboard } from '@/components/usage/UsageDashboard';
 import { IconButton } from '@/components/common/IconButton';
+import { LoadingOverlay } from '@/components/common/LoadingOverlay';
 import { NoProjectsOpen } from '@/components/project/NoProjectsOpen';
 import { OpenProjectDialog } from '@/components/project/OpenProjectDialog';
 import { ProjectTabs } from '@/components/project/ProjectTabs';
@@ -43,8 +45,9 @@ export const Home = () => {
   const [isUsageDashboardVisible, setIsUsageDashboardVisible] = useState(false);
   const [isModelLibraryVisible, setIsModelLibraryVisible] = useState(false);
   const [isCtrlTabbing, setIsCtrlTabbing] = useState(false);
+  const [isProjectSwitching, startProjectTransition] = useTransition();
 
-  const activeProject = optimisticOpenProjects.find((project) => project.active) || optimisticOpenProjects[0];
+  const activeProject = useDeferredValue(optimisticOpenProjects.find((project) => project.active) || optimisticOpenProjects[0]);
 
   const handleReorderProjects = async (reorderedProjects: ProjectData[]) => {
     setOpenProjects(reorderedProjects);
@@ -110,7 +113,7 @@ export const Home = () => {
 
   const setActiveProject = useCallback(
     (baseDir: string) => {
-      startTransition(async () => {
+      startProjectTransition(async () => {
         setOptimisticOpenProjects((prev) =>
           prev.map((project) => ({
             ...project,
@@ -475,7 +478,26 @@ export const Home = () => {
         )}
         {!releaseNotesContent && <TelemetryInfoDialog />}
         <div className="flex-1 overflow-hidden relative z-10">
-          {optimisticOpenProjects.length > 0 ? renderProjectPanels() : <NoProjectsOpen onOpenProject={() => setIsOpenProjectDialogVisible(true)} />}
+          {optimisticOpenProjects.length > 0 ? (
+            <div className="relative w-full h-full">
+              <AnimatePresence>
+                {isProjectSwitching && activeProject && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute inset-0 z-50"
+                  >
+                    <LoadingOverlay message={t('common.loadingProject')} animateOpacity />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              {renderProjectPanels()}
+            </div>
+          ) : (
+            <NoProjectsOpen onOpenProject={() => setIsOpenProjectDialogVisible(true)} />
+          )}
         </div>
       </div>
     </div>
