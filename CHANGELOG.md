@@ -6,6 +6,7 @@
 - properly showing the Aider cost
 - added option to disable thinking for Z.AI Coding Plan provider models
 - hidden pin and state change actions for new tasks
+- search field for messages (CTRL+F) properly showing only for active project
 
 ## [0.49.0]
 
