@@ -14,7 +14,7 @@ import { MenuOption, useContextMenu } from '@/contexts/ContextMenuContext';
 
 type Props = {
   openProjects: ProjectData[];
-  activeProject: ProjectData | undefined;
+  activeProject: string | undefined;
   onAddProject: () => void;
   onSetActiveProject: (baseDir: string) => void;
   onCloseProject: (baseDir: string) => void;
@@ -115,7 +115,7 @@ export const ProjectTabs = ({
   return (
     <TabGroup
       className="overflow-x-hidden flex-1"
-      selectedIndex={openProjects.findIndex((p) => p.baseDir === activeProject?.baseDir)}
+      selectedIndex={openProjects.findIndex((p) => p.baseDir === activeProject)}
       onChange={(index) => {
         if (openProjects[index] && !dragging) {
           onSetActiveProject(openProjects[index].baseDir);
@@ -138,7 +138,7 @@ export const ProjectTabs = ({
                 <SortableTabItem
                   key={project.baseDir}
                   project={project}
-                  activeProject={activeProject}
+                  isActive={activeProject === project.baseDir}
                   onCloseProject={onCloseProject}
                   onCloseOtherProjects={onCloseOtherProjects}
                   onCloseAllProjects={onCloseAllProjects}
@@ -169,14 +169,14 @@ export const ProjectTabs = ({
 
 type SortableTabItemProps = {
   project: ProjectData;
-  activeProject: ProjectData | undefined;
+  isActive: boolean;
   onCloseProject: (baseDir: string) => void;
   onCloseOtherProjects: (baseDir: string) => void;
   onCloseAllProjects: () => void;
   openProjectsNumber: number;
 };
 
-const SortableTabItem = ({ project, activeProject, onCloseProject, onCloseOtherProjects, onCloseAllProjects, openProjectsNumber }: SortableTabItemProps) => {
+const SortableTabItem = ({ project, isActive, onCloseProject, onCloseOtherProjects, onCloseAllProjects, openProjectsNumber }: SortableTabItemProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: project.baseDir });
   const { showMenu } = useContextMenu();
   const { t } = useTranslation();
@@ -235,7 +235,7 @@ const SortableTabItem = ({ project, activeProject, onCloseProject, onCloseOtherP
         <div
           className={clsx(
             'flex items-center justify-center rounded-full p-1 transition-colors duration-200 z-10',
-            activeProject?.baseDir === project.baseDir ? 'hover:bg-bg-fourth' : 'hover:bg-bg-tertiary-strong',
+            isActive ? 'hover:bg-bg-fourth' : 'hover:bg-bg-tertiary-strong',
           )}
           onClick={(e) => {
             e.preventDefault();

@@ -2,12 +2,13 @@ import { IoPlayOutline } from 'react-icons/io5';
 import { RiAlertLine, RiCheckLine, RiPlayLine } from 'react-icons/ri';
 import { useTranslation } from 'react-i18next';
 import { useState, ReactNode } from 'react';
-import { DefaultTaskState, TaskData } from '@common/types';
+import { DefaultTaskState } from '@common/types';
 
 import { Button } from '@/components/common/Button';
 
 type Props = {
-  task: TaskData;
+  state: string | undefined;
+  isArchived: boolean | undefined;
   onResumeTask: () => void;
   onMarkAsDone: () => void;
   onProceed?: () => void;
@@ -16,7 +17,7 @@ type Props = {
   onDeleteTask?: () => void;
 };
 
-export const TaskStateActions = ({ task, onResumeTask, onMarkAsDone, onProceed, onArchiveTask, onUnarchiveTask, onDeleteTask }: Props) => {
+export const TaskStateActions = ({ state, isArchived, onResumeTask, onMarkAsDone, onProceed, onArchiveTask, onUnarchiveTask, onDeleteTask }: Props) => {
   const { t } = useTranslation();
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -57,7 +58,7 @@ export const TaskStateActions = ({ task, onResumeTask, onMarkAsDone, onProceed, 
     );
   };
 
-  if (task.state === DefaultTaskState.Todo) {
+  if (state === DefaultTaskState.Todo) {
     return renderSection(
       <RiPlayLine className="h-4 w-4 flex-shrink-0 text-text-tertiary" />,
       t('messages.taskTodoDescription'),
@@ -70,7 +71,7 @@ export const TaskStateActions = ({ task, onResumeTask, onMarkAsDone, onProceed, 
     );
   }
 
-  if (task.state === DefaultTaskState.Interrupted) {
+  if (state === DefaultTaskState.Interrupted) {
     return renderSection(
       <RiAlertLine className="h-4 w-4 flex-shrink-0 text-warning" />,
       t('messages.taskInterrupted'),
@@ -83,7 +84,7 @@ export const TaskStateActions = ({ task, onResumeTask, onMarkAsDone, onProceed, 
     );
   }
 
-  if (task.state === DefaultTaskState.ReadyForReview) {
+  if (state === DefaultTaskState.ReadyForReview) {
     return renderSection(
       <RiCheckLine className="h-4 w-4 flex-shrink-0 text-tertiary" />,
       t('messages.taskReadyForReview'),
@@ -95,7 +96,7 @@ export const TaskStateActions = ({ task, onResumeTask, onMarkAsDone, onProceed, 
     );
   }
 
-  if (task.state === DefaultTaskState.ReadyForImplementation) {
+  if (state === DefaultTaskState.ReadyForImplementation) {
     return renderSection(
       <RiCheckLine className="h-4 w-4 flex-shrink-0 text-tertiary" />,
       t('messages.taskReadyForImplementation'),
@@ -108,9 +109,7 @@ export const TaskStateActions = ({ task, onResumeTask, onMarkAsDone, onProceed, 
     );
   }
 
-  if (task.state === DefaultTaskState.Done) {
-    const isArchived = task.archived === true;
-
+  if (state === DefaultTaskState.Done) {
     const actions = isDeleting ? (
       <>
         <Button key="cancel" variant="text" size="xs" onClick={handleCancelDelete}>

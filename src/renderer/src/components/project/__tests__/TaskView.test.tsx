@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ProjectData, TaskData, ModelsData } from '@common/types';
+import { TaskData, ModelsData } from '@common/types';
 import { toast } from 'react-toastify';
 
 import { TaskView } from '../TaskView';
@@ -106,17 +106,7 @@ vi.mock('../../terminal/TerminalView', () => ({
 }));
 
 describe('TaskView', () => {
-  const mockProject: ProjectData = {
-    baseDir: '/test/project',
-    active: true,
-    settings: {
-      agentProfileId: 'default',
-      chatHistoryEnabled: true,
-      theme: 'dark',
-      modelSettings: { models: [] },
-      projectSettings: {},
-    },
-  } as unknown as ProjectData;
+  const projectDir = '/test/project';
 
   const mockTask: TaskData = {
     id: 'task-1',
@@ -164,7 +154,7 @@ describe('TaskView', () => {
   it('renders core components when loaded', async () => {
     render(
       <TaskView
-        project={mockProject}
+        projectDir={projectDir}
         task={mockTask}
         updateTask={mockUpdateTask}
         updateOptimisticTaskState={mockUpdateOptimisticTaskState}
@@ -183,7 +173,7 @@ describe('TaskView', () => {
   it('calls updateTask when mode is changed in TaskBar', async () => {
     render(
       <TaskView
-        project={mockProject}
+        projectDir={projectDir}
         task={mockTask}
         updateTask={mockUpdateTask}
         updateOptimisticTaskState={mockUpdateOptimisticTaskState}
@@ -200,7 +190,7 @@ describe('TaskView', () => {
   it('calls setAiderModelsData when model is changed in TaskBar', async () => {
     render(
       <TaskView
-        project={mockProject}
+        projectDir={projectDir}
         task={mockTask}
         updateTask={mockUpdateTask}
         updateOptimisticTaskState={mockUpdateOptimisticTaskState}
@@ -217,7 +207,7 @@ describe('TaskView', () => {
   it('calls api.runPrompt when prompt is submitted', async () => {
     render(
       <TaskView
-        project={mockProject}
+        projectDir={projectDir}
         task={mockTask}
         updateTask={mockUpdateTask}
         updateOptimisticTaskState={mockUpdateOptimisticTaskState}
@@ -228,13 +218,13 @@ describe('TaskView', () => {
     await act(async () => {
       fireEvent.click(screen.getByText('Run Prompt'));
     });
-    expect(mockApi.runPrompt).toHaveBeenCalledWith(mockProject.baseDir, mockTask.id, 'hello', 'code');
+    expect(mockApi.runPrompt).toHaveBeenCalledWith(projectDir, mockTask.id, 'hello', 'code');
   });
 
   it('calls api.addFile when files are added', async () => {
     render(
       <TaskView
-        project={mockProject}
+        projectDir={projectDir}
         task={mockTask}
         updateTask={mockUpdateTask}
         updateOptimisticTaskState={mockUpdateOptimisticTaskState}
@@ -245,7 +235,7 @@ describe('TaskView', () => {
     await act(async () => {
       fireEvent.click(screen.getByText('Add File'));
     });
-    expect(mockApi.addFile).toHaveBeenCalledWith(mockProject.baseDir, mockTask.id, 'file1.ts', false);
+    expect(mockApi.addFile).toHaveBeenCalledWith(projectDir, mockTask.id, 'file1.ts', false);
   });
 
   describe('Message Removal', () => {
@@ -261,7 +251,7 @@ describe('TaskView', () => {
 
         render(
           <TaskView
-            project={mockProject}
+            projectDir={projectDir}
             task={mockTask}
             updateTask={mockUpdateTask}
             updateOptimisticTaskState={mockUpdateOptimisticTaskState}
@@ -291,7 +281,7 @@ describe('TaskView', () => {
 
         render(
           <TaskView
-            project={mockProject}
+            projectDir={projectDir}
             task={mockTask}
             updateTask={mockUpdateTask}
             updateOptimisticTaskState={mockUpdateOptimisticTaskState}
@@ -316,7 +306,7 @@ describe('TaskView', () => {
 
         render(
           <TaskView
-            project={mockProject}
+            projectDir={projectDir}
             task={mockTask}
             updateTask={mockUpdateTask}
             updateOptimisticTaskState={mockUpdateOptimisticTaskState}
@@ -343,7 +333,7 @@ describe('TaskView', () => {
 
         render(
           <TaskView
-            project={mockProject}
+            projectDir={projectDir}
             task={mockTask}
             updateTask={mockUpdateTask}
             updateOptimisticTaskState={mockUpdateOptimisticTaskState}
@@ -369,7 +359,7 @@ describe('TaskView', () => {
 
         render(
           <TaskView
-            project={mockProject}
+            projectDir={projectDir}
             task={mockTask}
             updateTask={mockUpdateTask}
             updateOptimisticTaskState={mockUpdateOptimisticTaskState}
@@ -396,7 +386,7 @@ describe('TaskView', () => {
 
         render(
           <TaskView
-            project={mockProject}
+            projectDir={projectDir}
             task={mockTask}
             updateTask={mockUpdateTask}
             updateOptimisticTaskState={mockUpdateOptimisticTaskState}

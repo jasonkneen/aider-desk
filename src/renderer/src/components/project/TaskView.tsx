@@ -1,4 +1,4 @@
-import { DefaultTaskState, Mode, Model, ModelsData, ProjectData, TaskData, TodoItem } from '@common/types';
+import { DefaultTaskState, Mode, Model, ModelsData, TaskData, TodoItem } from '@common/types';
 import { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ResizableBox, ResizeCallbackData } from 'react-resizable';
@@ -27,7 +27,6 @@ import { MobileSidebar } from '@/components/project/MobileSidebar';
 import { FilesContextInfoContent } from '@/components/project/FilesContextInfoContent';
 import { WelcomeMessage } from '@/components/project/WelcomeMessage';
 import 'react-resizable/css/styles.css';
-import { useSearchText } from '@/hooks/useSearchText';
 import { useApi } from '@/contexts/ApiContext';
 import { resolveAgentProfile } from '@/utils/agents';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -38,6 +37,7 @@ import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
 import { LoadingOverlay } from '@/components/common/LoadingOverlay';
 import { useTaskMessages, useTaskState } from '@/stores/taskStore';
 import { showErrorNotification } from '@/utils/notifications';
+import { useSearchText } from '@/hooks/useSearchText';
 
 type AddFileDialogOptions = {
   readOnly: boolean;
@@ -51,7 +51,7 @@ export type TaskViewRef = {
 const FILES_COLLAPSED_WIDTH = 36;
 
 type Props = {
-  project: ProjectData;
+  projectDir: string;
   task: TaskData;
   updateTask: (taskId: string, updates: Partial<TaskData>, useOptimistic?: boolean) => void;
   updateOptimisticTaskState: (taskId: string, taskState: string) => void;
@@ -69,7 +69,7 @@ type Props = {
 export const TaskView = forwardRef<TaskViewRef, Props>(
   (
     {
-      project,
+      projectDir,
       task,
       updateTask,
       inputHistory,
@@ -109,8 +109,8 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     const [searchContainer, setSearchContainer] = useState<HTMLElement | null>(null);
     const [terminalVisible, setTerminalVisible] = useState(false);
     const [showSidebar, setShowSidebar] = useState(isMobile);
-    const { width: sidebarWidth, setWidth: setSidebarWidth } = useSidebarWidth(project.baseDir, task.id);
-    const [isFilesSidebarCollapsed, setIsFilesSidebarCollapsed] = useLocalStorage(`files-sidebar-collapsed-${project.baseDir}-${task.id}`, false);
+    const { width: sidebarWidth, setWidth: setSidebarWidth } = useSidebarWidth(projectDir, task.id);
+    const [isFilesSidebarCollapsed, setIsFilesSidebarCollapsed] = useLocalStorage(`files-sidebar-collapsed-${projectDir}-${task.id}`, false);
     const { renderSearchInput } = useSearchText(searchContainer, 'absolute top-1 left-1', isActive);
 
     const promptFieldRef = useRef<PromptFieldRef>(null);
@@ -118,8 +118,8 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     const messagesRef = useRef<MessagesRef | VirtualizedMessagesRef>(null);
     const terminalViewRef = useRef<TerminalViewRef | null>(null);
     const activeAgentProfile = useMemo(() => {
-      return resolveAgentProfile(task, projectSettings?.agentProfileId, getProfiles(project.baseDir));
-    }, [task, projectSettings?.agentProfileId, getProfiles, project.baseDir]);
+      return resolveAgentProfile(task, projectSettings?.agentProfileId, getProfiles(projectDir));
+    }, [task, projectSettings?.agentProfileId, getProfiles, projectDir]);
 
     useEffect(() => {
       if (isActive && !taskState.loaded && !taskState.loading) {
@@ -192,12 +192,12 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     const handleAddFiles = useCallback(
       (filePaths: string[], readOnly = false) => {
         for (const filePath of filePaths) {
-          api.addFile(project.baseDir, task.id, filePath, readOnly);
+          api.addFile(projectDir, task.id, filePath, readOnly);
         }
         setAddFileDialogOptions(null);
         promptFieldRef.current?.focus();
       },
-      [api, project.baseDir, task.id, setAddFileDialogOptions, promptFieldRef],
+      [api, projectDir, task.id, setAddFileDialogOptions, promptFieldRef],
     );
 
     const showFileDialog = useCallback((readOnly: boolean) => {
@@ -211,10 +211,10 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
         clearSession(task.id, true);
 
         if (clearContext) {
-          api.clearContext(project.baseDir, task.id);
+          api.clearContext(projectDir, task.id);
         }
       },
-      [clearSession, task.id, api, project.baseDir],
+      [clearSession, task.id, api, projectDir],
     );
 
     const toggleTerminal = useCallback(() => {
@@ -227,9 +227,9 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
 
     const runCommand = useCallback(
       (command: string) => {
-        api.runCommand(project.baseDir, task.id, command);
+        api.runCommand(projectDir, task.id, command);
       },
-      [api, project.baseDir, task.id],
+      [api, projectDir, task.id],
     );
 
     const runTests = useCallback(
@@ -241,9 +241,9 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
 
     const scrapeWeb = useCallback(
       async (url: string, filePath?: string) => {
-        await api.scrapeWeb(project.baseDir, task.id, url, filePath);
+        await api.scrapeWeb(projectDir, task.id, url, filePath);
       },
-      [api, project.baseDir, task.id],
+      [api, projectDir, task.id],
     );
 
     const handleModelChange = useCallback(
@@ -285,19 +285,19 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                 }
               });
           });
-          api.redoLastUserPrompt(project.baseDir, task.id, currentMode, prompt);
+          api.redoLastUserPrompt(projectDir, task.id, currentMode, prompt);
         } else {
-          api.runPrompt(project.baseDir, task.id, prompt, currentMode);
+          api.runPrompt(projectDir, task.id, prompt, currentMode);
         }
       },
-      [updateOptimisticTaskState, task.id, editingMessageIndex, api, project.baseDir, currentMode, setMessages],
+      [updateOptimisticTaskState, task.id, editingMessageIndex, api, projectDir, currentMode, setMessages],
     );
 
     const handleSavePrompt = useCallback(
       async (prompt: string) => {
-        await api.savePrompt(project.baseDir, task.id, prompt);
+        await api.savePrompt(projectDir, task.id, prompt);
       },
-      [api, project.baseDir, task.id],
+      [api, projectDir, task.id],
     );
 
     const handleEditLastUserMessage = useCallback(
@@ -352,12 +352,12 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
         return prevMessages.filter((_, index) => index <= lastUserMessageIndex);
       });
       updateOptimisticTaskState(task.id, DefaultTaskState.InProgress);
-      api.redoLastUserPrompt(project.baseDir, task.id, currentMode);
-    }, [displayedMessages, setMessages, task.id, updateOptimisticTaskState, api, project.baseDir, currentMode]);
+      api.redoLastUserPrompt(projectDir, task.id, currentMode);
+    }, [displayedMessages, setMessages, task.id, updateOptimisticTaskState, api, projectDir, currentMode]);
 
     const handleResumeTask = useCallback(() => {
-      api.resumeTask(project.baseDir, task.id);
-    }, [api, project.baseDir, task.id]);
+      api.resumeTask(projectDir, task.id);
+    }, [api, projectDir, task.id]);
 
     const handleProceed = useCallback(() => {
       onProceed?.();
@@ -386,7 +386,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
         }
 
         try {
-          await api.removeMessage(project.baseDir, task.id, messageToRemove.id);
+          await api.removeMessage(projectDir, task.id, messageToRemove.id);
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error('Failed to remove message:', error);
@@ -394,26 +394,26 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
           showErrorNotification(t('errors.removeMessageFailed'));
         }
       },
-      [displayedMessages, setMessages, task.id, api, project.baseDir, t],
+      [displayedMessages, setMessages, task.id, api, projectDir, t],
     );
 
     const handleAddTodo = useCallback(
       async (name: string) => {
         try {
-          const updatedTodos = await api.addTodo(project.baseDir, task.id, name);
+          const updatedTodos = await api.addTodo(projectDir, task.id, name);
           setTodoItems(task.id, () => updatedTodos);
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error('Error adding todo:', error);
         }
       },
-      [api, project.baseDir, task.id, setTodoItems],
+      [api, projectDir, task.id, setTodoItems],
     );
 
     const handleToggleTodo = useCallback(
       async (name: string, completed: boolean) => {
         try {
-          const updatedTodos = await api.updateTodo(project.baseDir, task.id, name, {
+          const updatedTodos = await api.updateTodo(projectDir, task.id, name, {
             completed,
           });
           setTodoItems(task.id, () => updatedTodos);
@@ -422,44 +422,44 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
           console.error('Error toggling todo:', error);
         }
       },
-      [api, project.baseDir, task.id, setTodoItems],
+      [api, projectDir, task.id, setTodoItems],
     );
 
     const handleUpdateTodo = useCallback(
       async (name: string, updates: Partial<TodoItem>) => {
         try {
-          const updatedTodos = await api.updateTodo(project.baseDir, task.id, name, updates);
+          const updatedTodos = await api.updateTodo(projectDir, task.id, name, updates);
           setTodoItems(task.id, () => updatedTodos);
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error('Error updating todo:', error);
         }
       },
-      [api, project.baseDir, task.id, setTodoItems],
+      [api, projectDir, task.id, setTodoItems],
     );
 
     const handleDeleteTodo = useCallback(
       async (name: string) => {
         try {
-          const updatedTodos = await api.deleteTodo(project.baseDir, task.id, name);
+          const updatedTodos = await api.deleteTodo(projectDir, task.id, name);
           setTodoItems(task.id, () => updatedTodos);
         } catch (error) {
           // eslint-disable-next-line no-console
           console.error('Error deleting todo:', error);
         }
       },
-      [api, project.baseDir, task.id, setTodoItems],
+      [api, projectDir, task.id, setTodoItems],
     );
 
     const handleClearAllTodos = useCallback(async () => {
       try {
-        const updatedTodos = await api.clearAllTodos(project.baseDir, task.id);
+        const updatedTodos = await api.clearAllTodos(projectDir, task.id);
         setTodoItems(task.id, () => updatedTodos);
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Error clearing all todos:', error);
       }
-    }, [api, project.baseDir, task.id, setTodoItems]);
+    }, [api, projectDir, task.id, setTodoItems]);
 
     const handleShowTaskInfo = useCallback(() => {
       const taskInfo: TaskInfoMessage = {
@@ -518,18 +518,25 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     const handleHandoff = useCallback(
       async (focus?: string) => {
         try {
-          await api.handoffConversation(project.baseDir, task.id, focus);
+          await api.handoffConversation(projectDir, task.id, focus);
         } catch (error) {
           showErrorNotification(error instanceof Error ? error.message : String(error));
         }
       },
-      [api, project.baseDir, task.id],
+      [api, projectDir, task.id],
     );
 
     const handleShowFileDialog = useCallback(() => {
       setAddFileDialogOptions({
         readOnly: false,
       });
+    }, []);
+
+    const setMessagesRef = useCallback((node: MessagesRef | VirtualizedMessagesRef | null) => {
+      messagesRef.current = node;
+      if (node?.container) {
+        setSearchContainer(node.container);
+      }
     }, []);
 
     const handleRefreshAllFiles = useCallback((useGit?: boolean) => refreshAllFiles(task.id, useGit), [refreshAllFiles, task.id]);
@@ -545,7 +552,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
         <div className="flex flex-col flex-grow overflow-hidden">
           <TaskBar
             ref={projectTopBarRef}
-            baseDir={project.baseDir}
+            baseDir={projectDir}
             task={task}
             modelsData={aiderModelsData}
             mode={currentMode}
@@ -574,13 +581,8 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                 <>
                   {settings.virtualizedRendering ? (
                     <VirtualizedMessages
-                      ref={(node) => {
-                        messagesRef.current = node;
-                        if (node?.container) {
-                          setSearchContainer(node.container);
-                        }
-                      }}
-                      baseDir={project.baseDir}
+                      ref={setMessagesRef}
+                      baseDir={projectDir}
                       taskId={task.id}
                       task={task}
                       messages={displayedMessages}
@@ -599,13 +601,8 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                     />
                   ) : (
                     <Messages
-                      ref={(node) => {
-                        messagesRef.current = node;
-                        if (node?.container) {
-                          setSearchContainer(node.container);
-                        }
-                      }}
-                      baseDir={project.baseDir}
+                      ref={setMessagesRef}
+                      baseDir={projectDir}
                       taskId={task.id}
                       task={task}
                       messages={displayedMessages}
@@ -638,7 +635,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
             >
               <TerminalView
                 ref={terminalViewRef}
-                baseDir={project.baseDir}
+                baseDir={projectDir}
                 taskId={task.id}
                 visible={terminalVisible}
                 className="border-t border-border-dark-light flex-grow"
@@ -666,7 +663,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
               )}
               <PromptField
                 ref={promptFieldRef}
-                baseDir={project.baseDir}
+                baseDir={projectDir}
                 taskId={task.id}
                 task={task}
                 inputHistory={inputHistory}
@@ -740,7 +737,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
               >
                 <div className="flex flex-col h-full">
                   <FilesContextInfoContent
-                    baseDir={project.baseDir}
+                    baseDir={projectDir}
                     taskId={task.id}
                     allFiles={allFiles}
                     contextFiles={contextFiles}
@@ -764,7 +761,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
 
         {addFileDialogOptions && (
           <AddFileDialog
-            baseDir={project.baseDir}
+            baseDir={projectDir}
             taskId={task.id}
             onClose={() => {
               setAddFileDialogOptions(null);
@@ -778,7 +775,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
           <MobileSidebar
             showSidebar={showSidebar}
             setShowSidebar={setShowSidebar}
-            baseDir={project.baseDir}
+            baseDir={projectDir}
             taskId={task.id}
             allFiles={allFiles}
             contextFiles={contextFiles}

@@ -183,7 +183,8 @@ const MessagesComponent = forwardRef<MessagesRef, Props>(
         <div ref={messagesEndRef} />
         {settings?.taskSettings?.showTaskStateActions && !inProgress && !isLastLoadingMessage && (
           <TaskStateActions
-            task={task}
+            state={task.state}
+            isArchived={task.archived}
             onResumeTask={resumeTask}
             onMarkAsDone={onMarkAsDone}
             onProceed={onProceed}

@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ProjectData, TaskData, TaskStateData } from '@common/types';
+import { TaskData, TaskStateData } from '@common/types';
 
 import { ProjectView } from '../ProjectView';
 
@@ -55,7 +55,7 @@ vi.mock('../TaskView', () => ({
 }));
 
 describe('ProjectView', () => {
-  const mockProject = { baseDir: '/mock/project' } as ProjectData;
+  const projectDir = '/mock/project';
   const mockApi = createMockApi({
     startProject: vi.fn(() => Promise.resolve()),
     getTasks: vi.fn(() => Promise.resolve([{ id: 'task-1', name: 'Task 1' }] as TaskData[])),
@@ -83,17 +83,17 @@ describe('ProjectView', () => {
 
   it('initializes project and loads tasks', async () => {
     const mockShowSettingsPage = vi.fn();
-    render(<ProjectView project={mockProject} isActive={true} showSettingsPage={mockShowSettingsPage} />);
+    render(<ProjectView projectDir={projectDir} isProjectActive={true} showSettingsPage={mockShowSettingsPage} />);
 
     await waitFor(() => {
-      expect(mockApi.startProject).toHaveBeenCalledWith(mockProject.baseDir);
-      expect(mockApi.getTasks).toHaveBeenCalledWith(mockProject.baseDir);
+      expect(mockApi.startProject).toHaveBeenCalledWith(projectDir);
+      expect(mockApi.getTasks).toHaveBeenCalledWith(projectDir);
     });
   });
 
   it('renders task sidebar and active task view', async () => {
     const mockShowSettingsPage = vi.fn();
-    render(<ProjectView project={mockProject} isActive={true} showSettingsPage={mockShowSettingsPage} />);
+    render(<ProjectView projectDir={projectDir} isProjectActive={true} showSettingsPage={mockShowSettingsPage} />);
 
     await waitFor(() => {
       expect(screen.getByTestId('task-view')).toBeInTheDocument();
@@ -116,12 +116,12 @@ describe('ProjectView', () => {
     ] as TaskData[]);
 
     const mockShowSettingsPage = vi.fn();
-    render(<ProjectView project={mockProject} isActive={true} showSettingsPage={mockShowSettingsPage} />);
+    render(<ProjectView projectDir={projectDir} isProjectActive={true} showSettingsPage={mockShowSettingsPage} />);
 
     // Wait for API calls to complete
     await waitFor(() => {
-      expect(mockApi.startProject).toHaveBeenCalledWith(mockProject.baseDir);
-      expect(mockApi.getTasks).toHaveBeenCalledWith(mockProject.baseDir);
+      expect(mockApi.startProject).toHaveBeenCalledWith(projectDir);
+      expect(mockApi.getTasks).toHaveBeenCalledWith(projectDir);
     });
   });
 });

@@ -1,6 +1,6 @@
 import { TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { MouseEvent, useState, useRef, useEffect, useOptimistic, startTransition, Activity, memo, useDeferredValue } from 'react';
+import { MouseEvent, useState, useRef, useEffect, useOptimistic, startTransition, Activity, memo, useCallback, useDeferredValue } from 'react';
 import { HiPlus } from 'react-icons/hi';
 import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { CgSpinner } from 'react-icons/cg';
@@ -110,64 +110,55 @@ const TaskSidebarComponent = ({
   const sortedTasks = getSortedVisibleTasks(tasks, showArchived, debouncedSearchQuery);
   const deferredTasks = useDeferredValue(sortedTasks);
 
-  const handleTaskClick = (e: MouseEvent, taskId: string) => {
-    if (e.ctrlKey || e.metaKey) {
-      handleTaskCtrlClick(e, taskId);
-    } else if (e.shiftKey && isMultiselectMode) {
-      handleTaskShiftClick(taskId);
-    } else if (isMultiselectMode) {
-      handleTaskClickInMultiselect(e, taskId);
-    } else {
-      startTransition(() => {
-        setOptimisticActiveTaskId(taskId);
-        onTaskSelect(taskId);
-      });
-    }
-  };
-
-  const handleDeleteClick = (taskId: string) => {
+  const handleDeleteClick = useCallback((taskId: string) => {
     setDeleteConfirmTaskId(taskId);
     setEditingTaskId(null);
-  };
+  }, []);
 
-  const handleConfirmDelete = async (taskId: string) => {
-    try {
-      if (deleteTask) {
-        await deleteTask(taskId);
+  const handleConfirmDelete = useCallback(
+    async (taskId: string) => {
+      try {
+        if (deleteTask) {
+          await deleteTask(taskId);
+        }
+        setDeleteConfirmTaskId(null);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to delete task:', error);
       }
-      setDeleteConfirmTaskId(null);
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to delete task:', error);
-    }
-  };
+    },
+    [deleteTask],
+  );
 
-  const handleCancelDelete = () => {
+  const handleCancelDelete = useCallback(() => {
     setDeleteConfirmTaskId(null);
-  };
+  }, []);
 
-  const handleEditClick = (taskId: string) => {
+  const handleEditClick = useCallback((taskId: string) => {
     setEditingTaskId(taskId);
     setDeleteConfirmTaskId(null);
-  };
+  }, []);
 
-  const handleEditConfirm = async (taskId: string, newName: string) => {
-    try {
-      if (updateTask && newName.trim()) {
-        await updateTask(taskId, {
-          name: newName.trim(),
-        });
+  const handleEditConfirm = useCallback(
+    async (taskId: string, newName: string) => {
+      try {
+        if (updateTask && newName.trim()) {
+          await updateTask(taskId, {
+            name: newName.trim(),
+          });
+        }
+        setEditingTaskId(null);
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to update task:', error);
       }
-      setEditingTaskId(null);
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to update task:', error);
-    }
-  };
+    },
+    [updateTask],
+  );
 
-  const handleEditCancel = () => {
+  const handleEditCancel = useCallback(() => {
     setEditingTaskId(null);
-  };
+  }, []);
 
   const handleCreateTask = () => {
     if (createNewTask) {
@@ -190,77 +181,92 @@ const TaskSidebarComponent = ({
     setSearchQuery('');
   };
 
-  const handleArchiveTask = async (taskId: string) => {
-    try {
-      if (updateTask) {
-        await updateTask(taskId, { archived: true });
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to archive task:', error);
-    }
-  };
-
-  const handleUnarchiveTask = async (taskId: string) => {
-    try {
-      if (updateTask) {
-        await updateTask(taskId, { archived: false });
-      }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to unarchive task:', error);
-    }
-  };
-
-  const handleTogglePin = async (taskId: string) => {
-    try {
-      if (updateTask) {
-        const task = tasks.find((t) => t.id === taskId);
-        if (task) {
-          await updateTask(taskId, { pinned: !task.pinned });
+  const handleArchiveTask = useCallback(
+    async (taskId: string) => {
+      try {
+        if (updateTask) {
+          await updateTask(taskId, { archived: true });
         }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to archive task:', error);
       }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to toggle pin:', error);
-    }
-  };
+    },
+    [updateTask],
+  );
 
-  const handleChangeState = async (taskId: string, newState: string) => {
-    try {
-      if (updateTask) {
-        await updateTask(taskId, { state: newState });
+  const handleUnarchiveTask = useCallback(
+    async (taskId: string) => {
+      try {
+        if (updateTask) {
+          await updateTask(taskId, { archived: false });
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to unarchive task:', error);
       }
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to change state:', error);
-    }
-  };
+    },
+    [updateTask],
+  );
+
+  const handleTogglePin = useCallback(
+    async (taskId: string) => {
+      try {
+        if (updateTask) {
+          const task = tasks.find((t) => t.id === taskId);
+          if (task) {
+            await updateTask(taskId, { pinned: !task.pinned });
+          }
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to toggle pin:', error);
+      }
+    },
+    [tasks, updateTask],
+  );
+
+  const handleChangeState = useCallback(
+    async (taskId: string, newState: string) => {
+      try {
+        if (updateTask) {
+          await updateTask(taskId, { state: newState });
+        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to change state:', error);
+      }
+    },
+    [updateTask],
+  );
 
   // Multiselect handlers
-  const handleTaskCtrlClick = (e: MouseEvent, taskId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleTaskCtrlClick = useCallback(
+    (e: MouseEvent, taskId: string) => {
+      e.preventDefault();
+      e.stopPropagation();
 
-    if (!isMultiselectMode) {
-      setIsMultiselectMode(true);
-      setSelectedTasks(new Set([taskId]));
-      lastClickedTaskIdRef.current = taskId;
-    } else {
-      setSelectedTasks((prev) => {
-        const newSet = new Set(prev);
-        if (newSet.has(taskId)) {
-          newSet.delete(taskId);
-        } else {
-          newSet.add(taskId);
-        }
-        return newSet;
-      });
-      lastClickedTaskIdRef.current = taskId;
-    }
-  };
+      if (!isMultiselectMode) {
+        setIsMultiselectMode(true);
+        setSelectedTasks(new Set([taskId]));
+        lastClickedTaskIdRef.current = taskId;
+      } else {
+        setSelectedTasks((prev) => {
+          const newSet = new Set(prev);
+          if (newSet.has(taskId)) {
+            newSet.delete(taskId);
+          } else {
+            newSet.add(taskId);
+          }
+          return newSet;
+        });
+        lastClickedTaskIdRef.current = taskId;
+      }
+    },
+    [isMultiselectMode],
+  );
 
-  const handleTaskClickInMultiselect = (e: MouseEvent, taskId: string) => {
+  const handleTaskClickInMultiselect = useCallback((e: MouseEvent, taskId: string) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -274,45 +280,66 @@ const TaskSidebarComponent = ({
       return newSet;
     });
     lastClickedTaskIdRef.current = taskId;
-  };
+  }, []);
 
-  const handleTaskShiftClick = (taskId: string) => {
-    const lastClickedTaskId = lastClickedTaskIdRef.current;
+  const handleTaskShiftClick = useCallback(
+    (taskId: string) => {
+      const lastClickedTaskId = lastClickedTaskIdRef.current;
 
-    if (!lastClickedTaskId) {
+      if (!lastClickedTaskId) {
+        setSelectedTasks((prev) => {
+          const newSet = new Set(prev);
+          if (newSet.has(taskId)) {
+            newSet.delete(taskId);
+          } else {
+            newSet.add(taskId);
+          }
+          return newSet;
+        });
+        lastClickedTaskIdRef.current = taskId;
+        return;
+      }
+
+      const taskIds = sortedTasks.map((task) => task.id);
+      const lastIndex = taskIds.indexOf(lastClickedTaskId);
+      const currentIndex = taskIds.indexOf(taskId);
+
+      if (lastIndex === -1 || currentIndex === -1) {
+        return;
+      }
+
+      const start = Math.min(lastIndex, currentIndex);
+      const end = Math.max(lastIndex, currentIndex);
+      const rangeIds = taskIds.slice(start, end + 1);
+
       setSelectedTasks((prev) => {
         const newSet = new Set(prev);
-        if (newSet.has(taskId)) {
-          newSet.delete(taskId);
-        } else {
-          newSet.add(taskId);
-        }
+        rangeIds.forEach((id) => newSet.add(id));
         return newSet;
       });
+
       lastClickedTaskIdRef.current = taskId;
-      return;
-    }
+    },
+    [sortedTasks],
+  );
 
-    const taskIds = sortedTasks.map((task) => task.id);
-    const lastIndex = taskIds.indexOf(lastClickedTaskId);
-    const currentIndex = taskIds.indexOf(taskId);
-
-    if (lastIndex === -1 || currentIndex === -1) {
-      return;
-    }
-
-    const start = Math.min(lastIndex, currentIndex);
-    const end = Math.max(lastIndex, currentIndex);
-    const rangeIds = taskIds.slice(start, end + 1);
-
-    setSelectedTasks((prev) => {
-      const newSet = new Set(prev);
-      rangeIds.forEach((id) => newSet.add(id));
-      return newSet;
-    });
-
-    lastClickedTaskIdRef.current = taskId;
-  };
+  const handleTaskClick = useCallback(
+    (e: MouseEvent, taskId: string) => {
+      if (e.ctrlKey || e.metaKey) {
+        handleTaskCtrlClick(e, taskId);
+      } else if (e.shiftKey && isMultiselectMode) {
+        handleTaskShiftClick(taskId);
+      } else if (isMultiselectMode) {
+        handleTaskClickInMultiselect(e, taskId);
+      } else {
+        startTransition(() => {
+          setOptimisticActiveTaskId(taskId);
+          onTaskSelect(taskId);
+        });
+      }
+    },
+    [isMultiselectMode, handleTaskCtrlClick, handleTaskShiftClick, handleTaskClickInMultiselect, onTaskSelect, setOptimisticActiveTaskId],
+  );
 
   const handleBulkDelete = async () => {
     try {

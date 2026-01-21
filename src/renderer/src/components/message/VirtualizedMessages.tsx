@@ -189,7 +189,8 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
         )}
         {settings?.taskSettings?.showTaskStateActions && !inProgress && !isLastLoadingMessage && (
           <TaskStateActions
-            task={task}
+            state={task.state}
+            isArchived={task.archived}
             onResumeTask={resumeTask}
             onMarkAsDone={onMarkAsDone}
             onProceed={onProceed}
