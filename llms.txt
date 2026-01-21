@@ -371,11 +371,14 @@ src/
             RequestyModelOverrides.tsx
             RequestyParameters.tsx
             SyntheticParameters.tsx
+            useArrayField.ts
             VertexAiAdvancedSettings.tsx
             VertexAiModelOverrides.tsx
             VertexAIParameters.tsx
             ZaiPlanAdvancedSettings.tsx
+            ZaiPlanModelOverrides.tsx
             ZaiPlanParameters.tsx
+            ZaiPlanThinkingSetting.tsx
           DisableStreaming.tsx
           index.ts
           ModelDialog.tsx
@@ -468,6 +471,8 @@ src/
         ModelSelector.tsx
         TelemetryInfoDialog.tsx
         TokenUsageBar.tsx
+      constants/
+        keyboardKeys.ts
       contexts/
         AgentsContext.tsx
         ApiContext.tsx
@@ -502,6 +507,7 @@ src/
         useClickOutside.ts
         useConfiguredHotkeys.ts
         useCustomCommands.ts
+        useDropdownState.ts
         useEffectiveEnvironmentVariable.ts
         useIndexedDB.ts
         useLmStudioModels.ts
@@ -513,6 +519,14 @@ src/
         useResponsive.ts
         useScrollingPaused.ts
         useSearchText.tsx
+        useTaskActions.ts
+        useTaskCommandHandlers.ts
+        useTaskDataHandlers.ts
+        useTaskLifecycleHandlers.ts
+        useTaskLogHandlers.ts
+        useTaskMessageHandlers.ts
+        useTaskResponseHandlers.ts
+        useTaskToolHandlers.ts
         useTypingAnimation.ts
         useUserMessageNavigation.tsx
         useVersions.ts
@@ -1659,7 +1673,9 @@ File: src/common/locales/en.json
       "add": "Add",
       "adding": "Adding...",
       "configured": "Configured"
-    }
+    },
+    "thinkingEnabled": "Enable Thinking",
+    "thinkingEnabledTooltip": "When enabled, the model will use thinking mode for deeper reasoning (default). Disable for faster responses on simple tasks."
   },
   "azure": {
     "apiKey": "API Key",
@@ -3078,7 +3094,9 @@ File: src/common/locales/zh.json
       "add": "添加",
       "adding": "添加中...",
       "configured": "已配置"
-    }
+    },
+    "thinkingEnabled": "启用思考",
+    "thinkingEnabledTooltip": "启用时，模型将使用思考模式进行更深入的推理（默认）。对于简单任务，可以禁用以获得更快的响应速度。"
   },
   "anthropic": {
     "apiKey": "API 密钥"
@@ -4482,6 +4500,7 @@ export const isOpenCodeProvider = (provider: LlmProviderBase): provider is OpenC
 export interface ZaiPlanProvider extends LlmProviderBase {
   name: 'zai-plan';
   apiKey: string;
+  thinkingEnabled?: boolean;
 }
 export const isZaiPlanProvider = (provider: LlmProviderBase): provider is ZaiPlanProvider
 ⋮----
@@ -6438,6 +6457,7 @@ import {
   NoSuchToolError,
   type StepResult,
   streamText,
+  smoothStream,
   type Tool,
   type ToolCallOptions,
   type ToolSet,
@@ -8699,12 +8719,12 @@ const getVertexAiModelInfo = (_provider: ProviderProfile, modelId: string, allMo
 File: src/main/models/providers/zai-plan.ts
 ================
 import { Model, ModelInfo, ProviderProfile, SettingsData } from '@common/types';
-import { isZaiPlanProvider, ZaiPlanProvider } from '@common/agent';
+import { isZaiPlanProvider, LlmProvider, ZaiPlanProvider } from '@common/agent';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 ⋮----
 import { getDefaultUsageReport } from './default';
 ⋮----
-import type { LanguageModelV2 } from '@ai-sdk/provider';
+import type { LanguageModelV2, SharedV2ProviderOptions } from '@ai-sdk/provider';
 ⋮----
 import { AiderModelMapping, LlmProviderStrategy, LoadModelsResponse } from '@/models';
 import logger from '@/logger';
@@ -8731,6 +8751,10 @@ const createZaiPlanLlm = (profile: ProviderProfile, model: Model, settings: Sett
 // ZAI uses specific base URL for chat completions
 ⋮----
 const getZaiPlanModelInfo = (_provider: ProviderProfile, modelId: string, allModelInfos: Record<string, ModelInfo>): ModelInfo | undefined =>
+⋮----
+const getZaiPlanProviderOptions = (llmProvider: LlmProvider, model: Model): SharedV2ProviderOptions | undefined =>
+⋮----
+// Only disable thinking if explicitly set to false
 ⋮----
 // === Complete Strategy Implementation ===
 ⋮----
@@ -14871,12 +14895,14 @@ export const Section = (
 ================
 File: src/renderer/src/components/common/Select.tsx
 ================
-import { ReactNode, useRef, useState, useEffect } from 'react';
+import { ReactNode, useRef, useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { HiChevronUpDown, HiCheck } from 'react-icons/hi2';
 import { useTranslation } from 'react-i18next';
 ⋮----
 import { useClickOutside } from '@/hooks/useClickOutside';
+import { useDropdownState } from '@/hooks/useDropdownState';
+import { KeyboardKeys } from '@/constants/keyboardKeys';
 ⋮----
 export type Option = {
   label: ReactNode;
@@ -14894,11 +14920,7 @@ type Props = {
   disabled?: boolean;
 };
 ⋮----
-const dropdownRef = useRef<HTMLUListElement>(null); // Ref for the dropdown itself
-⋮----
 // Pass both refs to useClickOutside
-⋮----
-const handleToggleDropdown = () =>
 ⋮----
 const handleKeyDown = (e: React.KeyboardEvent) =>
 ⋮----
@@ -15508,7 +15530,7 @@ return <ExpandableMessageBlock title=
 ================
 File: src/renderer/src/components/message/FileEditToolMessage.tsx
 ================
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { RiCheckboxCircleFill, RiEditLine, RiErrorWarningFill, RiCloseCircleFill } from 'react-icons/ri';
 import { getLanguageFromPath } from '@common/utils';
 import { CgSpinner } from 'react-icons/cg';
@@ -15557,7 +15579,7 @@ return <ExpandableMessageBlock title=
 ================
 File: src/renderer/src/components/message/FileWriteToolMessage.tsx
 ================
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { RiCheckboxCircleFill, RiEditLine, RiErrorWarningFill, RiCloseCircleFill } from 'react-icons/ri';
 import { CgSpinner } from 'react-icons/cg';
 import { useTranslation } from 'react-i18next';
@@ -16009,7 +16031,7 @@ const arePropsEqual = (prevProps: Props, nextProps: Props): boolean =>
 ================
 File: src/renderer/src/components/message/Messages.tsx
 ================
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, memo, useRef } from 'react';
 import { toPng } from 'html-to-image';
 import { MdKeyboardDoubleArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
@@ -16334,7 +16356,6 @@ import { FaChevronRight } from 'react-icons/fa';
 import { TfiThought } from 'react-icons/tfi';
 import { useTranslation } from 'react-i18next';
 import { clsx } from 'clsx';
-import { AnimatePresence, motion } from 'framer-motion';
 ⋮----
 import { CopyMessageButton } from './CopyMessageButton';
 ⋮----
@@ -16361,9 +16382,9 @@ const handleToggleThinking = (e: MouseEvent<HTMLDivElement>) =>
 ⋮----
 <div className=
 ⋮----
-className=
-⋮----
 {/* Answer section - only show if we have an answer or we're streaming */}
+⋮----
+className=
 
 ================
 File: src/renderer/src/components/message/ToolMessageBlock.tsx
@@ -17013,6 +17034,8 @@ File: src/renderer/src/components/ModelLibrary/providers/index.ts
 // Advanced Settings
 ⋮----
 // Model Overrides
+⋮----
+// Utility Components
 
 ================
 File: src/renderer/src/components/ModelLibrary/providers/LitellmParameters.tsx
@@ -17285,9 +17308,10 @@ label=
 ================
 File: src/renderer/src/components/ModelLibrary/providers/OpenRouterAdvancedSettings.tsx
 ================
-import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { OpenRouterProvider } from '@common/agent';
+⋮----
+import { useArrayField } from './useArrayField';
 ⋮----
 import { InfoIcon } from '@/components/common/InfoIcon';
 import { Input } from '@/components/common/Input';
@@ -17298,22 +17322,6 @@ type Props = {
   provider: OpenRouterProvider;
   onChange: (updated: OpenRouterProvider) => void;
 };
-⋮----
-const handleOrderChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-⋮----
-const handleOrderBlur = () =>
-⋮----
-const handleOnlyChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-⋮----
-const handleOnlyBlur = () =>
-⋮----
-const handleIgnoreChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-⋮----
-const handleIgnoreBlur = () =>
-⋮----
-const handleQuantizationsChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-⋮----
-const handleQuantizationsBlur = () =>
 ⋮----
 const handleAllowFallbacksChange = (checked: boolean) =>
 ⋮----
@@ -17513,6 +17521,22 @@ const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 label=
 
 ================
+File: src/renderer/src/components/ModelLibrary/providers/useArrayField.ts
+================
+import { useState, useEffect } from 'react';
+import { OpenRouterProvider } from '@common/agent';
+⋮----
+export const useArrayField = (
+  provider: OpenRouterProvider,
+  field: keyof Pick<OpenRouterProvider, 'order' | 'only' | 'ignore' | 'quantizations'>,
+  onChange: (updated: OpenRouterProvider) => void,
+) =>
+⋮----
+const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+⋮----
+const handleBlur = () =>
+
+================
 File: src/renderer/src/components/ModelLibrary/providers/VertexAiAdvancedSettings.tsx
 ================
 import { useTranslation } from 'react-i18next';
@@ -17594,6 +17618,8 @@ import { ZaiPlanProvider } from '@common/agent';
 import { SettingsData, McpServerConfig } from '@common/types';
 import { FaCheck, FaPlus, FaInfoCircle, FaExternalLinkAlt } from 'react-icons/fa';
 ⋮----
+import { ZaiPlanThinkingSetting } from './ZaiPlanThinkingSetting';
+⋮----
 import { useSettings } from '@/contexts/SettingsContext';
 import { Button } from '@/components/common/Button';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
@@ -17621,6 +17647,23 @@ const handleAddServer = async (serverInfo: McpServerInfo) =>
 ⋮----
 
 ================
+File: src/renderer/src/components/ModelLibrary/providers/ZaiPlanModelOverrides.tsx
+================
+import { getDefaultProviderParams, LlmProvider, ZaiPlanProvider } from '@common/agent';
+⋮----
+import { ZaiPlanThinkingSetting } from './ZaiPlanThinkingSetting';
+⋮----
+type Props = {
+  provider: LlmProvider;
+  overrides: Partial<ZaiPlanProvider>;
+  onChange: (overrides: Record<string, unknown>) => void;
+};
+⋮----
+export const ZaiPlanModelOverrides = (
+⋮----
+const handleProviderChange = (updatedProvider: ZaiPlanProvider) =>
+
+================
 File: src/renderer/src/components/ModelLibrary/providers/ZaiPlanParameters.tsx
 ================
 import { ChangeEvent } from 'react';
@@ -17640,6 +17683,22 @@ type Props = {
 const handleApiKeyChange = (e: ChangeEvent<HTMLInputElement>) =>
 ⋮----
 label=
+
+================
+File: src/renderer/src/components/ModelLibrary/providers/ZaiPlanThinkingSetting.tsx
+================
+import { useTranslation } from 'react-i18next';
+import { ZaiPlanProvider } from '@common/agent';
+⋮----
+import { Checkbox } from '@/components/common/Checkbox';
+import { InfoIcon } from '@/components/common/InfoIcon';
+⋮----
+type Props = {
+  provider: ZaiPlanProvider;
+  onChange: (updated: ZaiPlanProvider) => void;
+};
+⋮----
+const handleThinkingEnabledChange = (checked: boolean) =>
 
 ================
 File: src/renderer/src/components/ModelLibrary/DisableStreaming.tsx
@@ -17792,6 +17851,7 @@ import { RequestyModelOverrides } from './providers/RequestyModelOverrides';
 import { AzureModelOverrides } from './providers/AzureModelOverrides';
 import { OpenAiCompatibleModelOverrides } from './providers/OpenAiCompatibleModelOverrides';
 import { DefaultModelOverrides } from './providers/DefaultModelOverrides';
+import { ZaiPlanModelOverrides } from './providers/ZaiPlanModelOverrides';
 ⋮----
 import { Button } from '@/components/common/Button';
 import { Accordion } from '@/components/common/Accordion';
@@ -18357,7 +18417,7 @@ File: src/renderer/src/components/project/TaskSidebar/TaskSidebar.tsx
 ================
 import { TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { MouseEvent, useState, useRef, useEffect, useOptimistic, startTransition, Activity, memo } from 'react';
+import { MouseEvent, useState, useRef, useEffect, useOptimistic, startTransition, Activity, memo, useDeferredValue } from 'react';
 import { HiPlus } from 'react-icons/hi';
 import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { CgSpinner } from 'react-icons/cg';
@@ -19079,10 +19139,6 @@ type Props = {
 ⋮----
 // Focus prompt field
 ⋮----
-const handleModelChange = (modelsData: ModelsData | null) =>
-⋮----
-const handleMarkAsDone = () =>
-⋮----
 // This submission is an edit of a previous message
 setEditingMessageIndex(null); // Clear editing state
 ⋮----
@@ -19092,49 +19148,17 @@ setEditingMessageIndex(null); // Clear editing state
 ⋮----
 // eslint-disable-next-line react-hooks/exhaustive-deps
 ⋮----
-const handleResetTask = () =>
-⋮----
-const handleResumeTask = () =>
-⋮----
-const handleProceed = () =>
-⋮----
-const handleArchiveTask = () =>
-⋮----
-const handleUnarchiveTask = () =>
-⋮----
-const handleDeleteTask = () =>
-⋮----
-const handleRemoveMessage = async (messageToRemove: Message) =>
+// eslint-disable-next-line no-console
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
-const handleAddTodo = async (name: string) =>
+// eslint-disable-next-line no-console
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
-const handleToggleTodo = async (name: string, completed: boolean) =>
-⋮----
 // eslint-disable-next-line no-console
 ⋮----
-const handleUpdateTodo = async (name: string, updates: Partial<TodoItem>) =>
-⋮----
 // eslint-disable-next-line no-console
-⋮----
-const handleDeleteTodo = async (name: string) =>
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-const handleClearAllTodos = async () =>
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-const handleTerminalViewResize = () =>
-⋮----
-const handleSidebarResize = async (_, data: ResizeCallbackData) =>
-⋮----
-const handleToggleFilesSidebarCollapse = () =>
-⋮----
-const handleCopyTerminalOutput = (output: string) =>
 ⋮----
 <div className=
 ⋮----
@@ -19486,13 +19510,13 @@ export const CommandSuggestion = (
 ================
 File: src/renderer/src/components/PromptField/EditFormatSelector.tsx
 ================
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MdKeyboardArrowUp } from 'react-icons/md';
 import { EditFormat } from '@common/types';
 ⋮----
 import { useClickOutside } from '@/hooks/useClickOutside';
-import { useBooleanState } from '@/hooks/useBooleanState';
+import { useDropdownState } from '@/hooks/useDropdownState';
 ⋮----
 export type EditFormatSelectorRef = {
   open: () => void;
@@ -19510,8 +19534,8 @@ const handleFormatSelected = (format: EditFormat) =>
 const renderFormatItem = (format: EditFormat, index: number) => (
     <div
       key={format}
-      ref={index === highlightedIndex ? highlightedItemRef : undefined}
-      className={`flex items-center w-full hover:bg-bg-tertiary transition-colors duration-200 ${index === highlightedIndex ? 'bg-bg-tertiary' : 'text-text-tertiary'}`}
+      ref={index === state.highlightedIndex ? highlightedItemRef : undefined}
+      className={`flex items-center w-full hover:bg-bg-tertiary transition-colors duration-200 ${index === state.highlightedIndex ? 'bg-bg-tertiary' : 'text-text-tertiary'}`}
     >
       <button
         onClick={() => handleFormatSelected(format)}
@@ -21139,6 +21163,8 @@ import { useTranslation } from 'react-i18next';
 import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
 ⋮----
+import { KeyboardKeys } from '@/constants/keyboardKeys';
+⋮----
 type Props = {
   value: string;
   suggestions: string[];
@@ -21202,7 +21228,7 @@ data-tooltip-content=
 ================
 File: src/renderer/src/components/ModelSelector.tsx
 ================
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, KeyboardEvent, MouseEvent, useOptimistic, startTransition } from 'react';
+import { forwardRef, useImperativeHandle, useRef, KeyboardEvent, MouseEvent, useOptimistic, startTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MdClose, MdKeyboardArrowUp, MdKeyboardReturn } from 'react-icons/md';
 import { useDebounce } from '@reactuses/core';
@@ -21211,7 +21237,8 @@ import { Model, ProviderProfile } from '@common/types';
 import { getProviderModelId } from '@common/agent';
 ⋮----
 import { useClickOutside } from '@/hooks/useClickOutside';
-import { useBooleanState } from '@/hooks/useBooleanState';
+import { useDropdownState } from '@/hooks/useDropdownState';
+import { KeyboardKeys } from '@/constants/keyboardKeys';
 ⋮----
 export type ModelSelectorRef = {
   open: (model?: string) => void;
@@ -21283,6 +21310,11 @@ type Props = {
 ⋮----
 className=
 ⋮----
+
+================
+File: src/renderer/src/constants/keyboardKeys.ts
+================
+
 
 ================
 File: src/renderer/src/contexts/AgentsContext.tsx
@@ -21475,114 +21507,28 @@ export const useSettings = () =>
 ================
 File: src/renderer/src/contexts/TaskContext.tsx
 ================
-import React, { createContext, ReactNode, useCallback, useContext, useEffect } from 'react';
+import React, { createContext, memo, ReactNode, useContext, useEffect, useMemo } from 'react';
 import { usePrevious } from '@reactuses/core';
-import {
-  AutocompletionData,
-  ClearTaskData,
-  CommandOutputData,
-  ContextFilesUpdatedData,
-  DefaultTaskState,
-  LogData,
-  MessageRemovedData,
-  ModelsData,
-  QuestionData,
-  ResponseChunkData,
-  ResponseCompletedData,
-  TaskData,
-  TodoItem,
-  TokensInfoData,
-  ToolData,
-  UserMessageData,
-} from '@common/types';
-import { v4 as uuidv4 } from 'uuid';
-import { TODO_TOOL_CLEAR_ITEMS, TODO_TOOL_GET_ITEMS, TODO_TOOL_GROUP_NAME, TODO_TOOL_SET_ITEMS, TODO_TOOL_UPDATE_ITEM_COMPLETION } from '@common/tools';
-import { useTranslation } from 'react-i18next';
+import { DefaultTaskState, TaskData, TodoItem, ModelsData } from '@common/types';
 import { useStoreWithEqualityFn } from 'zustand/traditional';
 import { shallow } from 'zustand/vanilla/shallow';
 ⋮----
-import {
-  CommandOutputMessage,
-  isCommandOutputMessage,
-  isLoadingMessage,
-  LoadingMessage,
-  LogMessage,
-  Message,
-  ReflectedMessage,
-  ResponseMessage,
-  ToolMessage,
-  UserMessage,
-} from '@/types/message';
-import { useApi } from '@/contexts/ApiContext';
+import { isLoadingMessage, Message } from '@/types/message';
 import { useTaskStore } from '@/stores/taskStore';
+import { useTaskResponseHandlers } from '@/hooks/useTaskResponseHandlers';
+import { useTaskToolHandlers } from '@/hooks/useTaskToolHandlers';
+import { useTaskLogHandlers } from '@/hooks/useTaskLogHandlers';
+import { useTaskCommandHandlers } from '@/hooks/useTaskCommandHandlers';
+import { useTaskDataHandlers } from '@/hooks/useTaskDataHandlers';
+import { useTaskMessageHandlers } from '@/hooks/useTaskMessageHandlers';
+import { useTaskLifecycleHandlers } from '@/hooks/useTaskLifecycleHandlers';
+import { useTaskActions } from '@/hooks/useTaskActions';
 ⋮----
 interface TaskEventSubscriberProps {
   baseDir: string;
   taskId: string;
   state?: string;
 }
-⋮----
-const TaskEventSubscriber: React.FC<TaskEventSubscriberProps> = (
-⋮----
-const handleSetAiderTotalCost = (aiderTotalCost: number) =>
-⋮----
-const handleSetAllFiles = (allFiles: string[]) =>
-⋮----
-const handleSetAutocompletionWords = (autocompletionWords: string[]) =>
-⋮----
-const handleSetTokensInfo = (tokensInfo: TokensInfoData | null) =>
-⋮----
-const handleResponseChunk = (
-⋮----
-const handleResponseCompleted = (
-⋮----
-// If no processing message exists, find the last response message
-⋮----
-// If no response message exists, create a new one
-⋮----
-const handleCommandOutput = (
-⋮----
-const handleTodoTool = (toolName: string, args: Record<string, unknown> | undefined, response: string | undefined) =>
-⋮----
-// If response is not JSON, it might be a message like "No todo items found"
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-const handleTool = (
-⋮----
-const createNewToolMessage = () =>
-⋮----
-const handleLog = (
-⋮----
-// Mark all messages in the same group as finished before removing loading messages
-⋮----
-// Create a new message object with updated promptContext.group.finished
-⋮----
-// Then remove loading messages
-⋮----
-// Update existing loading message
-⋮----
-// Add new loading message
-⋮----
-const handleUpdateAutocompletion = (
-⋮----
-const handleTokensInfo = (data: TokensInfoData) =>
-⋮----
-const handleQuestion = (data: QuestionData) =>
-⋮----
-const handleQuestionAnswered = () =>
-⋮----
-const handleUserMessage = (data: UserMessageData) =>
-⋮----
-const handleClearProject = (
-⋮----
-const handleContextFilesUpdated = (
-⋮----
-const handleUpdateAiderModels = (data: ModelsData) =>
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-const handleMessageRemoved = (data: MessageRemovedData) =>
 ⋮----
 export interface TaskContextType {
   loadTask: (taskId: string) => void;
@@ -21596,8 +21542,6 @@ export interface TaskContextType {
   updateTaskAgentProfile: (taskId: string, agentProfileId: string, provider: string, model: string) => void;
   refreshAllFiles: (taskId: string, useGit?: boolean) => Promise<void>;
 }
-⋮----
-// eslint-disable-next-line no-console
 ⋮----
 export const useTask = (): TaskContextType =>
 
@@ -21688,6 +21632,18 @@ export const useCustomCommands = (baseDir: string) =>
 // Load initial commands
 ⋮----
 // Listen for commands updates
+
+================
+File: src/renderer/src/hooks/useDropdownState.ts
+================
+import { useCallback, useState } from 'react';
+⋮----
+export interface DropdownStateOptions<T> {
+  initialState: T;
+  onCloseReset?: Partial<T>;
+}
+⋮----
+export const useDropdownState = <T extends Record<string, unknown>>(
 
 ================
 File: src/renderer/src/hooks/useEffectiveEnvironmentVariable.ts
@@ -21916,6 +21872,143 @@ navigateToElement(0); // Navigate to the first result
 // eslint-disable-next-line
 ⋮----
 <div className=
+
+================
+File: src/renderer/src/hooks/useTaskActions.ts
+================
+import { useCallback } from 'react';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/vanilla/shallow';
+import { v4 as uuidv4 } from 'uuid';
+import { TODO_TOOL_GROUP_NAME } from '@common/tools';
+⋮----
+import { Message, ReflectedMessage, ResponseMessage, ToolMessage, UserMessage } from '@/types/message';
+import { useTaskStore } from '@/stores/taskStore';
+import { useApi } from '@/contexts/ApiContext';
+⋮----
+type UseTaskActionsParams = {
+  baseDir: string;
+};
+⋮----
+export const useTaskActions = (
+⋮----
+// eslint-disable-next-line no-console
+
+================
+File: src/renderer/src/hooks/useTaskCommandHandlers.ts
+================
+import { useCallback, useEffect } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/vanilla/shallow';
+⋮----
+import type { CommandOutputData } from '@common/types';
+import type { CommandOutputMessage, Message } from '@/types/message';
+⋮----
+import { useApi } from '@/contexts/ApiContext';
+import { useTaskStore } from '@/stores/taskStore';
+⋮----
+const isCommandOutputMessage = (message: Message): message is CommandOutputMessage =>
+⋮----
+export const useTaskCommandHandlers = (baseDir: string, taskId: string) =>
+
+================
+File: src/renderer/src/hooks/useTaskDataHandlers.ts
+================
+import { useCallback, useEffect } from 'react';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/vanilla/shallow';
+⋮----
+import type { TokensInfoData, QuestionData, AutocompletionData, ModelsData, ContextFilesUpdatedData } from '@common/types';
+⋮----
+import { useApi } from '@/contexts/ApiContext';
+import { useTaskStore } from '@/stores/taskStore';
+⋮----
+export const useTaskDataHandlers = (baseDir: string, taskId: string) =>
+
+================
+File: src/renderer/src/hooks/useTaskLifecycleHandlers.ts
+================
+import { useCallback, useEffect } from 'react';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/vanilla/shallow';
+⋮----
+import type { ClearTaskData } from '@common/types';
+⋮----
+import { useApi } from '@/contexts/ApiContext';
+import { useTaskStore } from '@/stores/taskStore';
+⋮----
+export const useTaskLifecycleHandlers = (baseDir: string, taskId: string) =>
+
+================
+File: src/renderer/src/hooks/useTaskLogHandlers.ts
+================
+import { useCallback, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { v4 as uuidv4 } from 'uuid';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/vanilla/shallow';
+⋮----
+import type { LogData } from '@common/types';
+import type { LogMessage, LoadingMessage, Message } from '@/types/message';
+⋮----
+import { useApi } from '@/contexts/ApiContext';
+import { useTaskStore } from '@/stores/taskStore';
+⋮----
+const isLoadingMessage = (message: Message): message is LoadingMessage =>
+⋮----
+export const useTaskLogHandlers = (baseDir: string, taskId: string) =>
+
+================
+File: src/renderer/src/hooks/useTaskMessageHandlers.ts
+================
+import { useCallback, useEffect } from 'react';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/vanilla/shallow';
+⋮----
+import type { UserMessageData, MessageRemovedData } from '@common/types';
+import type { UserMessage } from '@/types/message';
+⋮----
+import { useApi } from '@/contexts/ApiContext';
+import { useTaskStore } from '@/stores/taskStore';
+⋮----
+export const useTaskMessageHandlers = (baseDir: string, taskId: string) =>
+
+================
+File: src/renderer/src/hooks/useTaskResponseHandlers.ts
+================
+import { useCallback, useEffect } from 'react';
+import { v4 as uuidv4 } from 'uuid';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/vanilla/shallow';
+⋮----
+import type { ResponseChunkData, ResponseCompletedData } from '@common/types';
+import type { Message, ReflectedMessage, ResponseMessage } from '@/types/message';
+⋮----
+import { useApi } from '@/contexts/ApiContext';
+import { useTaskStore } from '@/stores/taskStore';
+⋮----
+export const useTaskResponseHandlers = (baseDir: string, taskId: string) =>
+
+================
+File: src/renderer/src/hooks/useTaskToolHandlers.ts
+================
+import { useCallback, useEffect } from 'react';
+import { TODO_TOOL_CLEAR_ITEMS, TODO_TOOL_GET_ITEMS, TODO_TOOL_GROUP_NAME, TODO_TOOL_SET_ITEMS, TODO_TOOL_UPDATE_ITEM_COMPLETION } from '@common/tools';
+import { useStoreWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/vanilla/shallow';
+⋮----
+import type { TodoItem, ToolData } from '@common/types';
+import type { ToolMessage } from '@/types/message';
+⋮----
+import { useApi } from '@/contexts/ApiContext';
+import { useTaskStore } from '@/stores/taskStore';
+⋮----
+export const useTaskToolHandlers = (baseDir: string, taskId: string) =>
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+const createNewToolMessage = (): ToolMessage =>
 
 ================
 File: src/renderer/src/hooks/useTypingAnimation.ts
@@ -22812,7 +22905,6 @@ export interface TaskState {
   todoItems: TodoItem[];
   allFiles: string[];
   autocompletionWords: string[];
-  aiderTotalCost: number;
   contextFiles: ContextFile[];
   aiderModelsData: ModelsData | null;
   lastActiveAt: Date | null;
@@ -22830,7 +22922,6 @@ interface TaskStore {
   setTokensInfo: (taskId: string, tokensInfo: TokensInfoData | null) => void;
   setQuestion: (taskId: string, question: QuestionData | null) => void;
   setAiderModelsData: (taskId: string, modelsData: ModelsData | null) => void;
-  setAiderTotalCost: (taskId: string, cost: number) => void;
   clearSession: (taskId: string, messagesOnly: boolean) => void;
 }
 ⋮----
@@ -25132,6 +25223,7 @@ import { HashRouter as Router, Navigate, Route, Routes, useLocation } from 'reac
 import { ToastContainer } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
 import { THEMES } from '@common/types';
+import { IconContext } from 'react-icons';
 ⋮----
 import { Onboarding } from '@/pages/Onboarding';
 import { Home } from '@/pages/Home';
