@@ -287,20 +287,22 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
           });
           api.redoLastUserPrompt(projectDir, task.id, currentMode, prompt);
         } else {
-          // OPTIMISTIC: Add user message immediately before backend response
-          setMessages(task.id, (prevMessages) => [
-            ...prevMessages,
-            {
-              id: uuidv4(),
-              type: 'user',
-              content: prompt,
-              isOptimistic: true,
-            } satisfies UserMessage,
-          ]);
+          if (!question) {
+            // OPTIMISTIC: Add user message immediately before backend response
+            setMessages(task.id, (prevMessages) => [
+              ...prevMessages,
+              {
+                id: uuidv4(),
+                type: 'user',
+                content: prompt,
+                isOptimistic: true,
+              } satisfies UserMessage,
+            ]);
+          }
           api.runPrompt(projectDir, task.id, prompt, currentMode);
         }
       },
-      [updateOptimisticTaskState, task.id, editingMessageIndex, api, projectDir, currentMode, setMessages],
+      [updateOptimisticTaskState, task.id, editingMessageIndex, setMessages, api, projectDir, currentMode, question],
     );
 
     const handleSavePrompt = useCallback(
