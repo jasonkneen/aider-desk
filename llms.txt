@@ -156,6 +156,7 @@ src/
         providers-api.ts
         settings-api.ts
         system-api.ts
+        terminal-api.ts
         todo-api.ts
         usage-api.ts
         voice-api.ts
@@ -561,6 +562,7 @@ src/
         Onboarding.tsx
         Settings.tsx
       stores/
+        projectStore.ts
         taskStore.ts
       themes/
         theme-aurora.scss
@@ -1335,6 +1337,7 @@ File: src/common/locales/en.json
     "loading": "Loading...",
     "startingUp": "Starting up...",
     "loadingProjectSettings": "Loading project settings...",
+    "loadingProject": "Loading project...",
     "loadingTask": "Loading task...",
     "loadingMessages": "Loading messages...",
     "error": "Error",
@@ -2809,6 +2812,7 @@ File: src/common/locales/zh.json
     "loading": "加载中...",
     "startingUp": "正在启动...",
     "loadingProjectSettings": "正在加载项目设置...",
+    "loadingProject": "加载项目中...",
     "loadingTask": "正在加载任务...",
     "loadingMessages": "正在加载消息...",
     "error": "错误",
@@ -9964,6 +9968,34 @@ constructor(private readonly eventsHandler: EventsHandler)
 registerRoutes(router: Router): void
 
 ================
+File: src/main/server/rest-api/terminal-api.ts
+================
+import { Router } from 'express';
+import { z } from 'zod';
+⋮----
+import { BaseApi } from './base-api';
+⋮----
+import { EventsHandler } from '@/events-handler';
+⋮----
+export class TerminalApi extends BaseApi
+⋮----
+constructor(private readonly eventsHandler: EventsHandler)
+⋮----
+registerRoutes(router: Router): void
+⋮----
+// Create terminal
+⋮----
+// Write to terminal
+⋮----
+// Resize terminal
+⋮----
+// Close terminal
+⋮----
+// Get terminal for task
+⋮----
+// Get all terminals for task
+
+================
 File: src/main/server/rest-api/todo-api.ts
 ================
 import { Router } from 'express';
@@ -10112,6 +10144,7 @@ import {
   UsageApi,
   MemoryApi,
   VoiceApi,
+  TerminalApi,
 } from '@/server/rest-api';
 import { AUTH_PASSWORD, AUTH_USERNAME, SERVER_PORT } from '@/constants';
 import logger from '@/logger';
@@ -10841,6 +10874,7 @@ import {
   UserMessageData,
   WorkingMode,
   ModelInfo,
+  TaskStateEmoji,
 } from '@common/types';
 import { extractTextContent, fileExists, parseUsageReport } from '@common/utils';
 import { COMPACT_CONVERSATION_AGENT_PROFILE, CONFLICT_RESOLUTION_PROFILE, HANDOFF_AGENT_PROFILE, INIT_PROJECT_AGENTS_PROFILE } from '@common/agent';
@@ -10878,6 +10912,8 @@ import { MemoryManager } from '@/memory/memory-manager';
 import { getElectronApp } from '@/app';
 import { HookManager } from '@/hooks/hook-manager';
 import { PromptsManager } from '@/prompts';
+⋮----
+const getTaskFinishedNotificationText = (task: TaskData) =>
 ⋮----
 export class Task
 ⋮----
@@ -13750,6 +13786,8 @@ type EventDataMap = {
   'task-completed': TaskData;
   'task-cancelled': TaskData;
   'message-removed': MessageRemovedData;
+  'terminal-data': TerminalData;
+  'terminal-exit': TerminalExitData;
 };
 ⋮----
 type EventCallback<T> = (data: T) => void;
@@ -13936,12 +13974,12 @@ addOpenSettingsListener(callback: (pageId: string) => void): () => void
 getCustomCommands(baseDir: string): Promise<CustomCommand[]>
 runCustomCommand(baseDir: string, taskId: string, commandName: string, args: string[], mode: Mode): Promise<void>
 isTerminalSupported(): boolean
-createTerminal(baseDir: string, taskId: string, cols?: number, rows?: number): Promise<string>
-writeToTerminal(terminalId: string, data: string): Promise<boolean>
-resizeTerminal(terminalId: string, cols: number, rows: number): Promise<boolean>
-closeTerminal(terminalId: string): Promise<boolean>
-getTerminalForTask(taskId: string): Promise<string | null>
-getAllTerminalsForTask(taskId: string): Promise<Array<
+async createTerminal(baseDir: string, taskId: string, cols?: number, rows?: number): Promise<string>
+async writeToTerminal(terminalId: string, data: string): Promise<boolean>
+async resizeTerminal(terminalId: string, cols: number, rows: number): Promise<boolean>
+async closeTerminal(terminalId: string): Promise<boolean>
+async getTerminalForTask(taskId: string): Promise<string | null>
+async getAllTerminalsForTask(taskId: string): Promise<Array<
 isManageServerSupported(): boolean
 ⋮----
 startServer(username?: string, password?: string): Promise<boolean>
@@ -16319,12 +16357,13 @@ import { IoPlayOutline } from 'react-icons/io5';
 import { RiAlertLine, RiCheckLine, RiPlayLine } from 'react-icons/ri';
 import { useTranslation } from 'react-i18next';
 import { useState, ReactNode } from 'react';
-import { DefaultTaskState, TaskData } from '@common/types';
+import { DefaultTaskState } from '@common/types';
 ⋮----
 import { Button } from '@/components/common/Button';
 ⋮----
 type Props = {
-  task: TaskData;
+  state: string | undefined;
+  isArchived: boolean | undefined;
   onResumeTask: () => void;
   onMarkAsDone: () => void;
   onProceed?: () => void;
@@ -16513,6 +16552,7 @@ File: src/renderer/src/components/message/utils.tsx
 ================
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
+import { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Group } from '@common/types';
 ⋮----
@@ -16523,15 +16563,15 @@ import { CodeBlock } from '@/components/common/CodeBlock';
 import { CodeInline } from '@/components/common/CodeInline';
 import { GroupMessage, isResponseMessage, isToolMessage, Message, ToolMessage } from '@/types/message';
 ⋮----
-// First check if the content matches the thinking/answer format
-⋮----
 // Use CodeInline for inline code elements generated by markdown
 ⋮----
 // Basic styling for preformatted blocks (e.g., indented code)
 ⋮----
 // Table styling
 ⋮----
-
+// First check if the content matches the thinking/answer format
+const thinkingAnswerContent = parseThinkingAnswerFormat(content, baseDir, allFiles, renderMarkdown, renderThinking);
+if (thinkingAnswerContent)
 ⋮----
 const processCodeBlock = () =>
 ⋮----
@@ -18417,7 +18457,7 @@ File: src/renderer/src/components/project/TaskSidebar/TaskSidebar.tsx
 ================
 import { TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { MouseEvent, useState, useRef, useEffect, useOptimistic, startTransition, Activity, memo, useDeferredValue } from 'react';
+import { MouseEvent, useState, useRef, useEffect, useOptimistic, startTransition, Activity, memo, useCallback, useDeferredValue } from 'react';
 import { HiPlus } from 'react-icons/hi';
 import { RiMenuUnfold4Line } from 'react-icons/ri';
 import { CgSpinner } from 'react-icons/cg';
@@ -18466,23 +18506,9 @@ const handleKeyDown = (e: globalThis.KeyboardEvent) =>
 ⋮----
 // Handle click outside for multiselect menu
 ⋮----
-const handleTaskClick = (e: MouseEvent, taskId: string) =>
-⋮----
-const handleDeleteClick = (taskId: string) =>
-⋮----
-const handleConfirmDelete = async (taskId: string) =>
-⋮----
 // eslint-disable-next-line no-console
 ⋮----
-const handleCancelDelete = () =>
-⋮----
-const handleEditClick = (taskId: string) =>
-⋮----
-const handleEditConfirm = async (taskId: string, newName: string) =>
-⋮----
 // eslint-disable-next-line no-console
-⋮----
-const handleEditCancel = () =>
 ⋮----
 const handleCreateTask = () =>
 ⋮----
@@ -18490,28 +18516,15 @@ const handleSearchToggle = () =>
 ⋮----
 const handleSearchClose = () =>
 ⋮----
-const handleArchiveTask = async (taskId: string) =>
+// eslint-disable-next-line no-console
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
-const handleUnarchiveTask = async (taskId: string) =>
-⋮----
 // eslint-disable-next-line no-console
-⋮----
-const handleTogglePin = async (taskId: string) =>
-⋮----
-// eslint-disable-next-line no-console
-⋮----
-const handleChangeState = async (taskId: string, newState: string) =>
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
 // Multiselect handlers
-const handleTaskCtrlClick = (e: MouseEvent, taskId: string) =>
-⋮----
-const handleTaskClickInMultiselect = (e: MouseEvent, taskId: string) =>
-⋮----
-const handleTaskShiftClick = (taskId: string) =>
 ⋮----
 const handleBulkDelete = async () =>
 ⋮----
@@ -18856,6 +18869,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { MouseEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { Tab, TabGroup, TabList } from '@headlessui/react';
 import { clsx } from 'clsx';
+import { CgSpinner } from 'react-icons/cg';
 import { MdAdd, MdClose, MdChevronLeft, MdChevronRight } from 'react-icons/md';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, sortableKeyboardCoordinates, arrayMove, useSortable, horizontalListSortingStrategy } from '@dnd-kit/sortable';
@@ -18864,10 +18878,11 @@ import { useTranslation } from 'react-i18next';
 import type { DragEndEvent } from '@dnd-kit/core';
 ⋮----
 import { MenuOption, useContextMenu } from '@/contexts/ContextMenuContext';
+import { useProjectProcessingState } from '@/stores/projectStore';
 ⋮----
 type Props = {
   openProjects: ProjectData[];
-  activeProject: ProjectData | undefined;
+  activeProject: string | undefined;
   onAddProject: () => void;
   onSetActiveProject: (baseDir: string) => void;
   onCloseProject: (baseDir: string) => void;
@@ -18894,7 +18909,8 @@ const handleRightClick = (event: MouseEvent) =>
 ⋮----
 className={clsx(
             'flex items-center justify-center rounded-full p-1 transition-colors duration-200 z-10',
-            activeProject?.baseDir === project.baseDir ? 'hover:bg-bg-fourth' : 'hover:bg-bg-tertiary-strong',
+            isActive ? 'hover:bg-bg-fourth' : 'hover:bg-bg-tertiary-strong',
+            isProcessing ? 'cursor-default' : '',
           )}
 onClick=
 ⋮----
@@ -18903,15 +18919,16 @@ e.stopPropagation(); // Prevent tab selection/drag initiation
 ================
 File: src/renderer/src/components/project/ProjectView.tsx
 ================
-import { InputHistoryData, ProjectData, ProjectStartMode, TaskCreatedData, TaskData } from '@common/types';
+import { InputHistoryData, ProjectStartMode, TaskCreatedData, TaskData } from '@common/types';
 import { useTranslation } from 'react-i18next';
-import { startTransition, useCallback, useEffect, useOptimistic, useRef, useState, useTransition } from 'react';
+import { Activity, startTransition, useCallback, useEffect, useOptimistic, useRef, useState, useTransition } from 'react';
 import { useLocalStorage } from '@reactuses/core';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { clsx } from 'clsx';
 ⋮----
 import { COLLAPSED_WIDTH, EXPANDED_WIDTH, TaskSidebar } from './TaskSidebar/TaskSidebar';
 ⋮----
+import { useProjectTasks, useProjectStore } from '@/stores/projectStore';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
 import { LoadingOverlay } from '@/components/common/LoadingOverlay';
@@ -18924,8 +18941,8 @@ import { useResponsive } from '@/hooks/useResponsive';
 import { useBooleanState } from '@/hooks/useBooleanState';
 ⋮----
 type Props = {
-  project: ProjectData;
-  isActive?: boolean;
+  projectDir: string;
+  isProjectActive?: boolean;
   showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
 };
 ⋮----
@@ -18978,8 +18995,6 @@ const initProject = async () =>
 // Optionally switch to the new task
 ⋮----
 // eslint-disable-next-line no-console
-⋮----
-onDeleteTask=
 
 ================
 File: src/renderer/src/components/project/TaskBar.tsx
@@ -19071,7 +19086,7 @@ onSquash=
 ================
 File: src/renderer/src/components/project/TaskView.tsx
 ================
-import { DefaultTaskState, Mode, Model, ModelsData, ProjectData, TaskData, TodoItem } from '@common/types';
+import { DefaultTaskState, Mode, Model, ModelsData, TaskData, TodoItem } from '@common/types';
 import { forwardRef, useCallback, useDeferredValue, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ResizableBox, ResizeCallbackData } from 'react-resizable';
@@ -19085,7 +19100,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { useSidebarWidth } from './useSidebarWidth';
 ⋮----
 import { StyledTooltip } from '@/components/common/StyledTooltip';
-import { isLogMessage, isTaskInfoMessage, isUserMessage, Message, TaskInfoMessage } from '@/types/message';
+import { isLogMessage, isTaskInfoMessage, isUserMessage, Message, TaskInfoMessage, UserMessage } from '@/types/message';
 import { Messages, MessagesRef } from '@/components/message/Messages';
 import { VirtualizedMessages, VirtualizedMessagesRef } from '@/components/message/VirtualizedMessages';
 import { useSettings } from '@/contexts/SettingsContext';
@@ -19100,7 +19115,6 @@ import { MobileSidebar } from '@/components/project/MobileSidebar';
 import { FilesContextInfoContent } from '@/components/project/FilesContextInfoContent';
 import { WelcomeMessage } from '@/components/project/WelcomeMessage';
 ⋮----
-import { useSearchText } from '@/hooks/useSearchText';
 import { useApi } from '@/contexts/ApiContext';
 import { resolveAgentProfile } from '@/utils/agents';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -19111,6 +19125,7 @@ import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
 import { LoadingOverlay } from '@/components/common/LoadingOverlay';
 import { useTaskMessages, useTaskState } from '@/stores/taskStore';
 import { showErrorNotification } from '@/utils/notifications';
+import { useSearchText } from '@/hooks/useSearchText';
 ⋮----
 type AddFileDialogOptions = {
   readOnly: boolean;
@@ -19122,7 +19137,7 @@ export type TaskViewRef = {
 };
 ⋮----
 type Props = {
-  project: ProjectData;
+  projectDir: string;
   task: TaskData;
   updateTask: (taskId: string, updates: Partial<TaskData>, useOptimistic?: boolean) => void;
   updateOptimisticTaskState: (taskId: string, taskState: string) => void;
@@ -19141,6 +19156,8 @@ type Props = {
 ⋮----
 // This submission is an edit of a previous message
 setEditingMessageIndex(null); // Clear editing state
+⋮----
+// OPTIMISTIC: Add user message immediately before backend response
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
@@ -19162,12 +19179,7 @@ setEditingMessageIndex(null); // Clear editing state
 ⋮----
 <div className=
 ⋮----
-onToggleSidebar=
-⋮----
 
-⋮----
-if (node?.container)
-setSearchContainer(node.container);
 ⋮----
 {/* Expand/Collapse Button */}
 ⋮----
@@ -22650,7 +22662,8 @@ type Props = {
 File: src/renderer/src/pages/Home.tsx
 ================
 import { ProjectData } from '@common/types';
-import { Activity, startTransition, useCallback, useEffect, useOptimistic, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Activity, startTransition, useCallback, useEffect, useOptimistic, useState, useTransition } from 'react';
 import { MdBarChart, MdSettings, MdUpload } from 'react-icons/md';
 import { PiNotebookFill } from 'react-icons/pi';
 import { useTranslation } from 'react-i18next';
@@ -22659,6 +22672,7 @@ import { useHotkeys } from 'react-hotkeys-hook';
 import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
 import { UsageDashboard } from '@/components/usage/UsageDashboard';
 import { IconButton } from '@/components/common/IconButton';
+import { LoadingOverlay } from '@/components/common/LoadingOverlay';
 import { NoProjectsOpen } from '@/components/project/NoProjectsOpen';
 import { OpenProjectDialog } from '@/components/project/OpenProjectDialog';
 import { ProjectTabs } from '@/components/project/ProjectTabs';
@@ -22672,13 +22686,12 @@ import { showInfoNotification } from '@/utils/notifications';
 import { useApi } from '@/contexts/ApiContext';
 import { ModelLibrary } from '@/components/ModelLibrary';
 import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { useBooleanState } from '@/hooks/useBooleanState';
 ⋮----
 type ShowSettingsInfo = {
   pageId: string;
   options?: Record<string, unknown>;
 };
-⋮----
-const handleReorderProjects = async (reorderedProjects: ProjectData[]) =>
 ⋮----
 const loadProjects = async () =>
 ⋮----
@@ -22712,28 +22725,19 @@ const handleKeyUp = (e: KeyboardEvent) =>
 ⋮----
 const handleAddProject = async (baseDir: string) =>
 ⋮----
-const handleCloseOtherProjects = async (baseDir: string) =>
+const renderProjectPanels = ()
 ⋮----
-const handleCloseAllProjects = async () =>
+const getUpdateTooltip = () =>
 ⋮----
 return ''; // Should not happen if showUpdateIcon is true
 ⋮----
-setShowSettingsInfo({
-                    pageId: 'about',
-                  });
+const handleCloseReleaseNotes = async () =>
 ⋮----
 tooltip=
-⋮----
-setShowSettingsInfo({
-                  pageId: 'general',
-                });
 ⋮----
 <OpenProjectDialog onClose=
 ⋮----
 onClose=
-⋮----
-<UsageDashboard onClose=
-⋮----
 
 ================
 File: src/renderer/src/pages/Onboarding.tsx
@@ -22886,6 +22890,28 @@ toggleExpand(item.id);
 {/* Children */}
 ⋮----
 {/* Content */}
+
+================
+File: src/renderer/src/stores/projectStore.ts
+================
+import { useShallow } from 'zustand/react/shallow';
+import { TaskData, DefaultTaskState } from '@common/types';
+import { createWithEqualityFn } from 'zustand/traditional';
+import { shallow } from 'zustand/vanilla/shallow';
+⋮----
+interface ProjectStore {
+  projectTasksMap: Map<string, TaskData[]>;
+
+  setProjectTasks: (projectBaseDir: string, tasks: TaskData[]) => void;
+  updateProjectTask: (projectBaseDir: string, taskData: TaskData) => void;
+  addProjectTask: (projectBaseDir: string, taskData: TaskData) => void;
+  removeProjectTask: (projectBaseDir: string, taskId: string) => void;
+  clearProjectTasks: (projectBaseDir: string) => void;
+}
+⋮----
+export const useProjectTasks = (projectBaseDir: string)
+⋮----
+export const useProjectProcessingState = (projectBaseDir: string)
 
 ================
 File: src/renderer/src/stores/taskStore.ts
@@ -24762,6 +24788,7 @@ export interface Message {
 ⋮----
 export interface UserMessage extends Message {
   type: 'user';
+  isOptimistic?: boolean;
 }
 ⋮----
 export interface ResponseMessage extends Message {
@@ -25330,10 +25357,10 @@ File: src/renderer/index.html
 <!doctype html>
 <html>
   <head>
-    <script
-      crossOrigin="anonymous"
-      src="https://unpkg.com/react-scan/dist/auto.global.js"
-    ></script>
+<!--    <script-->
+<!--      crossOrigin="anonymous"-->
+<!--      src="https://unpkg.com/react-scan/dist/auto.global.js"-->
+<!--    ></script>-->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>AiderDesk</title>
