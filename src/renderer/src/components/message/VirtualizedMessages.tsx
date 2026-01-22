@@ -153,7 +153,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
         <div
           ref={messagesContainerRef}
           className={clsx(
-            'flex flex-col overflow-y-auto max-h-full px-4 scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-tertiary hover:scrollbar-thumb-bg-fourth',
+            'flex flex-col flex-grow overflow-y-auto max-h-full px-4 scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-tertiary hover:scrollbar-thumb-bg-fourth',
             virtualizer.isScrolling ? 'cursor-progress' : '',
           )}
           {...eventHandlers}
