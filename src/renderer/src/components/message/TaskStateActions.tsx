@@ -48,7 +48,7 @@ export const TaskStateActions = ({ state, isArchived, onResumeTask, onMarkAsDone
 
   const renderSection = (icon: ReactNode, text: string, actions: ReactNode) => {
     return (
-      <div className="rounded-md p-2.5 max-w-full break-words text-xs border border-border-dark-light relative group bg-bg-primary-light-strong">
+      <div className="p-2.5 max-w-full break-words text-xs border-t border-border-dark-light relative group bg-bg-primary-light-strong">
         <div className="flex items-center gap-3">
           {icon}
           <div className="flex-1 text-text-secondary">{text}</div>

@@ -1,9 +1,10 @@
 import { MdKeyboardDoubleArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual';
 import { DefaultTaskState, TaskData } from '@common/types';
 import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef } from 'react';
 import { TaskStateActions } from 'src/renderer/src/components/message/TaskStateActions';
+import { clsx } from 'clsx';
 
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
@@ -14,6 +15,7 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
 import { showInfoNotification } from '@/utils/notifications';
 import { useScrollingPaused } from '@/hooks/useScrollingPaused';
+import { useUserMessageNavigation } from '@/hooks/useUserMessageNavigation';
 import { useSettings } from '@/contexts/SettingsContext';
 
 export type VirtualizedMessagesRef = {
@@ -73,34 +75,65 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
     const isLastLoadingMessage = processedMessages.length > 0 && isLoadingMessage(processedMessages[processedMessages.length - 1]);
     const inProgress = task.state === DefaultTaskState.InProgress;
 
+    // Get all user message IDs
+    const userMessageIds = useMemo(() => {
+      return processedMessages.filter(isUserMessage).map((message) => message.id);
+    }, [processedMessages]);
+
     // Create virtualizer for dynamic sized items
     const virtualizer = useVirtualizer({
       count: processedMessages.length,
       getScrollElement: () => messagesContainerRef.current,
       estimateSize: () => 44, // Initial estimate, will be measured
-      overscan: 5,
-      scrollToFn: (offset, { behavior }) => {
-        messagesContainerRef.current?.scrollTo({
-          top: offset + 32,
-          behavior,
+      rangeExtractor: (range) => {
+        const indices = defaultRangeExtractor(range);
+
+        processedMessages.forEach((message, index) => {
+          if (isUserMessage(message) && !indices.includes(index)) {
+            indices.push(index);
+          }
         });
+
+        return indices.sort((a, b) => a - b);
+      },
+      paddingStart: 16,
+      overscan: 5,
+    });
+
+    const { scrollingPaused, setScrollingPaused, scrollToBottom, eventHandlers } = useScrollingPaused({
+      onAutoScroll: () => {
+        if (processedMessages.length > 0) {
+          virtualizer.scrollToIndex(processedMessages.length - 1, {
+            align: 'end',
+          });
+        }
       },
     });
 
-    const { scrollingPaused, scrollToBottom, eventHandlers } = useScrollingPaused({
-      onAutoScroll: () => {
-        if (processedMessages.length > 0) {
-          virtualizer.scrollToOffset(virtualizer.getTotalSize() + 100);
+    const { hasPreviousUserMessage, hasNextUserMessage, renderGoToPrevious, renderGoToNext } = useUserMessageNavigation({
+      containerRef: messagesContainerRef,
+      userMessageIds,
+      scrollToMessageById: (id: string) => {
+        const index = processedMessages.findIndex((msg) => msg.id === id);
+        if (index !== -1) {
+          setScrollingPaused(true);
+          virtualizer.scrollToIndex(index, {
+            align: 'start',
+            behavior: 'smooth',
+          });
         }
       },
+      buttonClassName: 'hidden group-hover:block',
     });
 
     useLayoutEffect(() => {
       if (!scrollingPaused && processedMessages.length > 0) {
         // Scroll to last item when new messages arrive
-        virtualizer.scrollToOffset(virtualizer.getTotalSize() + 100);
+        virtualizer.scrollToIndex(processedMessages.length - 1, {
+          align: 'end',
+        });
       }
-    }, [processedMessages, scrollingPaused, virtualizer]);
+    }, [processedMessages, scrollingPaused, virtualizer, task.state]);
 
     const exportToImage = async () => {
       // Show notification that export is not available with virtualized rendering
@@ -119,7 +152,10 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
 
         <div
           ref={messagesContainerRef}
-          className="flex flex-col overflow-y-auto max-h-full p-4 scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-tertiary hover:scrollbar-thumb-bg-fourth"
+          className={clsx(
+            'flex flex-col overflow-y-auto max-h-full px-4 scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-tertiary hover:scrollbar-thumb-bg-fourth',
+            virtualizer.isScrolling ? 'cursor-progress' : '',
+          )}
           {...eventHandlers}
         >
           <div
@@ -137,6 +173,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
                   key={message.id || virtualRow.index}
                   data-index={virtualRow.index}
                   ref={virtualizer.measureElement}
+                  className={virtualRow.index === processedMessages.length - 1 ? 'pb-2' : ''}
                   style={{
                     position: 'absolute',
                     top: 0,
@@ -176,8 +213,9 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
           </div>
         </div>
 
-        {scrollingPaused && (
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex gap-1">
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 flex gap-1">
+          {(hasPreviousUserMessage || hasNextUserMessage) && renderGoToPrevious()}
+          {scrollingPaused && (
             <IconButton
               icon={<MdKeyboardDoubleArrowDown className="h-6 w-6" />}
               onClick={scrollToBottom}
@@ -185,8 +223,9 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
               className="bg-bg-primary-light border border-border-default shadow-lg hover:bg-bg-secondary transition-colors duration-200"
               aria-label={t('messages.scrollToBottom')}
             />
-          </div>
-        )}
+          )}
+          {(hasPreviousUserMessage || hasNextUserMessage) && renderGoToNext()}
+        </div>
         {settings?.taskSettings?.showTaskStateActions && !inProgress && !isLastLoadingMessage && (
           <TaskStateActions
             state={task.state}

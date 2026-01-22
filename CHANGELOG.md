@@ -11,6 +11,7 @@
 - updated notification messages to include task name and state
 - added support for terminals in the browser
 - added visual indicator to project tab when that project is in progress
+- improved usability of message virtual rendering
 
 ## [0.49.0]
 

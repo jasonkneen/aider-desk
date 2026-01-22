@@ -128,59 +128,61 @@ const MessagesComponent = forwardRef<MessagesRef, Props>(
     }));
 
     return (
-      <div
-        ref={messagesContainerRef}
-        className="flex flex-col overflow-y-auto max-h-full p-4 scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-tertiary hover:scrollbar-thumb-bg-fourth"
-        {...eventHandlers}
-      >
-        <StyledTooltip id="usage-info-tooltip" />
-        <div className="absolute left-1/2 -translate-x-1/2 w-[50%] bottom-0 z-10 flex justify-center gap-1 pt-10 pb-2 group">
-          {(hasPreviousUserMessage || hasNextUserMessage) && renderGoToPrevious()}
-          {scrollingPaused && (
-            <IconButton
-              icon={<MdKeyboardDoubleArrowDown className="h-6 w-6" />}
-              onClick={scrollToBottom}
-              tooltip={t('messages.scrollToBottom')}
-              className="bg-bg-primary-light border border-border-default shadow-lg hover:bg-bg-secondary transition-colors duration-200"
-              aria-label={t('messages.scrollToBottom')}
-            />
-          )}
-          {(hasPreviousUserMessage || hasNextUserMessage) && renderGoToNext()}
-        </div>
+      <div className="group relative flex flex-col h-full">
+        <div
+          ref={messagesContainerRef}
+          className="flex flex-col overflow-y-auto max-h-full p-4 scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-tertiary hover:scrollbar-thumb-bg-fourth"
+          {...eventHandlers}
+        >
+          <StyledTooltip id="usage-info-tooltip" />
+          <div className="absolute left-1/2 -translate-x-1/2 w-[50%] bottom-0 z-10 flex justify-center gap-1 pt-10 pb-2 group">
+            {(hasPreviousUserMessage || hasNextUserMessage) && renderGoToPrevious()}
+            {scrollingPaused && (
+              <IconButton
+                icon={<MdKeyboardDoubleArrowDown className="h-6 w-6" />}
+                onClick={scrollToBottom}
+                tooltip={t('messages.scrollToBottom')}
+                className="bg-bg-primary-light border border-border-default shadow-lg hover:bg-bg-secondary transition-colors duration-200"
+                aria-label={t('messages.scrollToBottom')}
+              />
+            )}
+            {(hasPreviousUserMessage || hasNextUserMessage) && renderGoToNext()}
+          </div>
 
-        {processedMessages.map((message, index) => {
-          if (isGroupMessage(message)) {
+          {processedMessages.map((message, index) => {
+            if (isGroupMessage(message)) {
+              return (
+                <GroupMessageBlock
+                  key={message.id || index}
+                  baseDir={baseDir}
+                  taskId={taskId}
+                  message={message}
+                  allFiles={allFiles}
+                  renderMarkdown={renderMarkdown}
+                  remove={inProgress ? undefined : removeMessage}
+                  redo={inProgress ? undefined : redoLastUserPrompt}
+                  edit={editLastUserMessage}
+                  onInterrupt={onInterrupt}
+                />
+              );
+            }
             return (
-              <GroupMessageBlock
+              <MessageBlock
                 key={message.id || index}
                 baseDir={baseDir}
                 taskId={taskId}
                 message={message}
                 allFiles={allFiles}
                 renderMarkdown={renderMarkdown}
-                remove={inProgress ? undefined : removeMessage}
-                redo={inProgress ? undefined : redoLastUserPrompt}
-                edit={editLastUserMessage}
+                remove={inProgress ? undefined : () => removeMessage(message)}
+                redo={index === lastUserMessageIndex && !inProgress ? redoLastUserPrompt : undefined}
+                edit={index === lastUserMessageIndex ? editLastUserMessage : undefined}
                 onInterrupt={onInterrupt}
               />
             );
-          }
-          return (
-            <MessageBlock
-              key={message.id || index}
-              baseDir={baseDir}
-              taskId={taskId}
-              message={message}
-              allFiles={allFiles}
-              renderMarkdown={renderMarkdown}
-              remove={inProgress ? undefined : () => removeMessage(message)}
-              redo={index === lastUserMessageIndex && !inProgress ? redoLastUserPrompt : undefined}
-              edit={index === lastUserMessageIndex ? editLastUserMessage : undefined}
-              onInterrupt={onInterrupt}
-            />
-          );
-        })}
-        <div ref={messagesEndRef} />
+          })}
+          <div ref={messagesEndRef} />
+        </div>
         {settings?.taskSettings?.showTaskStateActions && !inProgress && !isLastLoadingMessage && (
           <TaskStateActions
             state={task.state}
