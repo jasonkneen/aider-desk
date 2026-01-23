@@ -1061,7 +1061,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
               </div>
             )}
           </div>
-          <div className={clsx('relative w-full flex gap-1.5 flex-wrap', isMobile ? 'items-start' : 'items-center')}>
+          <div className={clsx('relative w-full flex flex-wrap', isMobile ? 'items-start gap-0.5' : 'items-center gap-1.5')}>
             <div className={clsx('flex gap-1.5', isMobile && mode === 'agent' ? 'flex-col items-start' : 'items-center')}>
               <ModeSelector mode={mode} onModeChange={onModeChanged} />
               <div className="flex gap-2">
@@ -1087,7 +1087,7 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
                 size="xs"
               >
                 <VscTerminal className="w-4 h-4 mr-1" />
-                Terminal
+                <span className="hidden sm:inline">Terminal</span>
               </Button>
             )}
             <Button
