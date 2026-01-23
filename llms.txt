@@ -16690,10 +16690,11 @@ File: src/renderer/src/components/message/VirtualizedMessages.tsx
 ================
 import { MdKeyboardDoubleArrowDown } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { defaultRangeExtractor, useVirtualizer } from '@tanstack/react-virtual';
 import { DefaultTaskState, TaskData } from '@common/types';
 import { forwardRef, useImperativeHandle, useLayoutEffect, useMemo, useRef } from 'react';
 import { TaskStateActions } from 'src/renderer/src/components/message/TaskStateActions';
+import { clsx } from 'clsx';
 ⋮----
 import { MessageBlock } from './MessageBlock';
 import { GroupMessageBlock } from './GroupMessageBlock';
@@ -16704,6 +16705,7 @@ import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
 import { showInfoNotification } from '@/utils/notifications';
 import { useScrollingPaused } from '@/hooks/useScrollingPaused';
+import { useUserMessageNavigation } from '@/hooks/useUserMessageNavigation';
 import { useSettings } from '@/contexts/SettingsContext';
 ⋮----
 export type VirtualizedMessagesRef = {
@@ -16732,6 +16734,8 @@ type Props = {
 };
 ⋮----
 // Group messages by promptContext.group.id
+⋮----
+// Get all user message IDs
 ⋮----
 // Create virtualizer for dynamic sized items
 ⋮----
@@ -22047,6 +22051,7 @@ interface UseUserMessageNavigationProps {
   containerRef: React.RefObject<HTMLDivElement | null>;
   userMessageIds: string[];
   scrollToMessageByElement?: (element: HTMLElement) => void;
+  scrollToMessageById?: (id: string) => void;
   alwaysVisible?: boolean;
   buttonClassName?: string;
 }
@@ -22061,7 +22066,28 @@ interface NavigationButton {
   className: string;
 }
 ⋮----
+export const useUserMessageNavigation = ({
+  containerRef,
+  userMessageIds,
+  scrollToMessageByElement,
+  scrollToMessageById,
+  alwaysVisible = false,
+  buttonClassName = '',
+}: UseUserMessageNavigationProps) =>
+⋮----
+// eslint-disable-next-line react-hooks/exhaustive-deps
+⋮----
+// eslint-disable-next-line react-hooks/exhaustive-deps
+⋮----
+// eslint-disable-next-line react-hooks/exhaustive-deps
+⋮----
 const handleScroll = () =>
+⋮----
+// eslint-disable-next-line react-hooks/exhaustive-deps
+⋮----
+// eslint-disable-next-line react-hooks/exhaustive-deps
+⋮----
+// eslint-disable-next-line react-hooks/exhaustive-deps
 
 ================
 File: src/renderer/src/hooks/useVersions.ts
