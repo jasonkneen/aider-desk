@@ -12,6 +12,7 @@
 - added support for terminals in the browser
 - added visual indicator to project tab when that project is in progress
 - improved usability of message virtual rendering
+- added Claude Agent SDK as a provider to use with Claude subscription
 
 ## [0.49.0]
 

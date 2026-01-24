@@ -7,6 +7,8 @@ import { ContextFile, ContextMessage, MessageRole, ResponseCompletedData, TaskCo
 import { extractServerNameToolName, extractTextContent, fileExists, isMessageEmpty, isTextContent } from '@common/utils';
 import { AIDER_TOOL_GROUP_NAME, AIDER_TOOL_RUN_PROMPT, SUBAGENTS_TOOL_GROUP_NAME, SUBAGENTS_TOOL_RUN_TASK } from '@common/tools';
 
+import type { ToolResultPart } from 'ai';
+
 import logger from '@/logger';
 import { Task } from '@/task';
 import { isDirectory, isFileIgnored } from '@/utils';
@@ -467,13 +469,23 @@ export class ContextManager {
           for (const part of message.content) {
             if (part.type === 'tool-call') {
               const [serverName, toolName] = extractServerNameToolName(part.toolName);
-              // @ts-expect-error part.input type is complex, 'prompt' check is safe in this context
-              if (serverName === AIDER_TOOL_GROUP_NAME && toolName === AIDER_TOOL_RUN_PROMPT && part.input && 'prompt' in part.input) {
+              if (
+                serverName === AIDER_TOOL_GROUP_NAME &&
+                toolName === AIDER_TOOL_RUN_PROMPT &&
+                part.input &&
+                typeof part.input === 'object' &&
+                'prompt' in part.input
+              ) {
                 aiderPrompt = part.input.prompt as string;
                 break;
               }
-              // @ts-expect-error part.input type is complex, 'prompt' check is safe in this context
-              if (serverName === SUBAGENTS_TOOL_GROUP_NAME && toolName === SUBAGENTS_TOOL_RUN_TASK && part.input && 'prompt' in part.input) {
+              if (
+                serverName === SUBAGENTS_TOOL_GROUP_NAME &&
+                toolName === SUBAGENTS_TOOL_RUN_TASK &&
+                part.input &&
+                typeof part.input === 'object' &&
+                'prompt' in part.input
+              ) {
                 subAgentsPrompt = part.input.prompt as string;
                 break;
               }
@@ -507,9 +519,8 @@ export class ContextManager {
                 role: MessageRole.Assistant,
                 content: part.output.value,
               });
-            } else if (part.output?.type === 'json') {
-              // @ts-expect-error part.output.value.responses type is complex, safe in this context
-              const responses: ResponseCompletedData[] = part.output.value.responses;
+            } else if (part.output?.type === 'json' && part.output.value && typeof part.output.value === 'object' && 'responses' in part.output.value) {
+              const responses: ResponseCompletedData[] = part.output.value.responses as unknown as ResponseCompletedData[];
               if (responses) {
                 responses.forEach((response: ResponseCompletedData) => {
                   if (response.reflectedMessage) {
@@ -748,37 +759,162 @@ export class ContextManager {
     const messagesData: (UserMessageData | ResponseCompletedData | ToolData)[] = [];
 
     for (const message of contextMessages) {
+      const processToolResult = (part: ToolResultPart) => {
+        const [serverName, toolName] = extractServerNameToolName(part.toolName);
+        const promptContext = extractPromptContextFromToolResult(part.output.value);
+        const toolMessage = messagesData.find((message) => message.type === 'tool' && message.id === part.toolCallId) as ToolData | undefined;
+
+        if (toolMessage) {
+          toolMessage.response = JSON.stringify(part.output.value);
+          toolMessage.usageReport = message.usageReport || toolMessage.usageReport;
+          toolMessage.promptContext = promptContext;
+        }
+
+        // Handle aider tool responses - create ResponseCompletedData for each response
+        if (
+          serverName === AIDER_TOOL_GROUP_NAME &&
+          toolName === AIDER_TOOL_RUN_PROMPT &&
+          part.output?.value &&
+          typeof part.output.value === 'object' &&
+          'responses' in part.output.value
+        ) {
+          const responses = part.output.value.responses as unknown as ResponseCompletedData[];
+          if (Array.isArray(responses)) {
+            responses.forEach((response: ResponseCompletedData) => {
+              const responseCompletedData: ResponseCompletedData = {
+                type: 'response-completed',
+                messageId: response.messageId,
+                content: response.content,
+                baseDir: this.task.getProjectDir(),
+                taskId: this.taskId,
+                reflectedMessage: response.reflectedMessage,
+                editedFiles: response.editedFiles,
+                commitHash: response.commitHash,
+                commitMessage: response.commitMessage,
+                diff: response.diff,
+                usageReport: response.usageReport,
+                promptContext: message.promptContext,
+              };
+              messagesData.push(responseCompletedData);
+            });
+          }
+        }
+
+        // Handle agent tool results - process all messages from subagent
+        if (
+          serverName === SUBAGENTS_TOOL_GROUP_NAME &&
+          toolName === SUBAGENTS_TOOL_RUN_TASK &&
+          part.output?.value &&
+          typeof part.output.value === 'object' &&
+          'messages' in part.output.value
+        ) {
+          const messages = part.output.value.messages as unknown as ContextMessage[];
+          if (Array.isArray(messages)) {
+            messages.forEach((subMessage: ContextMessage) => {
+              if (subMessage.role === 'assistant') {
+                if (Array.isArray(subMessage.content)) {
+                  // Collect reasoning and text parts to combine them if both exist
+                  let subReasoningContent = '';
+                  let subTextContent = '';
+                  let subHasReasoning = false;
+                  let subHasText = false;
+
+                  for (const subPart of subMessage.content) {
+                    if (subPart.type === 'reasoning' && subPart.text?.trim()) {
+                      subReasoningContent = subPart.text.trim();
+                      subHasReasoning = true;
+                    } else if (subPart.type === 'text' && subPart.text) {
+                      subTextContent = subPart.text.trim();
+                      subHasText = true;
+                    }
+                  }
+
+                  // Process combined reasoning and text content
+                  if (subHasReasoning || subHasText) {
+                    let subFinalContent = '';
+                    if (subHasReasoning && subHasText) {
+                      subFinalContent = `${THINKING_RESPONSE_STAR_TAG}${subReasoningContent}${ANSWER_RESPONSE_START_TAG}${subTextContent}`;
+                    } else {
+                      subFinalContent = subReasoningContent || subTextContent;
+                    }
+
+                    const responseCompletedData: ResponseCompletedData = {
+                      type: 'response-completed',
+                      messageId: subMessage.id,
+                      content: subFinalContent,
+                      baseDir: this.task.getProjectDir(),
+                      taskId: this.taskId,
+                      usageReport: subMessage.usageReport,
+                      promptContext: subMessage.promptContext,
+                    };
+                    messagesData.push(responseCompletedData);
+                  }
+
+                  // Process tool-call parts
+                  for (const subPart of subMessage.content) {
+                    if (subPart.type === 'tool-call' && subPart.toolCallId) {
+                      const [subServerName, subToolName] = extractServerNameToolName(subPart.toolName);
+                      const toolData: ToolData = {
+                        type: 'tool',
+                        baseDir: this.task.getProjectDir(),
+                        taskId: this.taskId,
+                        id: subPart.toolCallId,
+                        serverName: subServerName,
+                        toolName: subToolName,
+                        args: subPart.input,
+                        usageReport: undefined,
+                        promptContext: subMessage.promptContext,
+                      };
+                      messagesData.push(toolData);
+                    }
+                  }
+                } else if (isTextContent(subMessage.content)) {
+                  const content = extractTextContent(subMessage.content);
+                  const responseCompletedData: ResponseCompletedData = {
+                    type: 'response-completed',
+                    messageId: subMessage.id,
+                    content: content,
+                    baseDir: this.task.getProjectDir(),
+                    taskId: this.taskId,
+                    usageReport: subMessage.usageReport,
+                    promptContext: subMessage.promptContext,
+                  };
+                  messagesData.push(responseCompletedData);
+                }
+              } else if (subMessage.role === 'tool') {
+                for (const subPart of subMessage.content) {
+                  if (subPart.type === 'tool-result') {
+                    const toolMessage = messagesData.find((message) => message.type === 'tool' && message.id === subPart.toolCallId) as ToolData | undefined;
+                    if (toolMessage) {
+                      toolMessage.response = JSON.stringify(subPart.output.value);
+                    }
+                  }
+                }
+              }
+            });
+          }
+        }
+      };
+
       if (message.role === 'assistant') {
         if (Array.isArray(message.content)) {
-          // Collect reasoning and text parts to combine them if both exist
-          let reasoningContent = '';
-          let textContent = '';
-          let hasReasoning = false;
-          let hasText = false;
+          const toolResultsMap = new Map<string, { toolName: string; output: unknown }>();
+          let reasoning = '';
+          let responseMessageIndex = 0;
 
-          for (const part of message.content) {
-            if (part.type === 'reasoning' && part.text?.trim()) {
-              reasoningContent += `${part.text.trim()}\n\n`;
-              hasReasoning = true;
-            } else if (part.type === 'text' && part.text) {
-              textContent += `${part.text.trim()}\n\n`;
-              hasText = true;
-            }
-          }
-
-          // Process combined reasoning and text content
-          if (hasReasoning || hasText) {
+          const pushResponseCompletedData = (content = '') => {
             let finalContent = '';
-            if (hasReasoning) {
-              finalContent = `${THINKING_RESPONSE_STAR_TAG}${reasoningContent.trim()}${ANSWER_RESPONSE_START_TAG}${textContent.trim()}`;
+            if (reasoning) {
+              finalContent = `${THINKING_RESPONSE_STAR_TAG}${reasoning.trim()}${ANSWER_RESPONSE_START_TAG}${content.trim()}`;
             } else {
-              finalContent = textContent;
+              finalContent = content.trim();
             }
 
+            const messageId = responseMessageIndex === 0 ? message.id : `${message.id}-${responseMessageIndex}`;
             const responseCompletedData: ResponseCompletedData = {
               type: 'response-completed',
-              messageId: message.id,
-              content: finalContent.trim(),
+              messageId,
+              content: finalContent,
               baseDir: this.task.getProjectDir(),
               taskId: this.taskId,
               reflectedMessage: message.reflectedMessage,
@@ -790,13 +926,23 @@ export class ContextManager {
               promptContext: message.promptContext,
             };
             messagesData.push(responseCompletedData);
-          }
 
-          // Process tool-call parts
+            reasoning = '';
+            responseMessageIndex++;
+          };
+
           for (const part of message.content) {
-            if (part.type === 'tool-call') {
+            if (part.type === 'reasoning' && part.text?.trim()) {
+              reasoning = part.text.trim();
+            } else if (part.type === 'text' && part.text) {
+              pushResponseCompletedData(part.text);
+            } else if (part.type === 'tool-call') {
+              if (reasoning) {
+                pushResponseCompletedData();
+              }
+
+              // Create tool message for tool-call parts
               const toolCall = part;
-              // Ensure toolCall.toolCallId exists before proceeding
               if (!toolCall.toolCallId) {
                 continue;
               }
@@ -814,6 +960,26 @@ export class ContextManager {
                 promptContext: message.promptContext,
               };
               messagesData.push(toolData);
+            } else if (part.type === 'tool-result') {
+              processToolResult(part);
+            }
+          }
+
+          if (reasoning) {
+            pushResponseCompletedData();
+          }
+
+          // Now update tool messages with their responses from tool-results
+          for (const [toolCallId, toolResultData] of toolResultsMap.entries()) {
+            const toolMessage = messagesData.find((msg) => msg.type === 'tool' && msg.id === toolCallId) as ToolData | undefined;
+
+            if (toolMessage) {
+              toolMessage.response = JSON.stringify(toolResultData.output);
+              toolMessage.usageReport = message.usageReport || toolMessage.usageReport;
+              const promptContext = extractPromptContextFromToolResult(toolResultData.output);
+              if (promptContext) {
+                toolMessage.promptContext = promptContext;
+              }
             }
           }
         } else if (isTextContent(message.content)) {
@@ -848,132 +1014,7 @@ export class ContextManager {
       } else if (message.role === 'tool' && Array.isArray(message.content)) {
         for (const part of message.content) {
           if (part.type === 'tool-result') {
-            const [serverName, toolName] = extractServerNameToolName(part.toolName);
-            const promptContext = extractPromptContextFromToolResult(part.output.value);
-            const toolMessage = messagesData.find((message) => message.type === 'tool' && message.id === part.toolCallId) as ToolData | undefined;
-
-            if (toolMessage) {
-              toolMessage.response = JSON.stringify(part.output.value);
-              toolMessage.usageReport = message.usageReport || toolMessage.usageReport;
-              toolMessage.promptContext = promptContext;
-            }
-
-            // Handle aider tool responses - create ResponseCompletedData for each response
-            if (serverName === AIDER_TOOL_GROUP_NAME && toolName === AIDER_TOOL_RUN_PROMPT) {
-              // @ts-expect-error part.output.value.responses type is complex, safe in this context
-              const responses = part.output?.value.responses;
-              if (Array.isArray(responses)) {
-                responses.forEach((response: ResponseCompletedData) => {
-                  const responseCompletedData: ResponseCompletedData = {
-                    type: 'response-completed',
-                    messageId: response.messageId,
-                    content: response.content,
-                    baseDir: this.task.getProjectDir(),
-                    taskId: this.taskId,
-                    reflectedMessage: response.reflectedMessage,
-                    editedFiles: response.editedFiles,
-                    commitHash: response.commitHash,
-                    commitMessage: response.commitMessage,
-                    diff: response.diff,
-                    usageReport: response.usageReport,
-                    promptContext: message.promptContext,
-                  };
-                  messagesData.push(responseCompletedData);
-                });
-              }
-            }
-
-            // Handle agent tool results - process all messages from subagent
-            if (serverName === SUBAGENTS_TOOL_GROUP_NAME && toolName === SUBAGENTS_TOOL_RUN_TASK) {
-              // @ts-expect-error part.output.value.messages type is complex, safe in this context
-              const messages = part.output?.value.messages;
-              if (Array.isArray(messages)) {
-                messages.forEach((subMessage: ContextMessage) => {
-                  if (subMessage.role === 'assistant') {
-                    if (Array.isArray(subMessage.content)) {
-                      // Collect reasoning and text parts to combine them if both exist
-                      let subReasoningContent = '';
-                      let subTextContent = '';
-                      let subHasReasoning = false;
-                      let subHasText = false;
-
-                      for (const subPart of subMessage.content) {
-                        if (subPart.type === 'reasoning' && subPart.text?.trim()) {
-                          subReasoningContent = subPart.text.trim();
-                          subHasReasoning = true;
-                        } else if (subPart.type === 'text' && subPart.text) {
-                          subTextContent = subPart.text.trim();
-                          subHasText = true;
-                        }
-                      }
-
-                      // Process combined reasoning and text content
-                      if (subHasReasoning || subHasText) {
-                        let subFinalContent = '';
-                        if (subHasReasoning && subHasText) {
-                          subFinalContent = `${THINKING_RESPONSE_STAR_TAG}${subReasoningContent}${ANSWER_RESPONSE_START_TAG}${subTextContent}`;
-                        } else {
-                          subFinalContent = subReasoningContent || subTextContent;
-                        }
-
-                        const responseCompletedData: ResponseCompletedData = {
-                          type: 'response-completed',
-                          messageId: subMessage.id,
-                          content: subFinalContent,
-                          baseDir: this.task.getProjectDir(),
-                          taskId: this.taskId,
-                          usageReport: subMessage.usageReport,
-                          promptContext: subMessage.promptContext,
-                        };
-                        messagesData.push(responseCompletedData);
-                      }
-
-                      // Process tool-call parts
-                      for (const subPart of subMessage.content) {
-                        if (subPart.type === 'tool-call' && subPart.toolCallId) {
-                          const [subServerName, subToolName] = extractServerNameToolName(subPart.toolName);
-                          const toolData: ToolData = {
-                            type: 'tool',
-                            baseDir: this.task.getProjectDir(),
-                            taskId: this.taskId,
-                            id: subPart.toolCallId,
-                            serverName: subServerName,
-                            toolName: subToolName,
-                            args: subPart.input,
-                            usageReport: undefined,
-                            promptContext: subMessage.promptContext,
-                          };
-                          messagesData.push(toolData);
-                        }
-                      }
-                    } else if (isTextContent(subMessage.content)) {
-                      const content = extractTextContent(subMessage.content);
-                      const responseCompletedData: ResponseCompletedData = {
-                        type: 'response-completed',
-                        messageId: subMessage.id,
-                        content: content,
-                        baseDir: this.task.getProjectDir(),
-                        taskId: this.taskId,
-                        usageReport: subMessage.usageReport,
-                        promptContext: subMessage.promptContext,
-                      };
-                      messagesData.push(responseCompletedData);
-                    }
-                  } else if (subMessage.role === 'tool') {
-                    for (const subPart of subMessage.content) {
-                      if (subPart.type === 'tool-result') {
-                        const toolMessage = messagesData.find((message) => message.type === 'tool' && message.id === subPart.toolCallId) as
-                          | ToolData
-                          | undefined;
-                        if (toolMessage) {
-                          toolMessage.response = JSON.stringify(subPart.output.value);
-                        }
-                      }
-                    }
-                  }
-                });
-              }
-            }
+            processToolResult(part);
           }
         }
       }

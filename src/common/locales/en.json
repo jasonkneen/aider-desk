@@ -249,6 +249,8 @@
       "invalidTemperature": "Temperature must be between 0 and 2",
       "duplicateId": "Provider ID already exists"
     },
+    "claudeAgentSdkAuthRequired": "This provider requires Claude Code CLI installation and authentication. Install from https://claude.com/product/claude-code and run `claude login` to authenticate.",
+    "claudeAgentSdkAgentOnly": "This provider only works in Agent mode and is not supported in Code/Ask/Architect/Context modes.",
     "overrides": {
       "title": "Provider Overrides",
       "resetToDefaults": "Clear overrides",
@@ -372,6 +374,7 @@
     "anthropic": "Anthropic",
     "bedrock": "Bedrock",
     "cerebras": "Cerebras",
+    "claude-agent-sdk": "Claude Agent SDK",
     "deepseek": "Deepseek",
     "gemini": "Gemini",
     "groq": "Groq",
