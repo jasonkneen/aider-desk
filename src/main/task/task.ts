@@ -2345,6 +2345,8 @@ export class Task {
       throw new Error('Failed to get newly created task');
     }
 
+    await newTask.init();
+
     // Add prompt to new task
     await newTask.savePromptOnly(generatedPrompt, false);
 
