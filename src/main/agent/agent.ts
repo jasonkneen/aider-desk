@@ -29,6 +29,7 @@ import {
   type Tool,
   type ToolCallOptions,
   type ToolSet,
+  type TypedToolResult,
   wrapLanguageModel,
 } from 'ai';
 import { delay, extractServerNameToolName } from '@common/utils';
@@ -1238,6 +1239,22 @@ export class Agent {
 
     let responseMessageIndex: number = 0;
 
+    const processToolResult = (toolResult: TypedToolResult<TOOLS>, isLast = true) => {
+      const [serverName, toolName] = extractServerNameToolName(toolResult.toolName);
+      const toolPromptContext = extractPromptContextFromToolResult(toolResult.output) ?? promptContext;
+
+      // Update the existing tool message with the result
+      task.addToolMessage(
+        toolResult.toolCallId,
+        serverName,
+        toolName,
+        toolResult.input,
+        JSON.stringify(toolResult.output),
+        isLast && responseMessageIndex === 0 ? usageReport : undefined, // Only add usage report to the last tool message
+        toolPromptContext,
+      );
+    };
+
     for (let i = 0; i < content.length; i++) {
       let part = content[i];
       if (part.type === 'reasoning') {
@@ -1264,24 +1281,20 @@ export class Agent {
         reasoningText = undefined;
         responseMessageIndex++;
       }
+
+      if (part.type === 'tool-result') {
+        const toolResult = toolResults.find((toolResult) => toolResult.toolCallId === part.toolCallId);
+        if (toolResult) {
+          processToolResult(toolResult);
+          toolResults = toolResults.filter((toolResult) => toolResult.toolCallId !== part.toolCallId);
+        }
+      }
     }
 
     // Process successful tool results *after* sending text/reasoning and handling errors
     for (let i = 0; i < toolResults.length; i++) {
       const toolResult = toolResults[i];
-      const [serverName, toolName] = extractServerNameToolName(toolResult.toolName);
-      const toolPromptContext = extractPromptContextFromToolResult(toolResult.output) ?? promptContext;
-
-      // Update the existing tool message with the result
-      task.addToolMessage(
-        toolResult.toolCallId,
-        serverName,
-        toolName,
-        toolResult.input,
-        JSON.stringify(toolResult.output),
-        i === toolResults.length - 1 && responseMessageIndex === 0 ? usageReport : undefined, // Only add usage report to the last tool message
-        toolPromptContext,
-      );
+      processToolResult(toolResult, i === toolResults.length - 1);
     }
 
     if (!abortSignal?.aborted) {
