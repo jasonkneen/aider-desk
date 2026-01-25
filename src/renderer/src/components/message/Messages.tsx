@@ -128,7 +128,7 @@ const MessagesComponent = forwardRef<MessagesRef, Props>(
     }));
 
     return (
-      <div className="group relative flex flex-col h-full">
+      <div className="relative flex flex-col h-full">
         <div
           ref={messagesContainerRef}
           className="flex flex-col flex-grow overflow-y-auto max-h-full p-4 scrollbar-thin scrollbar-track-bg-primary-light scrollbar-thumb-bg-tertiary hover:scrollbar-thumb-bg-fourth"
