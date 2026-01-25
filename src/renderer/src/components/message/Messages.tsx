@@ -39,6 +39,7 @@ type Props = {
   onUnarchiveTask?: () => void;
   onDeleteTask?: () => void;
   onInterrupt?: () => void;
+  onForkFromMessage?: (message: Message) => void;
 };
 
 const MessagesComponent = forwardRef<MessagesRef, Props>(
@@ -60,6 +61,7 @@ const MessagesComponent = forwardRef<MessagesRef, Props>(
       onUnarchiveTask,
       onDeleteTask,
       onInterrupt,
+      onForkFromMessage,
     },
     ref,
   ) => {
@@ -178,6 +180,7 @@ const MessagesComponent = forwardRef<MessagesRef, Props>(
                 redo={index === lastUserMessageIndex && !inProgress ? redoLastUserPrompt : undefined}
                 edit={index === lastUserMessageIndex ? editLastUserMessage : undefined}
                 onInterrupt={onInterrupt}
+                onFork={onForkFromMessage ? () => onForkFromMessage(message) : undefined}
               />
             );
           })}

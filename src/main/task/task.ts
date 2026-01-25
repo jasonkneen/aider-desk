@@ -3280,9 +3280,7 @@ ${error.stderr}`,
 
     // Copy messages
     const messages = await sourceTask.getContextMessages();
-    for (const message of messages) {
-      this.contextManager.addContextMessage(message);
-    }
+    this.contextManager.setContextMessages(messages);
 
     await this.updateContextInfo();
 
@@ -3291,6 +3289,33 @@ ${error.stderr}`,
     if (todos.length > 0) {
       await this.setTodos(todos, 'Duplicated from original task');
     }
+
+    // Copy worktree if exists
+    if (sourceData.worktree && sourceData.workingMode === 'worktree') {
+      await this.updateTask({
+        workingMode: 'worktree',
+      });
+    }
+  }
+
+  public async forkFrom(sourceTask: Task, messageId: string): Promise<void> {
+    // Copy basic task data
+    const sourceData = sourceTask.task;
+    await this.saveTask({
+      name: `${sourceData.name} (Fork)`,
+    });
+
+    // Copy ALL context files from source task (not just up to fork point)
+    const contextFiles = await sourceTask.getContextFiles();
+    await this.addFiles(...contextFiles);
+
+    // Get messages up to and including the specified message
+    const forkedMessages = sourceTask.contextManager.getMessagesUpTo(messageId);
+
+    // Save forked messages into new task
+    this.contextManager.setContextMessages(forkedMessages);
+
+    await this.updateContextInfo();
 
     // Copy worktree if exists
     if (sourceData.worktree && sourceData.workingMode === 'worktree') {

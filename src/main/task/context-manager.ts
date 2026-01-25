@@ -1050,4 +1050,115 @@ export class ContextManager {
 
     return markdown;
   }
+
+  getMessagesUpTo(messageId: string): ContextMessage[] {
+    let messageIndex = this.messages.findIndex((msg) => msg.id === messageId);
+
+    // If not found as a message ID, check if it's a toolCallId
+    if (messageIndex === -1) {
+      for (let i = 0; i < this.messages.length; i++) {
+        const msg = this.messages[i];
+        if (msg.role === 'tool' && Array.isArray(msg.content)) {
+          const hasMatchingToolResult = msg.content.some((part) => part.type === 'tool-result' && part.toolCallId === messageId);
+          if (hasMatchingToolResult) {
+            messageIndex = i;
+            break;
+          }
+        }
+      }
+    }
+
+    if (messageIndex === -1) {
+      const error = new Error(`Message with id ${messageId} not found`);
+      logger.error('Failed to get messages up to:', {
+        taskId: this.taskId,
+        messageId,
+      });
+      throw error;
+    }
+
+    const targetMessage = this.messages[messageIndex];
+
+    // If it's an assistant message with tool calls, we need to filter out tool calls
+    if (targetMessage.role === 'assistant' && Array.isArray(targetMessage.content)) {
+      const result = this.messages.slice(0, messageIndex + 1).map((msg) => ({ ...msg }));
+
+      // Filter the assistant message to keep only reasoning and text parts, exclude tool calls
+      const targetAssistant = result[messageIndex];
+      if (Array.isArray(targetAssistant.content)) {
+        targetAssistant.content = targetAssistant.content.filter((part) => part.type === 'reasoning' || part.type === 'text');
+      }
+
+      return result;
+    }
+
+    // If it's a tool message, we need to handle the assistant message with tool calls
+    if (targetMessage.role === 'tool' && Array.isArray(targetMessage.content)) {
+      // messageId might be a toolCallId passed directly, or the message ID
+      // Try to get the toolCallId from the message content
+      let toolCallId = targetMessage.content[0]?.toolCallId;
+
+      // If messageId is a toolCallId that doesn't match the first result, search for it
+      if (toolCallId !== messageId) {
+        const matchingToolResult = targetMessage.content.find((part) => part.type === 'tool-result' && part.toolCallId === messageId);
+        if (matchingToolResult) {
+          toolCallId = matchingToolResult.toolCallId;
+        }
+      }
+
+      if (toolCallId) {
+        // Find the assistant message that contains this tool call
+        for (let i = messageIndex - 1; i >= 0; i--) {
+          const message = this.messages[i];
+          if (message.role === 'assistant' && Array.isArray(message.content)) {
+            const toolCallIndex = message.content.findIndex((part) => part.type === 'tool-call' && part.toolCallId === toolCallId);
+
+            if (toolCallIndex !== -1) {
+              // Clone messages up to and including the assistant message
+              const result: ContextMessage[] = this.messages.slice(0, i + 1);
+
+              // Clone the assistant message and keep only tool calls up to and including the target
+              const assistantMessage: ContextMessage = {
+                ...message,
+                content: message.content.slice(0, toolCallIndex + 1),
+              };
+
+              result[result.length - 1] = assistantMessage;
+
+              // Add all tool messages up to and including the target
+              for (let j = i + 1; j <= messageIndex; j++) {
+                const msg = this.messages[j];
+
+                if (msg.role === 'tool' && Array.isArray(msg.content)) {
+                  const toolMsg = this.messages[j] as ContextMessage & {
+                    role: 'tool';
+                  };
+
+                  // Check if this tool message contains a tool-result for a tool-call we kept
+                  const toolResult = toolMsg.content.find((part) => part.type === 'tool-result');
+                  if (toolResult && toolResult.toolCallId) {
+                    // Check if this tool call is in the assistant message we kept
+                    const toolCallExists = (assistantMessage.content as Array<{ type: string; toolCallId: string }>).some(
+                      (part) => part.type === 'tool-call' && part.toolCallId === toolResult.toolCallId,
+                    );
+
+                    if (toolCallExists) {
+                      result.push({ ...toolMsg });
+                    }
+                  }
+                } else {
+                  result.push({ ...msg });
+                }
+              }
+
+              return result;
+            }
+          }
+        }
+      }
+    }
+
+    // For non-tool messages or if we couldn't find the assistant message, return all messages up to the target
+    return this.messages.slice(0, messageIndex + 1).map((msg) => ({ ...msg }));
+  }
 }

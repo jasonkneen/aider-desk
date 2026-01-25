@@ -41,6 +41,7 @@ type Props = {
   onUnarchiveTask?: () => void;
   onDeleteTask?: () => void;
   onInterrupt?: () => void;
+  onForkFromMessage?: (message: Message) => void;
 };
 
 export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
@@ -62,6 +63,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
       onUnarchiveTask,
       onDeleteTask,
       onInterrupt,
+      onForkFromMessage,
     },
     ref,
   ) => {
@@ -204,6 +206,7 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
                       remove={inProgress ? undefined : () => removeMessage(message)}
                       redo={virtualRow.index === lastUserMessageIndex && !inProgress ? redoLastUserPrompt : undefined}
                       edit={virtualRow.index === lastUserMessageIndex ? editLastUserMessage : undefined}
+                      onFork={onForkFromMessage ? () => onForkFromMessage(message) : undefined}
                       onInterrupt={onInterrupt}
                     />
                   )}
