@@ -15,6 +15,7 @@
 - added Claude Agent SDK as a provider to use with Claude subscription
 - using Enter action on mobiles adds a new line instead of submitting the prompt
 - properly storing the handoff task context before executing it
+- fixed tooltip translation for TODO items actions
 
 ## [0.49.0]
 
