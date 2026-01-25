@@ -1250,7 +1250,7 @@ export class Agent {
         toolName,
         toolResult.input,
         JSON.stringify(toolResult.output),
-        isLast && responseMessageIndex === 0 ? usageReport : undefined, // Only add usage report to the last tool message
+        isLast ? usageReport : undefined, // Only add usage report to the last tool message
         toolPromptContext,
       );
     };
@@ -1272,7 +1272,7 @@ export class Agent {
           action: 'response',
           content: reasoningText?.trim() ? `${THINKING_RESPONSE_STAR_TAG}${reasoningText.trim()}${ANSWER_RESPONSE_START_TAG}${text.trim()}` : text,
           finished: true,
-          usageReport: toolResults?.length && responseMessageIndex === 0 ? undefined : usageReport,
+          usageReport: i === content.length - 1 && toolResults.length === 0 ? usageReport : undefined,
           promptContext,
         };
         await task.processResponseMessage(message);
@@ -1285,8 +1285,8 @@ export class Agent {
       if (part.type === 'tool-result') {
         const toolResult = toolResults.find((toolResult) => toolResult.toolCallId === part.toolCallId);
         if (toolResult) {
-          processToolResult(toolResult);
           toolResults = toolResults.filter((toolResult) => toolResult.toolCallId !== part.toolCallId);
+          processToolResult(toolResult, i === content.length - 1 && toolResults.length === 0);
         }
       }
     }
