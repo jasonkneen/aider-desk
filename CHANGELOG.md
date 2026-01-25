@@ -13,6 +13,7 @@
 - added visual indicator to project tab when that project is in progress
 - improved usability of message virtual rendering
 - added Claude Agent SDK as a provider to use with Claude subscription
+- using Enter action on mobiles adds a new line instead of submitting the prompt
 
 ## [0.49.0]
 
