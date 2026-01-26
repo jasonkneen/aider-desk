@@ -314,19 +314,6 @@ Please follow these guidelines:
 
 For major changes, please open an issue first to discuss what you would like to change.
 
-## 💰 Support the Project
-
-If you find this project helpful and want to support its development, you can do so via my **Bags.fm** token! Your support helps me maintain the project and add new features.
-
-<a href="https://bags.fm/GVmGoD3iDhLGM7sHoY664k8AHQbK55G6pNQKaBZDBAGS" target="_blank" rel="noopener">
-  <img
-    src="https://bags.sivaramp.com/embed/mini-badge-project/GVmGoD3iDhLGM7sHoY664k8AHQbK55G6pNQKaBZDBAGS/dark.svg"
-    alt="Token fees on Bags.fm"
-    width="180"
-    height="40"
-  />
-</a>
-
 ## ⭐ Star History
 
 [![Star History
