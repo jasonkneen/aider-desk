@@ -1,5 +1,9 @@
 # Changelog
 
+## [UNRELEASED]
+
+- hiding the subtasks when parent task is archived
+
 ## [0.50.0]
 
 - further improvement to the rendering performance
