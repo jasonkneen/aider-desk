@@ -119,7 +119,7 @@ export class ModelManager {
 
       await this.loadModelsInfo();
       await this.loadModelOverrides();
-      await this.loadProviderModels(this.store.getProviders());
+      await this.loadProviderModels(this.store.getProviders().filter((p) => !p.disabled));
 
       logger.info('ModelInfoManager initialized successfully.', {
         modelCount: Object.keys(this.modelsInfo).length,
@@ -236,10 +236,23 @@ export class ModelManager {
     const removedProviders = oldProviders.filter((p) => !newProviders.find((np) => np.id === p.id));
     for (const removedProvider of removedProviders) {
       delete this.providerErrors[removedProvider.id];
+      // Clear models for removed providers
+      delete this.providerModels[removedProvider.id];
+    }
+
+    // Clear models for providers that became disabled
+    const disabledProviders = oldProviders.filter((old) => {
+      const newProfile = newProviders.find((np) => np.id === old.id);
+      return newProfile && newProfile.disabled && !old.disabled;
+    });
+    for (const disabledProvider of disabledProviders) {
+      delete this.providerErrors[disabledProvider.id];
+      delete this.providerModels[disabledProvider.id];
+      logger.info(`Cleared models for disabled provider: ${disabledProvider.id}`);
     }
 
     const changedProviderProfiles = this.getChangedProviders(oldProviders, newProviders);
-    await this.loadProviderModels(changedProviderProfiles);
+    await this.loadProviderModels(changedProviderProfiles.filter((p) => !p.disabled));
 
     return changedProviderProfiles.length > 0 || removedProviders.length > 0;
   }
@@ -405,8 +418,8 @@ export class ModelManager {
         this.providerModels = {};
         this.providerErrors = {};
       }
-      // Load models from all providers
-      await this.loadProviderModels(this.store.getProviders());
+      // Load models from all enabled providers
+      await this.loadProviderModels(this.store.getProviders().filter((p) => !p.disabled));
     }
 
     return {
