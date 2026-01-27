@@ -4,6 +4,7 @@
 
 - hiding the subtasks when parent task is archived
 - skipping model loading for disabled providers
+- updated visuals of model selectors
 
 ## [0.50.1]
 

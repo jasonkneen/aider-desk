@@ -581,6 +581,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
             task={task}
             modelsData={aiderModelsData}
             mode={currentMode}
+            activeAgentProfile={activeAgentProfile}
             onModelsChange={handleModelChange}
             runCommand={runCommand}
             onToggleSidebar={() => setShowSidebar(!showSidebar)}
@@ -596,6 +597,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                 onAddTodo={handleAddTodo}
                 onUpdateTodo={handleUpdateTodo}
                 onDeleteTodo={handleDeleteTodo}
+                onHandoffTodo={handleHandoff}
                 onClearAllTodos={handleClearAllTodos}
               />
             )}

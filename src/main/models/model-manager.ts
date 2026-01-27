@@ -13,6 +13,7 @@ import {
   UsageReportData,
   VoiceSession,
 } from '@common/types';
+import { extractProviderModel } from '@common/utils';
 
 import { anthropicProviderStrategy } from './providers/anthropic';
 import { azureProviderStrategy } from './providers/azure';
@@ -551,8 +552,7 @@ export class ModelManager {
 
   getAiderModelMapping(modelName: string, projectDir: string): AiderModelMapping {
     const providers = this.store.getProviders();
-    const [providerId, ...modelIdParts] = modelName.split('/');
-    const modelId = modelIdParts.join('/');
+    const [providerId, modelId] = extractProviderModel(modelName);
     if (!providerId || !modelId) {
       logger.error('Invalid provider/model format:', modelName);
       return {
