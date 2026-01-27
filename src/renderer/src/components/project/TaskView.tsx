@@ -113,6 +113,8 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
     const [isFilesSidebarCollapsed, setIsFilesSidebarCollapsed] = useLocalStorage(`files-sidebar-collapsed-${projectDir}-${task.id}`, false);
     const { renderSearchInput } = useSearchText(searchContainer, 'absolute top-1 left-1', isActive);
 
+    const inProgress = task.state === DefaultTaskState.InProgress;
+
     const promptFieldRef = useRef<PromptFieldRef>(null);
     const projectTopBarRef = useRef<TaskBarRef>(null);
     const messagesRef = useRef<MessagesRef | VirtualizedMessagesRef>(null);
@@ -602,7 +604,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
               />
             )}
             <div className="overflow-hidden flex-grow relative">
-              {displayedMessages.length === 0 && !loading && !messagesPending && task.state !== DefaultTaskState.InProgress ? (
+              {displayedMessages.length === 0 && !loading && !messagesPending && !inProgress ? (
                 <WelcomeMessage onModeChange={handleModeChange} />
               ) : (
                 <>
@@ -695,7 +697,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                 taskId={task.id}
                 task={task}
                 inputHistory={inputHistory}
-                processing={task.state === DefaultTaskState.InProgress}
+                processing={inProgress}
                 mode={currentMode}
                 onModeChanged={handleModeChange}
                 runPrompt={runPrompt}
