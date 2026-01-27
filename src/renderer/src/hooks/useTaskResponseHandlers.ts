@@ -17,8 +17,6 @@ export const useTaskResponseHandlers = (baseDir: string, taskId: string) => {
 
   const handleResponseChunk = useCallback(
     ({ messageId, chunk, reflectedMessage, promptContext }: ResponseChunkData) => {
-      console.log('handleResponseChunk', messageId);
-
       let processingMessage = processingResponseMessageMap.get(taskId);
       if (processingMessage?.id === messageId) {
         processingMessage = {
