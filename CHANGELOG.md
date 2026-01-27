@@ -3,6 +3,7 @@
 ## [UNRELEASED]
 
 - hiding the subtasks when parent task is archived
+- setting the executably path manually for Claude Agent SDK provider in Electron
 
 ## [0.50.0]
 
