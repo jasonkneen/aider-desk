@@ -25391,6 +25391,16 @@ const getMostRecentUpdatedAt = (task: TaskData, allTasks: TaskData[]): string | 
 ⋮----
 export const getSortedVisibleTasks = (tasks: TaskData[], showArchived: boolean = false, searchQuery: string = ''): TaskData[] =>
 ⋮----
+// When showArchived is false, exclude tasks whose parent is archived
+// Check each task's parent exists in the original tasks and is not archived
+⋮----
+// Find the parent in the original tasks array
+⋮----
+// Include the task if:
+// - showArchived is true (show everything), OR
+// - parent doesn't exist (orphan), OR
+// - parent exists and is not archived
+⋮----
 const sortFn = (a: TaskData, b: TaskData) =>
 ⋮----
 // Pinned tasks come first
@@ -25945,7 +25955,7 @@ File: package.json
 ================
 {
   "name": "aider-desk",
-  "version": "0.50.0-dev",
+  "version": "0.51.0-dev",
   "description": "Aider desktop application wrapper",
   "main": "./out/main/index.js",
   "author": "Hotovo",
