@@ -14,6 +14,7 @@ import { Task } from '@/task/task';
 import { calculateCost } from '@/models/providers/default';
 import { isDev, isElectron } from '@/app';
 import { CLAUDE_CODE_EXECUTABLE_PATH } from '@/constants';
+import { findExecutableInPath } from '@/utils/shell';
 
 interface ClaudeCodeProviderMetadata {
   'claude-code': {
@@ -73,8 +74,8 @@ export const loadClaudeAgentSdkModels = async (profile: ProviderProfile, _settin
   }
 };
 
-const hasClaudeAgentSdkEnvVars = (_settings: SettingsData): boolean => {
-  return true;
+const hasClaudeAgentSdkEnvVars = (): boolean => {
+  return findExecutableInPath('claude') !== null;
 };
 
 const getClaudeAgentSdkAiderMapping = (_provider: ProviderProfile, modelId: string): AiderModelMapping => {
