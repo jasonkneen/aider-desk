@@ -7,6 +7,7 @@
 - updated visuals of model selectors
 - Claude Agent SDK provider only available when claude executable is present
 - added action to handoff a todo item to a new task
+- improved perfomance by replacing library used to render tooltips
 
 ## [0.50.1]
 
