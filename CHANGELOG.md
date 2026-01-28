@@ -8,6 +8,7 @@
 - Claude Agent SDK provider only available when claude executable is present
 - added action to handoff a todo item to a new task
 - improved perfomance by replacing library used to render tooltips
+- filtering out unsupported language in the semantic search tool
 
 ## [0.50.1]
 

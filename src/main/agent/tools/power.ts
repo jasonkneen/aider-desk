@@ -766,6 +766,40 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
         searchPath = path.resolve(task.getTaskDir(), searchPath);
       }
 
+      // List of supported languages by the probe binary
+      const supportedLanguages = [
+        'rust',
+        'rs',
+        'javascript',
+        'js',
+        'jsx',
+        'typescript',
+        'ts',
+        'tsx',
+        'python',
+        'py',
+        'go',
+        'c',
+        'h',
+        'cpp',
+        'cc',
+        'cxx',
+        'hpp',
+        'hxx',
+        'java',
+        'ruby',
+        'rb',
+        'php',
+        'swift',
+        'csharp',
+        'cs',
+        'yaml',
+        'yml',
+      ];
+
+      // Only include language parameter if it's supported
+      const effectiveLanguage = language && supportedLanguages.includes(language) ? language : undefined;
+
       try {
         // @ts-expect-error probe is not typed properly
         const results = await search({
@@ -775,7 +809,7 @@ Do not use escape characters \\ in the string like \\n or \\" and others. Do not
           exact,
           json: false,
           maxTokens: effectiveMaxTokens,
-          language,
+          language: effectiveLanguage,
           binaryOptions: {
             path: PROBE_BINARY_PATH,
           },
