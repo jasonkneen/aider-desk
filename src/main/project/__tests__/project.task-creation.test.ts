@@ -38,7 +38,7 @@ import * as fs from 'fs/promises';
 
 import { v4 as uuidv4 } from 'uuid';
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
-import { CreateTaskParams, SettingsData, ProjectSettings, Mode } from '@common/types';
+import { CreateTaskParams, SettingsData, ProjectSettings, Mode, ContextCompactionType } from '@common/types';
 
 import { Project } from '../project';
 
@@ -129,6 +129,8 @@ describe('Project - createNewTask', () => {
               autoGenerateTaskName: true,
               showTaskStateActions: true,
               worktreeSymlinkFolders: [],
+              contextCompactingThreshold: 0,
+              contextCompactionType: ContextCompactionType.Compact,
             },
             aider: {
               options: '',

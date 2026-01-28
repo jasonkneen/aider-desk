@@ -512,11 +512,18 @@ export enum MemoryEmbeddingProvider {
   SentenceTransformers = 'sentence-transformers',
 }
 
+export enum ContextCompactionType {
+  Compact = 'compact',
+  Handoff = 'handoff',
+}
+
 export interface TaskSettings {
   smartTaskState: boolean;
   autoGenerateTaskName: boolean;
   showTaskStateActions: boolean;
   worktreeSymlinkFolders: string[];
+  contextCompactingThreshold: number;
+  contextCompactionType: ContextCompactionType;
 }
 
 export interface MemoryConfig {

@@ -2156,7 +2156,7 @@ export class Task {
     promptContext?: PromptContext,
     abortSignal?: AbortSignal,
     waitForAgentCompletion = true,
-    logMessage = 'Compacting conversation...',
+    loadingMessage = 'Compacting conversation...',
   ) {
     // Get profile if not provided
     if (!profile) {
@@ -2173,7 +2173,7 @@ export class Task {
       return;
     }
 
-    this.addLogMessage('loading', logMessage);
+    this.addLogMessage('loading', loadingMessage);
 
     const extractSummary = (content: string): string => {
       const lines = content.split('\n');
@@ -2272,17 +2272,24 @@ export class Task {
     }
   }
 
-  public async handoffConversation(mode: Mode, focus: string = ''): Promise<void> {
-    // Get context messages
-    const contextMessages = await this.contextManager.getContextMessages();
+  public async handoffConversation(
+    mode: Mode,
+    focus: string = '',
+    contextMessages?: ContextMessage[],
+    execute = false,
+    waitForAgentCompletion = true,
+    loadingMessage = 'Preparing handoff...',
+  ): Promise<void> {
+    if (!contextMessages) {
+      // Get context messages
+      contextMessages = await this.contextManager.getContextMessages();
+      const userMessage = contextMessages[0];
 
-    const userMessage = contextMessages[0];
-
-    if (!userMessage) {
-      throw new Error('No conversation to handoff. Please send at least one message before using /handoff.');
+      if (!userMessage) {
+        throw new Error('No conversation to handoff. Please send at least one message before using /handoff.');
+      }
     }
 
-    const loadingMessage = 'Preparing handoff...';
     this.addLogMessage('loading', loadingMessage, false, undefined, ['interrupt']);
 
     // Get context files to transfer
@@ -2305,7 +2312,9 @@ export class Task {
         model: profile.model,
       };
 
-      await this.waitForCurrentAgentToFinish();
+      if (waitForAgentCompletion) {
+        await this.waitForCurrentAgentToFinish();
+      }
       generatedPrompt = await this.agent.generateText(
         handoffAgentProfile,
         '',
@@ -2350,6 +2359,10 @@ export class Task {
 
     // Transfer context files
     await newTask.addFiles(...contextFiles);
+
+    if (execute) {
+      await newTask.resumeTask();
+    }
 
     // Send task-created event to trigger activation and handoff
     this.eventManager.sendTaskCreated(newTask.task, true);

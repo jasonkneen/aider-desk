@@ -4,9 +4,11 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import {
   AgentProfile,
+  ContextCompactionType,
   ContextFile,
   ContextMessage,
   ContextUserMessage,
+  DefaultTaskState,
   McpTool,
   McpToolInputSchema,
   PromptContext,
@@ -837,7 +839,7 @@ export class Agent {
           hasReasoning = false;
         };
 
-        await this.compactMessagesIfNeeded(
+        const shouldContinue = await this.compactMessagesIfNeeded(
           task,
           profile,
           userRequestMessage || findLastUserMessage(contextMessages)!,
@@ -848,6 +850,14 @@ export class Agent {
           promptContext,
           effectiveAbortSignal,
         );
+
+        if (!shouldContinue) {
+          logger.debug('Agent run aborted due to context compaction');
+          await task.updateTask({
+            state: DefaultTaskState.Interrupted,
+          });
+          break;
+        }
 
         if (this.modelManager.isStreamingDisabled(provider, profile.model)) {
           logger.debug('Streaming disabled, using generateText');
@@ -1337,33 +1347,60 @@ export class Agent {
   ) {
     const contextCompactingThreshold =
       task.task.contextCompactingThreshold ?? this.store.getProjectSettings(task.getProjectDir())?.contextCompactingThreshold ?? 0;
+    const contextCompactionType = this.store.getSettings().taskSettings.contextCompactionType ?? ContextCompactionType.Compact;
     const usageReport = resultMessages[resultMessages.length - 1]?.usageReport;
     const maxTokens = this.modelManager.getModelSettings(profile.provider, profile.model)?.maxInputTokens;
 
     if (contextCompactingThreshold === 0 || !usageReport || !maxTokens) {
-      return;
+      return true;
     }
 
     // Check for context compacting
     const totalTokens = usageReport.sentTokens + usageReport.receivedTokens + (usageReport.cacheReadTokens ?? 0);
     if (maxTokens && totalTokens > (maxTokens * contextCompactingThreshold) / 100) {
-      logger.info(`Token usage ${totalTokens} exceeds threshold of ${contextCompactingThreshold}%. Compacting conversation.`);
-      task.addLogMessage('info', 'Token usage exceeds threshold. Compacting conversation...', false, promptContext);
+      logger.info(
+        `Token usage ${totalTokens} exceeds threshold of ${contextCompactingThreshold}%. Compacting conversation with type: ${contextCompactionType}.`,
+      );
 
-      await task.compactConversation('agent', undefined, profile, [...contextMessages, ...resultMessages], promptContext, abortSignal, false);
+      if (contextCompactionType === ContextCompactionType.Compact) {
+        await task.compactConversation(
+          'agent',
+          undefined,
+          profile,
+          [...contextMessages, ...resultMessages],
+          promptContext,
+          abortSignal,
+          false,
+          'Token usage exceeds threshold. Compacting conversation...',
+        );
 
-      // reload messages after compacting
-      messages.length = 0;
-      resultMessages.length = 0;
+        // reload messages after compacting
+        messages.length = 0;
+        resultMessages.length = 0;
 
-      messages.push(...(await this.prepareMessages(task, profile, await task.getContextMessages(), contextFiles)));
-      resultMessages.push({
-        id: uuidv4(),
-        role: 'user',
-        content: `Based on your compacted summary of our previous conversation, please continue our work with my request:\n\n${userRequestMessage.content}`,
-        promptContext,
-      });
-      messages.push(...resultMessages);
+        messages.push(...(await this.prepareMessages(task, profile, await task.getContextMessages(), contextFiles)));
+        resultMessages.push({
+          id: uuidv4(),
+          role: 'user',
+          content: `Based on your compacted summary of our previous conversation, please continue our work with my request:\n\n${userRequestMessage.content}`,
+          promptContext,
+        });
+        messages.push(...resultMessages);
+      } else if (contextCompactionType === ContextCompactionType.Handoff) {
+        // Perform handoff
+        await task.handoffConversation(
+          'agent',
+          'Continue with the task based on the last user message',
+          [...contextMessages, ...resultMessages],
+          true,
+          false,
+          'Token usage exceeds threshold. Handing off conversation to new task...',
+        );
+
+        return false;
+      }
     }
+
+    return true;
   }
 }

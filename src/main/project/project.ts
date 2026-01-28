@@ -86,7 +86,6 @@ export class Project {
         reasoningEffort: sourceTask.task.reasoningEffort,
         thinkingTokens: sourceTask.task.thinkingTokens,
         currentMode: sourceTask.task.currentMode,
-        contextCompactingThreshold: sourceTask.task.contextCompactingThreshold,
         weakModelLocked: sourceTask.task.weakModelLocked,
         ...(parentTask
           ? {
@@ -107,9 +106,11 @@ export class Project {
     }
 
     const projectSettings = this.getProjectSettings();
+    const taskSettings = this.store.getSettings().taskSettings;
     const task = this.prepareTask(undefined, {
       ...initialTaskData,
       autoApprove: projectSettings.autoApproveLocked ? true : initialTaskData?.autoApprove,
+      contextCompactingThreshold: taskSettings.contextCompactingThreshold,
     });
     if (params?.sendEvent !== false) {
       this.eventManager.sendTaskCreated(task.task, params?.activate);

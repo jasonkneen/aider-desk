@@ -9,6 +9,7 @@ import {
   WindowState,
   MemoryEmbeddingProvider,
   DiffViewMode,
+  ContextCompactionType,
 } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
 
@@ -87,6 +88,8 @@ export const DEFAULT_SETTINGS: SettingsData = {
     autoGenerateTaskName: true,
     showTaskStateActions: true,
     worktreeSymlinkFolders: ['node_modules', 'vendor', '__pycache__', '.venv', 'venv'],
+    contextCompactingThreshold: 0,
+    contextCompactionType: ContextCompactionType.Compact,
   },
 };
 
