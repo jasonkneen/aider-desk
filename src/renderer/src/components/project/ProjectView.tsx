@@ -23,9 +23,10 @@ type Props = {
   projectDir: string;
   isProjectActive?: boolean;
   showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
+  initialTaskId?: string;
 };
 
-export const ProjectView = ({ projectDir, isProjectActive = false, showSettingsPage }: Props) => {
+export const ProjectView = ({ projectDir, isProjectActive = false, showSettingsPage, initialTaskId }: Props) => {
   const { t } = useTranslation();
   const { settings } = useSettings();
   const { projectSettings } = useProjectSettings();
@@ -113,6 +114,15 @@ export const ProjectView = ({ projectDir, isProjectActive = false, showSettingsP
 
   useEffect(() => {
     const handleStartupMode = async (tasks: TaskData[]) => {
+      // Check if URL specifies a task to activate
+      if (initialTaskId) {
+        const initialTask = tasks.find((task) => task.id === initialTaskId);
+        if (initialTask) {
+          activateTask(initialTask.id);
+          return;
+        }
+      }
+
       const mode = settings?.startupMode ?? ProjectStartMode.Empty;
       const existingNewTask = tasks.find((task) => !task.createdAt);
       let startupTask: TaskData | null = null;
@@ -242,7 +252,18 @@ export const ProjectView = ({ projectDir, isProjectActive = false, showSettingsP
       removeInputHistoryListener();
       clearProjectTasks(projectDir);
     };
-  }, [activateTask, api, projectDir, settings?.startupMode, clearProjectTasks, setProjectTasks, updateProjectTask, addProjectTask, removeProjectTask]);
+  }, [
+    activateTask,
+    api,
+    projectDir,
+    settings?.startupMode,
+    clearProjectTasks,
+    setProjectTasks,
+    updateProjectTask,
+    addProjectTask,
+    removeProjectTask,
+    initialTaskId,
+  ]);
 
   const handleTaskSelect = useCallback(
     (taskId: string) => {
