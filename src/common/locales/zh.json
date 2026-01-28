@@ -1030,15 +1030,18 @@
       },
       "glob": {
         "title": "查找匹配模式的文件:",
+        "findingFiles": "正在查找文件...",
         "foundFiles": "找到 {{count}} 文件",
-        "foundMatches": "找到 {{count}} 个匹配项",
-        "noMatches": "未找到匹配项。"
+        "noMatches": "未找到文件",
+        "matching": "匹配"
       },
       "grep": {
         "title": "在",
-        "for": "搜索",
+        "findingMatches": "正在查找...",
+        "in": "中",
+
         "foundMatches": "找到 {{count}} 个匹配项",
-        "noMatches": "未找到匹配项。",
+        "noMatches": "未找到匹配项",
         "contextLines": "({{count}} 行上下文)",
         "matchesCount": "({{count}} 个匹配)",
         "lineLabel": "第 {{lineNumber}} 行:",

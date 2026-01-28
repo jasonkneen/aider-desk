@@ -25,13 +25,24 @@ export const GrepToolMessage = ({ message, onRemove, compact = false, onFork }: 
   const isError = content && !Array.isArray(content) && typeof content === 'string' && content.startsWith('Error:');
   const isDenied = content && typeof content === 'string' && content.startsWith('Grep search for');
 
+  const matchCount = Array.isArray(content) ? content.length : 0;
+
   const title = (
-    <div className="flex items-center gap-2 w-full">
+    <div className="flex items-center gap-2 w-full text-left">
       <div className="text-text-muted">
         <LuFileSearch className="w-4 h-4" />
       </div>
       <div className="text-xs text-text-primary flex flex-wrap gap-1">
-        <span>{t('toolMessage.power.grep.title')}</span>
+        {!content ? (
+          <span>{t('toolMessage.power.grep.findingMatches')}</span>
+        ) : isError || isDenied ? (
+          <span>{t('toolMessage.power.grep.title')}</span>
+        ) : matchCount > 0 ? (
+          <span>{t('toolMessage.power.grep.foundMatches', { count: matchCount })}</span>
+        ) : (
+          <span>{t('toolMessage.power.grep.noMatches')}</span>
+        )}
+        <span>{t('toolMessage.power.grep.in')}</span>
         <span>
           <CodeInline className="bg-bg-primary-light">{filePattern}</CodeInline>
         </span>
@@ -44,19 +55,30 @@ export const GrepToolMessage = ({ message, onRemove, compact = false, onFork }: 
       {content &&
         (isError ? (
           <Tooltip content={content}>
-            <RiErrorWarningFill className="w-3 h-3 text-error" />
+            <RiErrorWarningFill className="w-3 h-3 text-error flex-shrink-0" />
           </Tooltip>
         ) : isDenied ? (
           <Tooltip content={content}>
-            <RiCloseCircleFill className="w-3 h-3 text-warning" />
+            <RiCloseCircleFill className="w-3 h-3 text-warning flex-shrink-0" />
           </Tooltip>
-        ) : (
+        ) : matchCount > 0 ? (
           <RiCheckboxCircleFill className="w-3 h-3 text-success flex-shrink-0" />
-        ))}
+        ) : null)}
     </div>
   );
 
   const renderContent = () => {
+    if (!content) {
+      return (
+        <div className="p-3 text-2xs text-text-tertiary bg-bg-secondary">
+          <div className="flex items-center gap-2">
+            <CgSpinner className="animate-spin w-3 h-3 text-text-muted-light" />
+            <span>{t('toolMessage.power.grep.findingMatches')}</span>
+          </div>
+        </div>
+      );
+    }
+
     if (isError) {
       return (
         <div className="p-3 text-2xs text-text-tertiary bg-bg-secondary">
@@ -77,7 +99,7 @@ export const GrepToolMessage = ({ message, onRemove, compact = false, onFork }: 
       );
     }
 
-    if (!content || !Array.isArray(content) || content.length === 0) {
+    if (!Array.isArray(content) || content.length === 0) {
       return (
         <div className="p-3 text-2xs text-text-tertiary bg-bg-secondary">
           <div className="text-text-muted">{t('toolMessage.power.grep.noMatches')}</div>

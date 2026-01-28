@@ -1054,19 +1054,18 @@
       },
       "glob": {
         "title": "Find files matching pattern:",
+        "findingFiles": "Finding files...",
         "foundFiles": "Found {{count}} files",
-        "noMatches": "No matches found.",
-        "for": "for",
-        "contextLines": "({{count}} lines of context)",
-        "matchesCount": "({{count}} matches)",
-        "lineLabel": "Line {{lineNumber}}:",
-        "contextLabel": "Context:"
+        "noMatches": "No files found",
+        "matching": "matching"
       },
       "grep": {
         "title": "Search files matching",
+        "findingMatches": "Finding...",
+        "in": "in",
         "for": "for",
         "foundMatches": "Found {{count}} matches",
-        "noMatches": "No matches found.",
+        "noMatches": "No matches found",
         "contextLines": "({{count}} lines of context)",
         "matchesCount": "({{count}} matches)",
         "lineLabel": "Line {{lineNumber}}:",

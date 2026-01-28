@@ -10,6 +10,7 @@
 - improved perfomance by replacing library used to render tooltips
 - filtering out unsupported language in the semantic search tool
 - removed empty tooltip from folders in context files tree and using muted color for project files not in the context
+- improving Glob and Grep tool messages to give more info to user
 
 ## [0.50.1]
 
