@@ -11,7 +11,6 @@ import { GroupMessageBlock } from './GroupMessageBlock';
 
 import { isGroupMessage, isLoadingMessage, isUserMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
 import { showInfoNotification } from '@/utils/notifications';
 import { useScrollingPaused } from '@/hooks/useScrollingPaused';
@@ -150,8 +149,6 @@ export const VirtualizedMessages = forwardRef<VirtualizedMessagesRef, Props>(
 
     return (
       <div className="relative flex flex-col h-full">
-        <StyledTooltip id="usage-info-tooltip" />
-
         <div
           ref={messagesContainerRef}
           className={clsx(
