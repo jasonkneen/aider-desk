@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next';
 import { useDebounce, useLocalStorage } from '@reactuses/core';
 import { AnimatePresence, motion } from 'framer-motion';
 import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Input } from '@/components/common/Input';
@@ -314,7 +315,7 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
   );
 
   const renderTreeItem = (
-    { item, title, children, context: _context }: { item: TreeItem; title: React.ReactNode; children: React.ReactNode; context: unknown },
+    { item, title, children }: { item: TreeItem; title: React.ReactNode; children: React.ReactNode; context: unknown },
     type: SectionType,
     _treeData: Record<string, TreeItem>,
     expandedItems: string[],
@@ -332,54 +333,53 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
 
     const fileTokenTooltip = getFileTokenTooltip(treeItem);
 
+    // Helper functions
+    const toggleFolder = () => {
+      const isExpanded = expandedItems.includes(String(treeItem.index));
+      if (isExpanded) {
+        setExpandedItems(expandedItems.filter((id) => id !== String(treeItem.index)));
+      } else {
+        setExpandedItems([...expandedItems, String(treeItem.index)]);
+      }
+    };
+
+    const renderChevron = () => {
+      if (!treeItem.isFolder) {
+        return <span className="w-3 h-3 inline-block" />;
+      }
+      return (
+        <span className="flex items-center justify-center cursor-pointer" onClick={toggleFolder}>
+          {expandedItems.includes(String(treeItem.index)) ? (
+            <HiChevronDown className="w-3 h-3 text-text-muted-dark" />
+          ) : (
+            <HiChevronRight className="w-3 h-3 text-text-muted-dark" />
+          )}
+        </span>
+      );
+    };
+
+    const renderTitle = () => {
+      const className = twMerge(
+        'select-none text-2xs overflow-hidden',
+        treeItem.isFolder ? 'context-dimmed' : type === 'project' && !isContextFile ? 'context-dimmed' : 'text-text-primary',
+      );
+
+      if (fileTokenTooltip) {
+        return (
+          <Tooltip content={fileTokenTooltip}>
+            <span className={className}>{title}</span>
+          </Tooltip>
+        );
+      }
+      return <span className={className}>{title}</span>;
+    };
+
     return (
       <>
         <div className="flex space-between items-center w-full pr-1 h-6 group/item">
           <div className="flex items-center flex-grow min-w-0">
-            {treeItem.isFolder ? (
-              <span
-                className="flex items-center justify-center cursor-pointer"
-                onClick={() => {
-                  const isExpanded = expandedItems.includes(String(treeItem.index));
-                  if (isExpanded) {
-                    setExpandedItems(expandedItems.filter((id) => id !== String(treeItem.index)));
-                  } else {
-                    setExpandedItems([...expandedItems, String(treeItem.index)]);
-                  }
-                }}
-              >
-                {expandedItems.includes(String(treeItem.index)) ? (
-                  <HiChevronDown className="w-3 h-3 text-text-muted-dark" />
-                ) : (
-                  <HiChevronRight className="w-3 h-3 text-text-muted-dark" />
-                )}
-              </span>
-            ) : (
-              <span className="w-3 h-3 inline-block" />
-            )}
-            <Tooltip content={fileTokenTooltip}>
-              <span
-                className={clsx(
-                  'select-none text-2xs overflow-hidden',
-                  treeItem.isFolder ? 'context-dimmed' : 'text-text-primary font-semibold',
-                  type === 'project' && isContextFile && 'text-text-muted',
-                )}
-                {...(treeItem.isFolder
-                  ? {
-                      onClick: () => {
-                        const isExpanded = expandedItems.includes(String(treeItem.index));
-                        if (isExpanded) {
-                          setExpandedItems(expandedItems.filter((id) => id !== String(treeItem.index)));
-                        } else {
-                          setExpandedItems([...expandedItems, String(treeItem.index)]);
-                        }
-                      },
-                    }
-                  : {})}
-              >
-                {title}
-              </span>
-            </Tooltip>
+            {renderChevron()}
+            {renderTitle()}
           </div>
 
           <div className="flex items-center gap-1 flex-shrink-0 group">
@@ -502,7 +502,7 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
                   key={objectHash(treeData)} // Force re-render if data structure changes drastically
                   items={treeData}
                   getItemTitle={(item) => item.data}
-                  renderItemTitle={({ title }) => <>{title}</>}
+                  renderItemTitle={({ title }) => title}
                   viewState={{
                     [treeId]: {
                       expandedItems,
