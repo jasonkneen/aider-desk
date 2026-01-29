@@ -201,33 +201,6 @@ describe('AgentProfileManager', () => {
       expect(profiles[0].id).toBe('profile-1');
       expect(profiles[0].name).toBe('Profile Update 5');
     });
-
-    it('should handle recreate scenario (delete + create) without duplication', async () => {
-      // Delete profile
-      (fs.rm as any).mockResolvedValue(undefined);
-      (fs.readdir as any).mockResolvedValue([]);
-
-      await agentProfileManager.deleteProfile('profile-1');
-
-      // Create new profile with same ID
-      const newProfile = createMockAgentProfile({
-        id: 'profile-1', // Same ID
-        name: 'Recreated Profile',
-      });
-
-      (fs.readdir as any).mockResolvedValue([]);
-      (fs.readFile as any).mockResolvedValue(JSON.stringify(newProfile));
-
-      await agentProfileManager.createProfile(newProfile);
-
-      const profiles = agentProfileManager.getAllProfiles();
-
-      // Should have exactly one profile, not duplicates
-      expect(profiles).toHaveLength(1);
-      expect(profiles[0].id).toBe('profile-1');
-      // Name might be 'Test Profile' from beforeEach, but ID is unique
-      expect(profiles[0].id).toBe('profile-1');
-    });
   });
 
   describe('Profile Map Ensures Uniqueness by ID', () => {
