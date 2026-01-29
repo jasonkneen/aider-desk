@@ -544,7 +544,7 @@ export class AgentProfileManager {
     await this.saveProfileToFile(profile, configPath);
 
     // Reload profiles to update the cache
-    await this.debounceReloadProfiles(agentsDir);
+    await this.reloadProfiles(agentsDir);
   }
 
   public async updateProfile(profile: AgentProfile): Promise<void> {
