@@ -13,6 +13,7 @@
 - improving Glob and Grep tool messages to give more info to user
 - added support for 'project' and 'task' parameters in URL hash for direct navigation to a specific project and task
 - added context management task settings for automatic conversation compaction or handoff
+- properly updating the agent profile list after deletion
 
 ## [0.50.1]
 

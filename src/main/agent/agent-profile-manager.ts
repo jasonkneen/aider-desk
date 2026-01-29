@@ -563,6 +563,8 @@ export class AgentProfileManager {
 
     existingContext.agentProfile = profile;
     await this.saveProfileToFile(profile, configPath);
+
+    this.notifyListeners();
   }
 
   public async deleteProfile(profileId: string): Promise<void> {
@@ -577,6 +579,7 @@ export class AgentProfileManager {
 
     try {
       await fs.rm(profileDir, { recursive: true, force: true });
+      this.profiles.delete(profileId);
     } catch (err) {
       logger.error(`Failed to delete agent profile directory ${profileDir}: ${err}`);
       throw err;
