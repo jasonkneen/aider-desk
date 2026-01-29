@@ -594,7 +594,12 @@
       "copyProfile": "Copy",
       "cutProfile": "Cut",
       "deleteProfile": "Delete",
-      "pasteProfile": "Paste Agent"
+      "pasteProfile": "Paste Agent",
+      "resetProfileToDefaults": "Reset to Defaults",
+      "resetProfileTitle": "Reset '{{name}}' to Defaults?",
+      "resetProfileConfirm": "This will restore '{{name}}' to its original default settings. Any custom modifications will be lost.",
+      "restoreProfile": "Restore",
+      "restoreProfileTooltip": "Restore this default profile"
     },
     "aider": {
       "options": "Options",

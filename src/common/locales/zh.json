@@ -592,7 +592,12 @@
       "copyProfile": "复制",
       "cutProfile": "剪切",
       "deleteProfile": "删除",
-      "pasteProfile": "粘贴代理"
+      "pasteProfile": "粘贴代理",
+      "resetProfileToDefaults": "重置为默认值",
+      "resetProfileTitle": "将 '{{name}}' 重置为默认值？",
+      "resetProfileConfirm": "这将把 '{{name}}' 恢复到原始默认设置。任何自定义修改都将丢失。",
+      "restoreProfile": "恢复",
+      "restoreProfileTooltip": "恢复此默认配置"
     },
     "aider": {
       "options": "选项",

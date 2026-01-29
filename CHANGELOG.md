@@ -14,6 +14,7 @@
 - added support for 'project' and 'task' parameters in URL hash for direct navigation to a specific project and task
 - added context management task settings for automatic conversation compaction or handoff
 - properly updating the agent profile list after deletion
+- added action to restore default agent profiles
 
 ## [0.50.1]
 
