@@ -464,6 +464,8 @@ src/
           Terminal.scss
           Terminal.tsx
           TerminalView.tsx
+        ui/
+          Tooltip.tsx
         usage/
           CostBreakdownChart.tsx
           MessageBreakdownChart.tsx
@@ -1803,6 +1805,13 @@ File: src/common/locales/en.json
       "autoGenerateTaskNameTooltip": "When enabled, the model generates a concise task name from your prompt. When disabled, the first 5 words of your prompt will be used as the task name.",
       "showTaskStateActions": "Show Task State Actions",
       "showTaskStateActionsTooltip": "When enabled, task state actions are displayed at the bottom of messages. Disable to hide these actions.",
+      "contextManagement": "Context Management",
+      "contextCompactingThreshold": "Auto-compact threshold",
+      "contextCompactingThresholdTooltip": "When token usage exceeds this threshold, the conversation will be automatically managed according to the selected compaction type. Set to 0 to disable.",
+      "contextCompactionType": "Compaction type",
+      "contextCompactionTypeCompact": "Compact",
+      "contextCompactionTypeHandoff": "Handoff",
+      "contextCompactionTypeTooltip": "Choose how to manage conversation context when the token threshold is exceeded: Compact summarizes the conversation within the task, while Handoff creates a new task with a handoff.",
       "worktree": "Worktree",
       "worktreeSymlinkFoldersLabel": "Symlink Folders",
       "worktreeSymlinkFoldersTooltip": "These folders will be symlinked from the project root to the task worktree. Useful for large dependencies like node_modules.",
@@ -2378,19 +2387,18 @@ File: src/common/locales/en.json
       },
       "glob": {
         "title": "Find files matching pattern:",
+        "findingFiles": "Finding files...",
         "foundFiles": "Found {{count}} files",
-        "noMatches": "No matches found.",
-        "for": "for",
-        "contextLines": "({{count}} lines of context)",
-        "matchesCount": "({{count}} matches)",
-        "lineLabel": "Line {{lineNumber}}:",
-        "contextLabel": "Context:"
+        "noMatches": "No files found",
+        "matching": "matching"
       },
       "grep": {
         "title": "Search files matching",
+        "findingMatches": "Finding...",
+        "in": "in",
         "for": "for",
         "foundMatches": "Found {{count}} matches",
-        "noMatches": "No matches found.",
+        "noMatches": "No matches found",
         "contextLines": "({{count}} lines of context)",
         "matchesCount": "({{count}} matches)",
         "lineLabel": "Line {{lineNumber}}:",
@@ -3283,6 +3291,13 @@ File: src/common/locales/zh.json
       "autoGenerateTaskNameTooltip": "启用后，模型会根据您的提示生成简洁的任务名称。禁用时，将使用提示的前5个词作为任务名称。",
       "showTaskStateActions": "显示任务状态操作",
       "showTaskStateActionsTooltip": "启用后，任务状态操作将显示在消息底部。禁用以隐藏这些操作。",
+      "contextManagement": "上下文管理",
+      "contextCompactingThreshold": "自动压缩阈值",
+      "contextCompactingThresholdTooltip": "当令牌使用量超过此阈值时，将根据所选的压缩类型自动管理对话。设置为 0 可禁用。",
+      "contextCompactionType": "压缩类型",
+      "contextCompactionTypeCompact": "压缩",
+      "contextCompactionTypeHandoff": "交接",
+      "contextCompactionTypeTooltip": "选择当令牌阈值超出时如何管理对话上下文：压缩在任务内总结对话，交接则创建一个带有交接的新任务。",
       "worktree": "工作树",
       "worktreeSymlinkFoldersLabel": "符号链接文件夹",
       "worktreeSymlinkFoldersTooltip": "这些文件夹将从项目根目录符号链接到任务工作树。适用于像 node_modules 这样的大型依赖。",
@@ -3835,15 +3850,18 @@ File: src/common/locales/zh.json
       },
       "glob": {
         "title": "查找匹配模式的文件:",
+        "findingFiles": "正在查找文件...",
         "foundFiles": "找到 {{count}} 文件",
-        "foundMatches": "找到 {{count}} 个匹配项",
-        "noMatches": "未找到匹配项。"
+        "noMatches": "未找到文件",
+        "matching": "匹配"
       },
       "grep": {
         "title": "在",
-        "for": "搜索",
+        "findingMatches": "正在查找...",
+        "in": "中",
+
         "foundMatches": "找到 {{count}} 个匹配项",
-        "noMatches": "未找到匹配项。",
+        "noMatches": "未找到匹配项",
         "contextLines": "({{count}} 行上下文)",
         "matchesCount": "({{count}} 个匹配)",
         "lineLabel": "第 {{lineNumber}} 行:",
@@ -5310,11 +5328,18 @@ export enum MemoryEmbeddingProvider {
   SentenceTransformers = 'sentence-transformers',
 }
 ⋮----
+export enum ContextCompactionType {
+  Compact = 'compact',
+  Handoff = 'handoff',
+}
+⋮----
 export interface TaskSettings {
   smartTaskState: boolean;
   autoGenerateTaskName: boolean;
   showTaskStateActions: boolean;
   worktreeSymlinkFolders: string[];
+  contextCompactingThreshold: number;
+  contextCompactionType: ContextCompactionType;
 }
 ⋮----
 export interface MemoryConfig {
@@ -6043,6 +6068,10 @@ exitCode = 124; // Timeout exit code
 ⋮----
 // If path is relative (including "." and "./"), resolve it relative to task.getTaskDir()
 ⋮----
+// List of supported languages by the probe binary
+⋮----
+// Only include language parameter if it's supported
+⋮----
 // @ts-expect-error probe is not typed properly
 ⋮----
 // Filter out tools that are set to Never in toolApprovals
@@ -6470,9 +6499,11 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import {
   AgentProfile,
+  ContextCompactionType,
   ContextFile,
   ContextMessage,
   ContextUserMessage,
+  DefaultTaskState,
   McpTool,
   McpToolInputSchema,
   PromptContext,
@@ -6758,6 +6789,8 @@ private async compactMessagesIfNeeded(
 // Check for context compacting
 ⋮----
 // reload messages after compacting
+⋮----
+// Perform handoff
 
 ================
 File: src/main/agent/index.ts
@@ -10586,6 +10619,7 @@ import {
   WindowState,
   MemoryEmbeddingProvider,
   DiffViewMode,
+  ContextCompactionType,
 } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
 ⋮----
@@ -11500,7 +11534,7 @@ public async compactConversation(
     promptContext?: PromptContext,
     abortSignal?: AbortSignal,
     waitForAgentCompletion = true,
-    logMessage = 'Compacting conversation...',
+    loadingMessage = 'Compacting conversation...',
 )
 ⋮----
 // Get profile if not provided
@@ -11517,7 +11551,14 @@ const extractSummary = (content: string): string =>
 ⋮----
 // Prevent memory leaks by cleaning up pending prompt resources
 ⋮----
-public async handoffConversation(mode: Mode, focus: string = ''): Promise<void>
+public async handoffConversation(
+    mode: Mode,
+    focus: string = '',
+    contextMessages?: ContextMessage[],
+    execute = false,
+    waitForAgentCompletion = true,
+    loadingMessage = 'Preparing handoff...',
+): Promise<void>
 ⋮----
 // Get context messages
 ⋮----
@@ -14311,7 +14352,6 @@ import { McpServerSelectorItem } from './McpServerSelectorItem';
 ⋮----
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { IconButton } from '@/components/common/IconButton';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { Accordion } from '@/components/common/Accordion';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
@@ -14721,6 +14761,8 @@ File: src/renderer/src/components/common/Checkbox.tsx
 import { InputHTMLAttributes, ReactNode } from 'react';
 import { clsx } from 'clsx';
 ⋮----
+import { Tooltip } from '@/components/ui/Tooltip';
+⋮----
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'onChange'> & {
   label?: ReactNode;
   checked: boolean;
@@ -14728,13 +14770,9 @@ type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'size' | 'onChange'> & 
   className?: string;
   size?: 'xs' | 'sm' | 'md';
   tooltip?: string;
-  tooltipId?: string;
 };
 ⋮----
 className=
-⋮----
-e.stopPropagation();
-onChange(!checked);
 ⋮----
 className="sr-only" // Hide the actual input but keep it accessible
 
@@ -14745,7 +14783,6 @@ import { IoClose } from 'react-icons/io5';
 import { twMerge } from 'tailwind-merge';
 ⋮----
 import { IconButton } from '@/components/common/IconButton';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
 ⋮----
 type Props = {
   label: string;
@@ -14953,19 +14990,18 @@ type Props = {
 ================
 File: src/renderer/src/components/common/IconButton.tsx
 ================
-import { MouseEvent, ReactNode, useState } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+import { MouseEvent, ReactNode } from 'react';
 import { twMerge } from 'tailwind-merge';
 ⋮----
-import { StyledTooltip } from './StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   icon: ReactNode;
   onClick?: () => void;
   tooltip?: ReactNode;
   className?: string;
-  tooltipId?: string;
   disabled?: boolean;
+  'data-testid'?: string;
 };
 ⋮----
 export const IconButton = (
@@ -14984,7 +15020,6 @@ import { IconButton } from './IconButton';
 ⋮----
 type Props = {
   tooltip: ReactNode;
-  tooltipId?: string;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
 };
@@ -15010,12 +15045,11 @@ export type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> & {
 ================
 File: src/renderer/src/components/common/ItemSelector.tsx
 ================
-import { ElementType, useId, useRef, useState } from 'react';
+import { ElementType, useRef, useState } from 'react';
 import { MdKeyboardArrowDown, MdKeyboardArrowUp } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 ⋮----
-import { StyledTooltip } from './StyledTooltip';
-⋮----
+import { Tooltip } from '@/components/ui/Tooltip';
 import { useClickOutside } from '@/hooks/useClickOutside';
 ⋮----
 export type ItemConfig<T extends string = string> = {
@@ -15043,6 +15077,8 @@ type Props<T extends string = string> = {
 const toggleOpen = () =>
 ⋮----
 const handleItemSelect = (value: T) =>
+⋮----
+const renderItem = (item: ItemConfig<T>) =>
 
 ================
 File: src/renderer/src/components/common/LoadingOverlay.tsx
@@ -15245,13 +15281,29 @@ const handleChange = (e: ChangeEvent<HTMLInputElement>) =>
 File: src/renderer/src/components/common/StyledTooltip.tsx
 ================
 import { ReactNode } from 'react';
-import { Tooltip } from 'react-tooltip';
 ⋮----
 type Props = {
   id: string;
+
   content?: ReactNode;
+
   maxWidth?: number | string;
 };
+⋮----
+/**
+ * @deprecated Use the new Tooltip component directly instead
+ */
+export const StyledTooltip = ({
+  id: _id,
+
+  content: _content,
+
+  maxWidth: _maxWidth = '300px',
+}: Props) =>
+⋮----
+// The new Tooltip component doesn't use ids, so this is a no-op
+// The actual tooltip rendering is handled by the components that wrap
+// their elements with <Tooltip content={...}>
 
 ================
 File: src/renderer/src/components/common/Table.tsx
@@ -15426,7 +15478,6 @@ import { IconButton } from './IconButton';
 ⋮----
 type Props = {
   tooltip: ReactNode;
-  tooltipId?: string;
   className?: string;
   size?: 'sm' | 'md' | 'lg';
 };
@@ -15474,9 +15525,9 @@ import { useTranslation } from 'react-i18next';
 import { useDebounce, useLocalStorage } from '@reactuses/core';
 import { AnimatePresence, motion } from 'framer-motion';
 import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 ⋮----
-import { StyledTooltip } from '../common/StyledTooltip';
-⋮----
+import { Tooltip } from '@/components/ui/Tooltip';
 import { Input } from '@/components/common/Input';
 import { useOS } from '@/hooks/useOS';
 import { useApi } from '@/contexts/ApiContext';
@@ -15547,36 +15598,34 @@ const addFile = (item: TreeItem) => (event: React.MouseEvent<HTMLButtonElement>)
 ⋮----
 // Actions logic
 ⋮----
-const isExpanded = expandedItems.includes(String(treeItem.index));
-if (isExpanded)
-setExpandedItems(expandedItems.filter((id)
+// Helper functions
+const toggleFolder = () =>
 ⋮----
-className={clsx(
-                'select-none text-2xs overflow-hidden',
-                treeItem.isFolder ? 'context-dimmed' : 'text-text-primary font-semibold',
-                type === 'project' && isContextFile && 'text-text-muted',
-              )}
-              {...(treeItem.isFolder
-                ? {
-onClick: () =>
+const renderChevron = () =>
+⋮----
+const renderTitle = () =>
+⋮----
+
 ⋮----
 <button onClick=
 ⋮----
-onClick=
-⋮----
-data-tooltip-content=
+className=
 ⋮----
 {/* Search Field */}
 ⋮----
 key={objectHash(treeData)} // Force re-render if data structure changes drastically
 ⋮----
-renderItemArrow={() => null} // Handled in renderItem
-⋮----
-renderItem=
+onExpandItem=
 ⋮----
 {/* Context Files Section */}
 ⋮----
+<Tooltip content=
+⋮----
 {/* Project Files Section */}
+⋮----
+<FaGitSquare className=
+⋮----
+onClick=
 ⋮----
 {/* Rules Section */}
 
@@ -15621,7 +15670,7 @@ import { MdKeyboardDoubleArrowDown } from 'react-icons/md';
 import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { CopyMessageButton } from '@/components/message/CopyMessageButton';
 import { IconButton } from '@/components/common/IconButton';
 import { useScrollingPaused } from '@/hooks/useScrollingPaused';
@@ -15689,7 +15738,7 @@ import { MdAssignmentAdd } from 'react-icons/md';
 import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -15728,7 +15777,7 @@ import { CgSpinner } from 'react-icons/cg';
 ⋮----
 import { ToolMessage } from '@/types/message';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -15752,7 +15801,8 @@ import { LiaFolderMinusSolid } from 'react-icons/lia';
 import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { TaskStateChip } from '@/components/common/TaskStateChip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -15761,7 +15811,7 @@ type Props = {
   onFork?: () => void;
 };
 ⋮----
-{/* Success Message */}
+const renderStatusIcon = () =>
 ⋮----
 return <ExpandableMessageBlock title=
 
@@ -15805,9 +15855,9 @@ import { CgSpinner } from 'react-icons/cg';
 import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { highlightWithLowlight } from '@/utils/highlighter';
 import { CopyMessageButton } from '@/components/message/CopyMessageButton';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -15815,6 +15865,8 @@ type Props = {
   compact?: boolean;
   onFork?: () => void;
 };
+⋮----
+const renderStatusIcon = () =>
 ⋮----
 return <ExpandableMessageBlock title=
 
@@ -15831,7 +15883,7 @@ import { ToolMessage } from '@/types/message';
 import { CodeBlock } from '@/components/common/CodeBlock';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock, ExpandableMessageBlockRef } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -15854,7 +15906,7 @@ import { ToolMessage } from '@/types/message';
 import { CodeBlock } from '@/components/common/CodeBlock';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -15881,7 +15933,7 @@ import { ToolMessage } from '@/types/message';
 import { CodeBlock } from '@/components/common/CodeBlock';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock, ExpandableMessageBlockRef } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -15904,7 +15956,7 @@ import { CgSpinner } from 'react-icons/cg';
 import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -15913,11 +15965,7 @@ type Props = {
   onFork?: () => void;
 };
 ⋮----
-{/* Message Header */}
-⋮----
-{/* Message Content */}
-⋮----
-{/* Usage Report */}
+const renderStatusIcon = () =>
 ⋮----
 return <ExpandableMessageBlock title=
 
@@ -15932,8 +15980,8 @@ import { MdAssignment } from 'react-icons/md';
 import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { TaskStateChip } from '@/components/common/TaskStateChip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -15946,6 +15994,8 @@ type ContextFile = {
     path: string;
     readOnly?: boolean;
   };
+⋮----
+const renderStatusIcon = () =>
 ⋮----
 {/* Task Header */}
 ⋮----
@@ -15968,7 +16018,7 @@ import { CgSpinner } from 'react-icons/cg';
 import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -15990,7 +16040,7 @@ import { CgSpinner } from 'react-icons/cg';
 import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -16070,7 +16120,7 @@ import { CgSpinner } from 'react-icons/cg';
 import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -16097,8 +16147,8 @@ import { LuClipboardList } from 'react-icons/lu';
 ⋮----
 import { ToolMessage } from '@/types/message';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { TaskStateChip } from '@/components/common/TaskStateChip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -16116,6 +16166,8 @@ type Task = {
     updatedAt?: string;
     state?: string;
   };
+⋮----
+const renderStatusIcon = () =>
 ⋮----
 return <ExpandableMessageBlock title=
 
@@ -16345,7 +16397,6 @@ import { GroupMessageBlock } from './GroupMessageBlock';
 ⋮----
 import { isGroupMessage, isLoadingMessage, isUserMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
 import { useScrollingPaused } from '@/hooks/useScrollingPaused';
 import { useUserMessageNavigation } from '@/hooks/useUserMessageNavigation';
@@ -16441,8 +16492,8 @@ import { CgSpinner } from 'react-icons/cg';
 ⋮----
 import { ToolMessage } from '@/types/message';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { IconButton } from '@/components/common/IconButton';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { useApi } from '@/contexts/ApiContext';
 ⋮----
@@ -16484,7 +16535,7 @@ import { MdOutlineContentPasteSearch } from 'react-icons/md';
 import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -16506,7 +16557,7 @@ import { MdOutlineContentPasteSearch } from 'react-icons/md';
 import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -16528,7 +16579,7 @@ import { CgSpinner } from 'react-icons/cg';
 import { ToolMessage } from '@/types/message';
 import { CodeInline } from '@/components/common/CodeInline';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -16548,7 +16599,7 @@ import { CgSpinner } from 'react-icons/cg';
 ⋮----
 import { ToolMessage } from '@/types/message';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -16763,7 +16814,7 @@ import { CgSpinner } from 'react-icons/cg';
 ⋮----
 import { ToolMessage } from '@/types/message';
 import { ExpandableMessageBlock } from '@/components/message/ExpandableMessageBlock';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   message: ToolMessage;
@@ -16785,12 +16836,12 @@ import { useTranslation } from 'react-i18next';
 import { FaArrowRightFromBracket, FaArrowRightToBracket, FaDollarSign, FaDownload, FaUpload } from 'react-icons/fa6';
 import { UsageReportData } from '@common/types';
 ⋮----
+import { Tooltip } from '@/components/ui/Tooltip';
+⋮----
 type Props = {
   usageReport: UsageReportData;
   className?: string;
 };
-⋮----
-<span className="flex items-center gap-1" data-tooltip-id="usage-info-tooltip" data-tooltip-content=
 
 ================
 File: src/renderer/src/components/message/UserMessageBlock.tsx
@@ -16975,7 +17026,6 @@ import { GroupMessageBlock } from './GroupMessageBlock';
 ⋮----
 import { isGroupMessage, isLoadingMessage, isUserMessage, Message } from '@/types/message';
 import { IconButton } from '@/components/common/IconButton';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { groupMessagesByPromptContext } from '@/components/message/utils';
 import { showInfoNotification } from '@/utils/notifications';
 import { useScrollingPaused } from '@/hooks/useScrollingPaused';
@@ -17954,7 +18004,7 @@ import { ZaiPlanThinkingSetting } from './ZaiPlanThinkingSetting';
 ⋮----
 import { useSettings } from '@/contexts/SettingsContext';
 import { Button } from '@/components/common/Button';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   provider: ZaiPlanProvider;
@@ -18225,7 +18275,7 @@ import { Checkbox } from '@/components/common/Checkbox';
 import { Column } from '@/components/common/Table';
 import { VirtualTable } from '@/components/common/VirtualTable';
 import { IconButton } from '@/components/common/IconButton';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { type MenuOption } from '@/components/common/VerticalDotsMenu';
 ⋮----
 type Props = {
@@ -18344,7 +18394,7 @@ import {
   ZaiPlanIcon,
 } from '@/icons';
 import { useResponsive } from '@/hooks/useResponsive';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   provider: ProviderProfile;
@@ -18366,8 +18416,6 @@ const handleEdit = () =>
 const handleDelete = () =>
 ⋮----
 className=
-⋮----
-<StyledTooltip id=
 ⋮----
 {/* Action buttons - shown on hover (desktop) or when showActions is true (mobile) */}
 ⋮----
@@ -18627,6 +18675,7 @@ import { Input } from '@/components/common/Input';
 import { Button } from '@/components/common/Button';
 import { LoadingText } from '@/components/common/LoadingText';
 import { TaskStateChip } from '@/components/common/TaskStateChip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   task: TaskData;
@@ -18768,10 +18817,10 @@ import { TaskItem } from './TaskItem';
 ⋮----
 import { getSortedVisibleTasks } from '@/utils/task-utils';
 import { Input } from '@/components/common/Input';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { IconButton } from '@/components/common/IconButton';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   loading: boolean;
@@ -18951,7 +19000,6 @@ import { PiKeyReturn } from 'react-icons/pi';
 ⋮----
 import { AutocompletionInput } from '@/components/AutocompletionInput';
 import { IconButton } from '@/components/common/IconButton';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type Props = {
@@ -19000,6 +19048,8 @@ const handleBrowse = async (browseType: 'file' | 'directory') =>
 // eslint-disable-next-line no-console
 ⋮----
 onClick=
+⋮----
+tooltip=
 
 ================
 File: src/renderer/src/components/project/FilesContextInfoContent.tsx
@@ -19132,7 +19182,6 @@ import { AutocompletionInput } from '@/components/AutocompletionInput';
 import { Accordion } from '@/components/common/Accordion';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { IconButton } from '@/components/common/IconButton';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { useApi } from '@/contexts/ApiContext';
 ⋮----
 type Props = {
@@ -19239,11 +19288,14 @@ type Props = {
   projectDir: string;
   isProjectActive?: boolean;
   showSettingsPage?: (pageId?: string, options?: Record<string, unknown>) => void;
+  initialTaskId?: string;
 };
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
 const handleStartupMode = async (tasks: TaskData[]) =>
+⋮----
+// Check if URL specifies a task to activate
 ⋮----
 const handleProjectStarted = () =>
 ⋮----
@@ -19312,7 +19364,7 @@ import { ModelSelector, ModelSelectorRef } from '@/components/ModelSelector';
 import { showErrorNotification } from '@/utils/notifications';
 import { EditFormatSelector } from '@/components/PromptField/EditFormatSelector';
 import { TaskWorkingMode } from '@/components/PromptField/TaskWorkingMode';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { useSettings } from '@/contexts/SettingsContext';
 import { useApi } from '@/contexts/ApiContext';
 import { useResponsive } from '@/hooks/useResponsive';
@@ -19374,7 +19426,7 @@ if (!settings)
 ⋮----
 // Original horizontal layout for other modes
 ⋮----
-data-tooltip-content=
+<Tooltip content=
 ⋮----
 onSquash=
 
@@ -19394,7 +19446,7 @@ import { v4 as uuidv4 } from 'uuid';
 ⋮----
 import { useSidebarWidth } from './useSidebarWidth';
 ⋮----
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { isLogMessage, isTaskInfoMessage, isUserMessage, Message, TaskInfoMessage, UserMessage } from '@/types/message';
 import { Messages, MessagesRef } from '@/components/message/Messages';
 import { VirtualizedMessages, VirtualizedMessagesRef } from '@/components/message/VirtualizedMessages';
@@ -19480,7 +19532,7 @@ setEditingMessageIndex(null); // Clear editing state
 ⋮----
 {/* Expand/Collapse Button */}
 ⋮----
-data-tooltip-content=
+className=
 ⋮----
 {/* Resizable wrapper for expanded state */}
 ⋮----
@@ -19659,6 +19711,7 @@ import { WorktreeIntegrationStatus } from '@common/types';
 import { useClickOutside } from '@/hooks/useClickOutside';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { WorktreeActionDialog } from '@/components/project/WorktreeActionDialog';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   baseDir: string;
@@ -19742,7 +19795,7 @@ import { TiWarning } from 'react-icons/ti';
 ⋮----
 import type { WorktreeIntegrationStatus } from '@common/types';
 ⋮----
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 const formatTruncatedList = (items: string[]) =>
 ⋮----
@@ -19751,9 +19804,28 @@ type Props = {
   onRefresh: () => void;
 };
 ⋮----
-export const WorktreeStatusBadges = (
+const renderBadge = (tooltipContent: React.ReactNode, onClick: () => void, children: React.ReactNode) => (
+    <Tooltip content={tooltipContent}>
+      <span
+        className="px-1.5 py-0.5 rounded bg-bg-secondary text-text-primary text-2xs cursor-pointer hover:bg-bg-secondary-light transition-colors"
+        onClick={onClick}
+      >
+        {children}
+      </span>
+    </Tooltip>
+  );
 ⋮----
-data-tooltip-content=
+const renderButtonBadge = (tooltipContent: string, onClick: () => void, children: React.ReactNode) => (
+    <Tooltip content={tooltipContent}>
+      <button
+        type="button"
+        className="px-1.5 py-0.5 rounded bg-bg-secondary text-text-muted-light text-2xs cursor-pointer hover:bg-bg-secondary-light transition-colors"
+        onClick={onClick}
+      >
+        {children}
+      </button>
+    </Tooltip>
+  );
 
 ================
 File: src/renderer/src/components/PromptField/AudioAnalyzer.tsx
@@ -19794,6 +19866,7 @@ import { MdDoneAll } from 'react-icons/md';
 import { VscLock, VscUnlock } from 'react-icons/vsc';
 ⋮----
 import { IconButton } from '@/components/common/IconButton';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 type Props = {
   enabled: boolean;
@@ -19936,7 +20009,7 @@ import { Button } from '@/components/common/Button';
 import { useCustomCommands } from '@/hooks/useCustomCommands';
 import { useApi } from '@/contexts/ApiContext';
 import { useProjectSettings } from '@/contexts/ProjectSettingsContext';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { AudioAnalyzer } from '@/components/PromptField/AudioAnalyzer';
 import { AutoApprove } from '@/components/PromptField/AutoApprove';
@@ -20403,8 +20476,6 @@ type Props = {
 };
 ⋮----
 <span className="text-2xs">
-⋮----
-onChange=
 
 ================
 File: src/renderer/src/components/settings/agent/GenericToolGroupItem.tsx
@@ -20464,9 +20535,9 @@ import { z } from 'zod/v3';
 import { useTranslation } from 'react-i18next';
 import { MdInfoOutline } from 'react-icons/md';
 ⋮----
-import { StyledTooltip } from '@/components/common/StyledTooltip';
 import { TextArea } from '@/components/common/TextArea';
 import { Button } from '@/components/common/Button';
+import { Tooltip } from '@/components/ui/Tooltip';
 ⋮----
 export type McpServer = {
   name: string;
@@ -20987,7 +21058,7 @@ const handleZoomChange = (zoomLevel: number) =>
 ================
 File: src/renderer/src/components/settings/TaskSettings.tsx
 ================
-import { SettingsData } from '@common/types';
+import { SettingsData, ContextCompactionType } from '@common/types';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 ⋮----
@@ -20996,6 +21067,7 @@ import { Checkbox } from '../common/Checkbox';
 import { Section } from '../common/Section';
 import { InfoIcon } from '../common/InfoIcon';
 import { Button } from '../common/Button';
+import { Slider } from '../common/Slider';
 ⋮----
 type Props = {
   settings: SettingsData;
@@ -21012,9 +21084,15 @@ const handleAddSymlinkFolder = () =>
 ⋮----
 const handleRemoveSymlinkFolder = (folder: string) =>
 ⋮----
+const handleCompactingThresholdChange = (value: number) =>
+⋮----
+const handleCompactionTypeChange = (value: ContextCompactionType) =>
+⋮----
 <Section title=
 ⋮----
 onChange=
+⋮----
+onClick=
 
 ================
 File: src/renderer/src/components/settings/VoiceSettings.tsx
@@ -21220,6 +21298,82 @@ const handleCopyOutput = () =>
 onClick=
 ⋮----
 {/* Terminal content */}
+
+================
+File: src/renderer/src/components/ui/Tooltip.tsx
+================
+import { ReactNode } from 'react';
+import { clsx } from 'clsx';
+⋮----
+type TooltipProps = {
+  content: ReactNode;
+  children: ReactNode;
+  side?: 'top' | 'right' | 'bottom' | 'left';
+  align?: 'start' | 'center' | 'end';
+  delayDuration?: number;
+  maxWidth?: number | string;
+};
+⋮----
+export const TooltipProvider = ({ children, ...props }: TooltipPrimitive.TooltipProviderProps) => (
+  <TooltipPrimitive.Provider delayDuration={200} skipDelayDuration={100} {...props}>
+    {children}
+  </TooltipPrimitive.Provider>
+);
+⋮----
+// Simple arrow component using Radix's Arrow primitive
+const Arrow = ({ side = 'top' }: { side?: string }) => (
+  <TooltipPrimitive.Arrow
+    asChild
+    width={16}
+    height={8}
+    className={clsx(
+      'overflow-visible',
+      side === 'top' && 'data-[side=top]',
+      side === 'bottom' && 'data-[side=bottom]',
+      side === 'left' && 'data-[side=left]',
+      side === 'right' && 'data-[side=right]',
+    )}
+  >
+    <svg width="16" height="8" viewBox="0 0 16 8" preserveAspectRatio="none" className="overflow-visible">
+      {/* Outer triangle with border color */}
+      <polygon points="0,0 16,0 8,8" fill={borderColor} />
+      {/* Inner triangle with background color to create border effect */}
+      <polygon points="1,0 15,0 8,7" fill="var(--color-bg-primary-light)" />
+    </svg>
+  </TooltipPrimitive.Arrow>
+);
+⋮----
+className=
+⋮----
+{/* Outer triangle with border color */}
+⋮----
+{/* Inner triangle with background color to create border effect */}
+⋮----
+export const Tooltip = ({ content, children, side, align, delayDuration, maxWidth = '300px' }: TooltipProps) => (
+  <TooltipPrimitive.Root delayDuration={delayDuration}>
+    <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
+    <TooltipPrimitive.Portal>
+      <TooltipPrimitive.Content
+        side={side}
+        align={align}
+        className={clsx(
+          'relative',
+          '!bg-bg-primary-light !text-text-secondary !text-2xs !py-1.5 !px-2.5 !opacity-100',
+          '!rounded-md z-50 whitespace-pre-wrap select-none',
+          // Use CSS border instead of outline
+          'border',
+        )}
+        style={{ borderColor, maxWidth }}
+        sideOffset={8}
+      >
+        {content}
+        <Arrow side={side} />
+      </TooltipPrimitive.Content>
+    </TooltipPrimitive.Portal>
+  </TooltipPrimitive.Root>
+);
+⋮----
+// Use CSS border instead of outline
 
 ================
 File: src/renderer/src/components/usage/CostBreakdownChart.tsx
@@ -21524,7 +21678,7 @@ import { useTranslation } from 'react-i18next';
 import { IoChevronDown, IoChevronUp, IoClose } from 'react-icons/io5';
 import { MdOutlineRefresh, MdSettingsBackupRestore } from 'react-icons/md';
 ⋮----
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { Tooltip } from '@/components/ui/Tooltip';
 import { TokenUsageBar } from '@/components/TokenUsageBar';
 ⋮----
 type Props = {
@@ -21541,11 +21695,6 @@ type Props = {
 ⋮----
 onClick=
 ⋮----
-refreshRepoMap();
-setRefreshingAnimation(true);
-setTimeout(()
-⋮----
-data-tooltip-content=
 
 ================
 File: src/renderer/src/components/ModelSelector.tsx
@@ -22174,7 +22323,6 @@ import { clsx } from 'clsx';
 ⋮----
 import { Input } from '@/components/common/Input';
 import { IconButton } from '@/components/common/IconButton';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
 ⋮----
 // Remove highlight from previous element
 ⋮----
@@ -23003,11 +23151,12 @@ File: src/renderer/src/pages/Home.tsx
 ================
 import { ProjectData } from '@common/types';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Activity, startTransition, useCallback, useEffect, useOptimistic, useState, useTransition } from 'react';
+import { Activity, startTransition, useCallback, useEffect, useOptimistic, useState, useTransition, useRef } from 'react';
 import { MdBarChart, MdSettings, MdUpload } from 'react-icons/md';
 import { PiNotebookFill } from 'react-icons/pi';
 import { useTranslation } from 'react-i18next';
 import { useHotkeys } from 'react-hotkeys-hook';
+import { useSearchParams } from 'react-router-dom';
 ⋮----
 import { useConfiguredHotkeys } from '@/hooks/useConfiguredHotkeys';
 import { UsageDashboard } from '@/components/usage/UsageDashboard';
@@ -23025,7 +23174,7 @@ import { TelemetryInfoDialog } from '@/components/TelemetryInfoDialog';
 import { showInfoNotification } from '@/utils/notifications';
 import { useApi } from '@/contexts/ApiContext';
 import { ModelLibrary } from '@/components/ModelLibrary';
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { URL_PARAMS, encodeBaseDir, decodeBaseDir } from '@/utils/routes';
 import { useBooleanState } from '@/hooks/useBooleanState';
 ⋮----
 type ShowSettingsInfo = {
@@ -23042,6 +23191,20 @@ const handleOpenSettings = (pageId: string) =>
 const checkReleaseNotes = async () =>
 ⋮----
 // Close current project tab
+⋮----
+// Handle URL parameters for direct project/task navigation
+⋮----
+const handleUrlNavigation = async () =>
+⋮----
+// Only update initial task ID on first navigation or when task changes
+⋮----
+// Only switch if not already active
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// Update URL when project changes from user interaction (not from URL navigation)
+⋮----
+// Skip if the change came from URL navigation
 ⋮----
 // Open new project dialog
 ⋮----
@@ -25372,21 +25535,6 @@ export const encodeBaseDir = (baseDir: string): string =>
  * @returns Decoded baseDir path
  */
 export const decodeBaseDir = (encodedBaseDir: string): string =>
-⋮----
-/**
- * Builds a home URL with optional project and task parameters
- * @param projectBaseDir - Optional project base directory to include
- * @param taskId - Optional task ID to include
- * @returns URL hash string
- */
-export const buildHomeUrl = (projectBaseDir?: string, taskId?: string): string =>
-⋮----
-/**
- * Parses URL parameters from the current location
- * @param location - React Router location object
- * @returns Object containing decoded project and task parameters
- */
-export const parseUrlParams = (location: Location):
 
 ================
 File: src/renderer/src/utils/string-utils.ts
@@ -25609,7 +25757,7 @@ import { SettingsProvider, useSettings } from '@/contexts/SettingsContext';
 ⋮----
 import { ROUTES } from '@/utils/routes';
 ⋮----
-import { StyledTooltip } from '@/components/common/StyledTooltip';
+import { TooltipProvider } from '@/components/ui/Tooltip';
 import { ApiProvider } from '@/contexts/ApiContext';
 import { ModelProviderProvider } from '@/contexts/ModelProviderContext';
 import { AgentsProvider } from '@/contexts/AgentsContext';
@@ -26043,6 +26191,7 @@ File: package.json
     "@opentelemetry/sdk-node": "^0.203.0",
     "@opentelemetry/sdk-trace-base": "^2.0.1",
     "@probelabs/probe": "0.6.0-rc161",
+    "@radix-ui/react-tooltip": "^1.2.8",
     "@reactuses/core": "^6.0.6",
     "@replit/codemirror-vim": "^6.3.0",
     "@requesty/ai-sdk": "^2.1.2",
@@ -26117,7 +26266,6 @@ File: package.json
     "react-router-dom": "^7.0.1",
     "react-textarea-autosize": "^8.5.6",
     "react-toastify": "^10.0.6",
-    "react-tooltip": "^5.28.0",
     "recharts": "^3.0.2",
     "refractor": "^5.0.0",
     "rehype-autolink-headings": "^7.1.0",
