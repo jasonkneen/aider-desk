@@ -14,9 +14,10 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 
-export const DeleteTaskToolMessage = ({ message, onRemove, compact = false, onFork }: Props) => {
+export const DeleteTaskToolMessage = ({ message, onRemove, compact = false, onFork, onRemoveUpTo }: Props) => {
   const { t } = useTranslation();
 
   const taskId = message.args.taskId as string;
@@ -123,5 +124,14 @@ export const DeleteTaskToolMessage = ({ message, onRemove, compact = false, onFo
     return title;
   }
 
-  return <ExpandableMessageBlock title={title} content={renderContent()} usageReport={message.usageReport} onRemove={onRemove} onFork={onFork} />;
+  return (
+    <ExpandableMessageBlock
+      title={title}
+      content={renderContent()}
+      usageReport={message.usageReport}
+      onRemove={onRemove}
+      onFork={onFork}
+      onRemoveUpTo={onRemoveUpTo}
+    />
+  );
 };

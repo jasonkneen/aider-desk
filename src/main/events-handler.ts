@@ -224,6 +224,11 @@ export class EventsHandler {
     this.eventManager.sendTaskMessageRemoved(baseDir, taskId, removedIds);
   }
 
+  async removeMessagesUpTo(baseDir: string, taskId: string, messageId: string): Promise<void> {
+    const removedIds = (await this.projectManager.getProject(baseDir).getTask(taskId)?.removeMessagesUpTo(messageId)) ?? [];
+    this.eventManager.sendTaskMessageRemoved(baseDir, taskId, removedIds);
+  }
+
   async redoLastUserPrompt(baseDir: string, taskId: string, mode: Mode, updatedPrompt?: string): Promise<void> {
     void this.projectManager.getProject(baseDir).getTask(taskId)?.redoLastUserPrompt(mode, updatedPrompt);
   }

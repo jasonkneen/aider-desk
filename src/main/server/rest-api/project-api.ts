@@ -204,6 +204,12 @@ const RemoveMessageSchema = z.object({
   messageId: z.string().min(1, 'Message id is required'),
 });
 
+const RemoveMessagesUpToSchema = z.object({
+  projectDir: z.string().min(1, 'Project directory is required'),
+  taskId: z.string().min(1, 'Task id is required'),
+  messageId: z.string().min(1, 'Message id is required'),
+});
+
 const CompactConversationSchema = z.object({
   projectDir: z.string().min(1, 'Project directory is required'),
   taskId: z.string().min(1, 'Task id is required'),
@@ -626,6 +632,21 @@ export class ProjectApi extends BaseApi {
         const { projectDir, taskId, messageId } = parsed;
         await this.eventsHandler.removeMessage(projectDir, taskId, messageId);
         res.status(200).json({ message: 'Message removed' });
+      }),
+    );
+
+    // Remove messages up to specified message ID
+    router.delete(
+      '/project/remove-messages-up-to',
+      this.handleRequest(async (req, res) => {
+        const parsed = this.validateRequest(RemoveMessagesUpToSchema, req.body, res);
+        if (!parsed) {
+          return;
+        }
+
+        const { projectDir, taskId, messageId } = parsed;
+        await this.eventsHandler.removeMessagesUpTo(projectDir, taskId, messageId);
+        res.status(200).json({ message: 'Messages removed' });
       }),
     );
 

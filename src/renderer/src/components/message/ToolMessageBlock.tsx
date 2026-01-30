@@ -29,6 +29,7 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 
 const formatName = (name: string): string => {
@@ -39,7 +40,7 @@ const formatName = (name: string): string => {
     .join(' ');
 };
 
-export const ToolMessageBlock = ({ message, onRemove, compact = false, onFork }: Props) => {
+export const ToolMessageBlock = ({ message, onRemove, compact = false, onFork, onRemoveUpTo }: Props) => {
   const { t } = useTranslation();
   const isExecuting = message.content === '';
   const parsedResult = !isExecuting ? parseToolContent(message.content) : null;
@@ -213,6 +214,14 @@ export const ToolMessageBlock = ({ message, onRemove, compact = false, onFork }:
   }
 
   return (
-    <ExpandableMessageBlock title={title} content={content} copyContent={copyContent} usageReport={message.usageReport} onRemove={onRemove} onFork={onFork} />
+    <ExpandableMessageBlock
+      title={title}
+      content={content}
+      copyContent={copyContent}
+      usageReport={message.usageReport}
+      onRemove={onRemove}
+      onFork={onFork}
+      onRemoveUpTo={onRemoveUpTo}
+    />
   );
 };

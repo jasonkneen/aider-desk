@@ -12,9 +12,10 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 
-export const ListMemoriesToolMessage = ({ message, onRemove, compact = false, onFork }: Props) => {
+export const ListMemoriesToolMessage = ({ message, onRemove, compact = false, onFork, onRemoveUpTo }: Props) => {
   const { t } = useTranslation();
 
   const type = message.args.type as string;
@@ -135,5 +136,14 @@ export const ListMemoriesToolMessage = ({ message, onRemove, compact = false, on
     return title;
   }
 
-  return <ExpandableMessageBlock title={title} content={renderContent()} usageReport={message.usageReport} onRemove={onRemove} onFork={onFork} />;
+  return (
+    <ExpandableMessageBlock
+      title={title}
+      content={renderContent()}
+      usageReport={message.usageReport}
+      onRemove={onRemove}
+      onFork={onFork}
+      onRemoveUpTo={onRemoveUpTo}
+    />
+  );
 };

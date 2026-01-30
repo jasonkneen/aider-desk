@@ -13,9 +13,10 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 
-export const SemanticSearchToolMessage = ({ message, onRemove, compact = false, onFork }: Props) => {
+export const SemanticSearchToolMessage = ({ message, onRemove, compact = false, onFork, onRemoveUpTo }: Props) => {
   const { t } = useTranslation();
 
   const searchQuery = (message.args.searchQuery as string) || (message.args.query as string);
@@ -95,5 +96,14 @@ export const SemanticSearchToolMessage = ({ message, onRemove, compact = false, 
     return title;
   }
 
-  return <ExpandableMessageBlock title={title} content={renderContent()} usageReport={message.usageReport} onRemove={onRemove} onFork={onFork} />;
+  return (
+    <ExpandableMessageBlock
+      title={title}
+      content={renderContent()}
+      usageReport={message.usageReport}
+      onRemove={onRemove}
+      onFork={onFork}
+      onRemoveUpTo={onRemoveUpTo}
+    />
+  );
 };

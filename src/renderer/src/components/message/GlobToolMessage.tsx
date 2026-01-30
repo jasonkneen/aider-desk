@@ -13,9 +13,10 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 
-export const GlobToolMessage = ({ message, onRemove, compact = false, onFork }: Props) => {
+export const GlobToolMessage = ({ message, onRemove, compact = false, onFork, onRemoveUpTo }: Props) => {
   const { t } = useTranslation();
 
   const pattern = message.args.pattern as string;
@@ -152,5 +153,14 @@ export const GlobToolMessage = ({ message, onRemove, compact = false, onFork }: 
     return title;
   }
 
-  return <ExpandableMessageBlock title={title} content={renderContent()} usageReport={message.usageReport} onRemove={onRemove} onFork={onFork} />;
+  return (
+    <ExpandableMessageBlock
+      title={title}
+      content={renderContent()}
+      usageReport={message.usageReport}
+      onRemove={onRemove}
+      onFork={onFork}
+      onRemoveUpTo={onRemoveUpTo}
+    />
+  );
 };

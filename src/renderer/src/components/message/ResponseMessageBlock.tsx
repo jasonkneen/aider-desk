@@ -14,9 +14,10 @@ type Props = {
   compact?: boolean;
   onRemove?: () => void;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 
-export const ResponseMessageBlock = ({ baseDir, message, allFiles, renderMarkdown, compact = false, onRemove, onFork }: Props) => {
+export const ResponseMessageBlock = ({ baseDir, message, allFiles, renderMarkdown, compact = false, onRemove, onFork, onRemoveUpTo }: Props) => {
   const baseClasses = 'rounded-md max-w-full text-xs bg-bg-secondary text-text-primary';
 
   const parsedContent = useParsedContent(baseDir, message.content, allFiles, renderMarkdown, !compact);
@@ -40,7 +41,7 @@ export const ResponseMessageBlock = ({ baseDir, message, allFiles, renderMarkdow
         </div>
         <div className="flex-grow-1 w-full overflow-hidden">{parsedContent}</div>
       </div>
-      {!compact && <MessageBar content={message.content} usageReport={message.usageReport} remove={onRemove} onFork={onFork} />}
+      {!compact && <MessageBar content={message.content} usageReport={message.usageReport} remove={onRemove} onFork={onFork} onRemoveUpTo={onRemoveUpTo} />}
     </div>
   );
 };

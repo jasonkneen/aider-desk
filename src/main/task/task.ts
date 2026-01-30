@@ -2084,6 +2084,14 @@ export class Task {
     return removedIds;
   }
 
+  public async removeMessagesUpTo(messageId: string): Promise<string[]> {
+    const removedIds = this.contextManager.removeMessagesAfter(messageId);
+    await this.reloadConnectorMessages();
+
+    await this.updateContextInfo();
+    return removedIds;
+  }
+
   public async redoLastUserPrompt(mode: Mode, updatedPrompt?: string) {
     logger.info('Redoing last user prompt:', {
       baseDir: this.project.baseDir,

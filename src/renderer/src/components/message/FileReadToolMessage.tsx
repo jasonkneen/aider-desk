@@ -14,9 +14,10 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 
-export const FileReadToolMessage = ({ message, onRemove, compact = false, onFork }: Props) => {
+export const FileReadToolMessage = ({ message, onRemove, compact = false, onFork, onRemoveUpTo }: Props) => {
   const { t } = useTranslation();
 
   const filePath = (message.args.filePath as string) || '';
@@ -120,6 +121,7 @@ export const FileReadToolMessage = ({ message, onRemove, compact = false, onFork
       onRemove={onRemove}
       initialExpanded={false}
       onFork={onFork}
+      onRemoveUpTo={onRemoveUpTo}
     />
   );
 };

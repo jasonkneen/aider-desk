@@ -424,6 +424,31 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       [displayedMessages, setMessages, task.id, api, projectDir, t],
     );
 
+    const handleRemoveUpToMessage = useCallback(
+      async (messageToRemove: Message) => {
+        const originalMessages = displayedMessages;
+
+        // Optimistically remove the messages after it
+        setMessages(task.id, (prevMessages) => {
+          const messageIndex = prevMessages.findIndex((msg) => msg.id === messageToRemove.id);
+          if (messageIndex === -1) {
+            return prevMessages;
+          }
+          return prevMessages.slice(0, messageIndex + 1);
+        });
+
+        try {
+          await api.removeMessagesUpTo(projectDir, task.id, messageToRemove.id);
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error('Failed to remove messages up to:', error);
+          setMessages(task.id, () => originalMessages);
+          showErrorNotification(t('errors.removeMessagesUpToFailed'));
+        }
+      },
+      [displayedMessages, setMessages, task.id, api, projectDir, t],
+    );
+
     const handleAddTodo = useCallback(
       async (name: string) => {
         try {
@@ -654,6 +679,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                       onDeleteTask={handleDeleteTask}
                       onInterrupt={handleInterruptResponse}
                       onForkFromMessage={handleForkFromMessage}
+                      onRemoveUpToMessage={handleRemoveUpToMessage}
                     />
                   )}
                 </>

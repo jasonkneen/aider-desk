@@ -810,13 +810,15 @@
     "archive": "Archive",
     "unarchive": "Unarchive",
     "confirmDelete": "Confirm Delete",
-    "remove": "Remove message"
+    "remove": "Remove message",
+    "deleteUpToHere": "Delete up to here"
   },
   "errors": {
     "frozenTitle": "AIDER FROZEN?",
     "frozenMessage": "Aider process seems to be frozen. Would you like to restart the task?",
     "removeMessageFailed": "Failed to remove message - please try again",
-    "forkTaskFailed": "Failed to fork task - please try again"
+    "forkTaskFailed": "Failed to fork task - please try again",
+    "removeMessagesUpToFailed": "Failed to remove messages - please try again"
   },
   "dialogs": {
     "confirm": "Confirm",

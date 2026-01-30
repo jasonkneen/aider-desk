@@ -124,6 +124,7 @@ export interface ApplicationAPI {
   clearContext: (baseDir: string, taskId: string) => void;
   removeLastMessage: (baseDir: string, taskId: string) => void;
   removeMessage: (baseDir: string, taskId: string, messageId: string) => Promise<void>;
+  removeMessagesUpTo: (baseDir: string, taskId: string, messageId: string) => Promise<void>;
   compactConversation: (baseDir: string, taskId: string, mode: Mode, customInstructions?: string) => void;
   handoffConversation: (baseDir: string, taskId: string, focus?: string) => Promise<void>;
   setZoomLevel: (level: number) => Promise<void>;

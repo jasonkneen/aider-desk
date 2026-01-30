@@ -534,6 +534,10 @@ export class BrowserApi implements ApplicationAPI {
   async removeMessage(baseDir: string, taskId: string, messageId: string): Promise<void> {
     await this.deleteWithBody('/project/remove-message', { projectDir: baseDir, taskId, messageId });
   }
+
+  async removeMessagesUpTo(baseDir: string, taskId: string, messageId: string): Promise<void> {
+    await this.deleteWithBody('/project/remove-messages-up-to', { projectDir: baseDir, taskId, messageId });
+  }
   compactConversation(baseDir: string, taskId: string, mode: Mode, customInstructions?: string): void {
     this.post('/project/compact-conversation', {
       projectDir: baseDir,

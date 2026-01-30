@@ -16,6 +16,7 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 
 const formatName = (name: string): string => {
@@ -26,7 +27,7 @@ const formatName = (name: string): string => {
     .join(' ');
 };
 
-export const FileWriteToolMessage = ({ message, onRemove, compact = false, onFork }: Props) => {
+export const FileWriteToolMessage = ({ message, onRemove, compact = false, onFork, onRemoveUpTo }: Props) => {
   const { t } = useTranslation();
   const expandableRef = useRef<ExpandableMessageBlockRef>(null);
 
@@ -115,6 +116,7 @@ export const FileWriteToolMessage = ({ message, onRemove, compact = false, onFor
       onRemove={onRemove}
       initialExpanded={true}
       onFork={onFork}
+      onRemoveUpTo={onRemoveUpTo}
     />
   );
 };

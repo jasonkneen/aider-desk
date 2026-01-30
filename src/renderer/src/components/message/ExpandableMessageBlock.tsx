@@ -14,6 +14,7 @@ type Props = {
   initialExpanded?: boolean;
   onOpenChange?: (open: boolean) => void;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 
 export interface ExpandableMessageBlockRef {
@@ -22,7 +23,7 @@ export interface ExpandableMessageBlockRef {
 }
 
 export const ExpandableMessageBlock = forwardRef<ExpandableMessageBlockRef, Props>(
-  ({ title, content, copyContent, usageReport, onRemove, initialExpanded = false, onOpenChange, onFork }, ref) => {
+  ({ title, content, copyContent, usageReport, onRemove, initialExpanded = false, onOpenChange, onFork, onRemoveUpTo }, ref) => {
     const [isExpanded, setIsExpanded] = useState(initialExpanded);
     const [isInitialAutoExpand, setIsInitialAutoExpand] = useState(!initialExpanded);
 
@@ -80,7 +81,7 @@ export const ExpandableMessageBlock = forwardRef<ExpandableMessageBlockRef, Prop
           </div>
         </Accordion>
         <div className="px-3 pb-3 bg-bg-secondary">
-          <MessageBar className="mt-0" content={copyContent} usageReport={usageReport} remove={onRemove} onFork={onFork} />
+          <MessageBar className="mt-0" content={copyContent} usageReport={usageReport} remove={onRemove} onFork={onFork} onRemoveUpTo={onRemoveUpTo} />
         </div>
       </div>
     );

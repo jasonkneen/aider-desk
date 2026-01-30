@@ -17,9 +17,10 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 
-export const BashToolMessage = ({ message, onRemove, compact = false, onFork }: Props) => {
+export const BashToolMessage = ({ message, onRemove, compact = false, onFork, onRemoveUpTo }: Props) => {
   const { t } = useTranslation();
 
   const command = message.args.command as string;
@@ -169,6 +170,7 @@ export const BashToolMessage = ({ message, onRemove, compact = false, onFork }: 
       onRemove={onRemove}
       onOpenChange={handleExpandedChange}
       onFork={onFork}
+      onRemoveUpTo={onRemoveUpTo}
     />
   );
 };
