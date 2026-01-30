@@ -17,6 +17,7 @@
 - added action to restore default agent profiles
 - added /resolve-conflicts command to resolve the conflicts in the current branch
 - creating subtask correctly inherits provider and model from parent task
+- properly loading the pending text in prompt field when switching tasks
 
 ## [0.50.1]
 

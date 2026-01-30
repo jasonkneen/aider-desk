@@ -698,6 +698,7 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
                 </div>
               )}
               <PromptField
+                key={task.id}
                 ref={promptFieldRef}
                 baseDir={projectDir}
                 taskId={task.id}
