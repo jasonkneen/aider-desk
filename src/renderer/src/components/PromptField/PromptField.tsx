@@ -1028,7 +1028,10 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
             {processing ? (
               <div className="absolute right-3 top-1/2 -translate-y-[12px] flex items-center space-x-2 text-text-muted-light">
                 <Tooltip content={`${t('promptField.stopResponse')} (Ctrl+C)`}>
-                  <button onClick={interruptResponse} className="hover:text-text-tertiary hover:bg-bg-tertiary rounded p-1 transition-colors duration-200">
+                  <button
+                    onClick={() => interruptResponse()}
+                    className="hover:text-text-tertiary hover:bg-bg-tertiary rounded p-1 transition-colors duration-200"
+                  >
                     <MdStop className="w-4 h-4" />
                   </button>
                 </Tooltip>
