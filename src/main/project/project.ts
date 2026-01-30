@@ -86,6 +86,8 @@ export class Project {
         reasoningEffort: sourceTask.task.reasoningEffort,
         thinkingTokens: sourceTask.task.thinkingTokens,
         currentMode: sourceTask.task.currentMode,
+        provider: sourceTask.task.provider,
+        model: sourceTask.task.model,
         weakModelLocked: sourceTask.task.weakModelLocked,
         ...(parentTask
           ? {
