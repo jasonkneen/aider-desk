@@ -411,8 +411,20 @@ export class BrowserApi implements ApplicationAPI {
   runCommand(baseDir: string, taskId: string, command: string): void {
     this.post('/project/run-command', { projectDir: baseDir, taskId, command });
   }
-  pasteImage(baseDir: string, taskId: string): void {
-    this.post('/project/paste-image', { projectDir: baseDir, taskId });
+  async pasteImage(baseDir: string, taskId: string, imageBuffer?: ArrayBuffer): Promise<void> {
+    if (imageBuffer) {
+      const blob = new Blob([imageBuffer], { type: 'image/png' });
+      const reader = new FileReader();
+      const base64String = await new Promise<string>((resolve) => {
+        reader.onload = () => {
+          resolve(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+      });
+      await this.post('/project/paste-image', { projectDir: baseDir, taskId, base64ImageData: base64String });
+    } else {
+      await this.post('/project/paste-image', { projectDir: baseDir, taskId });
+    }
   }
   scrapeWeb(baseDir: string, taskId: string, url: string, filePath?: string): Promise<void> {
     return this.post('/project/scrape-web', {

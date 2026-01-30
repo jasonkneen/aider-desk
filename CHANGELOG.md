@@ -19,6 +19,7 @@
 - creating subtask correctly inherits agent profile, provider and model from parent task
 - properly loading the pending text in prompt field when switching tasks
 - added delete up to here action to remove all messages up to some message
+- added support for pasting images from clipboard in the browser
 
 ## [0.50.1]
 

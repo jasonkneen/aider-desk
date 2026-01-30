@@ -277,18 +277,25 @@ export class EventsHandler {
     void this.projectManager.getProject(baseDir).getTask(taskId)?.dropFile(filePath);
   }
 
-  async pasteImage(baseDir: string, taskId: string): Promise<void> {
+  async pasteImage(baseDir: string, taskId: string, imageBuffer?: Buffer): Promise<void> {
     const task = this.projectManager.getProject(baseDir).getTask(taskId);
     if (!task) {
       return;
     }
 
     try {
-      const { clipboard } = await import('electron');
-      const image = clipboard.readImage();
-      if (image.isEmpty()) {
-        task.addLogMessage('info', 'No image found in clipboard.');
-        return;
+      let buffer: Buffer;
+
+      if (imageBuffer) {
+        buffer = imageBuffer;
+      } else {
+        const { clipboard } = await import('electron');
+        const image = clipboard.readImage();
+        if (image.isEmpty()) {
+          task.addLogMessage('info', 'No image found in clipboard.');
+          return;
+        }
+        buffer = image.toPNG();
       }
 
       const imagesDir = path.join(AIDER_DESK_TMP_DIR, 'images');
@@ -309,11 +316,10 @@ export class EventsHandler {
       }
       const nextImageNumber = maxNumber + 1;
       const imageName = `image-${nextImageNumber.toString().padStart(3, '0')}`;
-      const imageBuffer = image.toPNG();
       const imagePath = path.join(imagesDir, `${imageName}.png`);
       const absoluteImagePath = path.join(baseDir, imagePath);
 
-      await fs.writeFile(absoluteImagePath, imageBuffer);
+      await fs.writeFile(absoluteImagePath, buffer);
 
       await task.addFiles({ path: imagePath, readOnly: true });
     } catch (error) {

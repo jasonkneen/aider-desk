@@ -94,7 +94,7 @@ export interface ApplicationAPI {
   isProjectPath: (path: string) => Promise<boolean>;
   dropFile: (baseDir: string, taskId: string, path: string) => void;
   runCommand: (baseDir: string, taskId: string, command: string) => void;
-  pasteImage: (baseDir: string, taskId: string) => void;
+  pasteImage: (baseDir: string, taskId: string, imageBuffer?: ArrayBuffer) => void;
   scrapeWeb: (baseDir: string, taskId: string, url: string, filePath?: string) => Promise<void>;
   initProjectRulesFile: (baseDir: string, taskId: string) => Promise<void>;
 

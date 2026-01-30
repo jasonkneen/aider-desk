@@ -118,11 +118,6 @@ const GetFilePathSuggestionsSchema = z.object({
   directoriesOnly: z.boolean().optional(),
 });
 
-const PasteImageSchema = z.object({
-  projectDir: z.string().min(1, 'Project directory is required'),
-  taskId: z.string().min(1, 'Task id is required'),
-});
-
 const ApplyEditsSchema = z.object({
   projectDir: z.string().min(1, 'Project directory is required'),
   taskId: z.string().min(1, 'Task id is required'),
@@ -133,6 +128,12 @@ const ApplyEditsSchema = z.object({
       updated: z.string(),
     }),
   ),
+});
+
+const PasteImageSchema = z.object({
+  projectDir: z.string().min(1, 'Project directory is required'),
+  taskId: z.string().min(1, 'Task id is required'),
+  base64ImageData: z.string().optional(),
 });
 
 const RunCommandSchema = z.object({
@@ -394,8 +395,15 @@ export class ProjectApi extends BaseApi {
           return;
         }
 
-        const { projectDir, taskId } = parsed;
-        await this.eventsHandler.pasteImage(projectDir, taskId);
+        const { projectDir, taskId, base64ImageData } = parsed;
+
+        let imageBuffer: Buffer | undefined;
+        if (base64ImageData) {
+          const base64String = base64ImageData.split(',')[1] || base64ImageData;
+          imageBuffer = Buffer.from(base64String, 'base64');
+        }
+
+        await this.eventsHandler.pasteImage(projectDir, taskId, imageBuffer);
         res.status(200).json({ message: 'Image pasted' });
       }),
     );

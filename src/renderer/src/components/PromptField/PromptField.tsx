@@ -986,8 +986,16 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
                     const items = event.clipboardData?.items;
                     if (items) {
                       for (let i = 0; i < items.length; i++) {
-                        if (items[i].type.indexOf('image') !== -1) {
-                          api.pasteImage(baseDir, taskId);
+                        const item = items[i];
+                        if (item.type.indexOf('image') !== -1) {
+                          const file = item.getAsFile();
+                          if (file) {
+                            file.arrayBuffer().then((buffer) => {
+                              api.pasteImage(baseDir, taskId, buffer);
+                            });
+                          } else {
+                            api.pasteImage(baseDir, taskId);
+                          }
                           break;
                         }
                       }
