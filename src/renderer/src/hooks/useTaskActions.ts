@@ -113,8 +113,8 @@ export const useTaskActions = ({ baseDir }: UseTaskActionsParams) => {
   );
 
   const interruptResponse = useCallback(
-    (taskId: string) => {
-      api.interruptResponse(baseDir, taskId);
+    (taskId: string, interruptId?: string) => {
+      api.interruptResponse(baseDir, taskId, interruptId);
       updateTaskState(taskId, {
         question: null,
       });

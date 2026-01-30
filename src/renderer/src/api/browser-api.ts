@@ -517,8 +517,8 @@ export class BrowserApi implements ApplicationAPI {
   removeRecentProject(baseDir: string): Promise<void> {
     return this.post('/settings/remove-recent-project', { baseDir });
   }
-  interruptResponse(baseDir: string, taskId: string): void {
-    this.post('/project/interrupt', { projectDir: baseDir, taskId });
+  interruptResponse(baseDir: string, taskId: string, interruptId?: string): void {
+    this.post('/project/interrupt', { projectDir: baseDir, taskId, interruptId });
   }
   applyEdits(baseDir: string, taskId: string, edits: FileEdit[]): void {
     this.post('/project/apply-edits', { projectDir: baseDir, taskId, edits });
@@ -872,6 +872,13 @@ export class BrowserApi implements ApplicationAPI {
 
   resolveWorktreeConflictsWithAgent(baseDir: string, taskId: string): Promise<void> {
     return this.post('/project/worktree/resolve-conflicts-with-agent', {
+      projectDir: baseDir,
+      taskId,
+    });
+  }
+
+  resolveConflictsWithAgent(baseDir: string, taskId: string): Promise<void> {
+    return this.post('/project/resolve-conflicts-with-agent', {
       projectDir: baseDir,
       taskId,
     });

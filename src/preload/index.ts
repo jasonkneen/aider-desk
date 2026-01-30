@@ -106,7 +106,7 @@ const api: ApplicationAPI = {
   getRecentProjects: () => ipcRenderer.invoke('get-recent-projects'),
   addRecentProject: (baseDir) => ipcRenderer.invoke('add-recent-project', baseDir),
   removeRecentProject: (baseDir) => ipcRenderer.invoke('remove-recent-project', baseDir),
-  interruptResponse: (baseDir, taskId) => ipcRenderer.send('interrupt-response', baseDir, taskId),
+  interruptResponse: (baseDir, taskId, interruptId) => ipcRenderer.send('interrupt-response', baseDir, taskId, interruptId),
   applyEdits: (baseDir, taskId, edits: FileEdit[]) => ipcRenderer.send('apply-edits', baseDir, taskId, edits),
   clearContext: (baseDir, taskId) => ipcRenderer.send('clear-context', baseDir, taskId),
   removeLastMessage: (baseDir, taskId) => ipcRenderer.send('remove-last-message', baseDir, taskId),
@@ -575,6 +575,7 @@ const api: ApplicationAPI = {
   abortWorktreeRebase: (baseDir, taskId) => ipcRenderer.invoke('abort-worktree-rebase', baseDir, taskId),
   continueWorktreeRebase: (baseDir, taskId) => ipcRenderer.invoke('continue-worktree-rebase', baseDir, taskId),
   resolveWorktreeConflictsWithAgent: (baseDir, taskId) => ipcRenderer.invoke('resolve-worktree-conflicts-with-agent', baseDir, taskId),
+  resolveConflictsWithAgent: (baseDir, taskId) => ipcRenderer.invoke('resolve-worktree-conflicts-with-agent', baseDir, taskId),
 
   // Agent profile operations
   getAllAgentProfiles: () => ipcRenderer.invoke('get-agent-profiles'),

@@ -119,7 +119,7 @@ export interface ApplicationAPI {
   getRecentProjects: () => Promise<string[]>;
   addRecentProject: (baseDir: string) => Promise<void>;
   removeRecentProject: (baseDir: string) => Promise<void>;
-  interruptResponse: (baseDir: string, taskId: string) => void;
+  interruptResponse: (baseDir: string, taskId: string, interruptId?: string) => void;
   applyEdits: (baseDir: string, taskId: string, edits: FileEdit[]) => void;
   clearContext: (baseDir: string, taskId: string) => void;
   removeLastMessage: (baseDir: string, taskId: string) => void;
@@ -207,6 +207,7 @@ export interface ApplicationAPI {
   abortWorktreeRebase: (baseDir: string, taskId: string) => Promise<void>;
   continueWorktreeRebase: (baseDir: string, taskId: string) => Promise<void>;
   resolveWorktreeConflictsWithAgent: (baseDir: string, taskId: string) => Promise<void>;
+  resolveConflictsWithAgent: (baseDir: string, taskId: string) => Promise<void>;
 
   // Agent profile operations
   getAllAgentProfiles: () => Promise<AgentProfile[]>;

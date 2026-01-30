@@ -207,8 +207,8 @@ export class EventsHandler {
     this.store.removeRecentProject(baseDir);
   }
 
-  interruptResponse(baseDir: string, taskId: string): void {
-    this.projectManager.getProject(baseDir).getTask(taskId)?.interruptResponse();
+  interruptResponse(baseDir: string, taskId: string, interruptId?: string): void {
+    this.projectManager.getProject(baseDir).getTask(taskId)?.interruptResponse(interruptId);
   }
 
   clearContext(baseDir: string, taskId: string, includeLastMessage = true): void {
@@ -525,13 +525,13 @@ export class EventsHandler {
     await task.continueWorktreeRebase();
   }
 
-  async resolveWorktreeConflictsWithAgent(baseDir: string, taskId: string): Promise<void> {
+  async resolveConflictsWithAgent(baseDir: string, taskId: string): Promise<void> {
     const task = this.projectManager.getProject(baseDir).getTask(taskId);
     if (!task) {
       throw new Error(`Task ${taskId} not found`);
     }
 
-    await task.resolveWorktreeConflictsWithAgent();
+    await task.resolveConflictsWithAgent();
   }
 
   async scrapeWeb(baseDir: string, taskId: string, url: string, filePath?: string): Promise<void> {

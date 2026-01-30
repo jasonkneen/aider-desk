@@ -64,14 +64,15 @@ const COMMANDS = [
   '/drop',
   '/redo',
   '/edit-last',
-  '/compact',
+  '/optimize',
   '/commit',
   '/handoff',
   '/init',
   '/clear-logs',
+  '/resolve-conflicts',
 ];
 
-const ANSWERS = ['y', 'n', 'a', 'd'];
+const ANSWERS = ['y', 'n', 'a', 'd', 'maybe']; // Added 'maybe' (Branch B)
 
 const HISTORY_MENU_CHUNK_SIZE = 20;
 const PLACEHOLDER_COUNT = 20;
@@ -479,6 +480,11 @@ export const PromptField = forwardRef<PromptFieldRef, Props>(
           case '/clear-logs': {
             prepareForNextPrompt();
             clearLogMessages();
+            break;
+          }
+          case '/resolve-conflicts': {
+            prepareForNextPrompt();
+            void api.resolveConflictsWithAgent(baseDir, taskId);
             break;
           }
           default: {

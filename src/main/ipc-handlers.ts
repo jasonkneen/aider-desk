@@ -160,8 +160,8 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     await eventsHandler.pasteImage(baseDir, taskId);
   });
 
-  ipcMain.on('interrupt-response', (_, baseDir: string, taskId: string) => {
-    eventsHandler.interruptResponse(baseDir, taskId);
+  ipcMain.on('interrupt-response', (_, baseDir: string, taskId: string, interruptId?: string) => {
+    eventsHandler.interruptResponse(baseDir, taskId, interruptId);
   });
 
   ipcMain.on('apply-edits', (_, baseDir: string, taskId: string, edits: FileEdit[]) => {
@@ -372,7 +372,7 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
   });
 
   ipcMain.handle('resolve-worktree-conflicts-with-agent', async (_, baseDir: string, taskId: string) => {
-    await eventsHandler.resolveWorktreeConflictsWithAgent(baseDir, taskId);
+    await eventsHandler.resolveConflictsWithAgent(baseDir, taskId);
   });
 
   // Server control handlers

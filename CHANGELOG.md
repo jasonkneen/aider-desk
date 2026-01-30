@@ -15,6 +15,7 @@
 - added context management task settings for automatic conversation compaction or handoff
 - properly updating the agent profile list after deletion
 - added action to restore default agent profiles
+- added /resolve-conflicts command to resolve the conflicts in the current branch
 
 ## [0.50.1]
 

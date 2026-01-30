@@ -635,6 +635,7 @@ export interface Group {
   name?: string | LocalizedString;
   color?: string;
   finished?: boolean;
+  interruptId?: string;
 }
 
 export interface PromptContext {

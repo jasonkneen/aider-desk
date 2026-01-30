@@ -118,6 +118,7 @@ export class Task {
   private git: SimpleGit | null = null;
   private responseChunkMap: Map<string, { buffer: string; interval: NodeJS.Timeout }> = new Map();
   private isDeterminingTaskState = false;
+  private resolutionAbortControllers: Record<string, AbortController> = {};
 
   private readonly taskDataPath: string;
   private readonly contextManager: ContextManager;
@@ -1919,7 +1920,27 @@ export class Task {
     }
   }
 
-  public interruptResponse() {
+  public interruptResponse(interruptId?: string) {
+    if (interruptId) {
+      // Interrupt specific conflict resolution agent
+      logger.info('Interrupting specific conflict resolution agent:', {
+        baseDir: this.project.baseDir,
+        taskId: this.taskId,
+        interruptId,
+      });
+
+      const abortController = this.resolutionAbortControllers[interruptId];
+      if (abortController) {
+        abortController.abort();
+        delete this.resolutionAbortControllers[interruptId];
+        logger.info('Aborted conflict resolution agent', { interruptId });
+      } else {
+        logger.warn('Conflict resolution agent not found for interruptId', { interruptId });
+      }
+      return;
+    }
+
+    // Default behavior: interrupt all agents
     logger.info('Interrupting response:', {
       baseDir: this.project.baseDir,
       taskId: this.taskId,
@@ -3137,23 +3158,16 @@ ${error.stderr}`,
     await this.sendWorktreeIntegrationStatusUpdated();
   }
 
-  public async resolveWorktreeConflictsWithAgent(): Promise<void> {
-    if (!this.task.worktree) {
-      throw new Error('No worktree exists for this task');
-    }
-
-    await this.waitForCurrentPromptToFinish();
-
-    const worktreePath = this.task.worktree.path;
+  private async executeConflictResolution(directoryPath: string, directoryName: string): Promise<void> {
     const activeProfile = await this.getTaskAgentProfile();
     if (!activeProfile) {
       throw new Error('No active agent profile found');
     }
 
     try {
-      this.addLogMessage('loading', 'Resolving conflicts with agent...');
+      this.addLogMessage('loading', `Resolving conflicts in ${directoryName}...`);
 
-      const files = await this.worktreeManager.listConflictedFiles(worktreePath);
+      const files = await this.worktreeManager.listConflictedFiles(directoryPath);
       if (files.length === 0) {
         this.addLogMessage('info', 'No conflicted files found', true);
         return;
@@ -3165,7 +3179,13 @@ ${error.stderr}`,
         model: activeProfile.model,
       };
 
+      let interruptedCount = 0;
+
       const resolutionPromises = files.map(async (filePath) => {
+        const interruptId = uuidv4();
+        const abortController = new AbortController();
+        this.resolutionAbortControllers[interruptId] = abortController;
+
         const promptContext: PromptContext = {
           id: uuidv4(),
           group: {
@@ -3173,12 +3193,13 @@ ${error.stderr}`,
             color: 'var(--color-agent-conflict-resolution)',
             name: `Resolving ${filePath}...`,
             finished: false,
+            interruptId,
           },
         };
 
         this.addLogMessage('loading', `Resolving ${filePath}...`, false, promptContext);
 
-        const ctx = await this.worktreeManager.collectConflictContext(worktreePath, filePath);
+        const ctx = await this.worktreeManager.collectConflictContext(directoryPath, filePath);
 
         // Create temp directory structure for conflict files
         const conflictsDir = path.join(this.project.baseDir, AIDER_DESK_TMP_DIR, 'conflicts');
@@ -3206,28 +3227,44 @@ ${error.stderr}`,
           });
           const systemPrompt = this.promptsManager.getConflictResolutionSystemPrompt(this);
 
-          await this.agent.runAgent(this, conflictProfile, prompt, promptContext, [], [{ path: filePath }], systemPrompt);
+          await this.agent.runAgent(this, conflictProfile, prompt, promptContext, [], [{ path: filePath }], systemPrompt, abortController.signal);
 
-          // Update context to "Resolved"
+          // Update context based on whether it was interrupted or resolved
           if (promptContext.group) {
-            promptContext.group.name = `Resolved ${filePath}`;
-            promptContext.group.finished = true;
-          }
-          this.addLogMessage('info', `Resolved ${filePath}`, true, promptContext);
+            if (abortController.signal.aborted) {
+              promptContext.group.name = `Resolution of ${filePath} interrupted`;
+              promptContext.group.finished = true;
+              this.addLogMessage('warning', `Resolution of ${filePath} interrupted`, true, promptContext);
+              interruptedCount++;
+            } else {
+              promptContext.group.name = `Resolved ${filePath}`;
+              promptContext.group.finished = true;
+              this.addLogMessage('info', `Resolved ${filePath}`, true, promptContext);
 
-          // Stage the file
-          await execWithShellPath(`git add -- "${filePath}"`, {
-            cwd: worktreePath,
-          });
+              // Stage the file
+              await execWithShellPath(`git add -- "${filePath}"`, {
+                cwd: directoryPath,
+              });
+            }
+          }
         } finally {
           // Clean up temp files
           await Promise.allSettled([fs.unlink(basePath).catch(() => {}), fs.unlink(oursPath).catch(() => {}), fs.unlink(theirsPath).catch(() => {})]);
+          // Clean up abort controller
+          delete this.resolutionAbortControllers[interruptId];
         }
       });
 
       await Promise.all(resolutionPromises);
 
-      this.addLogMessage('info', 'Conflicts resolved and staged. You can now continue the rebase.', true, undefined, ['continue-rebase', 'abort-rebase']);
+      if (interruptedCount === 0) {
+        this.addLogMessage('info', 'Conflicts resolved and staged. You can now continue the rebase.', true, undefined, ['continue-rebase', 'abort-rebase']);
+      } else if (interruptedCount < files.length) {
+        this.addLogMessage('warning', 'Some conflicts were resolved, but some were interrupted. You can continue the rebase.', true, undefined, [
+          'continue-rebase',
+          'abort-rebase',
+        ]);
+      }
     } catch (error) {
       logger.error('Failed to resolve conflicts with agent:', error);
       this.addLogMessage(
@@ -3240,6 +3277,35 @@ ${error.stderr}`,
     }
 
     await this.sendWorktreeIntegrationStatusUpdated();
+  }
+
+  public async resolveConflictsWithAgent(): Promise<void> {
+    await this.waitForCurrentPromptToFinish();
+
+    // Check worktree first
+    if (this.task.worktree) {
+      const worktreePath = this.task.worktree.path;
+      const worktreeRebaseState = await this.worktreeManager.getRebaseState(worktreePath);
+
+      if (worktreeRebaseState.hasUnmergedPaths) {
+        logger.info('Conflicts found in worktree, resolving...', { worktreePath });
+        await this.executeConflictResolution(worktreePath, 'worktree');
+        return;
+      }
+    }
+
+    // Check main repository
+    const baseDir = this.project.baseDir;
+    const baseRebaseState = await this.worktreeManager.getRebaseState(baseDir);
+
+    if (baseRebaseState.hasUnmergedPaths) {
+      logger.info('Conflicts found in main repository, resolving...', { baseDir });
+      await this.executeConflictResolution(baseDir, 'main repository');
+      return;
+    }
+
+    // No conflicts found
+    this.addLogMessage('info', 'No merge conflicts found in either worktree or main repository.', true);
   }
 
   public async continueWorktreeRebase(): Promise<void> {

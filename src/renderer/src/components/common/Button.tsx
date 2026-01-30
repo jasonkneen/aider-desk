@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, MouseEvent } from 'react';
 import { twMerge } from 'tailwind-merge';
 
 export type ButtonVariant = 'contained' | 'text' | 'outline';
@@ -7,7 +7,7 @@ export type ButtonSize = 'sm' | 'md' | 'xs';
 
 type Props = {
   children: ReactNode;
-  onClick?: () => void;
+  onClick?: (e: MouseEvent<HTMLButtonElement>) => void;
   variant?: ButtonVariant;
   color?: ButtonColor;
   className?: string;

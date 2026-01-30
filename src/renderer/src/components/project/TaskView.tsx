@@ -537,10 +537,16 @@ export const TaskView = forwardRef<TaskViewRef, Props>(
       [answerQuestion, task.id],
     );
 
-    const handleInterruptResponse = useCallback(() => {
-      interruptResponse(task.id);
-      updateOptimisticTaskState(task.id, DefaultTaskState.Interrupted);
-    }, [interruptResponse, task.id, updateOptimisticTaskState]);
+    const handleInterruptResponse = useCallback(
+      (interruptId?: string) => {
+        interruptResponse(task.id, interruptId);
+        if (!interruptId) {
+          // Only update task state if we're interrupting the entire task, not a specific agent
+          updateOptimisticTaskState(task.id, DefaultTaskState.Interrupted);
+        }
+      },
+      [interruptResponse, task.id, updateOptimisticTaskState],
+    );
 
     const handleHandoff = useCallback(
       async (focus?: string) => {

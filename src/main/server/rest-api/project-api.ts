@@ -804,7 +804,7 @@ export class ProjectApi extends BaseApi {
         }
 
         const { projectDir, taskId } = parsed;
-        await this.eventsHandler.resolveWorktreeConflictsWithAgent(projectDir, taskId);
+        await this.eventsHandler.resolveConflictsWithAgent(projectDir, taskId);
         res.status(200).json({ message: 'Conflicts resolved' });
       }),
     );
