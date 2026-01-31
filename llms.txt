@@ -1920,7 +1920,12 @@ File: src/common/locales/en.json
       "copyProfile": "Copy",
       "cutProfile": "Cut",
       "deleteProfile": "Delete",
-      "pasteProfile": "Paste Agent"
+      "pasteProfile": "Paste Agent",
+      "resetProfileToDefaults": "Reset to Defaults",
+      "resetProfileTitle": "Reset '{{name}}' to Defaults?",
+      "resetProfileConfirm": "This will restore '{{name}}' to its original default settings. Any custom modifications will be lost.",
+      "restoreProfile": "Restore",
+      "restoreProfileTooltip": "Restore this default profile"
     },
     "aider": {
       "options": "Options",
@@ -2131,13 +2136,15 @@ File: src/common/locales/en.json
     "archive": "Archive",
     "unarchive": "Unarchive",
     "confirmDelete": "Confirm Delete",
-    "remove": "Remove message"
+    "remove": "Remove message",
+    "deleteUpToHere": "Delete up to here"
   },
   "errors": {
     "frozenTitle": "AIDER FROZEN?",
     "frozenMessage": "Aider process seems to be frozen. Would you like to restart the task?",
     "removeMessageFailed": "Failed to remove message - please try again",
-    "forkTaskFailed": "Failed to fork task - please try again"
+    "forkTaskFailed": "Failed to fork task - please try again",
+    "removeMessagesUpToFailed": "Failed to remove messages - please try again"
   },
   "dialogs": {
     "confirm": "Confirm",
@@ -2587,6 +2594,7 @@ File: src/common/locales/en.json
     "model": "Open the model selector",
     "read-only": "Add files to the chat that are for reference only, or turn added files to read-only",
     "redo": "Redoes the last user prompt.",
+    "resolve-conflicts": "Resolve merge conflicts using AI",
     "reasoning-effort": "Set the reasoning effort level (values: minimal/low/medium/high depending on model)",
     "reset": "Drop all files and clear the chat history",
     "run": "Run a shell command and optionally add the output to the chat",
@@ -3405,7 +3413,12 @@ File: src/common/locales/zh.json
       "copyProfile": "复制",
       "cutProfile": "剪切",
       "deleteProfile": "删除",
-      "pasteProfile": "粘贴代理"
+      "pasteProfile": "粘贴代理",
+      "resetProfileToDefaults": "重置为默认值",
+      "resetProfileTitle": "将 '{{name}}' 重置为默认值？",
+      "resetProfileConfirm": "这将把 '{{name}}' 恢复到原始默认设置。任何自定义修改都将丢失。",
+      "restoreProfile": "恢复",
+      "restoreProfileTooltip": "恢复此默认配置"
     },
     "aider": {
       "options": "选项",
@@ -3575,13 +3588,15 @@ File: src/common/locales/zh.json
     "archive": "归档",
     "unarchive": "取消归档",
     "confirmDelete": "确认删除",
-    "remove": "移除消息"
+    "remove": "移除消息",
+    "deleteUpToHere": "删除到此为止"
   },
   "errors": {
     "frozenTitle": "AIDER冻结了?",
     "frozenMessage": "Aider进程似乎已冻结。您想重启任务吗?",
     "removeMessageFailed": "删除消息失败 - 请重试",
-    "forkTaskFailed": "从消息分叉任务失败 - 请重试"
+    "forkTaskFailed": "从消息分叉任务失败 - 请重试",
+    "removeMessagesUpToFailed": "删除到此为止的消息失败 - 请重试"
   },
   "dialogs": {
     "confirm": "确认",
@@ -4048,6 +4063,7 @@ File: src/common/locales/zh.json
     "model": "打开模型选择器",
     "read-only": "将文件添加到聊天中，这些文件仅供参考，或将添加的文件设为只读。",
     "redo": "重做上一个用户提示。",
+    "resolve-conflicts": "使用 AI 解决合并冲突",
     "reasoning-effort": "设置推理工作量级别（值：数字或低/中/高，取决于模型）",
     "reset": "删除所有文件并清除聊天历史记录",
     "run": "运行 shell 命令并可选地将输出添加到聊天中",
@@ -4714,7 +4730,7 @@ export interface ApplicationAPI {
   isProjectPath: (path: string) => Promise<boolean>;
   dropFile: (baseDir: string, taskId: string, path: string) => void;
   runCommand: (baseDir: string, taskId: string, command: string) => void;
-  pasteImage: (baseDir: string, taskId: string) => void;
+  pasteImage: (baseDir: string, taskId: string, imageBuffer?: ArrayBuffer) => void;
   scrapeWeb: (baseDir: string, taskId: string, url: string, filePath?: string) => Promise<void>;
   initProjectRulesFile: (baseDir: string, taskId: string) => Promise<void>;
 
@@ -4739,11 +4755,12 @@ export interface ApplicationAPI {
   getRecentProjects: () => Promise<string[]>;
   addRecentProject: (baseDir: string) => Promise<void>;
   removeRecentProject: (baseDir: string) => Promise<void>;
-  interruptResponse: (baseDir: string, taskId: string) => void;
+  interruptResponse: (baseDir: string, taskId: string, interruptId?: string) => void;
   applyEdits: (baseDir: string, taskId: string, edits: FileEdit[]) => void;
   clearContext: (baseDir: string, taskId: string) => void;
   removeLastMessage: (baseDir: string, taskId: string) => void;
   removeMessage: (baseDir: string, taskId: string, messageId: string) => Promise<void>;
+  removeMessagesUpTo: (baseDir: string, taskId: string, messageId: string) => Promise<void>;
   compactConversation: (baseDir: string, taskId: string, mode: Mode, customInstructions?: string) => void;
   handoffConversation: (baseDir: string, taskId: string, focus?: string) => Promise<void>;
   setZoomLevel: (level: number) => Promise<void>;
@@ -4827,6 +4844,7 @@ export interface ApplicationAPI {
   abortWorktreeRebase: (baseDir: string, taskId: string) => Promise<void>;
   continueWorktreeRebase: (baseDir: string, taskId: string) => Promise<void>;
   resolveWorktreeConflictsWithAgent: (baseDir: string, taskId: string) => Promise<void>;
+  resolveConflictsWithAgent: (baseDir: string, taskId: string) => Promise<void>;
 
   // Agent profile operations
   getAllAgentProfiles: () => Promise<AgentProfile[]>;
@@ -5451,6 +5469,7 @@ export interface Group {
   name?: string | LocalizedString;
   color?: string;
   finished?: boolean;
+  interruptId?: string;
 }
 ⋮----
 export interface PromptContext {
@@ -10001,6 +10020,8 @@ registerRoutes(router: Router): void
 ⋮----
 // Remove message by ID
 ⋮----
+// Remove messages up to specified message ID
+⋮----
 // Compact conversation
 ⋮----
 // Handoff conversation
@@ -10871,7 +10892,17 @@ import { promises as fs } from 'fs';
 ⋮----
 import { v4 as uuidv4 } from 'uuid';
 import debounce from 'lodash/debounce';
-import { ContextFile, ContextMessage, MessageRole, ResponseCompletedData, TaskContext, ToolData, UsageReportData, UserMessageData } from '@common/types';
+import {
+  ContextFile,
+  ContextMessage,
+  ContextToolMessage,
+  MessageRole,
+  ResponseCompletedData,
+  TaskContext,
+  ToolData,
+  UsageReportData,
+  UserMessageData,
+} from '@common/types';
 import { extractServerNameToolName, extractTextContent, fileExists, isMessageEmpty, isTextContent } from '@common/utils';
 import { AIDER_TOOL_GROUP_NAME, AIDER_TOOL_RUN_PROMPT, SUBAGENTS_TOOL_GROUP_NAME, SUBAGENTS_TOOL_RUN_TASK } from '@common/tools';
 ⋮----
@@ -10918,6 +10949,8 @@ async getContextFilesEnsureLoaded(): Promise<ContextFile[]>
 setContextMessages(contextMessages: ContextMessage[], save = true)
 ⋮----
 async getContextMessages(): Promise<ContextMessage[]>
+⋮----
+// Deep clone messages to prevent external modifications from affecting internal state
 ⋮----
 clearContextFiles(save = true)
 ⋮----
@@ -11045,6 +11078,38 @@ getMessagesUpTo(messageId: string): ContextMessage[]
 // Check if this tool call is in the assistant message we kept
 ⋮----
 // For non-tool messages or if we couldn't find the assistant message, return all messages up to the target
+⋮----
+/**
+   * Removes all messages after the specified message ID, keeping messages up to and including the specified message.
+   * Uses intelligent slicing logic from getMessagesUpTo to handle tool messages and assistant messages with tool calls.
+   * For assistant messages that are the target, inverts the filtering to keep tool calls instead of text/reasoning.
+   *
+   * @param messageId - The ID of the message to keep (all messages after this will be removed), or a toolCallId
+   * @returns Array of removed message IDs
+   */
+removeMessagesAfter(messageId: string): string[]
+⋮----
+// Find the target message index in the original messages array
+⋮----
+// If not found as a message ID, check if it's a toolCallId
+⋮----
+// Get the messages to keep using the intelligent slicing logic
+⋮----
+// If no messages would be removed, return early
+⋮----
+// Process messages: deep clone all messages and handle assistant message filtering
+⋮----
+// Deep clone the message object
+⋮----
+// For target assistant message, get original content and keep only tool calls (remove both reasoning and text)
+⋮----
+// For non-target assistant messages, keep tool calls and text, remove reasoning only
+⋮----
+// Collect IDs of messages that will be removed
+⋮----
+// Replace the messages array with the processed messages
+⋮----
+// Trigger autosave if messages were removed
 
 ================
 File: src/main/task/index.ts
@@ -11484,7 +11549,11 @@ public sendToolMessage(data: ToolData)
 ⋮----
 public async clearContext(addToHistory = false, updateContextInfo = true)
 ⋮----
-public interruptResponse()
+public interruptResponse(interruptId?: string)
+⋮----
+// Interrupt specific conflict resolution agent
+⋮----
+// Default behavior: interrupt all agents
 ⋮----
 public applyEdits(edits: FileEdit[])
 ⋮----
@@ -11509,6 +11578,8 @@ private addUserMessage(id: string, content: string, promptContext?: PromptContex
 public async removeLastMessage()
 ⋮----
 public async removeMessage(messageId: string): Promise<string[]>
+⋮----
+public async removeMessagesUpTo(messageId: string): Promise<string[]>
 ⋮----
 public async redoLastUserPrompt(mode: Mode, updatedPrompt?: string)
 ⋮----
@@ -11706,7 +11777,7 @@ public async rebaseWorktreeFromBranch(fromBranch?: string): Promise<void>
 ⋮----
 public async abortWorktreeRebase(): Promise<void>
 ⋮----
-public async resolveWorktreeConflictsWithAgent(): Promise<void>
+private async executeConflictResolution(directoryPath: string, directoryName: string): Promise<void>
 ⋮----
 // Create temp directory structure for conflict files
 ⋮----
@@ -11714,11 +11785,21 @@ public async resolveWorktreeConflictsWithAgent(): Promise<void>
 ⋮----
 // Write version files
 ⋮----
-// Update context to "Resolved"
+// Update context based on whether it was interrupted or resolved
 ⋮----
 // Stage the file
 ⋮----
 // Clean up temp files
+⋮----
+// Clean up abort controller
+⋮----
+public async resolveConflictsWithAgent(): Promise<void>
+⋮----
+// Check worktree first
+⋮----
+// Check main repository
+⋮----
+// No conflicts found
 ⋮----
 public async continueWorktreeRebase(): Promise<void>
 ⋮----
@@ -13088,13 +13169,15 @@ addRecentProject(baseDir: string): void
 ⋮----
 removeRecentProject(baseDir: string): void
 ⋮----
-interruptResponse(baseDir: string, taskId: string): void
+interruptResponse(baseDir: string, taskId: string, interruptId?: string): void
 ⋮----
 clearContext(baseDir: string, taskId: string, includeLastMessage = true): void
 ⋮----
 async removeLastMessage(baseDir: string, taskId: string): Promise<void>
 ⋮----
 async removeMessage(baseDir: string, taskId: string, messageId: string): Promise<void>
+⋮----
+async removeMessagesUpTo(baseDir: string, taskId: string, messageId: string): Promise<void>
 ⋮----
 async redoLastUserPrompt(baseDir: string, taskId: string, mode: Mode, updatedPrompt?: string): Promise<void>
 ⋮----
@@ -13114,7 +13197,7 @@ async addFile(baseDir: string, taskId: string, filePath: string, readOnly = fals
 ⋮----
 dropFile(baseDir: string, taskId: string, filePath: string): void
 ⋮----
-async pasteImage(baseDir: string, taskId: string): Promise<void>
+async pasteImage(baseDir: string, taskId: string, imageBuffer?: Buffer): Promise<void>
 ⋮----
 applyEdits(baseDir: string, taskId: string, edits: FileEdit[]): void
 ⋮----
@@ -13176,7 +13259,7 @@ async abortWorktreeRebase(baseDir: string, taskId: string): Promise<void>
 ⋮----
 async continueWorktreeRebase(baseDir: string, taskId: string): Promise<void>
 ⋮----
-async resolveWorktreeConflictsWithAgent(baseDir: string, taskId: string): Promise<void>
+async resolveConflictsWithAgent(baseDir: string, taskId: string): Promise<void>
 ⋮----
 async scrapeWeb(baseDir: string, taskId: string, url: string, filePath?: string): Promise<void>
 ⋮----
@@ -14157,7 +14240,7 @@ async isValidPath(baseDir: string, path: string): Promise<boolean>
 async isProjectPath(path: string): Promise<boolean>
 dropFile(baseDir: string, taskId: string, path: string): void
 runCommand(baseDir: string, taskId: string, command: string): void
-pasteImage(baseDir: string, taskId: string): void
+async pasteImage(baseDir: string, taskId: string, imageBuffer?: ArrayBuffer): Promise<void>
 scrapeWeb(baseDir: string, taskId: string, url: string, filePath?: string): Promise<void>
 initProjectRulesFile(baseDir: string, taskId: string): Promise<void>
 getTodos(baseDir: string, taskId: string): Promise<TodoItem[]>
@@ -14180,13 +14263,15 @@ async exportTaskToMarkdown(baseDir: string, taskId: string): Promise<void>
 getRecentProjects(): Promise<string[]>
 addRecentProject(baseDir: string): Promise<void>
 removeRecentProject(baseDir: string): Promise<void>
-interruptResponse(baseDir: string, taskId: string): void
+interruptResponse(baseDir: string, taskId: string, interruptId?: string): void
 applyEdits(baseDir: string, taskId: string, edits: FileEdit[]): void
 ⋮----
 clearContext(baseDir: string, taskId: string): void
 removeLastMessage(baseDir: string, taskId: string): void
 ⋮----
 async removeMessage(baseDir: string, taskId: string, messageId: string): Promise<void>
+⋮----
+async removeMessagesUpTo(baseDir: string, taskId: string, messageId: string): Promise<void>
 compactConversation(baseDir: string, taskId: string, mode: Mode, customInstructions?: string): void
 ⋮----
 async handoffConversation(baseDir: string, taskId: string, focus?: string): Promise<void>
@@ -14305,6 +14390,8 @@ abortWorktreeRebase(baseDir: string, taskId: string): Promise<void>
 continueWorktreeRebase(baseDir: string, taskId: string): Promise<void>
 ⋮----
 resolveWorktreeConflictsWithAgent(baseDir: string, taskId: string): Promise<void>
+⋮----
+resolveConflictsWithAgent(baseDir: string, taskId: string): Promise<void>
 ⋮----
 // Memory operations
 listAllMemories(): Promise<MemoryEntry[]>
@@ -14722,7 +14809,7 @@ className=
 ================
 File: src/renderer/src/components/common/Button.tsx
 ================
-import { ReactNode } from 'react';
+import { ReactNode, MouseEvent } from 'react';
 import { twMerge } from 'tailwind-merge';
 ⋮----
 export type ButtonVariant = 'contained' | 'text' | 'outline';
@@ -14731,7 +14818,7 @@ export type ButtonSize = 'sm' | 'md' | 'xs';
 ⋮----
 type Props = {
   children: ReactNode;
-  onClick?: () => void;
+  onClick?: (e: MouseEvent<HTMLButtonElement>) => void;
   variant?: ButtonVariant;
   color?: ButtonColor;
   className?: string;
@@ -15654,6 +15741,7 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 <div className=
@@ -15680,6 +15768,7 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 const handleScrollToBottom = () =>
@@ -15745,11 +15834,10 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 {/* Task Details */}
-⋮----
-return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/CustomCommandBashBlock.tsx
@@ -15784,11 +15872,10 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 {/* Memory Details */}
-⋮----
-return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/DeleteTaskToolMessage.tsx
@@ -15809,11 +15896,10 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 const renderStatusIcon = () =>
-⋮----
-return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/ExpandableMessageBlock.tsx
@@ -15834,6 +15920,7 @@ type Props = {
   initialExpanded?: boolean;
   onOpenChange?: (open: boolean) => void;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 export interface ExpandableMessageBlockRef {
@@ -15864,11 +15951,12 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 const renderStatusIcon = () =>
 ⋮----
-return <ExpandableMessageBlock title=
+const renderContent = () =>
 
 ================
 File: src/renderer/src/components/message/FileEditToolMessage.tsx
@@ -15890,6 +15978,7 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 <strong>
@@ -15913,6 +16002,7 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 {/* File content - filter out line numbers if present */}
@@ -15940,6 +16030,7 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 const formatName = (name: string): string =>
@@ -15963,11 +16054,10 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 const renderStatusIcon = () =>
-⋮----
-return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/GetTaskToolMessage.tsx
@@ -15988,6 +16078,7 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 type ContextFile = {
@@ -16004,8 +16095,6 @@ const renderStatusIcon = () =>
 {/* Context Files */}
 ⋮----
 {/* Context Messages Count */}
-⋮----
-return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/GlobToolMessage.tsx
@@ -16025,9 +16114,8 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
-⋮----
-return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/GrepToolMessage.tsx
@@ -16047,15 +16135,14 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
-⋮----
-return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/GroupMessageBlock.tsx
 ================
 import { AnimatePresence, motion } from 'framer-motion';
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo, useState, MouseEvent } from 'react';
 import { clsx } from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { LocalizedString, UsageReportData } from '@common/types';
@@ -16065,7 +16152,8 @@ import { MessageBar } from './MessageBar';
 import { areMessagesEqual } from './utils';
 ⋮----
 import { Accordion } from '@/components/common/Accordion';
-import { GroupMessage, Message, ResponseMessage, ToolMessage, isResponseMessage, isToolMessage, isUserMessage } from '@/types/message';
+import { GroupMessage, isResponseMessage, isToolMessage, isUserMessage, Message, ResponseMessage, ToolMessage } from '@/types/message';
+import { Button } from '@/components/common/Button';
 ⋮----
 type Props = {
   baseDir: string;
@@ -16076,7 +16164,7 @@ type Props = {
   remove?: (message: Message) => void;
   redo?: () => void;
   edit?: (content: string) => void;
-  onInterrupt?: () => void;
+  onInterrupt?: (interruptId?: string) => void;
 };
 ⋮----
 const aggregateUsage = (messages: Message[]): UsageReportData | undefined =>
@@ -16090,6 +16178,8 @@ const aggregateUsage = (messages: Message[]): UsageReportData | undefined =>
 const getGroupDisplayName = (name?: string | LocalizedString) =>
 ⋮----
 // name is LocalizedString
+⋮----
+const handleInterrupt = (e: MouseEvent<HTMLButtonElement>) =>
 ⋮----
 <div className=
 ⋮----
@@ -16127,6 +16217,7 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 // Handle array data (new format)
@@ -16134,8 +16225,6 @@ type Props = {
 {/* Memory List */}
 ⋮----
 // Fallback for unexpected content (backward compatibility)
-⋮----
-return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/ListTasksToolMessage.tsx
@@ -16155,6 +16244,7 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 type Task = {
@@ -16168,8 +16258,6 @@ type Task = {
   };
 ⋮----
 const renderStatusIcon = () =>
-⋮----
-return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/LoadingMessageBlock.tsx
@@ -16247,7 +16335,7 @@ File: src/renderer/src/components/message/MessageBar.tsx
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { UsageReportData } from '@common/types';
-import { MdCallSplit, MdDeleteForever, MdEdit, MdRedo } from 'react-icons/md';
+import { MdCallSplit, MdDeleteForever, MdDeleteSweep, MdEdit, MdRedo } from 'react-icons/md';
 import { FaEllipsisVertical } from 'react-icons/fa6';
 import { twMerge } from 'tailwind-merge';
 ⋮----
@@ -16266,6 +16354,7 @@ type Props = {
   redo?: () => void;
   edit?: () => void;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 const handleRemoveClick = () =>
@@ -16275,6 +16364,8 @@ const handleRedoClick = () =>
 const handleEditClick = () =>
 ⋮----
 const handleForkClick = () =>
+⋮----
+const handleRemoveUpToClick = () =>
 ⋮----
 <div className=
 ⋮----
@@ -16376,9 +16467,23 @@ type Props = {
   edit?: (content: string) => void;
   onInterrupt?: () => void;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
-const MessageBlockComponent = (
+const MessageBlockComponent = ({
+  baseDir,
+  taskId,
+  message,
+  allFiles,
+  renderMarkdown,
+  compact = false,
+  remove,
+  redo,
+  edit,
+  onInterrupt,
+  onFork,
+  onRemoveUpTo,
+}: Props) =>
 ⋮----
 const arePropsEqual = (prevProps: Props, nextProps: Props): boolean =>
 
@@ -16426,6 +16531,7 @@ type Props = {
   onDeleteTask?: () => void;
   onInterrupt?: () => void;
   onForkFromMessage?: (message: Message) => void;
+  onRemoveUpToMessage?: (message: Message) => void;
 };
 ⋮----
 // Group messages by promptContext.group.id
@@ -16476,6 +16582,7 @@ type Props = {
   compact?: boolean;
   onRemove?: () => void;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 export const ResponseMessageBlock = (
@@ -16502,6 +16609,7 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 const loadMemories = async () =>
@@ -16542,9 +16650,8 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
-⋮----
-return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/SearchTaskToolMessage.tsx
@@ -16564,9 +16671,8 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
-⋮----
-return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/SemanticSearchToolMessage.tsx
@@ -16586,9 +16692,8 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
-⋮----
-return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/StoreMemoryToolMessage.tsx
@@ -16606,11 +16711,10 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 {/* Memory Details */}
-⋮----
-return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/SubagentToolMessage.tsx
@@ -16627,6 +16731,7 @@ type Props = {
   message: ToolMessage;
   onRemove?: () => void;
   compact?: boolean;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 export const SubagentToolMessage = (
@@ -16781,6 +16886,7 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 const formatName = (name: string): string =>
@@ -16821,13 +16927,12 @@ type Props = {
   onRemove?: () => void;
   compact?: boolean;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 {/* Memory ID */}
 ⋮----
 {/* New Content */}
-⋮----
-return <ExpandableMessageBlock title=
 
 ================
 File: src/renderer/src/components/message/UsageInfo.tsx
@@ -16864,6 +16969,7 @@ type Props = {
   onRedo?: () => void;
   onEdit?: (content: string) => void;
   onFork?: () => void;
+  onRemoveUpTo?: () => void;
 };
 ⋮----
 export const UserMessageBlock = (
@@ -19516,7 +19622,7 @@ setEditingMessageIndex(null); // Clear editing state
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
-// eslint-disable-next-line no-console
+// Optimistically remove the messages after it
 ⋮----
 // eslint-disable-next-line no-console
 ⋮----
@@ -19525,6 +19631,12 @@ setEditingMessageIndex(null); // Clear editing state
 // eslint-disable-next-line no-console
 ⋮----
 // eslint-disable-next-line no-console
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// eslint-disable-next-line no-console
+⋮----
+// Only update task state if we're interrupting the entire task, not a specific agent
 ⋮----
 <div className=
 ⋮----
@@ -20015,6 +20127,8 @@ import { AudioAnalyzer } from '@/components/PromptField/AudioAnalyzer';
 import { AutoApprove } from '@/components/PromptField/AutoApprove';
 import { useResponsive } from '@/hooks/useResponsive';
 ⋮----
+const ANSWERS = ['y', 'n', 'a', 'd', 'maybe']; // Added 'maybe' (Branch B)
+⋮----
 const isPathLike = (input: string): boolean =>
 ⋮----
 export interface PromptFieldRef {
@@ -20241,7 +20355,7 @@ import React, { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import { FaChevronLeft, FaChevronRight, FaList, FaPaste, FaPencilAlt, FaPlus, FaSyncAlt, FaTimes, FaBrain } from 'react-icons/fa';
 import { MdFlashOn, MdOutlineChecklist, MdOutlineFileCopy, MdOutlineHdrAuto, MdOutlineMap, MdRepeat, MdThermostat, MdPsychology } from 'react-icons/md';
-import { DEFAULT_AGENT_PROFILE, DEFAULT_MODEL_TEMPERATURE, AVAILABLE_PROVIDERS, getProviderModelId } from '@common/agent';
+import { DEFAULT_AGENT_PROFILE, DEFAULT_MODEL_TEMPERATURE, AVAILABLE_PROVIDERS, getProviderModelId, DEFAULT_AGENT_PROFILES } from '@common/agent';
 import { BiTrash } from 'react-icons/bi';
 import { clsx } from 'clsx';
 import Sketch from '@uiw/react-color-sketch';
@@ -20296,6 +20410,7 @@ import { GenericToolGroupItem } from './GenericToolGroupItem';
 import { AgentRules } from './AgentRules';
 import { SortableAgentProfileItem } from './SortableAgentProfileItem';
 ⋮----
+import { useApi } from '@/contexts/ApiContext';
 import { getPathBasename } from '@/utils/path-utils';
 import { IconButton } from '@/components/common/IconButton';
 import { Button } from '@/components/common/Button';
@@ -20307,7 +20422,6 @@ import { Input } from '@/components/common/Input';
 import { Checkbox } from '@/components/common/Checkbox';
 import { Select } from '@/components/common/Select';
 import { TextArea } from '@/components/common/TextArea';
-import { useApi } from '@/contexts/ApiContext';
 import { useModelProviders } from '@/contexts/ModelProviderContext';
 import { showErrorNotification } from '@/utils/notifications';
 ⋮----
@@ -20358,6 +20472,8 @@ const navigateContext = (direction: 'prev' | 'next') =>
 ⋮----
 // Filter profiles based on current context
 ⋮----
+// Calculate missing default profiles (only for global context)
+⋮----
 // Get context display name
 const getContextDisplayName = () =>
 ⋮----
@@ -20378,6 +20494,12 @@ const handleCreateNewProfile = () =>
 }, 0); // Focus the input after the state update
 ⋮----
 const handleDeleteProfile = (agentProfileId: string | null) =>
+⋮----
+const isDefaultProfile = (profileId: string | null): boolean =>
+⋮----
+const handleResetProfile = () =>
+⋮----
+const handleRestoreProfile = (profileId: string) =>
 ⋮----
 const handleCopyProfile = (profile: AgentProfile) =>
 ⋮----
@@ -22008,7 +22130,7 @@ export interface TaskContextType {
   setTodoItems: (taskId: string, updateTodoItems: (prev: TodoItem[]) => TodoItem[]) => void;
   setAiderModelsData: (taskId: string, modelsData: ModelsData | null) => void;
   answerQuestion: (taskId: string, answer: string) => void;
-  interruptResponse: (taskId: string) => void;
+  interruptResponse: (taskId: string, interruptId?: string) => void;
   updateTaskAgentProfile: (taskId: string, agentProfileId: string, provider: string, model: string) => void;
   refreshAllFiles: (taskId: string, useGit?: boolean) => Promise<void>;
 }
