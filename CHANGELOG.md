@@ -21,6 +21,7 @@
 - added delete up to here action to remove all messages up to some message
 - added support for pasting images from clipboard in the browser
 - showing the subagent tool error message in the tool message
+- showing project tabs as dropdown on mobile devices
 
 ## [0.50.1]
 
