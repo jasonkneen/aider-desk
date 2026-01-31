@@ -2944,6 +2944,9 @@ ${error.stderr}`,
         }
       }
 
+      const settings = this.store.getSettings();
+      const symlinkFolders = settings.taskSettings.worktreeSymlinkFolders || [];
+
       const mergeState = await this.worktreeManager.mergeWorktreeToMainWithUncommitted(
         this.project.baseDir,
         this.task.id,
@@ -2951,6 +2954,7 @@ ${error.stderr}`,
         squash,
         effectiveCommitMessage || this.task.name || `Task ${this.taskId} changes`,
         targetBranch,
+        symlinkFolders,
       );
 
       // Store merge state for potential revert
@@ -3005,7 +3009,16 @@ ${error.stderr}`,
 
       this.addLogMessage('loading', `Applying uncommitted changes to ${effectiveTargetBranch} branch...`);
 
-      await this.worktreeManager.applyUncommittedChangesToMain(this.project.baseDir, this.task.id, this.task.worktree.path, effectiveTargetBranch);
+      const settings = this.store.getSettings();
+      const symlinkFolders = settings.taskSettings.worktreeSymlinkFolders || [];
+
+      await this.worktreeManager.applyUncommittedChangesToMain(
+        this.project.baseDir,
+        this.task.id,
+        this.task.worktree.path,
+        effectiveTargetBranch,
+        symlinkFolders,
+      );
 
       this.addLogMessage('info', `Successfully applied uncommitted changes to ${effectiveTargetBranch} branch`, true);
     } catch (error) {
@@ -3053,7 +3066,10 @@ ${error.stderr}`,
     try {
       this.addLogMessage('loading', 'Reverting last merge...');
 
-      await this.worktreeManager.revertMerge(this.project.baseDir, this.task.id, this.task.worktree.path, this.task.lastMergeState);
+      const settings = this.store.getSettings();
+      const symlinkFolders = settings.taskSettings.worktreeSymlinkFolders || [];
+
+      await this.worktreeManager.revertMerge(this.project.baseDir, this.task.id, this.task.worktree.path, this.task.lastMergeState, symlinkFolders);
 
       // Clear merge state after successful revert
       await this.saveTask({ lastMergeState: undefined });
