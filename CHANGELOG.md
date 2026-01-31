@@ -22,6 +22,7 @@
 - added support for pasting images from clipboard in the browser
 - showing the subagent tool error message in the tool message
 - showing project tabs as dropdown on mobile devices
+- properly positioning message menu over the top content
 
 ## [0.50.1]
 
