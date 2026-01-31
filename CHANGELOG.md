@@ -23,6 +23,7 @@
 - showing the subagent tool error message in the tool message
 - showing project tabs as dropdown on mobile devices
 - properly positioning message menu over the top content
+- added support for unknown file type in diff viewer to show without highlighting
 
 ## [0.50.1]
 
