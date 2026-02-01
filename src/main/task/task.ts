@@ -1150,12 +1150,17 @@ export class Task {
   }
 
   private notifyIfEnabled(title: string, text: string) {
-    const app = getElectronApp();
     const settings = this.store.getSettings();
-    if (!settings.notificationsEnabled || !app) {
+    if (!settings.notificationsEnabled) {
       return;
     }
 
+    this.eventManager.sendNotification(this.getProjectDir(), title, text);
+
+    const app = getElectronApp();
+    if (!app) {
+      return;
+    }
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { Notification } = require('electron');
     if (Notification.isSupported()) {
