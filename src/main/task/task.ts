@@ -1872,9 +1872,11 @@ export class Task {
     await this.updateContextInfo();
   }
 
-  public async addContextMessage(message: ContextMessage) {
+  public async addContextMessage(message: ContextMessage, updateContextInfo = false) {
     this.contextManager.addContextMessage(message);
-    await this.updateContextInfo();
+    if (updateContextInfo) {
+      await this.updateContextInfo();
+    }
   }
 
   public sendAddMessage(role: MessageRole = MessageRole.User, content: string, acknowledge = true) {
