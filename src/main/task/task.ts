@@ -806,8 +806,6 @@ export class Task {
     const agentMessages = await this.agent.runAgent(this, profile, prompt, promptContext, contextMessages, contextFiles, systemPrompt);
     this.resolveAgentRunPromises();
     if (agentMessages.length > 0) {
-      agentMessages.forEach((message) => this.contextManager.addContextMessage(message));
-
       // send messages to connectors
       this.contextManager.toConnectorMessages(agentMessages).forEach((message) => {
         this.sendAddMessage(message.role, message.content, false);
@@ -967,7 +965,7 @@ export class Task {
       return [];
     }
     prompt = hookResult.event.prompt;
-    const resultMessages = await this.agent.runAgent(this, profile, prompt, promptContext, contextMessages, contextFiles, systemPrompt, abortSignal);
+    const resultMessages = await this.agent.runAgent(this, profile, prompt, promptContext, contextMessages, contextFiles, systemPrompt, false, abortSignal);
     await this.hookManager.trigger('onSubagentFinished', { subagentId: profile.id, resultMessages }, this, this.project);
     return resultMessages;
   }
@@ -1858,14 +1856,19 @@ export class Task {
     return this.contextManager.getContextMessages();
   }
 
-  public async addContextMessage(role: MessageRole, content: string, usageReport?: UsageReportData) {
-    logger.debug('Adding context message to session:', {
+  public async addRoleContextMessage(role: MessageRole, content: string, usageReport?: UsageReportData) {
+    logger.debug('Adding role message to session:', {
       baseDir: this.project.baseDir,
       role,
       content: content.substring(0, 30),
     });
 
     this.contextManager.addContextMessage(role, content, usageReport);
+    await this.updateContextInfo();
+  }
+
+  public async addContextMessage(message: ContextMessage) {
+    this.contextManager.addContextMessage(message);
     await this.updateContextInfo();
   }
 
@@ -2238,6 +2241,7 @@ export class Task {
           contextMessages,
           [],
           undefined,
+          false,
           abortSignal,
         );
         if (waitForAgentCompletion) {
@@ -3252,7 +3256,7 @@ ${error.stderr}`,
           });
           const systemPrompt = this.promptsManager.getConflictResolutionSystemPrompt(this);
 
-          await this.agent.runAgent(this, conflictProfile, prompt, promptContext, [], [{ path: filePath }], systemPrompt, abortController.signal);
+          await this.agent.runAgent(this, conflictProfile, prompt, promptContext, [], [{ path: filePath }], systemPrompt, false, abortController.signal);
 
           // Update context based on whether it was interrupted or resolved
           if (promptContext.group) {
