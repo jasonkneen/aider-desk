@@ -9,6 +9,7 @@ import { DisableStreaming } from './DisableStreaming';
 
 import {
   AnthropicParameters,
+  AnthropicCompatibleParameters,
   AzureParameters,
   BedrockParameters,
   ClaudeAgentSdkParameters,
@@ -42,6 +43,7 @@ type ProviderParametersProps<T extends LlmProvider> = {
 // @ts-expect-error using LlmProvider as type
 const PROVIDER_PARAMETERS_MAP: Record<LlmProviderName, ComponentType<ProviderParametersProps>> = {
   anthropic: AnthropicParameters,
+  'anthropic-compatible': AnthropicCompatibleParameters,
   azure: AzureParameters,
   bedrock: BedrockParameters,
   'claude-agent-sdk': ClaudeAgentSdkParameters,

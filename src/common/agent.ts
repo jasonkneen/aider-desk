@@ -35,6 +35,7 @@ import {
 
 export type LlmProviderName =
   | 'anthropic'
+  | 'anthropic-compatible'
   | 'azure'
   | 'bedrock'
   | 'cerebras'
@@ -76,6 +77,7 @@ export interface OllamaProvider extends LlmProviderBase {
 
 export const AVAILABLE_PROVIDERS: LlmProviderName[] = [
   'anthropic',
+  'anthropic-compatible',
   'azure',
   'bedrock',
   'cerebras',
@@ -131,6 +133,13 @@ export interface AnthropicProvider extends LlmProviderBase {
   apiKey: string;
 }
 export const isAnthropicProvider = (provider: LlmProviderBase): provider is AnthropicProvider => provider.name === 'anthropic';
+
+export interface AnthropicCompatibleProvider extends LlmProviderBase {
+  name: 'anthropic-compatible';
+  apiKey: string;
+  baseUrl?: string;
+}
+export const isAnthropicCompatibleProvider = (provider: LlmProviderBase): provider is AnthropicCompatibleProvider => provider.name === 'anthropic-compatible';
 
 export enum GeminiVoiceModel {
   GeminiLive25FlashNativeAudio = 'gemini-2.5-flash-native-audio-preview-12-2025',
@@ -279,6 +288,7 @@ export const isSyntheticProvider = (provider: LlmProviderBase): provider is Synt
 export type LlmProvider =
   | OpenAiProvider
   | AnthropicProvider
+  | AnthropicCompatibleProvider
   | AzureProvider
   | GeminiProvider
   | VertexAiProvider
@@ -578,6 +588,13 @@ export const getDefaultProviderParams = <T extends LlmProvider>(providerName: Ll
         name: 'anthropic',
         apiKey: '',
       } satisfies AnthropicProvider;
+      break;
+    case 'anthropic-compatible':
+      provider = {
+        name: 'anthropic-compatible',
+        apiKey: '',
+        baseUrl: '',
+      } satisfies AnthropicCompatibleProvider;
       break;
     case 'gemini':
       provider = {

@@ -33,6 +33,7 @@ vi.mock('@/hooks/useEffectiveEnvironmentVariable', () => ({
 vi.mock('@/components/ModelLibrary/providers', () => ({
   OpenAiParameters: () => <div data-testid="openai-params">OpenAI Parameters</div>,
   AnthropicParameters: () => <div>Anthropic Parameters</div>,
+  AnthropicCompatibleParameters: () => <div>Anthropic Compatible Parameters</div>,
   AzureParameters: () => <div>Azure Parameters</div>,
   BedrockParameters: () => <div>Bedrock Parameters</div>,
   ClaudeAgentSdkParameters: () => <div>Claude Agent SDK Parameters</div>,

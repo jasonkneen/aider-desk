@@ -52,7 +52,7 @@ const readApiKeyFromConfFile = (filePath: string, envVarName: string): string | 
         const envVarToProviderName: Record<string, string[]> = {
           GOOGLE_API_KEY: ['gemini', 'google'],
           OPENAI_API_KEY: ['openai'],
-          ANTHROPIC_API_KEY: ['anthropic'],
+          ANTHROPIC_API_KEY: ['anthropic', 'anthropic-compatible'],
           GROQ_API_KEY: ['groq'],
           DEEPSEEK_API_KEY: ['deepseek'],
           OPENROUTER_API_KEY: ['openrouter'],

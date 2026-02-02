@@ -3,6 +3,7 @@
 ## [UNRELEASED]
 
 - decreased default max tokens of semantic search for better context management
+- added support for Anthropic compatible provider
 
 ## [0.51.0]
 

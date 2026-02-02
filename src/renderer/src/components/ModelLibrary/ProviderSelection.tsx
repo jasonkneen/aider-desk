@@ -8,6 +8,7 @@ import { ProviderCard } from './ProviderCard';
 import { IconButton } from '@/components/common/IconButton';
 import {
   AnthropicIcon,
+  AnthropicCompatibleIcon,
   AzureIcon,
   BedrockIcon,
   CerebrasIcon,
@@ -32,6 +33,7 @@ import {
 
 const PROVIDER_ICON_MAP: Record<LlmProviderName, ComponentType<{ width?: number; height?: number; className?: string }>> = {
   anthropic: AnthropicIcon,
+  'anthropic-compatible': AnthropicCompatibleIcon,
   azure: AzureIcon,
   bedrock: BedrockIcon,
   cerebras: CerebrasIcon,

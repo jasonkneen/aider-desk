@@ -10,6 +10,7 @@ import { IconButton } from '@/components/common/IconButton';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import {
   AnthropicIcon,
+  AnthropicCompatibleIcon,
   AzureIcon,
   BedrockIcon,
   CerebrasIcon,
@@ -36,6 +37,7 @@ import { Tooltip } from '@/components/ui/Tooltip';
 
 const PROVIDER_ICON_MAP: Record<LlmProviderName, ComponentType<{ width?: number; height?: number; className?: string }>> = {
   anthropic: AnthropicIcon,
+  'anthropic-compatible': AnthropicCompatibleIcon,
   azure: AzureIcon,
   bedrock: BedrockIcon,
   cerebras: CerebrasIcon,
