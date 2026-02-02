@@ -1,5 +1,9 @@
 # Changelog
 
+## [UNRELEASED]
+
+- decreased default max tokens of semantic search for better context management
+
 ## [0.51.0]
 
 - hiding the subtasks when parent task is archived
