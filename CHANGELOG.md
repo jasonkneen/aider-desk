@@ -5,6 +5,7 @@
 - decreased default max tokens of semantic search for better context management
 - added support for Anthropic compatible provider
 - added direct support for Kimi Coding Plan provider
+- improved UX for initial user message
 
 ## [0.51.0]
 
