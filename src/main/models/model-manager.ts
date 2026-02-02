@@ -25,6 +25,7 @@ import { deepseekProviderStrategy } from './providers/deepseek';
 import { geminiProviderStrategy } from './providers/gemini';
 import { gpustackProviderStrategy } from './providers/gpustack';
 import { groqProviderStrategy } from './providers/groq';
+import { kimiPlanProviderStrategy } from './providers/kimi-plan';
 import { litellmProviderStrategy } from './providers/litellm';
 import { lmStudioProviderStrategy } from './providers/lm-studio';
 import { minimaxProviderStrategy } from './providers/minimax';
@@ -93,6 +94,7 @@ export class ModelManager {
     gemini: geminiProviderStrategy,
     gpustack: gpustackProviderStrategy,
     groq: groqProviderStrategy,
+    'kimi-plan': kimiPlanProviderStrategy,
     litellm: litellmProviderStrategy,
     lmstudio: lmStudioProviderStrategy,
     minimax: minimaxProviderStrategy,

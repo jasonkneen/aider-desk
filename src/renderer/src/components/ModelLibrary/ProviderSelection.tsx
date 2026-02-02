@@ -29,6 +29,7 @@ import {
   SyntheticIcon,
   VertexAiIcon,
   ZaiPlanIcon,
+  KimiPlanIcon,
 } from '@/icons';
 
 const PROVIDER_ICON_MAP: Record<LlmProviderName, ComponentType<{ width?: number; height?: number; className?: string }>> = {
@@ -42,6 +43,7 @@ const PROVIDER_ICON_MAP: Record<LlmProviderName, ComponentType<{ width?: number;
   gemini: GeminiIcon,
   gpustack: GpustackIcon,
   groq: GroqIcon,
+  'kimi-plan': KimiPlanIcon,
   litellm: LitellmIcon,
   lmstudio: LmStudioIcon,
   minimax: MinimaxIcon,

@@ -335,6 +335,9 @@
     "apiKey": "API 密钥",
     "modelPlaceholder": "例如 moonshotai/kimi-k2-instruct"
   },
+  "kimiPlan": {
+    "apiKey": "API 密钥"
+  },
   "deepseek": {
     "apiKey": "API 密钥"
   },
@@ -378,6 +381,7 @@
     "deepseek": "Deepseek",
     "gemini": "Gemini",
     "groq": "Groq",
+    "kimi-plan": "Kimi Coding Plan",
     "gpustack": "GPUStack",
     "lmstudio": "LM Studio",
     "litellm": "LiteLLM",

@@ -34,6 +34,7 @@ import {
 } from '@/icons';
 import { useResponsive } from '@/hooks/useResponsive';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { KimiPlanIcon } from '@/icons/KimiPlanIcon';
 
 const PROVIDER_ICON_MAP: Record<LlmProviderName, ComponentType<{ width?: number; height?: number; className?: string }>> = {
   anthropic: AnthropicIcon,
@@ -46,6 +47,7 @@ const PROVIDER_ICON_MAP: Record<LlmProviderName, ComponentType<{ width?: number;
   gemini: GeminiIcon,
   gpustack: GpustackIcon,
   groq: GroqIcon,
+  'kimi-plan': KimiPlanIcon,
   litellm: LitellmIcon,
   lmstudio: LmStudioIcon,
   minimax: MinimaxIcon,

@@ -8,6 +8,7 @@ export { DeepseekIcon } from './DeepseekIcon';
 export { GeminiIcon } from './GeminiIcon';
 export { GpustackIcon } from './GpustackIcon';
 export { GroqIcon } from './GroqIcon';
+export { KimiPlanIcon } from './KimiPlanIcon';
 export { LitellmIcon } from './LitellmIcon';
 export { LmStudioIcon } from './LmStudioIcon';
 export { MinimaxIcon } from './MinimaxIcon';
