@@ -205,6 +205,7 @@ export const createClaudeAgentSdkLlm = (
       'Bash',
       'TaskOutput',
       'Edit',
+      'EnterPlanMode',
       'ExitPlanMode',
       'Glob',
       'Grep',
