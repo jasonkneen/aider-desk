@@ -5,11 +5,8 @@ import { DefaultTaskState } from '@common/types';
 
 import { TaskStateActions } from '../TaskStateActions';
 
-// Mock hooks
-const mockUseBmadState = vi.fn();
-vi.mock('@/hooks/useBmadState', () => ({
-  useBmadState: () => mockUseBmadState(),
-}));
+// Mock useBmadState hook
+vi.mock('@/components/bmad/useBmadState');
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -31,6 +28,8 @@ vi.mock('@/components/bmad/SuggestedWorkflowCard', () => ({
     </button>
   ),
 }));
+
+import * as useBmadStateModule from '@/components/bmad/useBmadState';
 
 // Helper to create mock BmadStatus with required fields
 const createMockBmadStatus = (overrides: Partial<BmadStatus> = {}): BmadStatus => ({
@@ -60,7 +59,7 @@ describe('TaskStateActions - BMAD Integration', () => {
 
   describe('Mode Detection', () => {
     it('should render BMAD actions when mode is "bmad" in ReadyForReview state', () => {
-      mockUseBmadState.mockReturnValue({
+      vi.spyOn(useBmadStateModule, 'useBmadState').mockReturnValue({
         status: createMockBmadStatus(),
         suggestedWorkflows: [],
         isLoading: false,
@@ -130,7 +129,7 @@ describe('TaskStateActions - BMAD Integration', () => {
         totalSteps: 3,
       };
 
-      mockUseBmadState.mockReturnValue({
+      vi.spyOn(useBmadStateModule, 'useBmadState').mockReturnValue({
         status: createMockBmadStatus({
           availableWorkflows: [mockWorkflow],
           completedWorkflows: ['create-product-brief'], // Need completed workflows to show suggestions
@@ -167,7 +166,7 @@ describe('TaskStateActions - BMAD Integration', () => {
         totalSteps: 3,
       };
 
-      mockUseBmadState.mockReturnValue({
+      vi.spyOn(useBmadStateModule, 'useBmadState').mockReturnValue({
         status: createMockBmadStatus({
           availableWorkflows: [mockSuggestedWorkflow],
           completedWorkflows: ['product-brief'],
@@ -197,7 +196,7 @@ describe('TaskStateActions - BMAD Integration', () => {
 
   describe('Error States', () => {
     it('should handle error state gracefully', () => {
-      mockUseBmadState.mockReturnValue({
+      vi.spyOn(useBmadStateModule, 'useBmadState').mockReturnValue({
         status: null,
         suggestedWorkflows: [],
         isLoading: false,
@@ -235,7 +234,7 @@ describe('TaskStateActions - BMAD Integration', () => {
         totalSteps: 3,
       };
 
-      mockUseBmadState.mockReturnValue({
+      vi.spyOn(useBmadStateModule, 'useBmadState').mockReturnValue({
         status: createMockBmadStatus({
           availableWorkflows: [mockWorkflow],
           completedWorkflows: ['create-product-brief'], // Need completed workflows to show suggestions
