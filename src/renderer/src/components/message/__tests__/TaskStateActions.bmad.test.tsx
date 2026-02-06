@@ -51,13 +51,15 @@ const createMockBmadStatus = (overrides: Partial<BmadStatus> = {}): BmadStatus =
 describe('TaskStateActions - BMAD Integration', () => {
   const mockOnResumeTask = vi.fn();
   const mockOnMarkAsDone = vi.fn();
+  const projectDir = '/test/project';
+  const taskId = 'task-123';
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe('Mode Detection', () => {
-    it('should render BMAD actions when mode is "bmad"', () => {
+    it('should render BMAD actions when mode is "bmad" in ReadyForReview state', () => {
       mockUseBmadState.mockReturnValue({
         status: createMockBmadStatus(),
         suggestedWorkflows: [],
@@ -66,7 +68,17 @@ describe('TaskStateActions - BMAD Integration', () => {
         refresh: vi.fn(),
       });
 
-      render(<TaskStateActions state={DefaultTaskState.Todo} mode="bmad" isArchived={false} onResumeTask={mockOnResumeTask} onMarkAsDone={mockOnMarkAsDone} />);
+      render(
+        <TaskStateActions
+          projectDir={projectDir}
+          taskId={taskId}
+          state={DefaultTaskState.ReadyForReview}
+          mode="bmad"
+          isArchived={false}
+          onResumeTask={mockOnResumeTask}
+          onMarkAsDone={mockOnMarkAsDone}
+        />,
+      );
 
       // Should see BMAD-specific UI elements
       expect(screen.queryByText('messages.execute')).not.toBeInTheDocument();
@@ -74,7 +86,15 @@ describe('TaskStateActions - BMAD Integration', () => {
 
     it('should NOT render BMAD actions when mode is not "bmad"', () => {
       render(
-        <TaskStateActions state={DefaultTaskState.Todo} mode="agent" isArchived={false} onResumeTask={mockOnResumeTask} onMarkAsDone={mockOnMarkAsDone} />,
+        <TaskStateActions
+          projectDir={projectDir}
+          taskId={taskId}
+          state={DefaultTaskState.Todo}
+          mode="agent"
+          isArchived={false}
+          onResumeTask={mockOnResumeTask}
+          onMarkAsDone={mockOnMarkAsDone}
+        />,
       );
 
       // Should see default actions
@@ -82,7 +102,16 @@ describe('TaskStateActions - BMAD Integration', () => {
     });
 
     it('should render default actions when mode is undefined', () => {
-      render(<TaskStateActions state={DefaultTaskState.Todo} isArchived={false} onResumeTask={mockOnResumeTask} onMarkAsDone={mockOnMarkAsDone} />);
+      render(
+        <TaskStateActions
+          projectDir={projectDir}
+          taskId={taskId}
+          state={DefaultTaskState.Todo}
+          isArchived={false}
+          onResumeTask={mockOnResumeTask}
+          onMarkAsDone={mockOnMarkAsDone}
+        />,
+      );
 
       // Should see default actions
       expect(screen.getByText('messages.execute')).toBeInTheDocument();
@@ -112,7 +141,17 @@ describe('TaskStateActions - BMAD Integration', () => {
         refresh: vi.fn(),
       });
 
-      render(<TaskStateActions state={DefaultTaskState.Todo} mode="bmad" isArchived={false} onResumeTask={mockOnResumeTask} onMarkAsDone={mockOnMarkAsDone} />);
+      render(
+        <TaskStateActions
+          projectDir={projectDir}
+          taskId={taskId}
+          state={DefaultTaskState.ReadyForReview}
+          mode="bmad"
+          isArchived={false}
+          onResumeTask={mockOnResumeTask}
+          onMarkAsDone={mockOnMarkAsDone}
+        />,
+      );
 
       expect(screen.getByTestId('workflow-product-brief')).toBeInTheDocument();
     });
@@ -139,7 +178,17 @@ describe('TaskStateActions - BMAD Integration', () => {
         refresh: vi.fn(),
       });
 
-      render(<TaskStateActions state={DefaultTaskState.Todo} mode="bmad" isArchived={false} onResumeTask={mockOnResumeTask} onMarkAsDone={mockOnMarkAsDone} />);
+      render(
+        <TaskStateActions
+          projectDir={projectDir}
+          taskId={taskId}
+          state={DefaultTaskState.ReadyForReview}
+          mode="bmad"
+          isArchived={false}
+          onResumeTask={mockOnResumeTask}
+          onMarkAsDone={mockOnMarkAsDone}
+        />,
+      );
 
       // Should see the suggested workflow
       expect(screen.getByTestId('workflow-prd')).toBeInTheDocument();
@@ -156,7 +205,17 @@ describe('TaskStateActions - BMAD Integration', () => {
         refresh: vi.fn(),
       });
 
-      render(<TaskStateActions state={DefaultTaskState.Todo} mode="bmad" isArchived={false} onResumeTask={mockOnResumeTask} onMarkAsDone={mockOnMarkAsDone} />);
+      render(
+        <TaskStateActions
+          projectDir={projectDir}
+          taskId={taskId}
+          state={DefaultTaskState.ReadyForReview}
+          mode="bmad"
+          isArchived={false}
+          onResumeTask={mockOnResumeTask}
+          onMarkAsDone={mockOnMarkAsDone}
+        />,
+      );
 
       // Should show error message
       expect(screen.getByText(/Failed to load/)).toBeInTheDocument();
@@ -187,7 +246,17 @@ describe('TaskStateActions - BMAD Integration', () => {
         refresh: mockRefresh,
       });
 
-      render(<TaskStateActions state={DefaultTaskState.Todo} mode="bmad" isArchived={false} onResumeTask={mockOnResumeTask} onMarkAsDone={mockOnMarkAsDone} />);
+      render(
+        <TaskStateActions
+          projectDir={projectDir}
+          taskId={taskId}
+          state={DefaultTaskState.ReadyForReview}
+          mode="bmad"
+          isArchived={false}
+          onResumeTask={mockOnResumeTask}
+          onMarkAsDone={mockOnMarkAsDone}
+        />,
+      );
 
       // WorkflowActionButton should receive onComplete callback
       // This is verified by the component rendering correctly
