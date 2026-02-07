@@ -51,8 +51,6 @@ export class Project {
   ) {
     this.customCommandManager = new CustomCommandManager(this);
     this.bmadManager = new BmadManager(this.baseDir);
-    // initialize global task
-    this.prepareTask(INTERNAL_TASK_ID);
     this.tasksLoadingPromise = this.loadTasks();
   }
 
@@ -63,6 +61,11 @@ export class Project {
     await this.sendInputHistoryUpdatedEvent();
 
     this.eventManager.sendProjectStarted(this.baseDir);
+  }
+
+  private async prepareInternalTask() {
+    const task = this.prepareTask(INTERNAL_TASK_ID);
+    await task.resetContext();
   }
 
   public async createNewTask(params?: CreateTaskParams) {
@@ -124,7 +127,7 @@ export class Project {
       this.eventManager.sendTaskCreated(task.task, params?.activate);
     }
 
-    const internalTask = this.getTask(INTERNAL_TASK_ID);
+    const internalTask = this.getInternalTask();
     if (internalTask) {
       // adding files from internal task that keeps track of files to new task
       const contextFiles = await internalTask.getContextFiles();
@@ -162,6 +165,8 @@ export class Project {
   private async loadTasks() {
     // Migrate sessions to tasks before starting
     await migrateSessionsToTasks(this);
+
+    await this.prepareInternalTask();
 
     const tasksDir = path.join(this.baseDir, '.aider-desk', 'tasks');
 

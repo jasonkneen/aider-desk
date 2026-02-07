@@ -9,6 +9,7 @@
 - improved handling files within the context of the agent
 - properly removing the tool calls from assistant message when using remove messages up to here action
 - added BMAD Method mode
+- files are now clearing properly on new tasks when IDE plugin is not connected
 
 ## [0.51.0]
 
