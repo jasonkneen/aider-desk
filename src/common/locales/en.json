@@ -1501,7 +1501,7 @@
   },
   "bmad": {
     "welcome": {
-      "title": "Welcome to BMAD Mode",
+      "title": "Welcome to BMAD Mode (Preview)",
       "subtitle": "Guided workflows for planning, spec'ing, and implementing features"
     },
     "workflows": {
@@ -1594,7 +1594,14 @@
       "percentage": "{{percentage}}% complete"
     },
     "install": {
-      "terminalPrompt": "Click the button below to open a terminal with the BMAD installation command. The installation will begin automatically.",
+      "button": "Install BMAD",
+      "installing": "Installing...",
+      "success": "BMAD installed successfully",
+      "error": "BMAD installation failed",
+      "autoInstallNote": "Click the button above to automatically install BMAD for the current project.",
+      "manualInstallTitle": "Manual Installation",
+      "manualInstallNote": "For advanced customization, you can also install BMAD manually by running this command in your terminal.",
+      "terminalPrompt": "Install BMAD to access guided workflows for planning, spec'ing, and implementing features.",
       "commandLabel": "Command that will be executed:",
       "openTerminal": "Open Terminal & Install",
       "opening": "Opening Terminal...",

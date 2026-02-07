@@ -1512,7 +1512,7 @@
   },
   "bmad": {
     "welcome": {
-      "title": "欢迎使用 BMAD 模式",
+      "title": "欢迎使用 BMAD 模式 (预览)",
       "subtitle": "用于规划、规范和实现功能的引导式工作流"
     },
     "workflows": {
@@ -1605,7 +1605,14 @@
       "percentage": "完成 {{percentage}}%"
     },
     "install": {
-      "terminalPrompt": "点击下面的按钮打开一个带有 BMAD 安装命令的终端。安装将自动开始。",
+      "button": "安装 BMAD",
+      "installing": "安装中...",
+      "success": "BMAD 安装成功",
+      "error": "BMAD 安装失败",
+      "autoInstallNote": "点击上方按钮为当前项目自动安装 BMAD。",
+      "manualInstallTitle": "手动安装",
+      "manualInstallNote": "对于高级自定义，您也可以在终端中运行以下命令手动安装 BMAD。",
+      "terminalPrompt": "安装 BMAD 以访问用于规划、规范和实现功能的引导式工作流程。",
       "commandLabel": "将要执行的命令：",
       "openTerminal": "打开终端并安装",
       "opening": "正在打开终端...",
