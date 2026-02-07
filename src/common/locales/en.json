@@ -742,6 +742,9 @@
       "display": "Display Options",
       "markdownRendering": "Markdown rendering",
       "diffViewMode": "Diff view mode",
+      "viewMode": "Messages view mode",
+      "viewModeFull": "Full",
+      "viewModeCompact": "Compact",
       "virtualizedRendering": "Use virtualized rendering (experimental)",
       "virtualizedRenderingTooltip": "Experimental feature that can improve performance when you have many messages in your conversation history by only rendering visible messages."
     },

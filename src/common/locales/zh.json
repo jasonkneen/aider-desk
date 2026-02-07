@@ -699,6 +699,9 @@
       "display": "显示选项",
       "markdownRendering": "启用 Markdown 渲染",
       "diffViewMode": "差异视图模式",
+      "viewMode": "消息视图模式",
+      "viewModeFull": "完整",
+      "viewModeCompact": "紧凑",
       "virtualizedRendering": "使用虚拟化渲染（实验性）",
       "virtualizedRenderingTooltip": "实验性功能，当您在对话历史中有大量消息时可以通过仅渲染可见消息来提高性能。"
     },

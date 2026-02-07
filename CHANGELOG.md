@@ -11,6 +11,7 @@
 - added BMAD Method mode
 - files are now clearing properly on new tasks when IDE plugin is not connected
 - moved mode tooltips to right alignment for better usability
+- added option to use compact view mode for messages
 
 ## [0.51.0]
 
