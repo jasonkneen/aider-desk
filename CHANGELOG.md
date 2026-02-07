@@ -10,6 +10,7 @@
 - properly removing the tool calls from assistant message when using remove messages up to here action
 - added BMAD Method mode
 - files are now clearing properly on new tasks when IDE plugin is not connected
+- moved mode tooltips to right alignment for better usability
 
 ## [0.51.0]
 
