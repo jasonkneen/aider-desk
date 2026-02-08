@@ -13,6 +13,7 @@
 - moved mode tooltips to right alignment for better usability
 - added option to use compact view mode for messages
 - fixed issue with Merge actions from worktrees
+- default agent profiles now do not include the context files
 
 ## [0.51.0]
 
