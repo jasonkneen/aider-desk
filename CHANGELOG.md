@@ -15,6 +15,7 @@
 - fixed issue with Merge actions from worktrees
 - default agent profiles now do not include the context files
 - rules directory is correctly handled when using Aider modes and Worktree
+- added detaled information about the context files
 
 ## [0.51.0]
 

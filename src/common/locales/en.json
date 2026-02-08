@@ -905,7 +905,19 @@
     "refresh": "Refresh",
     "useGit": "Use Git",
     "useGitEnabled": "Git enabled - Click to use filesystem",
-    "useGitDisabled": "Filesystem enabled - Click to use Git"
+    "useGitDisabled": "Filesystem enabled - Click to use Git",
+    "empty": {
+      "title": "No Context Files",
+      "aiderMode": {
+        "description": "Add files here that you want to read or modify. Aider can only access files that are in the context.",
+        "hint": "Tip: Add related files (imports, types) for better understanding."
+      },
+      "agentMode": {
+        "description": "The agent can access any file in your project using tools. Adding files here is optional but can speed up tasks by providing immediate context.",
+        "hint": "Tip: Add files here when using Aider tools or when you want file contents included in the prompt.",
+        "includeContextFiles": "When 'Include Context Files' is enabled in agent settings, file contents are embedded directly in the prompt for immediate access."
+      }
+    }
   },
   "modelSelector": {
     "mainModel": "Main model",
