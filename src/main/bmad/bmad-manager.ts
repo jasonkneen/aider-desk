@@ -5,6 +5,8 @@ import * as os from 'os';
 
 import { v4 as uuidv4 } from 'uuid';
 import { BMAD_WORKFLOWS } from '@common/bmad-workflows';
+import { Installer } from 'bmad-method/tools/cli/installers/lib/core/installer';
+import { setProjectRoot } from 'bmad-method/tools/cli/lib/project-root';
 
 import { ArtifactDetector } from './artifact-detector';
 import { ContextPreparer } from './context-preparer';
@@ -13,10 +15,8 @@ import type { BmadError, BmadStatus, InstallResult, WorkflowExecutionResult } fr
 import type { Task } from '@/task';
 import type { ContextFile } from '@common/types';
 
+import { RESOURCES_DIR } from '@/constants';
 import logger from '@/logger';
-
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { Installer } = require('bmad-method/tools/cli/installers/lib/core/installer');
 
 export class BmadManager {
   private readonly artifactDetector: ArtifactDetector;
@@ -125,6 +125,14 @@ export class BmadManager {
         actionType,
         directory: this.projectDir,
       });
+
+      // Set the bmad-method project root to the unpacked location for packaged apps
+      // This ensures module sources (bmm, core) can be found when running from ASAR
+      const bmadMethodRoot = path.join(RESOURCES_DIR, 'app.asar.unpacked', 'node_modules', 'bmad-method');
+      if (fs.existsSync(bmadMethodRoot)) {
+        setProjectRoot(bmadMethodRoot);
+        logger.info('Set BMAD project root to unpacked location', { bmadMethodRoot });
+      }
 
       // Create installer instance and install
       const installer = new Installer();

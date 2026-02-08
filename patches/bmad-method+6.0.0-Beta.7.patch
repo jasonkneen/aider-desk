@@ -176,6 +176,46 @@ index edb1511..cfba0ab 100644
          toolSelection = await this.collectToolConfigurations(
            path.resolve(config.directory),
            config.modules,
+diff --git a/node_modules/bmad-method/tools/cli/installers/lib/modules/manager.js b/node_modules/bmad-method/tools/cli/installers/lib/modules/manager.js
+index f06f548..aed652a 100644
+--- a/node_modules/bmad-method/tools/cli/installers/lib/modules/manager.js
++++ b/node_modules/bmad-method/tools/cli/installers/lib/modules/manager.js
+@@ -1284,7 +1284,7 @@ class ModuleManager {
+         }
+       }
+     } catch (error) {
+-      console.error(chalk.red(`Error running module installer for ${moduleName}: ${error.message}`));
++      // console.error(chalk.red(`Error running module installer for ${moduleName}: ${error.message}`));
+     }
+   }
+ 
+diff --git a/node_modules/bmad-method/tools/cli/lib/project-root.js b/node_modules/bmad-method/tools/cli/lib/project-root.js
+index 4533c77..4af7a13 100644
+--- a/node_modules/bmad-method/tools/cli/lib/project-root.js
++++ b/node_modules/bmad-method/tools/cli/lib/project-root.js
+@@ -46,6 +46,15 @@ function getProjectRoot() {
+   return cachedRoot;
+ }
+ 
++/**
++ * Set the project root externally (for Electron packaged apps)
++ * This allows overriding the auto-detected root when running from ASAR
++ * @param {string} rootPath - The path to use as project root
++ */
++function setProjectRoot(rootPath) {
++  cachedRoot = rootPath;
++}
++
+ /**
+  * Get path to source directory
+  */
+@@ -73,5 +82,6 @@ module.exports = {
+   getProjectRoot,
+   getSourcePath,
+   getModulePath,
++  setProjectRoot,
+   findProjectRoot,
+ };
 diff --git a/node_modules/bmad-method/tools/cli/lib/ui.js b/node_modules/bmad-method/tools/cli/lib/ui.js
 index cc135fe..2ed7ab9 100644
 --- a/node_modules/bmad-method/tools/cli/lib/ui.js
