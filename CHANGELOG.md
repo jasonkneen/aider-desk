@@ -14,6 +14,7 @@
 - added option to use compact view mode for messages
 - fixed issue with Merge actions from worktrees
 - default agent profiles now do not include the context files
+- rules directory is correctly handled when using Aider modes and Worktree
 
 ## [0.51.0]
 
