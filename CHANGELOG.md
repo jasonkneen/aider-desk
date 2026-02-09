@@ -1,5 +1,9 @@
 # Changelog
 
+## [UNRELEASED]
+
+- optimized MCP server initialization
+
 ## [0.52.0]
 
 - decreased default max tokens of semantic search for better context management

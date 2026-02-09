@@ -93,6 +93,7 @@ const api: ApplicationAPI = {
 
   loadMcpServerTools: (serverName, config?: McpServerConfig) => ipcRenderer.invoke('load-mcp-server-tools', serverName, config),
   reloadMcpServers: (mcpServers, force = false) => ipcRenderer.invoke('reload-mcp-servers', mcpServers, force),
+  reloadMcpServer: (serverName: string, config: McpServerConfig) => ipcRenderer.invoke('reload-mcp-server', serverName, config),
 
   createNewTask: (baseDir, params?: CreateTaskParams) => ipcRenderer.invoke('create-new-task', baseDir, params),
   updateTask: (baseDir, id, updates) => ipcRenderer.invoke('update-task', baseDir, id, updates),

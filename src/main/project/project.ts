@@ -188,7 +188,6 @@ export class Project {
       logger.info(`Loading ${taskDirs.length} tasks from directory`, {
         baseDir: this.baseDir,
         tasksDir,
-        taskIds: taskDirs,
       });
 
       for (const taskId of taskDirs) {

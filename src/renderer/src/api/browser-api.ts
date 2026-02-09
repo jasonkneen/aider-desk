@@ -481,6 +481,9 @@ export class BrowserApi implements ApplicationAPI {
   reloadMcpServers(mcpServers: Record<string, McpServerConfig>, force = false): Promise<void> {
     return this.post('/mcp/reload', { mcpServers, force });
   }
+  reloadMcpServer(serverName: string, config: McpServerConfig): Promise<McpTool[]> {
+    return this.post('/mcp/reload-single', { serverName, config });
+  }
   createNewTask(baseDir: string, params?: CreateTaskParams): Promise<TaskData> {
     return this.post('/project/tasks/new', { projectDir: baseDir, ...params });
   }

@@ -242,6 +242,10 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     await eventsHandler.reloadMcpServers(mcpServers, force);
   });
 
+  ipcMain.handle('reload-mcp-server', async (_, serverName: string, config: McpServerConfig) => {
+    return await eventsHandler.reloadMcpServer(serverName, config);
+  });
+
   ipcMain.handle('export-task-to-markdown', async (_, baseDir: string, taskId: string) => {
     return await eventsHandler.exportTaskToMarkdown(baseDir, taskId);
   });

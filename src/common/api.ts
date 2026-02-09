@@ -111,6 +111,7 @@ export interface ApplicationAPI {
 
   loadMcpServerTools: (serverName: string, config?: McpServerConfig) => Promise<McpTool[] | null>;
   reloadMcpServers: (mcpServers: Record<string, McpServerConfig>, force?: boolean) => Promise<void>;
+  reloadMcpServer: (serverName: string, config: McpServerConfig) => Promise<McpTool[]>;
 
   createNewTask: (baseDir: string, params?: CreateTaskParams) => Promise<TaskData>;
   updateTask: (baseDir: string, id: string, updates: Partial<TaskData>) => Promise<boolean>;

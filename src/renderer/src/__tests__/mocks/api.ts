@@ -106,6 +106,7 @@ export const createMockApi = (overrides: Partial<ApplicationAPI> = {}): MockedOb
     // MCP operations
     loadMcpServerTools: vi.fn((): Promise<McpTool[] | null> => Promise.resolve([])),
     reloadMcpServers: vi.fn((): Promise<void> => Promise.resolve()),
+    reloadMcpServer: vi.fn((): Promise<McpTool[]> => Promise.resolve([])),
 
     // Task operations
     createNewTask: vi.fn((): Promise<TaskData> => Promise.resolve({ id: 'mock-task-id' } as TaskData)),

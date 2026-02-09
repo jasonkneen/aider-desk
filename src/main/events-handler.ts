@@ -77,7 +77,6 @@ export class EventsHandler {
     const oldSettings = this.store.getSettings();
     this.store.saveSettings(newSettings);
 
-    this.mcpManager.settingsChanged(oldSettings, newSettings);
     void this.projectManager.settingsChanged(oldSettings, newSettings);
     this.telemetryManager.settingsChanged(oldSettings, newSettings);
     void this.memoryManager.settingsChanged(oldSettings, newSettings);
@@ -188,8 +187,6 @@ export class EventsHandler {
     }));
 
     this.store.setOpenProjects(updatedProjects);
-
-    void this.mcpManager.initMcpConnectors(this.store.getSettings().mcpServers, baseDir, baseDir);
 
     return updatedProjects;
   }
@@ -418,16 +415,20 @@ export class EventsHandler {
       .forEachTask((task) => task.updateModels(task.task.mainModel, task.task.weakModel || null, projectSettings.modelEditFormats[task.task.mainModel]));
   }
 
-  async loadMcpServerTools(serverName: string, config?: McpServerConfig): Promise<McpTool[] | null> {
-    return await this.mcpManager.getMcpServerTools(serverName, config);
+  async loadMcpServerTools(serverName: string, config?: McpServerConfig): Promise<McpTool[] | string | null> {
+    const serverConfig = config ?? this.store.getSettings().mcpServers[serverName];
+    if (!serverConfig) {
+      return null;
+    }
+    return await this.mcpManager.getMcpServerTools(serverName, serverConfig);
   }
 
   async reloadMcpServers(mcpServers: Record<string, McpServerConfig>, force = false): Promise<void> {
-    // Get the currently active project's base directory
-    const activeProject = this.store.getOpenProjects().find((p) => p.active);
-    const projectDir = activeProject ? activeProject.baseDir : null;
-    // taskDir defaults to projectDir when there's no task context
-    await this.mcpManager.initMcpConnectors(mcpServers, projectDir, projectDir, force);
+    await this.mcpManager.reloadAllServers(mcpServers, force);
+  }
+
+  async reloadMcpServer(serverName: string, config: McpServerConfig): Promise<McpTool[]> {
+    return await this.mcpManager.reloadSingleServer(serverName, config);
   }
 
   async createTerminal(baseDir: string, taskId: string, cols?: number, rows?: number): Promise<string> {

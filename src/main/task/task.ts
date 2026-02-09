@@ -209,7 +209,7 @@ export class Task {
       const content = await fs.readFile(this.taskDataPath, 'utf8');
       const data = JSON.parse(content) as TaskData;
 
-      logger.info('Loaded task data', {
+      logger.debug('Loaded task data', {
         baseDir: this.project.baseDir,
         taskId: this.taskId,
         data,
