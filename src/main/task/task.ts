@@ -6,6 +6,7 @@ import { simpleGit } from 'simple-git';
 import YAML from 'yaml';
 import {
   AiderRunOptions,
+  AGENT_MODES,
   AgentProfile,
   ContextAssistantMessage,
   ContextFile,
@@ -461,7 +462,7 @@ export class Task {
     const mode = this.getCurrentMode();
     return {
       messages: this.contextManager.getContextMessagesData(),
-      files: await this.getContextFiles(mode === 'agent'),
+      files: await this.getContextFiles(AGENT_MODES.includes(mode)),
       todoItems: await this.getTodos(),
       question: this.currentQuestion,
       workingMode: this.task.workingMode || 'local',
@@ -668,7 +669,7 @@ export class Task {
     this.telemetryManager.captureRunPrompt(mode);
     // Generate promptContext for this run
 
-    if (mode === 'agent' || mode === 'bmad') {
+    if (AGENT_MODES.includes(mode)) {
       const profile = await this.getTaskAgentProfile();
       logger.debug('AgentProfile:', profile);
 
@@ -1335,7 +1336,7 @@ export class Task {
 
   private async sendContextFilesUpdated() {
     const mode = this.getCurrentMode();
-    const allFiles = await this.getContextFiles(mode === 'agent');
+    const allFiles = await this.getContextFiles(AGENT_MODES.includes(mode));
 
     this.eventManager.sendContextFilesUpdated(this.project.baseDir, this.taskId, allFiles);
   }
@@ -2190,7 +2191,7 @@ export class Task {
 
     const mode = this.getCurrentMode();
 
-    if (mode === 'agent') {
+    if (AGENT_MODES.includes(mode)) {
       const profile = await this.getTaskAgentProfile();
       if (!profile) {
         logger.error('No active Agent profile found for resume');
@@ -2269,7 +2270,7 @@ export class Task {
     };
 
     try {
-      if (mode === 'agent') {
+      if (AGENT_MODES.includes(mode)) {
         // Agent mode logic
         if (!profile) {
           throw new Error('No active Agent profile found');
@@ -2348,9 +2349,9 @@ export class Task {
       });
       this.addLogMessage('error', 'Failed to compact conversation. Original conversation preserved.');
       // Prevent memory leaks by cleaning up pending prompt resources
-      if (mode === 'agent' && waitForAgentCompletion) {
+      if (AGENT_MODES.includes(mode) && waitForAgentCompletion) {
         this.resolveAgentRunPromises();
-      } else if (mode !== 'agent') {
+      } else if (!AGENT_MODES.includes(mode)) {
         this.promptFinished();
       }
     }
@@ -2383,7 +2384,7 @@ export class Task {
     const handoffPrompt = await this.promptsManager.getHandoffPrompt(this, focus.trim().length ? focus.trim() : undefined);
     let generatedPrompt: string | undefined;
 
-    if (mode === 'agent') {
+    if (AGENT_MODES.includes(mode)) {
       // Agent mode logic
       const profile = await this.getTaskAgentProfile();
       if (!profile) {
@@ -2837,7 +2838,7 @@ ${error.stderr}`,
     this.addLogMessage('loading', 'Executing custom command...');
 
     try {
-      if (mode === 'agent') {
+      if (AGENT_MODES.includes(mode)) {
         // Agent mode logic
         const profile = await this.getTaskAgentProfile();
         if (!profile) {
