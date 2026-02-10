@@ -132,6 +132,7 @@
     "lowlight": "^3.3.0",
     "mark.js": "^8.11.1",
     "match-sorter": "^8.0.0",
+    "mermaid": "^11.12.2",
     "object-hash": "^3.0.0",
     "ollama-ai-provider-v2": "^1.5.5",
     "openai": "^6.9.1",

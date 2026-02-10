@@ -5,6 +5,7 @@
 - optimized MCP server initialization
 - optimized Aider connector start-up management
 - better detection of state for Quick Flow BMAD workflows
+- added support for Mermaid diagrams in messages
 
 ## [0.52.0]
 
