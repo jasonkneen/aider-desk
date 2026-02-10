@@ -3,6 +3,7 @@
 ## [UNRELEASED]
 
 - optimized MCP server initialization
+- optimized Aider connector start-up management
 
 ## [0.52.0]
 

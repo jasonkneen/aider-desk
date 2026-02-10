@@ -6,6 +6,7 @@ import { simpleGit } from 'simple-git';
 import YAML from 'yaml';
 import {
   AiderRunOptions,
+  AIDER_MODES,
   AGENT_MODES,
   AgentProfile,
   ContextAssistantMessage,
@@ -121,6 +122,7 @@ export class Task {
   private responseChunkMap: Map<string, { buffer: string; interval: NodeJS.Timeout }> = new Map();
   private isDeterminingTaskState = false;
   private resolutionAbortControllers: Record<string, AbortController> = {};
+  private tokensInfo: TokensInfoData;
 
   private readonly taskDataPath: string;
   private readonly contextManager: ContextManager;
@@ -163,6 +165,15 @@ export class Task {
       this.memoryManager,
       this.promptsManager,
     );
+    this.tokensInfo = {
+      baseDir: this.getProjectDir(),
+      taskId: this.taskId,
+      chatHistory: { cost: 0, tokens: 0 },
+      files: {},
+      repoMap: { cost: 0, tokens: 0 },
+      systemMessages: { cost: 0, tokens: 0 },
+      agent: { cost: 0, tokens: 0 },
+    };
     this.aiderManager = new AiderManager(this, this.store, this.modelManager, this.eventManager, () => this.connectors);
 
     void this.loadTaskData();
@@ -442,7 +453,10 @@ export class Task {
     }
 
     await this.loadContext();
-    await Promise.all([this.aiderManager.start(), this.updateContextInfo()]);
+    if (this.shouldStartAider()) {
+      await this.aiderManager.start();
+    }
+    await this.updateContextInfo();
     await this.updateAutocompletionData();
 
     this.eventManager.sendTaskInitialized(this.task);
@@ -2225,6 +2239,10 @@ export class Task {
     return this.task.currentMode || this.store.getProjectSettings(this.project.baseDir).currentMode || 'agent';
   }
 
+  private shouldStartAider(): boolean {
+    return AIDER_MODES.includes(this.getCurrentMode());
+  }
+
   private async reloadConnectorMessages() {
     await this.runCommand('clear', false);
     this.contextManager.toConnectorMessages().forEach((message) => {
@@ -2462,7 +2480,12 @@ export class Task {
   }
 
   updateTokensInfo(data: Partial<TokensInfoData>) {
-    this.aiderManager.updateTokensInfo(data);
+    this.tokensInfo = {
+      ...this.tokensInfo,
+      ...data,
+    };
+
+    this.eventManager.sendUpdateTokensInfo(this.tokensInfo);
   }
 
   async updateContextInfo(checkContextFilesIncluded = false, checkRepoMapIncluded = false) {
@@ -2562,9 +2585,12 @@ export class Task {
     const aiderCachingEnabledChanged = oldSettings.aider.cachingEnabled !== newSettings?.aider.cachingEnabled;
     const aiderConfirmBeforeEditChanged = oldSettings.aider.confirmBeforeEdit !== newSettings?.aider.confirmBeforeEdit;
 
-    if (aiderOptionsChanged || aiderAutoCommitsChanged || aiderWatchFilesChanged || aiderCachingEnabledChanged || aiderConfirmBeforeEditChanged) {
+    if (
+      (aiderOptionsChanged || aiderAutoCommitsChanged || aiderWatchFilesChanged || aiderCachingEnabledChanged || aiderConfirmBeforeEditChanged) &&
+      this.shouldStartAider()
+    ) {
       logger.debug('Aider options changed, restarting Aider.');
-      void this.aiderManager.start();
+      void this.aiderManager.start(true);
     } else if (aiderEnvVarsChanged) {
       logger.debug('Aider environment variables changed, updating connectors.');
       const updatedEnvironmentVariables = getEnvironmentVariablesForAider(newSettings, this.project.baseDir);
@@ -2887,6 +2913,18 @@ ${error.stderr}`,
       }
     }
 
+    // Check if currentMode changed and start aider if new mode requires it
+    const oldMode = this.getCurrentMode();
+    if (updates.currentMode !== undefined && updates.currentMode !== oldMode && AIDER_MODES.includes(updates.currentMode)) {
+      logger.debug('Task currentMode changed to aider-requiring mode, starting Aider.', {
+        oldMode,
+        newMode: updates.currentMode,
+        baseDir: this.project.baseDir,
+        taskId: this.taskId,
+      });
+      void this.aiderManager.start();
+    }
+
     this.task.updatedAt = new Date().toISOString();
     for (const key of Object.keys(updates)) {
       this.task[key] = updates[key];
@@ -2941,7 +2979,9 @@ ${error.stderr}`,
     }
 
     this.git = simpleGit(this.getTaskDir());
-    await this.aiderManager.start();
+    if (this.shouldStartAider()) {
+      await this.aiderManager.start(true);
+    }
 
     return true;
   }
