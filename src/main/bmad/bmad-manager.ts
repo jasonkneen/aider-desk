@@ -63,6 +63,7 @@ export class BmadManager {
     const detectionResult = await this.artifactDetector.detect(this.projectDir);
 
     return {
+      projectDir: this.projectDir,
       installed,
       version,
       availableWorkflows: BMAD_WORKFLOWS,

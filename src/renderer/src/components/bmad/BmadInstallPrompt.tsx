@@ -12,9 +12,10 @@ import { CopyMessageButton } from '@/components/message/CopyMessageButton';
 
 type Props = {
   refreshState: () => void;
+  projectDir: string;
 };
 
-export const BmadInstallPrompt = ({ refreshState }: Props) => {
+export const BmadInstallPrompt = ({ refreshState, projectDir }: Props) => {
   const { t } = useTranslation();
   const api = useApi();
   const [installing, setInstalling] = useState(false);
@@ -26,7 +27,7 @@ export const BmadInstallPrompt = ({ refreshState }: Props) => {
     setInstalling(true);
 
     try {
-      const result = await api.installBmad();
+      const result = await api.installBmad(projectDir);
 
       if (result.success) {
         showSuccessNotification(result.message || t('bmad.install.success') || 'BMAD installed successfully');

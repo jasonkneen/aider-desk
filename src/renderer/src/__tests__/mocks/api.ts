@@ -242,15 +242,15 @@ export const createMockApi = (overrides: Partial<ApplicationAPI> = {}): MockedOb
     getBmadStatus: vi.fn(
       (): Promise<BmadStatus> =>
         Promise.resolve({
+          projectDir: '/path/to/project',
           installed: false,
           availableWorkflows: [],
           completedWorkflows: [],
           inProgressWorkflows: [],
-          suggestedWorkflows: [],
           detectedArtifacts: { completedWorkflows: [], inProgressWorkflows: [], detectedArtifacts: {} },
         }),
     ),
-    getBmadWorkflows: vi.fn(() => Promise.resolve([])),
+    addBmadStatusChangedListener: vi.fn(() => vi.fn()),
     executeWorkflow: vi.fn(() => Promise.resolve({ success: true, artifactPath: '/path/to/artifact.md' })),
     resetBmadWorkflow: vi.fn((): Promise<{ success: boolean; message?: string }> => Promise.resolve({ success: true })),
   };
