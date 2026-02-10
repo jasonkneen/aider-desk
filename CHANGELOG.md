@@ -7,6 +7,7 @@
 - better detection of state for Quick Flow BMAD workflows
 - added support for Mermaid diagrams in messages
 - updated BMAD library installation to use the command approach
+- correctly reading the BMAD workflow files when preparing context
 
 ## [0.52.0]
 
