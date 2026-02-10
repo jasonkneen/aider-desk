@@ -6,6 +6,7 @@
 - optimized Aider connector start-up management
 - better detection of state for Quick Flow BMAD workflows
 - added support for Mermaid diagrams in messages
+- updated BMAD library installation to use the command approach
 
 ## [0.52.0]
 
