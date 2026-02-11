@@ -24,9 +24,6 @@ export class ContextPreparer {
    * @returns Prepared context with messages and file paths
    */
   async prepare(workflowId: string, status: BmadStatus): Promise<PreparedContext> {
-    // will be used in the future
-    void status;
-
     const context: PreparedContext = {
       contextMessages: [],
       contextFiles: [],
@@ -34,22 +31,28 @@ export class ContextPreparer {
     };
 
     // Inject context messages based on workflow ID
-    await this.injectContextMessages(workflowId, context);
+    await this.injectContextMessages(workflowId, context, status);
 
     return context;
   }
 
-  private async injectContextMessages(workflowId: string, context: PreparedContext) {
-    // Try to load .json.hbs template first, fall back to .json
-    const templateLoaded = await this.tryLoadTemplate(workflowId, context);
-    if (templateLoaded) {
-      logger.debug('Context template loaded.', { workflowId });
-    } else {
+  private async injectContextMessages(workflowId: string, context: PreparedContext, status: BmadStatus) {
+    const templateInjected = await this.injectTemplate(workflowId, context);
+    if (!templateInjected) {
       logger.warn('Context template not found.', { workflowId });
+      return;
+    }
+
+    logger.debug('Context template loaded.', { workflowId });
+
+    switch (workflowId) {
+      case 'quick-dev':
+        this.injectQuickDevContext(context, status);
+        break;
     }
   }
 
-  private async tryLoadTemplate(workflowId: string, context: PreparedContext): Promise<boolean> {
+  private async injectTemplate(workflowId: string, context: PreparedContext): Promise<boolean> {
     try {
       const module = await import(`./context/${workflowId}.json.hbs?raw`);
       const templateSource = module.default ?? module;
@@ -75,5 +78,10 @@ export class ContextPreparer {
       logger.error('Failed to load context template', { error: error instanceof Error ? error.message : String(error) });
       return false;
     }
+  }
+
+  private injectQuickDevContext(context: PreparedContext, status: BmadStatus) {
+    void context;
+    void status;
   }
 }
