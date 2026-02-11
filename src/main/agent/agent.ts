@@ -296,7 +296,7 @@ export class Agent {
 
       // Add file list for non-image files
       if (nonImageFiles.length > 0) {
-        logger.info('Adding file list for non-image files', {
+        logger.debug('Adding file list for non-image files', {
           files: nonImageFiles.map((f) => f.path),
         });
         const fileList = nonImageFiles
@@ -317,7 +317,7 @@ export class Agent {
 
       // Add images as separate messages
       if (imageParts.length > 0) {
-        logger.info('Adding images as separate messages', {
+        logger.debug('Adding images as separate messages', {
           count: imageParts.length,
         });
         messages.push({
