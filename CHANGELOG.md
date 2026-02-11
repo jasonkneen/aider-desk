@@ -10,6 +10,7 @@
 - correctly reading the BMAD workflow files when preparing context
 - added Show task info button for quick access to task information
 - image messages are sent also when Include Context Files is disabled
+- properly initializing internal task in project
 
 ## [0.52.0]
 

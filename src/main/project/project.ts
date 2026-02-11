@@ -163,10 +163,10 @@ export class Project {
   }
 
   private async loadTasks() {
+    await this.prepareInternalTask();
+
     // Migrate sessions to tasks before starting
     await migrateSessionsToTasks(this);
-
-    await this.prepareInternalTask();
 
     const tasksDir = path.join(this.baseDir, '.aider-desk', 'tasks');
 
