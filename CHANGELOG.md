@@ -9,6 +9,7 @@
 - updated BMAD library installation to use the command approach
 - correctly reading the BMAD workflow files when preparing context
 - added Show task info button for quick access to task information
+- image messages are sent also when Include Context Files is disabled
 
 ## [0.52.0]
 
