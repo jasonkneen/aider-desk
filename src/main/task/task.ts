@@ -783,6 +783,7 @@ export class Task {
 
     void this.sendRequestContextInfo();
     void this.sendWorktreeIntegrationStatusUpdated();
+    void this.sendUpdatedFilesUpdated();
     this.notifyIfEnabled('Task finished', getTaskFinishedNotificationText(this.task));
 
     await this.hookManager.trigger('onAiderPromptFinished', { responses }, this, this.project);
@@ -847,6 +848,7 @@ export class Task {
 
     void this.sendRequestContextInfo();
     void this.sendWorktreeIntegrationStatusUpdated();
+    void this.sendUpdatedFilesUpdated();
     this.notifyIfEnabled('Task finished', getTaskFinishedNotificationText(this.task));
 
     return [];
@@ -2946,6 +2948,11 @@ ${error.stderr}`,
 
   private async sendWorktreeIntegrationStatusUpdated() {
     this.eventManager.sendWorktreeIntegrationStatusUpdated(this.project.baseDir, this.taskId, await this.getWorktreeIntegrationStatus());
+  }
+
+  private async sendUpdatedFilesUpdated() {
+    const updatedFiles = await this.worktreeManager.getUpdatedFiles(this.project.baseDir);
+    this.eventManager.sendUpdatedFilesUpdated(this.project.baseDir, this.taskId, updatedFiles);
   }
 
   private async applyWorkingMode(mode: WorkingMode) {

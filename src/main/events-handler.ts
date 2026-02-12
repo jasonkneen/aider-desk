@@ -38,6 +38,7 @@ import { McpManager, AgentProfileManager } from '@/agent';
 import { MemoryManager } from '@/memory/memory-manager';
 import { ModelManager } from '@/models';
 import { ProjectManager } from '@/project';
+import { WorktreeManager } from '@/worktrees';
 import { CloudflareTunnelManager } from '@/server';
 import { Store } from '@/store';
 import { TelemetryManager } from '@/telemetry';
@@ -65,6 +66,7 @@ export class EventsHandler {
     private eventManager: EventManager,
     private readonly agentProfileManager: AgentProfileManager,
     private readonly memoryManager: MemoryManager,
+    private readonly worktreeManager: WorktreeManager,
   ) {}
 
   loadSettings(): SettingsData {
@@ -266,6 +268,14 @@ export class EventsHandler {
       return [];
     }
     return task.getAllFiles(useGit);
+  }
+
+  async getUpdatedFiles(baseDir: string, _taskId: string): Promise<{ path: string; additions: number; deletions: number }[]> {
+    const project = this.projectManager.getProject(baseDir);
+    if (!project) {
+      return [];
+    }
+    return this.worktreeManager.getUpdatedFiles(project.baseDir);
   }
 
   async addFile(baseDir: string, taskId: string, filePath: string, readOnly = false): Promise<void> {

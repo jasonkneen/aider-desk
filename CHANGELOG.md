@@ -11,6 +11,7 @@
 - added Show task info button for quick access to task information
 - image messages are sent also when Include Context Files is disabled
 - properly initializing internal task in project
+- added Updated Files section with information about the changes
 
 ## [0.52.0]
 
