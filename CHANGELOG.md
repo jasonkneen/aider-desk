@@ -12,6 +12,7 @@
 - image messages are sent also when Include Context Files is disabled
 - properly initializing internal task in project
 - added Updated Files section with information about the changes
+- BMAD mode consecutive prompts are now properly sending when working via browser
 
 ## [0.52.0]
 
