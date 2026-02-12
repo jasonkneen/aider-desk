@@ -199,6 +199,7 @@ export interface UpdatedFile {
   path: string;
   additions: number;
   deletions: number;
+  diff?: string;
 }
 
 export interface UpdatedFilesUpdatedData {

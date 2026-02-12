@@ -15,6 +15,8 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
+import { UpdatedFilesDiffModal } from './UpdatedFilesDiffModal';
+
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Input } from '@/components/common/Input';
 import { useOS } from '@/hooks/useOS';
@@ -157,6 +159,12 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
   const [updatedFiles, setUpdatedFiles] = useState<UpdatedFile[]>([]);
   const [updatedExpandedItems, setUpdatedExpandedItems] = useState<string[]>([]);
   const [isRefreshingUpdated, setIsRefreshingUpdated] = useState(false);
+  const [diffModalOpen, setDiffModalOpen] = useState(false);
+  const [diffModalFileIndex, setDiffModalFileIndex] = useState(0);
+
+  const sortedUpdatedFiles = useMemo(() => {
+    return [...updatedFiles].sort((a, b) => a.path.localeCompare(b.path));
+  }, [updatedFiles]);
 
   // Calculate total additions and deletions for updated files
   const totalStats = useMemo(() => {
@@ -205,6 +213,17 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
       setIsRefreshingUpdated(false);
     }
   }, [fetchUpdatedFiles]);
+
+  const handleFileDiffClick = useCallback(
+    (file: UpdatedFile) => {
+      const index = sortedUpdatedFiles.findIndex((f) => f.path === file.path);
+      if (index !== -1) {
+        setDiffModalFileIndex(index);
+        setDiffModalOpen(true);
+      }
+    },
+    [sortedUpdatedFiles],
+  );
 
   const handleFileDrop = useCallback(
     async (event: React.DragEvent<HTMLDivElement>) => {
@@ -462,8 +481,9 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
 
     const renderTitle = () => {
       const className = twMerge(
-        'select-none text-2xs overflow-hidden',
+        'select-none text-2xs overflow-hidden whitespace-nowrap overflow-ellipsis',
         treeItem.isFolder ? 'context-dimmed' : type === 'project' && !isContextFile ? 'context-dimmed' : 'text-text-primary',
+        type === 'updated' && !treeItem.isFolder && 'cursor-pointer hover:text-text-tertiary',
       );
 
       if (fileTokenTooltip) {
@@ -474,14 +494,14 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
         );
       }
 
-      // Show line stats for updated files
+      // Show line stats for updated files with click handler
       if (updatedFile && !treeItem.isFolder) {
         return (
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-2 min-w-0 cursor-pointer hover:text-text-tertiary" onClick={() => handleFileDiffClick(updatedFile)}>
             <span className={className}>{title}</span>
-            <span className="text-4xs text-text-muted-dark flex-shrink-0 flex items-center gap-0.5">
-              <span className="text-success">+{updatedFile.additions}</span>
-              <span className="text-error">-{updatedFile.deletions}</span>
+            <span className="text-4xs text-text-muted-dark flex-shrink-0 flex items-center gap-0.5 mt-0.5">
+              {updatedFile.additions > 0 && <span className="text-success">+{updatedFile.additions}</span>}
+              {updatedFile.deletions > 0 && <span className="text-error">-{updatedFile.deletions}</span>}
             </span>
           </div>
         );
@@ -590,7 +610,7 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
           <span className="text-xs font-semibold uppercase flex-grow text-text-secondary">{title}</span>
 
           {section === 'updated' ? (
-            <span className="text-2xs mr-2 bg-bg-secondary-light px-1.5 rounded-full">
+            <span className="text-2xs mr-2 bg-bg-secondary-light px-1.5">
               <span className="text-success">+{totalStats.additions}</span>
               <span className="ml-0.5 text-error">-{totalStats.deletions}</span>
             </span>
@@ -782,6 +802,9 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
 
       {/* Rules Section */}
       {renderSection('rules', t('contextFiles.rules'), rulesFiles.length, rulesTreeData, rulesExpandedItems, setRulesExpandedItems, undefined, false, true)}
+
+      {/* Diff Modal */}
+      {diffModalOpen && <UpdatedFilesDiffModal files={sortedUpdatedFiles} initialFileIndex={diffModalFileIndex} onClose={() => setDiffModalOpen(false)} />}
     </div>
   );
 };
