@@ -1,7 +1,10 @@
+import path from 'path';
+
 import Handlebars from 'handlebars';
 import { v4 as uuidv4 } from 'uuid';
 import { glob } from 'glob';
 import { ContextMessage, ContextUserMessage } from '@common/types';
+import { fileExists } from '@common/utils';
 
 import type { BmadStatus } from '@common/bmad-types';
 
@@ -49,6 +52,9 @@ export class ContextPreparer {
     logger.debug('Context template loaded.', { workflowId });
 
     switch (workflowId) {
+      case 'quick-spec':
+        await this.injectQuickSpecContext(context, status);
+        break;
       case 'quick-dev':
         await this.injectQuickDevContext(context, status);
         break;
@@ -154,5 +160,48 @@ export class ContextPreparer {
     };
 
     context.contextMessages.push(userMessage);
+  }
+
+  private async injectQuickSpecContext(context: PreparedContext, status: BmadStatus): Promise<void> {
+    const wipFilePath = '_bmad-output/implementation-artifacts/tech-spec-wip.md';
+    const fullWipPath = path.join(this.projectDir, wipFilePath);
+
+    const quickSpecArtifact = status.detectedArtifacts['quick-spec'];
+    const quickDevCompleted = status.completedWorkflows.includes('quick-dev');
+
+    const hasReadyTechSpec = quickSpecArtifact?.status === 'ready-for-dev';
+    const wipFileExists = await fileExists(fullWipPath);
+
+    const shouldStartFresh = !hasReadyTechSpec || quickDevCompleted || !wipFileExists;
+
+    if (shouldStartFresh) {
+      const userMessage: ContextUserMessage = {
+        id: uuidv4(),
+        role: 'user',
+        content: 'There is no tech-spec-wip.md file yet, we are starting the empty specification.',
+        promptContext: {
+          id: 'quick-spec-context',
+          group: {
+            id: 'quick-spec',
+          },
+        },
+      };
+
+      context.contextMessages.push(userMessage);
+    } else {
+      const userMessage: ContextUserMessage = {
+        id: uuidv4(),
+        role: 'user',
+        content: `Continuing with the existing tech-spec work in progress at \`${wipFilePath}\`.`,
+        promptContext: {
+          id: 'quick-spec-context',
+          group: {
+            id: 'quick-spec',
+          },
+        },
+      };
+
+      context.contextMessages.push(userMessage);
+    }
   }
 }
