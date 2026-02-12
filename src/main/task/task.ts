@@ -19,6 +19,7 @@ import {
   LogLevel,
   MessageRole,
   Mode,
+  ModelInfo,
   ModelsData,
   ProjectSettings,
   PromptContext,
@@ -27,16 +28,16 @@ import {
   ResponseCompletedData,
   SettingsData,
   TaskContext,
-  TaskStateData,
   TaskData,
+  TaskStateData,
+  TaskStateEmoji,
   TodoItem,
   TokensInfoData,
   ToolData,
+  UpdatedFile,
   UsageReportData,
   UserMessageData,
   WorkingMode,
-  ModelInfo,
-  TaskStateEmoji,
 } from '@common/types';
 import { extractProviderModel, extractTextContent, fileExists, parseUsageReport } from '@common/utils';
 import { COMPACT_CONVERSATION_AGENT_PROFILE, CONFLICT_RESOLUTION_PROFILE, HANDOFF_AGENT_PROFILE, INIT_PROJECT_AGENTS_PROFILE } from '@common/agent';
@@ -1760,6 +1761,10 @@ export class Task {
     return getAllFiles(this.getTaskDir(), useGit);
   }
 
+  public async getUpdatedFiles(): Promise<UpdatedFile[]> {
+    return await this.worktreeManager.getUpdatedFiles(this.getTaskDir());
+  }
+
   public async getContextFiles(includeRuleFiles = false): Promise<ContextFile[]> {
     const contextFiles = await this.contextManager.getContextFilesEnsureLoaded();
 
@@ -2953,7 +2958,7 @@ ${error.stderr}`,
   }
 
   private async sendUpdatedFilesUpdated() {
-    const updatedFiles = await this.worktreeManager.getUpdatedFiles(this.project.baseDir);
+    const updatedFiles = await this.getUpdatedFiles();
     this.eventManager.sendUpdatedFilesUpdated(this.project.baseDir, this.taskId, updatedFiles);
   }
 

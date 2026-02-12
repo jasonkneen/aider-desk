@@ -2,7 +2,7 @@ import path, { join } from 'path';
 import fs, { mkdir, rm, lstat, symlink } from 'fs/promises';
 import { existsSync } from 'fs';
 
-import { ConflictResolutionFileContext, MergeState, RebaseState, Worktree, WorktreeAheadCommits, WorktreeUncommittedFiles } from '@common/types';
+import { ConflictResolutionFileContext, MergeState, RebaseState, UpdatedFile, Worktree, WorktreeAheadCommits, WorktreeUncommittedFiles } from '@common/types';
 
 import { execWithShellPath, withLock } from '@/utils';
 import { AIDER_DESK_TASKS_DIR } from '@/constants';
@@ -1444,14 +1444,14 @@ export class WorktreeManager {
    * Format: "additions\tdeletions\tfilepath"
    * Also fetches the full git diff for each file
    */
-  async getUpdatedFiles(worktreePath: string): Promise<Array<{ path: string; additions: number; deletions: number; diff?: string }>> {
+  async getUpdatedFiles(worktreePath: string): Promise<UpdatedFile[]> {
     try {
       const { stdout } = await execWithShellPath('git diff --numstat HEAD', {
         cwd: worktreePath,
       });
 
       const lines = stdout.trim().split('\n');
-      const files: Array<{ path: string; additions: number; deletions: number; diff?: string }> = [];
+      const files: UpdatedFile[] = [];
 
       for (const line of lines) {
         if (!line.trim()) {

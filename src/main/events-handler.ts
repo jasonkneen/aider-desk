@@ -2,13 +2,16 @@ import path from 'path';
 import fs from 'fs/promises';
 
 import {
+  AgentProfile,
   CloudflareTunnelStatus,
+  CreateTaskParams,
   CustomCommand,
   EditFormat,
   EnvironmentVariable,
   FileEdit,
   McpServerConfig,
   McpTool,
+  MemoryEntry,
   Mode,
   Model,
   OS,
@@ -19,14 +22,12 @@ import {
   ResponseCompletedData,
   SettingsData,
   TaskData,
-  CreateTaskParams,
   TaskStateData,
   TodoItem,
+  UpdatedFile,
   UsageDataRow,
   VersionsInfo,
   VoiceSession,
-  AgentProfile,
-  MemoryEntry,
   WorkflowExecutionResult,
 } from '@common/types';
 import { normalizeBaseDir } from '@common/utils';
@@ -38,7 +39,6 @@ import { McpManager, AgentProfileManager } from '@/agent';
 import { MemoryManager } from '@/memory/memory-manager';
 import { ModelManager } from '@/models';
 import { ProjectManager } from '@/project';
-import { WorktreeManager } from '@/worktrees';
 import { CloudflareTunnelManager } from '@/server';
 import { Store } from '@/store';
 import { TelemetryManager } from '@/telemetry';
@@ -66,7 +66,6 @@ export class EventsHandler {
     private eventManager: EventManager,
     private readonly agentProfileManager: AgentProfileManager,
     private readonly memoryManager: MemoryManager,
-    private readonly worktreeManager: WorktreeManager,
   ) {}
 
   loadSettings(): SettingsData {
@@ -270,12 +269,12 @@ export class EventsHandler {
     return task.getAllFiles(useGit);
   }
 
-  async getUpdatedFiles(baseDir: string, _taskId: string): Promise<{ path: string; additions: number; deletions: number }[]> {
-    const project = this.projectManager.getProject(baseDir);
-    if (!project) {
+  async getUpdatedFiles(baseDir: string, taskId: string): Promise<UpdatedFile[]> {
+    const task = this.projectManager.getProject(baseDir).getTask(taskId);
+    if (!task) {
       return [];
     }
-    return this.worktreeManager.getUpdatedFiles(project.baseDir);
+    return await task.getUpdatedFiles();
   }
 
   async addFile(baseDir: string, taskId: string, filePath: string, readOnly = false): Promise<void> {

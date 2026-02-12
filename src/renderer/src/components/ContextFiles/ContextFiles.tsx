@@ -610,7 +610,7 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
           <span className="text-xs font-semibold uppercase flex-grow text-text-secondary">{title}</span>
 
           {section === 'updated' ? (
-            <span className="text-2xs mr-2 bg-bg-secondary-light px-1.5">
+            <span className="text-2xs mr-2 bg-bg-secondary-light px-1.5 rounded-full">
               <span className="text-success">+{totalStats.additions}</span>
               <span className="ml-0.5 text-error">-{totalStats.deletions}</span>
             </span>
