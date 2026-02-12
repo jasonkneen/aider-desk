@@ -1,9 +1,12 @@
 import Handlebars from 'handlebars';
-import { ContextMessage } from '@common/types';
+import { v4 as uuidv4 } from 'uuid';
+import { glob } from 'glob';
+import { ContextMessage, ContextUserMessage } from '@common/types';
 
 import type { BmadStatus } from '@common/bmad-types';
 
 import logger from '@/logger';
+import { execWithShellPath } from '@/utils';
 
 export interface PreparedContext {
   contextMessages: ContextMessage[];
@@ -47,7 +50,7 @@ export class ContextPreparer {
 
     switch (workflowId) {
       case 'quick-dev':
-        this.injectQuickDevContext(context, status);
+        await this.injectQuickDevContext(context, status);
         break;
     }
   }
@@ -80,8 +83,76 @@ export class ContextPreparer {
     }
   }
 
-  private injectQuickDevContext(context: PreparedContext, status: BmadStatus) {
-    void context;
-    void status;
+  private async injectQuickDevContext(context: PreparedContext, status: BmadStatus): Promise<void> {
+    // 1. Get git baseline
+    let gitBaseline = 'NO_GIT';
+    try {
+      const { stdout } = await execWithShellPath('git rev-parse HEAD', { cwd: this.projectDir });
+      gitBaseline = stdout.trim();
+    } catch {
+      logger.debug('Not a git repository or no commits yet', { projectDir: this.projectDir });
+    }
+
+    // 2. Find project-context.md
+    let projectContextPath: string | null = null;
+    try {
+      const matches = await glob('**/project-context.md', {
+        cwd: this.projectDir,
+        ignore: ['node_modules/**', '.git/**'],
+      });
+      if (matches.length > 0) {
+        projectContextPath = matches[0];
+      }
+    } catch (error) {
+      logger.debug('Failed to search for project-context.md', { error });
+    }
+
+    // 3. Check for ready-for-dev tech-spec from quick-spec workflow
+    const quickSpecArtifact = status.detectedArtifacts['quick-spec'];
+    const hasReadyTechSpec = quickSpecArtifact?.status === 'ready-for-dev';
+
+    // 4. Build user message content
+    const messageParts: string[] = [];
+
+    // Git baseline info
+    messageParts.push(`**Git Baseline:** \`${gitBaseline}\``);
+
+    // Project context info
+    if (projectContextPath) {
+      messageParts.push(`**Project Context:** Found at \`${projectContextPath}\``);
+    } else {
+      messageParts.push('**Project Context:** Not found');
+    }
+
+    // Mode determination
+    if (hasReadyTechSpec) {
+      // Mode A: Tech-spec provided
+      messageParts.push('\n**Mode A: Tech-Spec Provided**');
+      messageParts.push(`Tech-spec path: \`${quickSpecArtifact.path}\``);
+      messageParts.push(
+        `\nPlease proceed with executing the tech-spec. Set \`{execution_mode}\` = "tech-spec" and \`{tech_spec_path}\` = "${quickSpecArtifact.path}".`,
+      );
+    } else {
+      // Mode B: No tech-spec, ask user for instructions
+      messageParts.push('\n**Mode B: Direct Instructions**');
+      messageParts.push(
+        'No tech-spec ready for development. Please ask me what I want to build or implement, then evaluate the escalation threshold as described in step-01-mode-detection.md.',
+      );
+    }
+
+    // Create and add user message
+    const userMessage: ContextUserMessage = {
+      id: uuidv4(),
+      role: 'user',
+      content: messageParts.join('\n'),
+      promptContext: {
+        id: 'quick-dev-context',
+        group: {
+          id: 'quick-dev',
+        },
+      },
+    };
+
+    context.contextMessages.push(userMessage);
   }
 }

@@ -171,6 +171,8 @@ export class BmadManager {
     const inProgressWorkflows: string[] = [];
     const detectedArtifacts: WorkflowArtifacts['detectedArtifacts'] = {};
     const incompleteWorkflows: IncompleteWorkflowMetadata[] = [];
+    // Track workflows with non-completing status for quick-dev (same artifact pattern as quick-spec)
+    const workflowsWithNonCompletingStatus = new Set<string>();
 
     for (const workflow of BMAD_WORKFLOWS) {
       const { id, outputArtifact } = workflow;
@@ -219,6 +221,15 @@ export class BmadManager {
             ...(frontmatterError && { error: frontmatterError }),
           };
 
+          // Track quick-dev workflows with non-completing status
+          if (id === 'quick-dev' && status) {
+            const statusLower = status.toLowerCase();
+            const hasCompletingStatus = statusLower.includes('complete') || statusLower.includes('done');
+            if (!hasCompletingStatus) {
+              workflowsWithNonCompletingStatus.add(id);
+            }
+          }
+
           // Determine completion status using workflow.totalSteps from registry
           const workflowTotalSteps = workflow.totalSteps;
           const stepsCompletedNumbers = stepsCompleted?.map((s, i) => this.parseStepNumber(s, i)) || [];
@@ -228,13 +239,15 @@ export class BmadManager {
           // 1. No stepsCompleted in frontmatter (legacy/simple artifact) - assume complete
           // 2. stepsCompleted exists and max step >= totalSteps from registry
           // 3. For quick-spec workflow: status is 'ready-for-dev'
+          // 4. For quick-dev workflow: status (lowercase) contains 'complete' or 'done'
           const isQuickSpecReadyForDevStatus = id === 'quick-spec' && status === 'ready-for-dev';
-          const isQuickDevWithReadyStatus = id === 'quick-dev' && status === 'ready-for-dev';
+          const statusLower = status?.toLowerCase() || '';
+          const isQuickDevCompletedByStatus = id === 'quick-dev' && (statusLower.includes('complete') || statusLower.includes('done'));
 
-          // quick-dev with ready-for-dev status is NOT complete (that status comes from quick-spec)
-          const isLegacyComplete = !stepsCompleted && !isQuickDevWithReadyStatus;
-          const isStepsComplete = maxCompletedStep >= workflowTotalSteps && !isQuickDevWithReadyStatus;
-          const isFullyCompleted = isLegacyComplete || isStepsComplete || isQuickSpecReadyForDevStatus;
+          // quick-dev uses status field only for completion, ignores stepsCompleted
+          const isLegacyComplete = !stepsCompleted && id !== 'quick-dev';
+          const isStepsComplete = id === 'quick-dev' ? false : maxCompletedStep >= workflowTotalSteps;
+          const isFullyCompleted = isLegacyComplete || isStepsComplete || isQuickSpecReadyForDevStatus || isQuickDevCompletedByStatus;
 
           logger.debug('Workflow completion status', {
             workflowId: id,
@@ -245,7 +258,7 @@ export class BmadManager {
             isLegacyComplete,
             isStepsComplete,
             isQuickSpecReadyForDevStatus,
-            isQuickDevWithReadyStatus,
+            isQuickDevCompletedByStatus,
             isFullyCompleted,
           });
 
@@ -290,6 +303,15 @@ export class BmadManager {
         if (!completedWorkflows.includes(workflowId)) {
           completedWorkflows.push(workflowId);
         }
+      }
+    }
+
+    // Remove workflows with non-completing status from completedWorkflows
+    // This ensures quick-dev with status like 'ready-for-dev' is not marked as completed
+    for (const workflowId of workflowsWithNonCompletingStatus) {
+      const index = completedWorkflows.indexOf(workflowId);
+      if (index !== -1) {
+        completedWorkflows.splice(index, 1);
       }
     }
 
