@@ -78,14 +78,16 @@ export const UpdatedFilesDiffModal = ({ files, initialFileIndex, onClose }: Prop
       <div className="flex items-center border-b border-border-default justify-center bg-bg-secondary min-h-[44px] px-4">
         <div className="flex items-center justify-between w-full max-w-6xl">
           <div className="flex items-center gap-3 min-w-0">
-            <span className="text-sm font-medium text-text-primary truncate" title={currentFile.path}>
+            <span className="text-3xs sm:text-xs font-medium text-text-primary truncate" title={currentFile.path}>
               {currentFile.path}
             </span>
-            {currentFile.additions > 0 && <span className="text-xs font-medium text-success shrink-0">+{currentFile.additions}</span>}
-            {currentFile.deletions > 0 && <span className="text-xs font-medium text-error shrink-0">-{currentFile.deletions}</span>}
+            {currentFile.additions > 0 && <span className="text-3xs sm:text-xs font-medium text-success shrink-0">+{currentFile.additions}</span>}
+            {currentFile.deletions > 0 && <span className="text-3xs sm:text-xs font-medium text-error shrink-0">-{currentFile.deletions}</span>}
           </div>
           <div className="flex items-center gap-3 shrink-0 ml-4">
-            <CompactSelect options={diffViewOptions} value={diffViewMode} onChange={handleDiffViewModeChange} />
+            <div className="hidden sm:block">
+              <CompactSelect options={diffViewOptions} value={diffViewMode} onChange={handleDiffViewModeChange} />
+            </div>
             {files.length > 1 && (
               <div className="flex items-center gap-2">
                 <IconButton
@@ -98,7 +100,7 @@ export const UpdatedFilesDiffModal = ({ files, initialFileIndex, onClose }: Prop
                     canGoPrevious ? 'hover:bg-bg-tertiary text-text-secondary' : 'text-text-muted cursor-not-allowed',
                   )}
                 />
-                <span className="text-sm text-text-secondary min-w-[60px] text-center">
+                <span className="text-xs sm:text-sm text-text-secondary min-w-[60px] text-center">
                   {currentIndex + 1} / {files.length}
                 </span>
                 <IconButton
