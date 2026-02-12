@@ -230,6 +230,8 @@ export class Task {
       for (const key of Object.keys(data)) {
         this.task[key] = data[key];
       }
+      // make sure we always have the most recent project baseDir, in case the task was migrated from another path
+      this.task.baseDir = this.project.baseDir;
     }
 
     // Migrate missing task-level settings from project settings

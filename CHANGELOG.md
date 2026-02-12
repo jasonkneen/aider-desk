@@ -13,6 +13,7 @@
 - properly initializing internal task in project
 - added Updated Files section with information about the changes
 - BMAD mode consecutive prompts are now properly sending when working via browser
+- sync task baseDir with project baseDir to handle migrated tasks
 
 ## [0.52.0]
 
