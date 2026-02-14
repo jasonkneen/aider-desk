@@ -3,6 +3,8 @@ import fs, { mkdir, rm, lstat, symlink } from 'fs/promises';
 import { existsSync } from 'fs';
 
 import { ConflictResolutionFileContext, MergeState, RebaseState, UpdatedFile, Worktree, WorktreeAheadCommits, WorktreeUncommittedFiles } from '@common/types';
+// @ts-expect-error istextorbinary library does not provide TypeScript definitions
+import { isBinary } from 'istextorbinary';
 
 import { execWithShellPath, withLock } from '@/utils';
 import { AIDER_DESK_TASKS_DIR } from '@/constants';
@@ -1462,16 +1464,26 @@ export class WorktreeManager {
           const additions = parts[0] === '-' ? 0 : parseInt(parts[0], 10);
           const deletions = parts[1] === '-' ? 0 : parseInt(parts[1], 10);
           const filePath = parts.slice(2).join('\t'); // Handle paths with tabs
+          const absoluteFilePath = join(worktreePath, filePath);
 
-          // Fetch git diff for this file
+          // Check if file is binary and skip diff generation
           let diff = '';
           try {
-            const { stdout: diffOutput } = await execWithShellPath(`git diff --unified=3 HEAD ${filePath}`, {
+            const fileContentBuffer = await fs.readFile(absoluteFilePath);
+            if (isBinary(filePath, fileContentBuffer)) {
+              // Binary file - skip diff
+              files.push({ path: filePath, additions, deletions, diff });
+              continue;
+            }
+
+            // Escape file path for git command - use quotes and -- separator
+            const escapedPath = filePath.replace(/"/g, '\\"');
+            const { stdout: diffOutput } = await execWithShellPath(`git diff --unified=3 HEAD -- "${escapedPath}"`, {
               cwd: worktreePath,
             });
             diff = diffOutput;
           } catch (diffError) {
-            // If diff fetch fails, continue with empty diff
+            // If diff fetch fails (e.g., file not readable, git error), continue with empty diff
             logger.warn(`Failed to get diff for file ${filePath}:`, diffError);
             diff = '';
           }
