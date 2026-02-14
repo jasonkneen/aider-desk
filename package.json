@@ -238,6 +238,6 @@
     "vitest": "^4.0.16"
   },
   "lint-staged": {
-    "*.{ts,tsx}": "eslint --fix"
+    "*.{ts,tsx}": "npm run lint"
   }
 }
