@@ -3245,6 +3245,16 @@ ${error.stderr}`,
     await this.sendWorktreeIntegrationStatusUpdated();
   }
 
+  public async restoreFile(filePath: string): Promise<void> {
+    logger.info('Restoring file', {
+      baseDir: this.project.baseDir,
+      taskId: this.taskId,
+      filePath,
+    });
+
+    await this.worktreeManager.restoreFile(this.getTaskDir(), filePath);
+  }
+
   public async getWorktreeIntegrationStatus(targetBranch?: string) {
     if (!this.task.worktree) {
       return null;

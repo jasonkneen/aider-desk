@@ -78,6 +78,7 @@ const api: ApplicationAPI = {
   getAddableFiles: (baseDir, taskId) => ipcRenderer.invoke('get-addable-files', baseDir, taskId),
   getAllFiles: (baseDir, taskId, useGit = true) => ipcRenderer.invoke('get-all-files', baseDir, taskId, useGit),
   getUpdatedFiles: (baseDir, taskId) => ipcRenderer.invoke('get-updated-files', baseDir, taskId),
+  restoreFile: (baseDir, taskId, filePath) => ipcRenderer.invoke('restore-file', baseDir, taskId, filePath),
   addFile: (baseDir, taskId, filePath, readOnly = false) => ipcRenderer.send('add-file', baseDir, taskId, filePath, readOnly),
   isValidPath: (baseDir, path) => ipcRenderer.invoke('is-valid-path', baseDir, path),
   isProjectPath: (path) => ipcRenderer.invoke('is-project-path', path),

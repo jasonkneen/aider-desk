@@ -368,6 +368,10 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     await eventsHandler.revertLastMerge(baseDir, taskId);
   });
 
+  ipcMain.handle('restore-file', async (_, baseDir: string, taskId: string, filePath: string) => {
+    await eventsHandler.restoreFile(baseDir, taskId, filePath);
+  });
+
   ipcMain.handle('list-branches', async (_, baseDir: string) => {
     return await eventsHandler.listBranches(baseDir);
   });

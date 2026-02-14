@@ -95,6 +95,7 @@ export interface ApplicationAPI {
   getAddableFiles: (baseDir: string, taskId: string) => Promise<string[]>;
   getAllFiles: (baseDir: string, taskId: string, useGit?: boolean) => Promise<string[]>;
   getUpdatedFiles: (baseDir: string, taskId: string) => Promise<UpdatedFile[]>;
+  restoreFile: (baseDir: string, taskId: string, filePath: string) => Promise<void>;
   addFile: (baseDir: string, taskId: string, filePath: string, readOnly?: boolean) => void;
   isValidPath: (baseDir: string, path: string) => Promise<boolean>;
   isProjectPath: (path: string) => Promise<boolean>;

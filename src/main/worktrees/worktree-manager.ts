@@ -1488,6 +1488,22 @@ export class WorktreeManager {
     }
   }
 
+  async restoreFile(worktreePath: string, filePath: string): Promise<void> {
+    try {
+      logger.info(`Restoring file: ${filePath}`, { worktreePath });
+
+      const escapedPath = filePath.replace(/"/g, '\\"');
+      await execWithShellPath(`git restore -- "${escapedPath}"`, {
+        cwd: worktreePath,
+      });
+
+      logger.info(`Successfully restored file: ${filePath}`);
+    } catch (error) {
+      logger.error(`Failed to restore file ${filePath}:`, error);
+      throw error;
+    }
+  }
+
   async getRebaseState(worktreePath: string): Promise<RebaseState> {
     try {
       const { stdout } = await execWithShellPath('git status --porcelain=v1', {

@@ -880,6 +880,14 @@ export class BrowserApi implements ApplicationAPI {
     });
   }
 
+  restoreFile(baseDir: string, taskId: string, filePath: string): Promise<void> {
+    return this.post('/project/worktree/restore-file', {
+      projectDir: baseDir,
+      taskId,
+      filePath,
+    });
+  }
+
   listBranches(baseDir: string): Promise<Array<{ name: string; isCurrent: boolean; hasWorktree: boolean }>> {
     return this.get('/project/worktree/branches', {
       projectDir: baseDir,

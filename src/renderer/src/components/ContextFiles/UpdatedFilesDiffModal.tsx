@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState, startTransition, useOptimistic, MouseEvent, useEffect } from 'react';
 import { HiChevronLeft, HiChevronRight } from 'react-icons/hi';
+import { MdUndo } from 'react-icons/md';
 import { useTranslation } from 'react-i18next';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { DiffViewMode, UpdatedFile } from '@common/types';
@@ -8,6 +9,7 @@ import { clsx } from 'clsx';
 
 import { IconButton } from '../common/IconButton';
 import { ModalOverlayLayout } from '../common/ModalOverlayLayout';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import { UDiffViewer, CompactDiffViewer, DiffLineCommentPanel, LineClickInfo } from '../common/DiffViewer';
 import { CompactSelect } from '../common/CompactSelect';
 
@@ -30,6 +32,8 @@ export const UpdatedFilesDiffModal = ({ files, initialFileIndex, onClose, baseDi
   const [diffViewMode, setDiffViewMode] = useOptimistic(settings?.diffViewMode || DiffViewMode.SideBySide);
   const [activeLineInfo, setActiveLineInfo] = useState<{ lineKey: string; lineInfo: LineClickInfo; position: { top: number; left: number } } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showRevertConfirm, setShowRevertConfirm] = useState(false);
+  const [isReverting, setIsReverting] = useState(false);
 
   const currentFile = files[currentIndex];
 
@@ -122,6 +126,32 @@ export const UpdatedFilesDiffModal = ({ files, initialFileIndex, onClose, baseDi
     [api, baseDir, taskId, currentFile, activeLineInfo, isSubmitting, resetLineState, onClose],
   );
 
+  const handleRevertClick = useCallback(() => {
+    setShowRevertConfirm(true);
+  }, []);
+
+  const handleRevertCancel = useCallback(() => {
+    setShowRevertConfirm(false);
+  }, []);
+
+  const handleRevertConfirm = useCallback(async () => {
+    if (!currentFile) {
+      return;
+    }
+
+    setIsReverting(true);
+    try {
+      await api.restoreFile(baseDir, taskId, currentFile.path);
+      setShowRevertConfirm(false);
+      onClose();
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to revert file:', error);
+    } finally {
+      setIsReverting(false);
+    }
+  }, [api, baseDir, taskId, currentFile, onClose]);
+
   const diffViewOptions = useMemo(
     () => [
       { label: t('diffViewer.sideBySide'), value: DiffViewMode.SideBySide },
@@ -189,6 +219,12 @@ export const UpdatedFilesDiffModal = ({ files, initialFileIndex, onClose, baseDi
                 />
               </div>
             )}
+            <IconButton
+              icon={<MdUndo className="h-5 w-5" />}
+              onClick={handleRevertClick}
+              tooltip={t('contextFiles.revertFile')}
+              className="p-1.5 rounded-md transition-colors hover:bg-bg-tertiary text-text-secondary"
+            />
           </div>
         </div>
       </div>
@@ -209,6 +245,20 @@ export const UpdatedFilesDiffModal = ({ files, initialFileIndex, onClose, baseDi
           {activeLineInfo && <DiffLineCommentPanel onSubmit={handleCommentSubmit} onCancel={handleCommentCancel} position={activeLineInfo.position} />}
         </div>
       </div>
+
+      {showRevertConfirm && (
+        <ConfirmDialog
+          title={t('contextFiles.confirmRevertTitle')}
+          onConfirm={handleRevertConfirm}
+          onCancel={handleRevertCancel}
+          confirmButtonText={t('contextFiles.revert')}
+          disabled={isReverting}
+          closeOnEscape
+        >
+          <p className="text-sm mb-3">{t('contextFiles.confirmRevertMessage')}</p>
+          <p className="text-xs text-text-muted font-mono">{currentFile.path}</p>
+        </ConfirmDialog>
+      )}
     </ModalOverlayLayout>
   );
 };
