@@ -584,6 +584,16 @@ export class BrowserApi implements ApplicationAPI {
     });
   }
 
+  runCodeInlineRequest(baseDir: string, taskId: string, filename: string, lineNumber: number, userComment: string): void {
+    this.post('/project/run-code-inline-request', {
+      projectDir: baseDir,
+      taskId,
+      filename,
+      lineNumber,
+      userComment,
+    });
+  }
+
   setZoomLevel(level: number): Promise<void> {
     void level;
     // eslint-disable-next-line no-console

@@ -45,7 +45,8 @@
     "noFiles": "没有找到文件",
     "clickToRefresh": "点击刷新",
     "closeTasks": "关闭任务",
-    "toggleTasks": "切换任务"
+    "toggleTasks": "切换任务",
+    "submit": "提交"
   },
   "search": {
     "placeholder": "查找...",
@@ -1166,7 +1167,11 @@
     "sideBySide": "并排",
     "unified": "统一",
     "compact": "紧凑",
-    "noChanges": "没有进行任何更改。内容相同。"
+    "noChanges": "没有进行任何更改。内容相同。",
+    "lineComment": {
+      "placeholder": "描述您想要对此代码进行的更改...",
+      "taskName": "更新 {{filename}}"
+    }
   },
   "promptField": {
     "savePrompt": "保存提示",

@@ -206,6 +206,10 @@ export const setupIpcHandlers = (eventsHandler: EventsHandler, serverController:
     return await eventsHandler.handoffConversation(baseDir, taskId, focus);
   });
 
+  ipcMain.on('run-code-inline-request', async (_, baseDir: string, taskId: string, filename: string, lineNumber: number, userComment: string) => {
+    await eventsHandler.runCodeInlineRequest(baseDir, taskId, filename, lineNumber, userComment);
+  });
+
   ipcMain.handle('scrape-web', async (_, baseDir: string, taskId: string, url: string, filePath?: string) => {
     await eventsHandler.scrapeWeb(baseDir, taskId, url, filePath);
   });

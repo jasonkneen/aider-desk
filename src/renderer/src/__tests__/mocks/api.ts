@@ -132,6 +132,8 @@ export const createMockApi = (overrides: Partial<ApplicationAPI> = {}): MockedOb
     removeMessage: vi.fn((): Promise<void> => Promise.resolve()),
     removeMessagesUpTo: vi.fn((): Promise<void> => Promise.resolve()),
     compactConversation: vi.fn((): void => undefined),
+    handoffConversation: vi.fn((): Promise<void> => Promise.resolve()),
+    runCodeInlineRequest: vi.fn((): void => undefined),
 
     // UI operations
     setZoomLevel: vi.fn((): Promise<void> => Promise.resolve()),
@@ -237,7 +239,6 @@ export const createMockApi = (overrides: Partial<ApplicationAPI> = {}): MockedOb
     deleteProjectMemories: vi.fn((): Promise<number> => Promise.resolve(0)),
     writeToClipboard: vi.fn((): Promise<void> => Promise.resolve()),
     openPath: vi.fn((): Promise<boolean> => Promise.resolve(true)),
-    handoffConversation: vi.fn((): Promise<void> => Promise.resolve()),
 
     // BMAD operations
     installBmad: vi.fn((): Promise<{ success: boolean; message?: string }> => Promise.resolve({ success: false })),

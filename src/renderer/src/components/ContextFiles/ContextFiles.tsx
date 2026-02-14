@@ -804,7 +804,15 @@ export const ContextFiles = ({ baseDir, taskId, allFiles, contextFiles, showFile
       {renderSection('rules', t('contextFiles.rules'), rulesFiles.length, rulesTreeData, rulesExpandedItems, setRulesExpandedItems, undefined, false, true)}
 
       {/* Diff Modal */}
-      {diffModalOpen && <UpdatedFilesDiffModal files={sortedUpdatedFiles} initialFileIndex={diffModalFileIndex} onClose={() => setDiffModalOpen(false)} />}
+      {diffModalOpen && (
+        <UpdatedFilesDiffModal
+          files={sortedUpdatedFiles}
+          initialFileIndex={diffModalFileIndex}
+          onClose={() => setDiffModalOpen(false)}
+          baseDir={baseDir}
+          taskId={taskId}
+        />
+      )}
     </div>
   );
 };
