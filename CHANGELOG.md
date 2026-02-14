@@ -31,6 +31,7 @@
 - default agent profiles now do not include the context files
 - rules directory is correctly handled when using Aider modes and Worktree
 - added detaled information about the context files
+- setting Compact as default messages view mode
 
 ## [0.51.0]
 
