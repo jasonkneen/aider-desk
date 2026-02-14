@@ -15,6 +15,7 @@
 - BMAD mode consecutive prompts are now properly sending when working via browser
 - sync task baseDir with project baseDir to handle migrated tasks
 - correcly showing the project files with special characters
+- increased timeout of semantic search tool to avoid errors when the tool is running multiple times in parallel
 
 ## [0.52.0]
 
