@@ -14,6 +14,7 @@
 - added Updated Files section with information about the changes and ability to request changes on specific line
 - BMAD mode consecutive prompts are now properly sending when working via browser
 - sync task baseDir with project baseDir to handle migrated tasks
+- correcly showing the project files with special characters
 
 ## [0.52.0]
 
